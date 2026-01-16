@@ -1,0 +1,77 @@
+
+    <!-- MANUAL TRANSACTION MODAL -->
+    <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: none;">
+        <div class="custom-modal" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 20px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 85vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 24px; cursor: pointer;">close</i>
+                <div style="font-weight: 800; font-size: 16px; color: #1e293b;">New Transaction</div>
+                <div style="font-weight: 700; font-size: 14px; color: #10b981; cursor: pointer;" onclick="saveManualTxn()">Done</div>
+            </div>
+
+            <!-- Toggler -->
+            <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 30px;">
+                <div style="flex: 1; padding: 8px; text-align: center; background: #10b981; color: #fff; font-weight: 700; border-radius: 8px; font-size: 13px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);">Expense</div>
+                <div style="flex: 1; padding: 8px; text-align: center; color: #64748b; font-weight: 600; font-size: 13px;">Income</div>
+            </div>
+
+            <!-- Amount Input -->
+            <div style="text-align: center; margin-bottom: 40px;">
+                <div style="font-size: 12px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">AMOUNT</div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    <span style="font-size: 24px; font-weight: 700; color: #cbd5e1;">PHP</span>
+                    <input type="number" id="manual-amt" placeholder="0.00" style="font-size: 48px; font-weight: 800; color: #1e293b; border: none; outline: none; width: 220px; text-align: center; background: transparent;" step="0.01">
+                </div>
+            </div>
+
+            <!-- Category Section -->
+            <div style="margin-bottom: 30px;">
+                <div style="font-size: 11px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; padding-left: 4px;">CATEGORY</div>
+                <div id="manual-cat-list" style="display: flex; overflow-x: auto; gap: 20px; padding: 4px 4px 20px 4px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
+                    <!-- Categories injected by JS -->
+                </div>
+            </div>
+
+            <!-- Details List -->
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                
+                <!-- Date Row -->
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #10b981;">
+                        <i class="material-icons">calendar_today</i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Date</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #1e293b;" id="manual-date-display">Today</div>
+                    </div>
+                    <i class="material-icons" style="color: #cbd5e1;">chevron_right</i>
+                </div>
+
+                <!-- Note Row -->
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #64748b;">
+                        <i class="material-icons">notes</i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Note</div>
+                        <input type="text" id="manual-note" placeholder="Add description..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+    
+    <style>
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Hide scrollbar for category list */
+        #manual-cat-list::-webkit-scrollbar { display: none; }
+        #manual-cat-list { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .manual-cat-item { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 64px; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
+        .manual-cat-item.selected { opacity: 1; transform: scale(1.05); }
+        .manual-cat-circle { width: 56px; height: 56px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: all 0.2s; border: 2px solid transparent; }
+        .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+    </style>

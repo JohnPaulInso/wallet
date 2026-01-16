@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Auth Test</title>
+    <script src="https://accounts.google.com/gsi/client" onload="console.log('GIS Loaded')" async defer></script>
+    <style>
+        body { font-family: sans-serif; padding: 50px; text-align: center; }
+        button { padding: 20px; font-size: 20px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; }
+        #log { margin-top: 20px; white-space: pre-wrap; text-align: left; background: #f0f0f0; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Googe Auth Isolation Test</h1>
+    <p>This page tests ONLY the Google Sign-In popup.</p>
+    
+    <button id="btn" onclick="tryAuth()">Test Google Popup</button>
+    
+    <div id="log">Logs will appear here...</div>
+
+    <script>
+        const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com'; // Your ID
+        const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
+        let tokenClient;
+
+        function log(msg) {
+            document.getElementById('log').innerText += '\n[' + new Date().toLocaleTimeString() + '] ' + msg;
+            console.log(msg);
+        }
+
+        // Initialize immediately
+        window.onload = function() {
+            log('Page loaded. waiting for Google scripts...');
+            setTimeout(initGIS, 1000);
+        };
+
+        function initGIS() {
+             if (typeof google === 'undefined') {
+                 log('ERROR: window.google is undefined. Scripts blocked?');
+                 return;
+             }
+             
+             try {
+                 tokenClient = google.accounts.oauth2.initTokenClient({
+                     client_id: CLIENT_ID,
+                     scope: SCOPES,
+                     callback: (resp) => {
+                         if (resp.error) {
+                             log('AUTH ERROR: ' + JSON.stringify(resp));
+                             return;
+                         }
+                         log('SUCCESS! Access Token received: ' + resp.access_token.substring(0, 10) + '...');
+                         alert('IT WORKS! The problem is in the other file.');
+                     },
+                 });
+                 log('GIS Client Initialized. Ready to click.');
+             } catch (e) {
+                 log('INIT ERROR: ' + e.message);
+             }
+        }
+
+        function tryAuth() {
+            log('Button clicked.');
+            if (!tokenClient) {
+                log('Token client not ready. Re-trying init...');
+                initGIS();
+            }
+            
+            if (tokenClient) {
+                log('Calling requestAccessToken()...');
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                log('CRITICAL: Cannot initialize token client.');
+            }
+        }
+    </script>
+</body>
+</html>

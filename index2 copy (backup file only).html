@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartWallet Sync - MUI HTML</title>
+    
+    <!-- MUI CSS -->
+    <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.muicss.com/mui-0.10.3/js/mui.min.js"></script>
+    
+    <!-- Material Icons & Roboto -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background-color: #f4f6f8; color: #333; margin: 0; }
+        
+        #header { background-color: #3b82f6; color: #fff; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; height: 64px; box-sizing: border-box; }
+        #header .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 1.2rem; }
+        
+        #auth-section { display: flex; align-items: center; }
+        #profile-badge { display: none; align-items: center; gap: 10px; background: rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 20px; transition: background 0.2s; cursor: pointer; }
+        #profile-badge:hover { background: rgba(255,255,255,0.25); }
+        #profile-badge img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+        #profile-badge span { font-weight: 500; font-size: 0.95rem; }
+        
+        .mui-container { margin-top: 24px; max-width: 850px; padding-bottom: 50px; }
+        .control-panel { padding: 20px; margin-bottom: 24px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .status-labels { display: flex; gap: 10px; margin-bottom: 20px; }
+        .status-chip { font-size: 11px; padding: 4px 10px; border-radius: 12px; border: 1px solid #e2e8f0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-ready { border-color: #4caf50; color: #2e7d32; background: #f0fdf4; }
+
+        /* ACCORDION */
+        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #eef2f6; transition: box-shadow 0.2s; position: relative; }
+        .month-accordion:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
+        .month-header:hover { background: #f8fafc; }
+        .month-header .month-title { font-weight: 700; font-size: 1.1rem; color: #1e293b; }
+        .month-header .month-total { font-weight: 800; color: #3b82f6; font-size: 1.1rem; }
+        .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
+        .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
+        
+        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; }
+        .month-content.collapsed { max-height: 0; overflow: hidden; border-top: none; }
+
+        /* TRANSACTION ITEM - PREMIUM REDESIGN */
+        .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f8fafc; position: relative; transition: all 0.2s; background: #fff; }
+        .txn-item:last-child { border-bottom: none; }
+        .txn-item:hover { background-color: #f8fafc; }
+        
+        .txn-left { display: flex; align-items: center; gap: 15px; flex: 1; }
+        .txn-icon-box { min-width: 48px; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .txn-icon-box i { font-size: 22px; }
+        
+        /* CATEGORY COLORS */
+        .cat-online { background-color: #fff7ed; color: #f97316; } /* Orange */
+        .cat-vehicle { background-color: #f5f3ff; color: #8b5cf6; } /* Purple */
+        .cat-shopping { background-color: #f0f9ff; color: #0ea5e9; } /* Light Blue */
+        .cat-services { background-color: #f0fdf4; color: #22c55e; } /* Green - General Services */
+        .cat-service-magenta { background-color: #fdf2f9; color: #d946ef; } /* Magenta - Telco/Specific Service */
+        .cat-food { background-color: #fefce8; color: #eab308; } /* Yellow/Gold */
+        .cat-life { background-color: #ecfdf5; color: #10b981; } /* Emerald */
+        .cat-financial { background-color: #fef2f2; color: #ef4444; } /* Red */
+        .cat-trading { background-color: #fff1f2; color: #f43f5e; } /* Rose/Red - Trading */
+        .cat-aqua { background-color: #ecfeff; color: #0891b2; } /* Dark Aqua/Cyan - Trade Copier */
+        .cat-investments { background-color: #f0fdfa; color: #0d9488; } /* Teal/Dark Green */
+        .cat-school { background-color: #eff6ff; color: #3b82f6; } /* Blue */
+        
+        .txn-info { display: flex; flex-direction: column; }
+        .txn-merchant { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 3px; letter-spacing: -0.2px; }
+        .txn-subtitle { font-size: 0.8rem; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+        .txn-dot { font-size: 14px; opacity: 0.5; }
+        
+        .txn-right { display: flex; align-items: center; gap: 8px; }
+        .txn-amount { font-weight: 800; font-size: 1rem; color: #0f172a; white-space: nowrap; }
+
+        /* EXCLUDED STATE - Only fade content, keep actions clear */
+        .txn-item.txn-excluded .txn-left,
+        .txn-item.txn-excluded .txn-amount { opacity: 0.35; filter: grayscale(1); text-decoration: line-through; }
+        
+        /* HOVER ACTION */
+        .txn-actions { opacity: 0; transition: opacity 0.2s; position: relative; z-index: 60; }
+        .txn-item:hover .txn-actions { opacity: 1; }
+        .action-btn { background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; border-radius: 50%; display: flex; align-items: center; }
+        .action-btn:hover { background: #f1f5f9; color: #475569; }
+        
+        /* DROPDOWN MENU */
+        .dropdown-menu { display: none; position: absolute; right: 0; top: 100%; background: #fff; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); border-radius: 8px; z-index: 100; border: 1px solid #e2e8f0; padding: 4px 0; }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item { padding: 10px 16px; font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+        .dropdown-item:hover { background: #f1f5f9; }
+        .dropdown-item.danger { color: #ef4444; }
+        .dropdown-item.danger:hover { background: #fef2f2; }
+
+        /* MODAL STYLES */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-overlay.show { display: flex; }
+        .custom-modal { background: #fff; width: 92%; max-width: 380px; border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+        .modal-body { margin-bottom: 12px; }
+        .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+        .cat-option { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; }
+        .cat-option:hover { border-color: #3b82f6; background: #eff6ff; }
+        .cat-option.active { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 2px #3b82f6; }
+        .cat-option i { font-size: 24px; }
+        .cat-option span { font-size: 12px; font-weight: 600; color: #475569; text-align: center; }
+        .note-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; font-size: 14px; min-height: 60px; resize: none; outline: none; transition: border-color 0.2s; color: #1e293b; }
+        .note-input:focus { border-color: #3b82f6; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 8px; }
+        .cancel-link { color: #1e293b; font-weight: 700; font-size: 13px; text-transform: uppercase; cursor: pointer; padding: 10px 16px; border-radius: 4px; transition: background 0.2s; }
+        .cancel-link:hover { background: #f1f5f9; }
+
+        /* NOTE DISPLAY - INLINE */
+        .txn-note-inline { font-size: 11px; font-style: italic; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; background: transparent !important; padding: 0 !important; }
+        
+        /* TOAST NOTIFICATION */
+        
+        /* TOAST NOTIFICATION */
+        .toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); z-index: 2000; display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .toast-container.show { opacity: 1; bottom: 30px; pointer-events: auto; }
+        .toast-container i { color: #4ade80; }
+
+        #log-container { background: #1e293b; color: #4ade80; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; height: 140px; overflow-y: auto; font-size: 13px; margin-top: 30px; border: 1px solid #334155; line-height: 1.5; }
+        .log-entry { margin-bottom: 6px; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+        .log-error { color: #f87171; font-weight: bold; }
+        
+        .loading-overlay { display: none; text-align: center; padding: 60px; color: #64748b; }
+        .btn-sync { background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
+        .btn-sync:hover { background-color: #2563eb; }
+        .btn-sync:active { transform: scale(0.98); }
+        .btn-sync:disabled { background-color: #94a3b8; cursor: not-allowed; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div class="logo">
+            <i class="material-icons" style="font-size: 28px;">account_balance_wallet</i>
+            <span>SmartWallet Sync</span>
+        </div>
+        <div id="auth-section">
+            <button id="auth-btn" class="mui-btn mui-btn--flat" style="color:white; border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; text-transform: none; font-weight: 500;" onclick="handleAuthClick()">
+                <i class="material-icons" style="font-size: 18px; vertical-align: middle; margin-right: 6px;">vpn_key</i> Connect Gmail
+            </button>
+            <div id="profile-badge" onclick="handleSignout()">
+                <img id="user-pic" src="" alt="">
+                <span id="user-name"></span>
+                <i class="material-icons" style="font-size: 18px; margin-left: 6px; opacity: 0.6;">logout</i>
+            </div>
+        </div>
+    </div>
+
+    <div class="mui-container">
+        <div class="control-panel">
+            <div class="status-labels">
+                <div id="gis-status" class="status-chip">GIS: Loading...</div>
+                <div id="db-status" class="status-chip">DB: Ready</div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                <button id="scan-btn" class="btn-sync" onclick="handleScan(50)">
+                    <i class="material-icons" style="font-size: 20px;">search</i> Scan Gmail (50)
+                </button>
+                <button id="deep-scan-btn" class="mui-btn mui-btn--raised mui-btn--accent" style="height: 42px; border-radius: 8px; font-weight: 600; text-transform: none;" onclick="handleScan(500)">Deep Scan (500)</button>
+                <button class="mui-btn mui-btn--flat" style="height: 42px; border-radius: 8px; text-transform: none; color: #475569;" onclick="loadData()">Reload History</button>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: #1e293b;">
+            <i class="material-icons" style="font-size: 24px;">receipt_long</i>
+            <h3 style="margin: 0; font-weight: 800; letter-spacing: -0.5px;">Transaction History</h3>
+        </div>
+
+        <div id="loading-spinner" class="loading-overlay">
+            <i class="material-icons spin" style="font-size: 48px; color: #3b82f6;">sync</i>
+            <p style="margin-top: 15px; font-weight: 500;">Refreshing transactions...</p>
+        </div>
+
+        <div id="history-container">
+            <!-- Transactions grouped by month will go here -->
+        </div>
+
+        <div id="log-container"></div>
+    </div>
+
+    <script>
+        // Global bridge for GIS callback to avoid module race condition
+        window.gisLoaded = function() {
+            if (window.initGISModule) window.initGISModule();
+            else window.gisReadyPending = true;
+        };
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, serverTimestamp, getDocs, query, orderBy, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
+            authDomain: "atome-wallet.firebaseapp.com",
+            projectId: "atome-wallet",
+            storageBucket: "atome-wallet.firebasestorage.app",
+            messagingSenderId: "64186651619",
+            appId: "1:64186651619:web:cd7d426cfb663aab6606d6",
+            measurementId: "G-2SHWJ6S3Z3"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // GOOGLE AUTH CONSTANTS
+        const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile';
+        let tokenClient;
+        let accessToken = localStorage.getItem('g_access_token');
+        let expiry = localStorage.getItem('g_token_expiry');
+
+        // INITIALIZE APP
+        window.addEventListener('DOMContentLoaded', async () => {
+            log('SmartWallet Sync - v1.2 Optimizing...');
+            
+            // Firebase Init
+            try {
+                await signInAnonymously(auth);
+                const dbBadge = document.getElementById('db-status');
+                dbBadge.innerText = 'DB: Connected';
+                dbBadge.classList.add('status-ready');
+                log('Firebase connected.');
+            } catch (e) { log('Firebase Fail: ' + e.message, 'error'); }
+
+            // Initial Data Load
+            await loadData();
+
+            // Auto-fetch profile & Auto-sync
+            if (accessToken && expiry && Date.now() < parseInt(expiry)) {
+                log('Valid session found. Auto-syncing...');
+                fetchUserProfile(accessToken);
+                // Auto-sync on load
+                setTimeout(() => handleScan(50), 1000); 
+            }
+        });
+
+        // FETCH TRANSACTIONS FROM FIRESTORE
+        async function loadData() {
+            const container = document.getElementById('history-container');
+            const spinner = document.getElementById('loading-spinner');
+            
+            spinner.style.display = 'block';
+            try {
+                const q = query(collection(db, "users", "guest-user", "transactions"), orderBy("date", "desc"));
+                const snap = await getDocs(q);
+                let txns = [];
+                snap.forEach(d => {
+                    txns.push({ id: d.id, ...d.data() });
+                });
+
+                if (txns.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align:center; padding:60px 20px; color:#64748b; background: white; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                            <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">inbox</i>
+                            <p style="margin:0; font-weight: 500;">No transactions found.</p>
+                            <p style="font-size: 13px; margin: 10px 0 0;">Click "Scan Gmail" to sync your Atome payments.</p>
+                        </div>`;
+                } else {
+                    renderHistory(txns);
+                }
+            } catch (e) { 
+                log('Failed to load history: ' + e.message, 'error');
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        window.loadData = loadData;
+
+        // RENDER ACCORDIONS
+        function renderHistory(txns) {
+            const container = document.getElementById('history-container');
+            container.innerHTML = '';
+            
+            const groups = {};
+            txns.forEach(t => {
+                if (!t.date) return;
+                const d = new Date(t.date);
+                if (isNaN(d)) return;
+                const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                if (!groups[key]) groups[key] = { items: [], total: 0 };
+                
+                groups[key].items.push(t);
+                // ONLY add to total if NOT excluded
+                if (!t.excluded) {
+                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    groups[key].total += amt;
+                }
+            });
+
+            const entries = Object.entries(groups);
+            entries.forEach(([month, data], index) => {
+                const accordion = document.createElement('div');
+                accordion.className = 'month-accordion';
+                
+                const isFirst = index === 0;
+                const header = document.createElement('div');
+                header.className = `month-header ${!isFirst ? 'collapsed' : ''}`;
+                header.innerHTML = `
+                    <span class="month-title">${month}</span>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <span class="month-total">₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                        <i class="material-icons expand-icon">expand_more</i>
+                    </div>
+                `;
+                
+                const content = document.createElement('div');
+                content.className = `month-content ${!isFirst ? 'collapsed' : ''}`;
+                
+                data.items.forEach(t => {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const item = document.createElement('div');
+                    item.className = `txn-item ${t.excluded ? 'txn-excluded' : ''}`;
+                    const d = new Date(t.date);
+                    const shortDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const safeMerchant = (mapped.name).replace(/'/g, "\\'");
+                    
+                    item.innerHTML = `
+                        <div class="txn-left" style="flex: 1;">
+                            <div class="txn-icon-box ${mapped.catClass}">
+                                <i class="material-icons">${mapped.icon}</i>
+                            </div>
+                            <div class="txn-info">
+                                <div class="txn-merchant">${mapped.name}</div>
+                                <div class="txn-subtitle">
+                                    <span>${shortDate}</span>
+                                    <span class="txn-dot">•</span>
+                                    <span>${displayCategoryName(mapped.category)}</span>
+                                    ${t.note ? `<span class="txn-dot">•</span><span class="txn-note-inline ${mapped.catClass}" title="${t.note}">${t.note}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="txn-right">
+                            <div class="txn-amount" style="${(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)) >= 1000 ? 'color: #470000;' : ''}">
+                                ₱${(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
+                            </div>
+                            <div class="txn-actions">
+                                <button class="action-btn" onclick="toggleTxnMenu(event, '${t.id}')">
+                                    <i class="material-icons">more_vert</i>
+                                </button>
+                                <div id="menu-${t.id}" class="dropdown-menu">
+                                    <div class="dropdown-item" onclick="openPriceModal('${t.id}', ${t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)})">
+                                        <i class="material-icons" style="font-size:16px;">edit_notifications</i> 
+                                        <span>Change Price</span>
+                                    </div>
+                                    <div class="dropdown-item" onclick="toggleExclusion('${t.id}', '${safeMerchant}', ${t.excluded || false})">
+                                        <i class="material-icons" style="font-size:16px;">${t.excluded ? 'add_circle' : 'block'}</i> 
+                                        <span>${t.excluded ? 'Include' : 'Exclude'}</span>
+                                    </div>
+                                    <div class="dropdown-item" onclick="openCategoryModal('${t.id}', '${safeMerchant}', '${mapped.category}')">
+                                        <i class="material-icons" style="font-size:16px;">category</i> 
+                                        <span>Change Category</span>
+                                    </div>
+                                    <div class="dropdown-item" onclick="openNoteModal('${t.id}', '${safeMerchant}', \`${(t.note || '').replace(/`/g, "\\`").replace(/\${/g, "\\${")}\`)">
+                                        <i class="material-icons" style="font-size:16px;">edit_note</i> 
+                                        <span>Add Note</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    content.appendChild(item);
+                });
+
+                header.onclick = () => {
+                    const isCollapsedNow = content.classList.toggle('collapsed');
+                    header.classList.toggle('collapsed', isCollapsedNow);
+                };
+                
+                accordion.appendChild(header);
+                accordion.appendChild(content);
+                container.appendChild(accordion);
+            });
+        }
+
+        // GOOGLE IDENTITY SERVICES
+        function initGIS() {
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: (resp) => {
+                        if (resp.error) return log('Login failed: ' + resp.error, 'error');
+                        accessToken = resp.access_token;
+                        const expMs = Date.now() + (resp.expires_in * 1000);
+                        localStorage.setItem('g_access_token', accessToken);
+                        localStorage.setItem('g_token_expiry', expMs);
+                        fetchUserProfile(accessToken);
+                        handleScan(50);
+                    },
+                });
+                const gisBadge = document.getElementById('gis-status');
+                gisBadge.innerText = 'GIS: Ready';
+                gisBadge.classList.add('status-ready');
+            } catch (e) { log('GIS Init Error: ' + e.message, 'error'); }
+        }
+
+        // Expose init to global bridge
+        window.initGISModule = initGIS;
+        if (window.gisReadyPending) initGIS();
+
+        async function fetchUserProfile(token) {
+            try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.name) {
+                    document.getElementById('auth-btn').style.display = 'none';
+                    const badge = document.getElementById('profile-badge');
+                    badge.style.display = 'flex';
+                    document.getElementById('user-pic').src = data.picture;
+                    document.getElementById('user-name').innerText = `Hi, ${data.name.split(' ')[0]}`;
+                }
+            } catch (e) { log('Profile fetch fail: ' + e.message, 'error'); }
+        }
+
+        window.handleAuthClick = () => {
+            if (!tokenClient) {
+                log('GIS not ready.', 'error');
+                if (typeof google !== 'undefined' && google.accounts) initGIS();
+                return;
+            }
+            tokenClient.requestAccessToken({ prompt: 'consent' });
+        };
+        
+        window.handleSignout = () => {
+            if (confirm('Sign out?')) {
+                localStorage.clear();
+                location.reload();
+            }
+        };
+
+        // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
+        window.handleScan = async (limit) => {
+            if (!accessToken) return; // Silent return for auto-sync
+            
+            const btn = limit === 50 ? document.getElementById('scan-btn') : document.getElementById('deep-scan-btn');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> Syncing...';
+            
+            try {
+                log(`Starting fast sync (Parallel processing)...`);
+                let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&q=subject:"Transaction Confirmation" (from:Atome OR from:no-reply@atome.ph)`;
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
+                const data = await res.json();
+                const msgs = data.messages || [];
+                
+                if (msgs.length === 0) {
+                    log('No new transactions found.');
+                } else {
+                    log(`Parsing ${msgs.length} messages in parallel...`);
+                    
+                    // Parallel Processing with batches of 10
+                    const batchSize = 10;
+                    let savedCount = 0;
+                    
+                    for (let i = 0; i < msgs.length; i += batchSize) {
+                        const batch = msgs.slice(i, i + batchSize);
+                        const promises = batch.map(async (m) => {
+                            try {
+                                const detailRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}`, { headers: { 'Authorization': `Bearer ${accessToken}` }});
+                                const d = await detailRes.json();
+                                const txn = parseAtomeEmail(d.snippet, d.internalDate);
+                                if (txn) {
+                                    await setDoc(doc(db, "users", "guest-user", "transactions", txn.id), { ...txn, createdAt: serverTimestamp() }, { merge: true });
+                                    return true;
+                                }
+                            } catch (err) { return false; }
+                            return false;
+                        });
+                        
+                        const results = await Promise.all(promises);
+                        savedCount += results.filter(Boolean).length;
+                        log(`Processed batch ${Math.floor(i/batchSize) + 1}...`);
+                    }
+                    
+                    log(`Sync finished! ${savedCount} transactions processed.`);
+                    loadData();
+                }
+            } catch (e) { log('Scan error: ' + e.message, 'error'); }
+            finally {
+              btn.disabled = false;
+              btn.innerHTML = originalHTML;
+            }
+        };
+
+        function parseAtomeEmail(text, ts) {
+            const m = text.match(/payment of [^\d]*([\d,]+\.?\d*)\s+for\s+(.+?)\s+using/i);
+            if (!m) return null;
+            return {
+                id: 'txn_' + ts,
+                amount: parseFloat(m[1].replace(/,/g, '')),
+                merchant: m[2].trim(),
+                date: new Date(parseInt(ts)).toISOString().split('T')[0]
+            };
+        }
+
+        window.toggleTxnMenu = (e, id) => {
+            e.stopPropagation();
+            document.querySelectorAll('.dropdown-menu').forEach(m => {
+                if (m.id !== 'menu-' + id) m.classList.remove('show');
+            });
+            document.getElementById('menu-' + id).classList.toggle('show');
+        };
+
+        document.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('show'));
+        });
+
+        window.toggleExclusion = async (id, merchant, isCurrentlyExcluded) => {
+            try {
+                await updateDoc(doc(db, "users", "guest-user", "transactions", id), { excluded: !isCurrentlyExcluded });
+                log(`${isCurrentlyExcluded ? 'Included' : 'Excluded'}: ${merchant}`);
+                loadData();
+            } catch (e) { log('Toggle failed', 'error'); }
+        };
+
+        // --- CUSTOMIZATION MODALS ---
+        let currentTxnId = null;
+        const CATEGORIES = [
+            { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
+            { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
+            { id: 'Vehicle', icon: 'local_gas_station', label: 'Vehicle', cls: 'cat-vehicle' },
+            { id: 'Food & Drinks', icon: 'restaurant', label: 'Food & Drinks', cls: 'cat-food' },
+            { id: 'Service', icon: 'settings_cell', label: 'Service', cls: 'cat-service-magenta' },
+            { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
+            { id: 'Trading Expenses', icon: 'insights', label: 'Trading expenses', cls: 'cat-trading' },
+            { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
+            { id: 'Financial expenses', icon: 'payments', label: 'Financial expenses', cls: 'cat-financial' }
+        ];
+
+        window.closeModals = () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+            currentTxnId = null;
+        };
+
+        // Close on outside click
+        window.onclick = (e) => {
+            if (e.target.classList.contains('modal-overlay')) {
+                closeModals();
+            }
+        };
+
+        window.openCategoryModal = (id, merchant, currentCatId) => {
+            currentTxnId = id;
+            const grid = document.getElementById('cat-grid');
+            grid.innerHTML = CATEGORIES.map(cat => `
+                <div class="cat-option ${currentCatId === cat.id ? 'active' : ''}" onclick="window.saveCategory('${cat.id}')">
+                    <i class="material-icons ${cat.cls}" style="padding: 10px; border-radius: 12px;">${cat.icon}</i>
+                    <span>${cat.label}</span>
+                </div>
+            `).join('');
+            document.getElementById('cat-modal').classList.add('show');
+        };
+
+        window.saveCategory = async (catId) => {
+            if (!currentTxnId) return;
+            try {
+                await updateDoc(doc(db, "users", "guest-user", "transactions", currentTxnId), { manualCategory: catId });
+                showToast('Category updated');
+                closeModals();
+                loadData();
+            } catch (error) { log("Error saving category", "error"); }
+        };
+
+        window.openNoteModal = (id, merchant, note) => {
+            currentTxnId = id;
+            const input = document.getElementById('note-text');
+            const counter = document.getElementById('note-counter');
+            input.value = note || '';
+            counter.innerText = `${input.value.length}/30`;
+            
+            input.oninput = () => {
+                counter.innerText = `${input.value.length}/30`;
+            };
+
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveNote();
+                }
+            };
+            
+            document.getElementById('note-modal').classList.add('show');
+        };
+
+        window.openPriceModal = (id, currentAmt) => {
+            currentTxnId = id;
+            const modal = document.getElementById('price-modal');
+            const input = document.getElementById('price-input');
+            input.value = currentAmt;
+            modal.classList.add('show');
+            setTimeout(() => input.focus(), 100);
+
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') savePrice();
+            };
+        };
+
+        const savePrice = async () => {
+            if (!currentTxnId) return;
+            const val = document.getElementById('price-input').value;
+            const amt = parseFloat(val);
+            try {
+                const docRef = doc(db, "users", "guest-user", "transactions", currentTxnId);
+                if (isNaN(amt) || val.trim() === "") {
+                    await updateDoc(docRef, { manualAmount: deleteField() });
+                } else {
+                    await updateDoc(docRef, { manualAmount: amt });
+                }
+                showToast('Price updated');
+                closeModals();
+                loadData();
+            } catch (error) { log("Error saving price", "error"); }
+        };
+        window.savePrice = savePrice;
+
+        document.getElementById('save-note-btn').onclick = async () => {
+            if (!currentTxnId) return;
+            const note = document.getElementById('note-text').value.trim();
+            try {
+                await updateDoc(doc(db, "users", "guest-user", "transactions", currentTxnId), { note: note });
+                showToast('Note saved');
+                closeModals();
+                loadData();
+            } catch (error) { log("Error saving note", "error"); }
+        };
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-box');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function displayCategoryName(id) {
+            const cat = CATEGORIES.find(c => c.id === id);
+            return cat ? cat.label : id;
+        }
+
+        // MERCHANT MAPPING & CATEGORIZATION
+        function getMerchantDisplay(name = '', t = {}) {
+            let raw = name.toUpperCase();
+            
+            // 1. GENERAL CLEANUP (Remove PHL, Locations, messy suffixes)
+            let cleaned = name
+                .replace(/\s+PHL$/i, '')
+                .replace(/\s+CEBU\s+CITY\s+PHL$/i, '')
+                .replace(/\s+CEBU\s+CITY$/i, '')
+                .replace(/\s+DUBAI\s+ARE$/i, '')
+                .replace(/\s+LONDON\s+GBR$/i, '')
+                .replace(/\s+PH\s+PHL$/i, '')
+                .replace(/\s+PH$/i, '')
+                .trim();
+            
+            // 2. PATTERN REPLACEMENT
+            if (cleaned.toUpperCase().includes('GADC') || cleaned.toUpperCase().includes('MCDONALDS') || cleaned.toUpperCase().includes('MCDO')) {
+                let u = cleaned.toUpperCase();
+                if (u.includes('SOUTHCBU') || u.includes('325CLN')) {
+                    cleaned = 'MCDONALDS SOUTH CEBU';
+                } else {
+                    // Standardize prefix
+                    cleaned = cleaned.replace(/(GADC|MCDONALDS|MCDO)/i, 'MCDONALDS').trim();
+                    // Strip alphanumeric codes like 325CLNS... but keep what's after if it looks like a name
+                    cleaned = cleaned.replace(/MCDONALDS\s+\d+[A-Z]*/i, 'MCDONALDS').trim();
+                }
+            }
+            
+            if (cleaned.toUpperCase().includes('JOLLIBEE')) {
+                cleaned = cleaned.replace(/JB\d+\s+\w+/i, '').trim();
+            }
+
+            if (cleaned.toUpperCase().includes('RIBSHACK')) {
+                 cleaned = cleaned.replace(/PH\d+/i, '').trim();
+            }
+
+            if (cleaned.toUpperCase().includes('SHOPEE')) {
+                cleaned = 'SHOPEE PH';
+            }
+
+            if (cleaned.toUpperCase().includes('TRADERSCONNECT')) {
+                cleaned = 'TRADERS CONNECT';
+            }
+
+            if (cleaned.toUpperCase().includes('TIKTOK SHOP')) {
+                cleaned = 'TIKTOK SHOP';
+            }
+
+            if (cleaned.toUpperCase().includes('SPOTIFY')) {
+                cleaned = 'SPOTIFY';
+            }
+
+            let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
+
+            // 3. MANUAL OVERRIDE (USER CHOICE)
+            if (t.manualCategory) {
+                const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
+                if (userCat) {
+                    display.category = userCat.id;
+                    display.icon = userCat.icon;
+                    // Find catClass
+                    const catMap = {
+                        'Online shopping': 'cat-online',
+                        'Shopping': 'cat-shopping',
+                        'Vehicle': 'cat-vehicle',
+                        'Trade Copier': 'cat-aqua',
+                        'Trading Expenses': 'cat-trading',
+                        'Service': 'cat-service-magenta',
+                        'Food & Drinks': 'cat-food',
+                        'Life & Entertainment': 'cat-life',
+                        'Financial expenses': 'cat-financial'
+                    };
+                    display.catClass = catMap[userCat.id] || 'cat-financial';
+                    return display;
+                }
+            }
+
+            // 4. EXACT OVERRIDES
+            const mapping = {
+                'MR DIY BGCC BOGO': 'MR DIY BOGO',
+                'MR DIY ZBOG BOGO': 'MR DIY BOGO',
+                'TEC FUEL SAN REMIGIO': 'TECFUEL SAN REMIGIO',
+                'J AND L SHOPPING BOGO': 'J AND L MALL BOGO',
+                'TECFUEL BOGO CEBU': 'TECFUEL BOGO',
+                'KKV SM J Mall Cebu': 'KKV SM J MALL CEBU',
+                'SM STORE-CEBU': 'SM STORE - CEBU CITY',
+                'GLOBE-BILLSPAY PH': 'GLOBE / GOMO LOAD',
+                'SHELL FILLWISE BOGO CEBU': 'SHELL BOGO CEBU',
+                'GLOBE WEBLOADING EC PH': 'GLOBE / GOMO LOAD',
+                'WATSONS HISOLER BLDG B': 'WATSONS HISOLER BLDG BOGO',
+                'SUPER METRO S/M-BOGO': 'SUPER METRO BOGO',
+                'SM SUPERMARKET SM SRP CEBU': 'SM SUPERMARKET SRP',
+                'OCTAGON AYALA CENTRAL CEBU': 'OCTAGON AYALA CENTRAL CEBU',
+                'STARBUCKS 540 CENTRAL CEBU CITY': 'STARBUCKS 540 CENTRAL CEBU CITY',
+                'ICE SKATING SM SRP CEB': 'ICE SKATING SM SRP CEBU',
+                'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND',
+                'MRCRMT': 'MRCRMT',
+                'TRADERSCONNECT.COM': 'TRADERS CONNECT',
+                'TRADERSCONNECT': 'TRADERS CONNECT',
+                'TRADERSCONNECT.COM': 'TRADERS CONNECT'
+            };
+
+            const finalRaw = cleaned.toUpperCase();
+            if (mapping[cleaned]) display.name = mapping[cleaned];
+            else if (mapping[finalRaw]) display.name = mapping[finalRaw];
+
+            // 5. CATEGORY DETECTION
+            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
+                display.category = 'Online shopping';
+                display.icon = 'shopping_bag';
+                display.catClass = 'cat-online';
+            } else if (finalRaw.includes('FUEL') || finalRaw.includes('SHELL') || finalRaw.includes('TECFUEL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL')) {
+                display.category = 'Vehicle';
+                display.icon = 'local_gas_station';
+                display.catClass = 'cat-vehicle';
+            } else if (finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS') || finalRaw.includes('SM STORE') || finalRaw.includes('KKV') || finalRaw.includes('SHOPPING') || finalRaw.includes('MALL') || finalRaw.includes('METRO') || finalRaw.includes('SUPERMARKET') || finalRaw.includes('OCTAGON')) {
+                display.category = 'Shopping';
+                display.icon = 'shopping_cart';
+                display.catClass = 'cat-shopping';
+            } else if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
+                display.category = 'Trade Copier';
+                display.icon = 'hub';
+                display.catClass = 'cat-aqua';
+            } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
+                display.category = 'Trading Expenses';
+                display.icon = 'insights';
+                display.catClass = 'cat-trading';
+            } else if (finalRaw.includes('GLOBE') || finalRaw.includes('GOMO') || finalRaw.includes('BILLSPAY')) {
+                display.category = 'Service';
+                display.icon = 'settings_cell';
+                display.catClass = 'cat-service-magenta';
+            } else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('MCDONALDS') || finalRaw.includes('FOOD') || finalRaw.includes('RESTAURANT') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) {
+                display.category = 'Food & Drinks';
+                display.icon = 'restaurant';
+                display.catClass = 'cat-food';
+            } else if (finalRaw.includes('ICE SKATING') || finalRaw.includes('CINEMA') || finalRaw.includes('ENTERTAINMENT') || finalRaw.includes('SPOTIFY') || finalRaw.includes('NETFLIX')) {
+                display.category = 'Life & Entertainment';
+                display.icon = 'confirmation_number';
+                display.catClass = 'cat-life';
+            }
+
+            return display;
+        }
+
+        function log(msg, type = 'info') {
+            const container = document.getElementById('log-container');
+            if (!container) return;
+            const div = document.createElement('div');
+            div.className = `log-entry ${type === 'error' ? 'log-error' : ''}`;
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+    </script>
+    
+    <!-- CATEGORY MODAL -->
+    <div id="cat-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-header">Change Category</div>
+            <p style="color: #64748b; font-size: 13px;">Select a new category for this transaction.</p>
+            <div class="modal-body">
+                <div id="cat-grid" class="cat-grid">
+                    <!-- Categories injected here -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <div class="cancel-link" onclick="closeModals()">CANCEL</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTE MODAL -->
+    <div id="note-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-header">Add Note</div>
+            <p style="color: #64748b; font-size: 13px;">Personalized note for this transaction.</p>
+            <div class="modal-body">
+                <div style="position: relative;">
+                    <textarea id="note-text" class="note-input" maxlength="30" placeholder="Enter note here..."></textarea>
+                    <div id="note-counter" style="position: absolute; right: 8px; bottom: 8px; font-size: 10px; color: #94a3b8; font-weight: 600;">0/30</div>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 8px; align-items: center;">
+                <div class="cancel-link" onclick="closeModals()" style="letter-spacing: 0.5px; margin-right: 4px;">CANCEL</div>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" id="save-note-btn" style="border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #2196F3;">SAVE NOTE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRICE MODAL -->
+    <div id="price-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-header">Change Price</div>
+            <p style="color: #64748b; font-size: 13px;">Update the transaction amount manually.</p>
+            <div class="modal-body">
+                <div style="position: relative;">
+                    <input type="number" id="price-input" class="note-input" style="min-height: auto; font-size: 18px; font-weight: 700; text-align: center;" placeholder="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 8px; align-items: center;">
+                <div class="cancel-link" onclick="closeModals()" style="letter-spacing: 0.5px; margin-right: 4px;">CANCEL</div>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="savePrice()" style="border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #2196F3;">SAVE PRICE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST BOX -->
+    <div id="toast-box" class="toast-container">
+        <i class="material-icons">check_circle</i>
+        <span id="toast-msg">Updated</span>
+    </div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>

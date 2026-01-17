@@ -966,7 +966,11 @@
                             </div>`;
                     } else {
                         renderHistory(txns);
-                        // Persist filter
+                        
+                        // Apply active category filter
+                        if (window.filterTxnList) filterTxnList();
+
+                        // Persist chart filter
                         const savedFilter = localStorage.getItem('wallet_chart_filter') || 'this_month';
                         const filterEl = document.getElementById('chart-filter');
                         if (filterEl) {
@@ -2511,7 +2515,7 @@
                         'Financial Expenses': 'cat-financial',
                         'Transportation': 'cat-vehicle',
                         'Travel': 'cat-aqua',
-                        'Education': 'cat-shopping', /* Blue */
+                        'Education': 'cat-education', /* Blue */
                         'Sport': 'cat-life',
                         'Income': 'cat-income'
                     };
@@ -2853,24 +2857,52 @@
         };
 
         window.filterTxnList = () => {
-            const cat = document.getElementById('txn-cat-filter').value;
+            const catSelection = document.getElementById('txn-cat-filter').value;
             const accordions = document.querySelectorAll('.month-accordion');
             
             accordions.forEach(acc => {
                 const txns = acc.querySelectorAll('.premium-txn');
                 let visibleCount = 0;
+                let filteredTotal = 0;
                 
                 txns.forEach(t => {
-                    const itemCat = t.querySelector('.txn-sub span:last-child')?.innerText || '';
-                    const matchCat = (cat === 'all') || (itemCat.toLowerCase() === cat.toLowerCase());
+                    const itemCatId = t.dataset.category || '';
+                    const itemCatLabel = displayCategoryName(itemCatId); 
+                    
+                    const matchCat = (catSelection === 'all') || 
+                                   (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
+                                   (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
 
                     if (matchCat) {
                         t.style.display = 'flex';
                         visibleCount++;
+                        
+                        // Calculate total for header
+                        const isExcluded = t.classList.contains('txn-excluded') || t.dataset.excluded === 'true';
+                        const isRefund = t.dataset.refund === 'true';
+                        
+                        if (!isExcluded && !isRefund) {
+                             const amt = parseFloat(t.dataset.amount) || 0;
+                             const isIncome = (itemCatId === 'Income' || itemCatLabel === 'Income');
+                             
+                             if (catSelection === 'all') {
+                                 // Default: Total = Sum of all non-income expenses
+                                 if (!isIncome) filteredTotal += amt;
+                             } else {
+                                 // Specific filter: Sum everything that matched (Income or Expense)
+                                 filteredTotal += amt;
+                             }
+                        }
                     } else {
                         t.style.display = 'none';
                     }
                 });
+
+                // Update Header Total for this month
+                const totalEl = acc.querySelector('.month-total');
+                if (totalEl) {
+                    totalEl.innerText = `₱${filteredTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                }
 
                 // Hide the whole accordion if no visible items
                 acc.style.display = visibleCount > 0 ? 'block' : 'none';
@@ -3012,10 +3044,10 @@
 
     <!-- MANUAL TRANSACTION MODAL -->
     <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
-        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 94vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
+        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 95vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
             
             <!-- Swipe Handle Area (includes title) -->
-            <div id="modal-drag-handle" style="width: 100%; padding: max(12px, env(safe-area-inset-top)) 0 0 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
+            <div id="modal-drag-handle" style="width: 100%; padding: max(30px, env(safe-area-inset-top)) 0 0 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
                 <div style="display: flex; justify-content: center; margin-bottom: 12px;">
                     <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                 </div>
@@ -3169,6 +3201,18 @@
         <span id="toast-msg">Updated</span>
     </div>
 
+    <script>
+        // --- PREVENT PINCH-TO-ZOOM ---
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        document.addEventListener('gesturestart', (e) => {
+            e.preventDefault();
+        });
+    </script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
 </html>

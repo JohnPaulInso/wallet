@@ -27,60 +27,159 @@
         .mui-container { width: 100%; max-width: 100% !important; margin: 0; padding: 0 20px; }
 
         /* CALENDAR STYLES */
-        .calendar-card { background: #fff; border-radius: 28px; padding: 24px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .calendar-card { background: #fff; border-radius: 28px; padding: 20px 16px; margin-top: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.06); border: 1px solid #f1f5f9; width: 100%; overflow: hidden; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 8px; }
         .current-month { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
         .nav-btns { display: flex; gap: 8px; }
-        .nav-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
+        .nav-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); color: #64748b; }
         .nav-btn:hover { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; transform: scale(1.05); }
+        .nav-btn:active { transform: scale(0.95); }
 
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-        .weekday { text-align: center; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 12px; }
-        .day-cell { aspect-ratio: 1/1.4; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; position: relative; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; background: #fafafa; }
-        .day-cell:hover { background: #f1f5f9; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-        .day-cell.today { background: #eff6ff; border-color: #93c5fd; }
-        .day-cell.selected { background: #3b82f6; color: #fff; box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); transform: translateY(-2px); }
-        .day-cell.other-month { opacity: 0.25; pointer-events: none; background: transparent; }
-        .day-num { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; width: 100%; }
+        .weekday { text-align: center; font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 8px; }
         
-        /* Balance chips on calendar dates */
-        .balance-chips { display: flex; flex-direction: column; gap: 3px; margin-top: auto; margin-bottom: 6px; width: 100%; padding: 0 4px; }
-        .balance-chip { display: flex; align-items: center; justify-content: center; gap: 2px; padding: 3px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; white-space: nowrap; }
-        .balance-chip.income { background: #d1fae5; color: #059669; }
-        .balance-chip.expense { background: #fee2e2; color: #dc2626; }
-        .balance-chip i { font-size: 10px; }
-        .selected .balance-chip.income { background: rgba(255,255,255,0.25); color: #fff; }
-        .selected .balance-chip.expense { background: rgba(255,255,255,0.25); color: #fff; }
+        .day-cell { 
+            min-height: 80px; 
+            border-radius: 14px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 6px 2px;
+            position: relative; 
+            cursor: pointer; 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            border: 1.5px solid transparent;
+            background: #fafbfc;
+            overflow: hidden;
+        }
+        .day-cell:hover { 
+            background: #f1f5f9; 
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+        }
+        .day-cell.today { 
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+            border-color: #3b82f6;
+        }
+        .day-cell.selected { 
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+            color: #fff; 
+            border-color: #1d4ed8;
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.3);
+            z-index: 10;
+        }
+        .day-cell.other-month { opacity: 0.2; pointer-events: none; background: transparent; }
+        .day-num { 
+            font-size: 14px; 
+            font-weight: 800; 
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+        .day-cell.selected .day-num { color: #fff; }
+        
+        /* Amount Chips on Calendar */
+        .day-amounts { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 2px; 
+            width: 100%;
+            padding: 0 4px;
+        }
+        .amount-chip { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            padding: 2px 4px; 
+            border-radius: 6px; 
+            font-size: 7px; 
+            font-weight: 800;
+            gap: 2px;
+            white-space: nowrap;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .amount-chip.income { 
+            background: #dcfce7; 
+            color: #16a34a;
+        }
+        .amount-chip.expense { 
+            background: #fee2e2; 
+            color: #ef4444;
+        }
+        .day-cell.selected .amount-chip { 
+            background: rgba(255,255,255,0.2); 
+            color: #fff;
+            border-color: rgba(255,255,255,0.3);
+            backdrop-filter: blur(4px);
+        }
+        .day-cell.selected .amount-chip.expense { color: #fff; }
+        .day-cell.selected .amount-chip.income { color: #fff; }
+        .amount-chip i { font-size: 8px; }
 
-        /* CHIPS VIEW */
+        /* TRANSACTION LIST DESIGN (Same as main index) */
         .day-details { margin-top: 24px; }
-        .details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 0 4px; }
         .details-date { font-size: 15px; font-weight: 800; color: #1e293b; }
-        .no-txns { text-align: center; padding: 40px 20px; color: #94a3b8; border: 1px dashed #e2e8f0; border-radius: 16px; font-size: 13px; font-weight: 500; }
+        .no-txns { text-align: center; padding: 40px 20px; color: #94a3b8; border: 2px dashed #e2e8f0; border-radius: 20px; font-size: 13px; font-weight: 600; background: #fafbfc; }
 
-        .txn-chip { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 16px; margin-bottom: 12px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .txn-chip { 
+            display: flex; 
+            align-items: center; 
+            gap: 16px; 
+            padding: 16px; 
+            background: #fff; 
+            border-radius: 18px; 
+            margin-bottom: 12px; 
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03); 
+            border: 1px solid #f1f5f9;
+            transition: all 0.2s ease;
+        }
         .txn-chip:active { transform: scale(0.98); }
-        .txn-chip.expense { background: #fef2f2; border: 1.5px solid #fecaca; }
-        .txn-chip.income { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
         
-        .txn-chip-left { display: flex; align-items: center; gap: 14px; }
-        .txn-chip-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-        .expense .txn-chip-icon { background: #fff; color: #ef4444; border: 1.5px solid #fecaca; }
-        .income .txn-chip-icon { background: #fff; color: #10b981; border: 1.5px solid #bbf7d0; }
-        .txn-chip-icon i { font-size: 20px; }
+        .txn-chip-icon { 
+            width: 48px; 
+            height: 48px; 
+            border-radius: 14px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            position: relative;
+            flex-shrink: 0;
+            background: #f8fafc;
+        }
+        /* CATEGORY COLORS */
+        .cat-online { background: #ffedd5 !important; color: #ea580c !important; }
+        .cat-shopping { background: #dbeafe !important; color: #1d4ed8 !important; }
+        .cat-vehicle { background: #f3e8ff !important; color: #7e22ce !important; }
+        .cat-aqua { background: #e0f2fe !important; color: #0369a1 !important; }
+        .cat-trading { background: #ecfdf5 !important; color: #059669 !important; }
+        .cat-service-magenta { background: #fdf2f8 !important; color: #be185d !important; }
+        .cat-food { background: #fef3c7 !important; color: #d97706 !important; }
+        .cat-life { background: #f0fdf4 !important; color: #16a34a !important; }
+        .cat-financial { background: #fee2e2 !important; color: #dc2626 !important; }
+        .cat-education { background: #eff6ff !important; color: #1d4ed8 !important; }
+        .cat-income { background: #dcfce7 !important; color: #16a34a !important; }
+
+        .txn-chip-icon i { font-size: 24px; color: inherit; }
         
-        .txn-chip-info { display: flex; flex-direction: column; gap: 2px; }
-        .txn-chip-name { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
-        .txn-chip-cat { font-size: 11px; font-weight: 600; color: #64748b; }
-        .txn-chip-amount { font-size: 15px; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.3px; }
-        .expense .txn-chip-amount { color: #dc2626; }
-        .income .txn-chip-amount { color: #059669; }
+        .txn-chip-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .txn-chip-name { font-size: 13px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .txn-chip-meta { font-size: 10px; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .txn-chip-note { font-size: 10px; color: #f97316; font-weight: 600; margin-top: 2px; }
+        
+        .txn-chip-amount-wrapper { text-align: right; flex-shrink: 0; }
+        .txn-chip-amount { font-size: 14px; font-weight: 700; color: #1e293b; }
+        .txn-chip.income .txn-chip-amount { color: #10B981; }
+        .txn-chip.expense .txn-chip-amount { color: #ef4444; }
+        .txn-chip-status { font-size: 9px; color: #94a3b8; font-weight: 600; }
+
 
         /* SUMMARY PILLS */
         .summary-pills { display: flex; gap: 12px; margin-bottom: 20px; }
-        .summary-pill { flex: 1; padding: 12px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #f1f5f9; }
-        .pill-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
-        .pill-value { font-size: 16px; font-weight: 800; }
+        .summary-pill { flex: 1; padding: 14px; border-radius: 18px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #f1f5f9; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .pill-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
+        .pill-value { font-size: 17px; font-weight: 800; }
         .expense-pill .pill-value { color: #ef4444; }
         .income-pill .pill-value { color: #16a34a; }
 
@@ -93,45 +192,77 @@
         .nav-item span { font-size: 11px; font-weight: 700; }
 
         /* CUSTOM CONTENT SECTION */
-        .custom-section { margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 24px; color: #fff; position: relative; overflow: hidden; }
+        .custom-section { margin-top: 32px; padding: 24px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 28px; color: #fff; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .custom-section::after { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%); pointer-events: none; }
-        .custom-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
-        .custom-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; }
-        .custom-btn { margin-top: 16px; background: #fff; color: #1e293b; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .custom-title { font-size: 18px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.2px; }
+        .custom-desc { font-size: 13px; color: #cbd5e1; line-height: 1.7; }
+        .custom-btn { margin-top: 18px; background: #fff; color: #1e293b; border: none; padding: 14px 22px; border-radius: 16px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        .custom-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.2); }
+        .custom-btn:active { transform: translateY(0); }
+
 
         /* TOAST */
         .toast-container { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); z-index: 2000; display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
         .toast-container.show { opacity: 1; bottom: 110px; pointer-events: auto; }
 
         /* MODAL */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 3000; display: none; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 3000; display: none; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
         .modal-overlay.show { display: flex; }
-        .modal-content { background: #fff; border-radius: 28px; width: 90%; max-width: 420px; max-height: 82vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.2); animation: slideUp 0.3s; }
-        .modal-header { padding: 24px 24px 18px; border-bottom: 1.5px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 10; border-radius: 28px 28px 0 0; }
-        .modal-title { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
-        .modal-close { width: 34px; height: 34px; border-radius: 50%; background: #f8fafc; border: 1.5px solid #e2e8f0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
-        .modal-close:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; transform: scale(1.05); }
-        .modal-body { padding: 20px 24px 28px; }
-        .modal-category-group { margin-bottom: 26px; }
-        .modal-category-header { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-        .modal-category-icon { width: 26px; height: 26px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-        .modal-txn-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 16px; margin-bottom: 10px; transition: all 0.2s; border: 1.5px solid; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .modal-txn-item.expense { background: #fef2f2; border-color: #fecaca; }
-        .modal-txn-item.income { background: #f0fdf4; border-color: #bbf7d0; }
-        .modal-txn-name { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
-        .modal-txn-amount { font-size: 14px; font-weight: 800; letter-spacing: -0.3px; }
-        .modal-txn-item.expense .modal-txn-amount { color: #dc2626; }
-        .modal-txn-item.income .modal-txn-amount { color: #059669; }
-        .modal-summary { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 16px; margin-top: 16px; border: 1px solid #e2e8f0; }
+        .modal-content { 
+            background: #fff; 
+            border-radius: 32px; 
+            width: 92%; 
+            max-width: 400px; 
+            max-height: 85vh; 
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.2); 
+            animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            overflow: hidden;
+        }
+        .modal-header { 
+            padding: 24px 24px 16px; 
+            border-bottom: 1px solid #f1f5f9; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: #fff; 
+            z-index: 10; 
+            flex-shrink: 0;
+        }
+        .modal-title { font-size: 16px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
+        .modal-close { width: 36px; height: 36px; border-radius: 50%; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); color: #64748b; }
+        .modal-close:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; transform: scale(1.1) rotate(90deg); }
+        .modal-close:active { transform: scale(0.95) rotate(90deg); }
+        .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+        .modal-category-group { margin-bottom: 24px; }
+        .modal-category-header { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .modal-category-icon { width: 28px; height: 28px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .modal-cat-txns { display: flex; flex-direction: column; gap: 8px; }
+        
+        #modal-footer { 
+            padding: 16px 24px 24px; 
+            background: #fff; 
+            border-top: 1px solid #f1f5f9; 
+            flex-shrink: 0;
+        }
+        .modal-summary { 
+            background: #f8fafc; 
+            border-radius: 20px; 
+            padding: 16px; 
+            border: 1px solid #e2e8f0; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
+        }
         .modal-summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .modal-summary-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px solid #e2e8f0; }
-        .modal-summary-label { font-size: 12px; font-weight: 700; color: #64748b; }
-        .modal-summary-value { font-size: 14px; font-weight: 800; }
-        .modal-summary-row.total .modal-summary-label { font-size: 14px; color: #1e293b; }
-        .modal-summary-row.total .modal-summary-value { font-size: 16px; color: #1d4ed8; }
+        .modal-summary-divider { height: 1px; background: #e2e8f0; margin: 12px 0; }
+        .modal-summary-label { font-size: 11px; font-weight: 700; color: #64748b; }
+        .modal-summary-value { font-size: 13px; font-weight: 800; }
+        .modal-summary-net { text-align: center; }
+        .modal-summary-net .label { font-size: 12px; font-weight: 800; color: #1e293b; margin-bottom: 2px; display: block; }
+        .modal-summary-net .value { font-size: 18px; font-weight: 800; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(40px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .spin { animation: spin 1s linear infinite; }
     </style>
@@ -169,15 +300,7 @@
                 </div>
             </div>
 
-            <div class="day-details">
-                <div class="details-header">
-                    <div class="details-date" id="selected-date-label">Today, Jan 17</div>
-                </div>
 
-                <div id="day-txns-container">
-                    <!-- Transactions for the day -->
-                </div>
-            </div>
 
             <div class="custom-section">
                 <div class="custom-title">Financial Insights</div>
@@ -227,6 +350,7 @@
             <div class="modal-body" id="modal-body">
                 <!-- Transaction details will be injected here -->
             </div>
+            <div id="modal-footer"></div>
         </div>
     </div>
 
@@ -263,6 +387,9 @@
                     }
                 }
                 loadData(user.uid);
+            } else {
+                // No user logged in - still show calendar with no transactions
+                renderCalendar();
             }
         });
 
@@ -271,13 +398,14 @@
             onSnapshot(q, (snap) => {
                 window.allTxns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
                 renderCalendar();
-                renderDayDetails();
             });
         }
 
         function renderCalendar() {
             const grid = document.getElementById('calendar-grid');
             const title = document.getElementById('calendar-title');
+            
+            if (!grid || !title) return;
             
             // Clear existing days
             const dayCells = grid.querySelectorAll('.day-cell');
@@ -310,121 +438,53 @@
                 if (today.toDateString() === cellDate.toDateString()) cell.classList.add('today');
                 if (selectedDate && selectedDate.toDateString() === cellDate.toDateString()) cell.classList.add('selected');
 
-                // Balance chips for transactions
+                // Calculate totals for this day (only included transactions)
                 const dayTxns = window.allTxns.filter(t => t.date === dateStr && !t.excluded && !t.refund);
                 
-                // Calculate totals
-                let totalExpense = 0;
+                let totalExpenses = 0;
                 let totalIncome = 0;
                 
-                dayTxns.forEach(t => {
-                    const mapped = getMerchantDisplay(t.merchant, t);
-                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                    if (mapped.category === 'Income') {
-                        totalIncome += amt;
-                    } else {
-                        totalExpense += amt;
-                    }
-                });
+                try {
+                    dayTxns.forEach(t => {
+                        const mapped = getMerchantDisplay(t.merchant, t);
+                        const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                        
+                        if (mapped.category === 'Income') {
+                            totalIncome += amt;
+                        } else {
+                            totalExpenses += amt;
+                        }
+                    });
+                } catch (error) {}
 
-                let chipsHTML = '<div class="balance-chips">';
-                
-                // Show net balance or separate chips
-                const netBalance = totalIncome - totalExpense;
-                
-                if (totalIncome > 0 && totalExpense > 0) {
-                    // Show net balance
-                    if (netBalance > 0) {
-                        chipsHTML += `<div class="balance-chip income"><i class="material-icons">trending_up</i>+${netBalance.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
-                    } else if (netBalance < 0) {
-                        chipsHTML += `<div class="balance-chip expense"><i class="material-icons">trending_down</i>${netBalance.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
-                    }
-                } else {
-                    // Show individual chips
-                    if (totalIncome > 0) {
-                        chipsHTML += `<div class="balance-chip income"><i class="material-icons">trending_up</i>+${totalIncome.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
-                    }
-                    if (totalExpense > 0) {
-                        chipsHTML += `<div class="balance-chip expense"><i class="material-icons">trending_down</i>-${totalExpense.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
-                    }
+                // Build amount chips
+                let amountChipsHTML = '<div class="day-amounts">';
+                if (totalIncome > 0) {
+                    const formattedIncome = totalIncome >= 1000 
+                        ? `${(totalIncome / 1000).toFixed(1)}k` 
+                        : `${Math.round(totalIncome)}`;
+                    amountChipsHTML += `<div class="amount-chip income"><i class="material-icons">trending_up</i> ${formattedIncome}</div>`;
                 }
-                
-                chipsHTML += '</div>';
+                if (totalExpenses > 0) {
+                    const formattedExpense = totalExpenses >= 1000 
+                        ? `${(totalExpenses / 1000).toFixed(1)}k` 
+                        : `${Math.round(totalExpenses)}`;
+                    amountChipsHTML += `<div class="amount-chip expense"><i class="material-icons">trending_down</i> ${formattedExpense}</div>`;
+                }
+                amountChipsHTML += '</div>';
 
-                cell.innerHTML = `<span class="day-num">${d}</span>${chipsHTML}`;
+                cell.innerHTML = `<span class="day-num">${d}</span>${amountChipsHTML}`;
                 cell.onclick = () => {
                     selectedDate = new Date(year, month, d);
                     renderCalendar();
-                    renderDayDetails();
-                    openModal(selectedDate); // Open modal with transaction details
+                    openModal(selectedDate);
                 };
                 grid.appendChild(cell);
             }
         }
 
-        function renderDayDetails() {
-            const container = document.getElementById('day-txns-container');
-            const label = document.getElementById('selected-date-label');
-            
-            const options = { weekday: 'long', month: 'short', day: 'numeric' };
-            label.innerText = selectedDate.toLocaleDateString('en-US', options);
 
-            const dateStr = selectedDate.toISOString().split('T')[0];
-            // Filter to only show INCLUDED transactions (not excluded, not refunded)
-            const dayTxns = window.allTxns.filter(t => t.date === dateStr && !t.excluded && !t.refund);
 
-            if (dayTxns.length === 0) {
-                container.innerHTML = `<div class="no-txns">No transactions recorded for this day.</div>`;
-                return;
-            }
-
-            // Group & Sort: Expenses first, then income
-            const expenses = dayTxns.filter(t => {
-                const mapped = getMerchantDisplay(t.merchant, t);
-                return mapped.category !== 'Income';
-            });
-            const income = dayTxns.filter(t => {
-                const mapped = getMerchantDisplay(t.merchant, t);
-                return mapped.category === 'Income';
-            });
-
-            container.innerHTML = '';
-            
-            // Render Expenses
-            expenses.forEach(t => {
-                const mapped = getMerchantDisplay(t.merchant, t);
-                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                container.appendChild(createTxnChip(t, mapped, amt, 'expense'));
-            });
-
-            // Render Income
-            income.forEach(t => {
-                const mapped = getMerchantDisplay(t.merchant, t);
-                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                container.appendChild(createTxnChip(t, mapped, amt, 'income'));
-            });
-        }
-
-        function createTxnChip(t, mapped, amt, type) {
-            const chip = document.createElement('div');
-            chip.className = `txn-chip ${type}`;
-            if (t.excluded) chip.style.opacity = '0.5';
-            
-            const name = type === 'income' ? 'INCOME' : mapped.name;
-            const category = displayCategoryName(mapped.category);
-
-            chip.innerHTML = `
-                <div class="txn-chip-left">
-                    <div class="txn-chip-icon"><i class="material-icons">${mapped.icon}</i></div>
-                    <div class="txn-chip-info">
-                        <span class="txn-chip-name">${name}</span>
-                        <span class="txn-chip-cat">${category}</span>
-                    </div>
-                </div>
-                <div class="txn-chip-amount">${type === 'expense' ? '-' : '+'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-            `;
-            return chip;
-        }
 
         window.changeMonth = (delta) => {
             currentViewDate.setMonth(currentViewDate.getMonth() + delta);
@@ -607,11 +667,12 @@
             chip.className = `txn-chip ${type}`;
             if (t.excluded) chip.style.opacity = '0.5';
             
-            const name = type === 'income' ? 'INCOME' : mapped.name;
+            const name = type === 'income' ? 'INCOME' : (mapped.name || 'Unknown');
             const category = displayCategoryName(mapped.category);
+            const dateStr = new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
             // LOGO DETECTION
-            const mUpper = mapped.name.toUpperCase();
+            const mUpper = name.toUpperCase();
             let logo = null;
             if (mUpper.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
             else if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) logo = 'logos/mcdo.png';
@@ -626,20 +687,29 @@
             else if (mUpper.includes('TRADERS')) logo = 'logos/tradersconnect.png';
             else if (mUpper.includes('7/11') || mUpper.includes('7 11')) logo = 'logos/711.png';
 
-            const logoHTML = logo ? `<div style="position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; background: white; border-radius: 50%; padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;"><img src="${logo}" style="width: 100%; height: 100%; object-fit: contain;"></div>` : '';
+            const logoHTML = logo ? `
+                <div style="position: absolute; bottom: -4px; right: -4px; width: 22px; height: 22px; background: white; border-radius: 50%; padding: 2px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; z-index: 2; border: 1.5px solid #fff;">
+                    <img src="${logo}" style="width: 100%; height: 100%; object-fit: contain; border-radius: 50%;">
+                </div>` : '';
 
             chip.innerHTML = `
-                <div class="txn-chip-left">
-                    <div class="txn-chip-icon" style="position: relative;">
-                        <i class="material-icons">${mapped.icon}</i>
-                        ${logoHTML}
-                    </div>
-                    <div class="txn-chip-info">
-                        <span class="txn-chip-name">${name}</span>
-                        <span class="txn-chip-cat">${category}</span>
-                    </div>
+                <div class="txn-chip-icon ${mapped.catClass || ''}">
+                    <i class="material-icons">${mapped.icon}</i>
+                    ${logoHTML}
                 </div>
-                <div class="txn-chip-amount">${type === 'expense' ? '-' : '+'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                <div class="txn-chip-info">
+                    <span class="txn-chip-name">${name}</span>
+                    <div class="txn-chip-meta">
+                        <span>${dateStr}</span>
+                        <span>•</span>
+                        <span>${category}</span>
+                    </div>
+                    ${t.note ? `<div class="txn-chip-note">${t.note}</div>` : ''}
+                </div>
+                <div class="txn-chip-amount-wrapper">
+                    <div class="txn-chip-amount">${type === 'expense' ? '-' : '+'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div class="txn-chip-status">Wallet</div>
+                </div>
             `;
             return chip;
         }
@@ -653,7 +723,12 @@
             const options = { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' };
             modalTitle.innerText = date.toLocaleDateString('en-US', options);
             
-            const dateStr = date.toISOString().split('T')[0];
+            // Fix: Use local date string instead of toISOString to avoid timezone shifting
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const dStr = String(date.getDate()).padStart(2, '0');
+            const dateStr = `${y}-${m}-${dStr}`;
+            
             // Filter to only show INCLUDED transactions (not excluded, not refunded)
             const dayTxns = window.allTxns.filter(t => t.date === dateStr && !t.excluded && !t.refund);
             
@@ -677,29 +752,20 @@
                 if (!categoryGroups[category]) {
                     categoryGroups[category] = {
                         icon: mapped.icon,
-                        catClass: mapped.catClass,
                         transactions: [],
                         isIncome: isIncome
                     };
                 }
                 
-                categoryGroups[category].transactions.push({
-                    name: isIncome ? 'INCOME' : mapped.name,
-                    amount: amt,
-                    type: isIncome ? 'income' : 'expense'
-                });
+                categoryGroups[category].transactions.push(t);
                 
-                if (isIncome) {
-                    totalIncome += amt;
-                } else {
-                    totalExpenses += amt;
-                }
+                if (isIncome) totalIncome += amt;
+                else totalExpenses += amt;
             });
             
             // Render modal content
-            let html = '';
+            let bodyHTML = '';
             
-            // Sort categories: Expenses first, then Income
             const sortedCategories = Object.keys(categoryGroups).sort((a, b) => {
                 if (a === 'Income') return 1;
                 if (b === 'Income') return -1;
@@ -710,7 +776,7 @@
                 const group = categoryGroups[category];
                 const catInfo = CATEGORIES.find(c => c.id === category) || { label: category, icon: 'payments' };
                 
-                html += `
+                bodyHTML += `
                     <div class="modal-category-group">
                         <div class="modal-category-header">
                             <div class="modal-category-icon" style="background: ${group.isIncome ? '#dcfce7' : '#fee2e2'}; color: ${group.isIncome ? '#16a34a' : '#ef4444'};">
@@ -718,23 +784,16 @@
                             </div>
                             <span>${catInfo.label}</span>
                         </div>
+                        <div class="modal-cat-txns"></div>
+                    </div>
                 `;
-                
-                group.transactions.forEach(txn => {
-                    html += `
-                        <div class="modal-txn-item ${txn.type}">
-                            <div class="modal-txn-name">${txn.name}</div>
-                            <div class="modal-txn-amount">${txn.type === 'expense' ? '-' : '+'} ₱${txn.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                        </div>
-                    `;
-                });
-                
-                html += `</div>`;
             });
             
-            // Add summary
+            modalBody.innerHTML = bodyHTML;
+
+            // Add summary to footer
             const netAmount = totalIncome - totalExpenses;
-            html += `
+            document.getElementById('modal-footer').innerHTML = `
                 <div class="modal-summary">
                     <div class="modal-summary-row">
                         <div class="modal-summary-label">Total Expenses</div>
@@ -744,14 +803,28 @@
                         <div class="modal-summary-label">Total Income</div>
                         <div class="modal-summary-value" style="color: #16a34a;">+ ₱${totalIncome.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                     </div>
-                    <div class="modal-summary-row total">
-                        <div class="modal-summary-label">Net</div>
-                        <div class="modal-summary-value" style="color: ${netAmount >= 0 ? '#16a34a' : '#ef4444'};">${netAmount >= 0 ? '+' : ''} ₱${netAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div class="modal-summary-divider"></div>
+                    <div class="modal-summary-net">
+                        <span class="label">Net Balance</span>
+                        <div class="value" style="color: ${netAmount >= 0 ? '#16a34a' : '#ef4444'};">${netAmount >= 0 ? '+' : ''} ₱${netAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                     </div>
                 </div>
             `;
             
-            modalBody.innerHTML = html;
+            // Inject transaction chips into categories
+            sortedCategories.forEach(category => {
+                const group = categoryGroups[category];
+                const groupDiv = Array.from(modalBody.querySelectorAll('.modal-category-group')).find(d => d.querySelector('span').innerText === (CATEGORIES.find(c => c.id === category)?.label || category));
+                const listDiv = groupDiv.querySelector('.modal-cat-txns');
+                
+                group.transactions.forEach(t => {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    const type = mapped.category === 'Income' ? 'income' : 'expense';
+                    listDiv.appendChild(createTxnChip(t, mapped, amt, type));
+                });
+            });
+
             modal.classList.add('show');
         };
 
@@ -766,6 +839,9 @@
                 closeModal();
             }
         });
+
+        // INITIALIZE CALENDAR - Direct call at end of script
+        renderCalendar();
 
     </script>
 </body>

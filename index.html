@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SmartWallet Sync - MUI HTML</title>
+    <title>SmartWallet - JP</title>
+    <link rel="icon" type="image/png" href="applogo.png?v=3">
+    <link rel="apple-touch-icon" href="applogo.png">
     
     <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
@@ -23,10 +25,19 @@
             .mobile-wrapper { height: 100vh; overflow-y: scroll; }
         }
 
-        #header { padding: 30px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; }
-        .greeting-section { line-height: 1.2; }
-        .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
-        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; }
+        #header { padding: 30px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
+        .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
+        #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
+        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
+        #header.shrunk .user-name { font-size: 18px; }
+        
+        .header-logo { width: 42px; height: 42px; border-radius: 12px; object-fit: contain; transition: all 0.3s ease; }
+        #header.shrunk .header-logo { width: 32px; height: 32px; border-radius: 8px; }
+        
+        #profile-badge { transition: all 0.3s ease; }
+        #header.shrunk #profile-badge { transform: scale(0.8); }
         
         #profile-badge { width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; }
@@ -198,33 +209,30 @@
         .status-local { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
 
         .sticky-banner { 
-            position: fixed;
-            top: 100px; /* Below header */
-            left: 50%;
-            transform: translateX(-50%);
-            width: calc(100% - 48px);
-            max-width: 380px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            color: #1e293b; 
-            z-index: 999; 
+            position: relative;
+            margin: -10px 24px 20px 24px;
+            width: auto;
+            max-width: none;
+            background: #fff;
+            border-radius: 20px;
+            z-index: 100; 
             display: none; 
             align-items: center; 
             justify-content: space-between; 
-            padding: 12px 16px; 
-            border-radius: 20px;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            padding: 14px 20px; 
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 15px -5px rgba(0,0,0,0.05);
+            animation: slideInDown 0.4s ease-out;
         }
+        @keyframes slideInDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .banner-pill-btn { 
             background: #1e293b; 
             color: #fff; 
             border: none; 
-            padding: 8px 16px; 
-            border-radius: 12px; 
+            padding: 10px 20px; 
+            border-radius: 14px; 
             font-weight: 700; 
-            font-size: 12px; 
+            font-size: 13px; 
             cursor: pointer; 
             transition: all 0.2s; 
             text-transform: uppercase; 
@@ -241,8 +249,8 @@
         .month-accordion:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
-        .month-header .month-title { font-weight: 700; font-size: 0.85rem; color: #1e293b; }
-        .month-header .month-total { font-weight: 800; color: #1d4ed8; font-size: 0.85rem; }
+        .month-header .month-title { font-weight: 700; font-size: 0.8rem; color: #1e293b; }
+        .month-header .month-total { font-weight: 800; color: #1d4ed8; font-size: 0.8rem; }
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
@@ -300,7 +308,7 @@
         .dropdown-item.danger:hover { background: #fef2f2; }
 
         /* CATEGORY COLORS */
-        .cat-online { background: #ffedd5; color: #f97316; }
+        .cat-online { background: #fff7ed; color: #f97316; }
         .cat-shopping { background: #dbeafe; color: #3b82f6; }
         .cat-vehicle { background: #ede9fe; color: #8b5cf6; } 
         .cat-food { background: #fef9c3; color: #eab308; }
@@ -399,7 +407,7 @@
         .legend-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
         /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.02); }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
         .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
         .nav-item.active { color: #1d4ed8; }
@@ -504,9 +512,12 @@
 
     <div class="mobile-wrapper">
         <div id="header">
-            <div class="greeting-section">
-                <div class="greeting-text">GOOD MORNING</div>
-                <div class="user-name" id="user-display-name">Guest</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="applogo.png" alt="Logo" class="header-logo">
+                <div class="greeting-section">
+                    <div class="greeting-text">Hello,</div>
+                    <div class="user-name" id="user-display-name">Guest</div>
+                </div>
             </div>
             <div class="profile-container">
             <div id="profile-badge" onclick="toggleProfileDropdown(event)">
@@ -651,7 +662,7 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: #e0f2fe; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                         <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: #0284c7;">visibility</i>
-                        <span style="font-size: 11px; font-weight: 700; color: #0284c7;"></span>
+                       
                     </div>
                     <select id="txn-cat-filter" onchange="filterTxnList()" style="font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; cursor: pointer;">
                         <option value="all">All Items</option>
@@ -677,13 +688,13 @@
                 <i class="material-icons">account_balance_wallet</i>
                 <span>Wallet</span>
             </a>
-            <a href="accounts.html" class="nav-item">
-                <i class="material-icons">account_balance</i>
-                <span>Accounts</span>
-            </a>
             <a href="calendar.html" class="nav-item">
                 <i class="material-icons">calendar_today</i>
                 <span>Calendar</span>
+            </a>
+            <a href="accounts.html" class="nav-item">
+                <i class="material-icons">account_balance</i>
+                <span>Accounts</span>
             </a>
             <a href="goals.html" class="nav-item">
                 <i class="material-icons">track_changes</i>
@@ -841,8 +852,8 @@
                             <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
                          `;
                          banner.className = 'sticky-banner';
-                         const wrapper = document.querySelector('.mobile-wrapper');
-                         if (wrapper) wrapper.prepend(banner);
+                         const balanceCard = document.querySelector('.balance-card');
+                         if (balanceCard) balanceCard.after(banner);
                          else document.body.prepend(banner);
                      }
                      banner.style.display = 'flex';
@@ -944,8 +955,31 @@
                         }
                     });
                     
+                    // Sort locally: Newest to Oldest (Date Desc, then CreatedAt Desc)
+                    txns.sort((a, b) => {
+                        const dateA = new Date(a.date);
+                        const dateB = new Date(b.date);
+                        if (dateB - dateA !== 0) return dateB - dateA;
+                        
+                        const createA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
+                        const createB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
+                        return createB - createA;
+                    });
+                    
+                    // Sort locally: Newest to Oldest (Date Desc, then CreatedAt Desc)
+                    txns.sort((a, b) => {
+                        const dateA = new Date(a.date).getTime();
+                        const dateB = new Date(b.date).getTime();
+                        if (dateB !== dateA) return dateB - dateA;
+                        
+                        const createA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
+                        const createB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
+                        return createB - createA;
+                    });
+                    
                     // Store globally
                     window.allTxns = txns;
+                    updateMainWalletBalance(txns); // Update total balance regardless of period filter
 
                     if (txns.length === 0) {
                         // EMPTY STATE
@@ -1168,7 +1202,7 @@
             
             grandTotal = expenseTotal; // Chart shows Expenses only
 
-            // UPDATE WALLET BALANCE
+            // UPDATE WALLET BALANCE (Restored Interactivity)
             const balanceEl = document.querySelector('.balance-amount');
             if (balanceEl) {
                 const balance = incomeTotal - expenseTotal;
@@ -1572,9 +1606,8 @@
             // refreshChart is now called via filterChart separately, but we still need trend
             drawTrendChart(txns);
 
-            // Update ATM Card Balance - HARDCODED TO 0 AS REQUESTED
+            // Update ATM Card balance handled by refreshChart/updateMainWalletBalance
             const balanceEl = document.querySelector('.balance-amount');
-            if (balanceEl) balanceEl.innerText = `PHP 0.00`;
             
             const groups = {};
             txns.forEach(t => {
@@ -2211,6 +2244,7 @@
             } catch (error) { 
                 log("Error deleting: " + error.message, "error");
                 showToast('Delete failed');
+            } finally {
                 deleteBtn.disabled = false;
                 deleteBtn.innerHTML = originalText;
                 deleteBtn.style.opacity = '1';
@@ -2235,6 +2269,31 @@
             { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
             { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
         ];
+
+        // Function to update main wallet balance (Total All-Time)
+        function updateMainWalletBalance(allTxns) {
+            let incomeTotal = 0;
+            let expenseTotal = 0;
+            
+            allTxns.forEach(t => {
+                if (t.excluded || t.refund || t.deleted) return;
+                const mapped = getMerchantDisplay(t.merchant, t);
+                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                const cat = mapped.category;
+                
+                if (cat === 'Income') {
+                    incomeTotal += amt;
+                } else {
+                    expenseTotal += amt;
+                }
+            });
+            
+            const balanceEl = document.querySelector('.balance-amount');
+            if (balanceEl) {
+                const balance = incomeTotal - expenseTotal;
+                balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            }
+        }
 
         // Populate Transaction History Category Filter
         const populateTxnFilter = () => {
@@ -2701,10 +2760,11 @@
                 setTxnType('expense');
             }
             
-            // Enable Button
+            // Disable Button to prevent double taps
             const btn = document.getElementById('done-btn');
             btn.style.pointerEvents = 'auto';
             btn.style.opacity = '1';
+            btn.innerHTML = 'Done';
             
             // Update modal title
             document.getElementById('modal-title').innerText = 'Edit Transaction';
@@ -2714,10 +2774,9 @@
             
             // Block body scroll
             document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
+            // Removed position: fixed to avoid layout jumping
             
-            setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+            setTimeout(() => document.getElementById('manual-amt').focus(), 100);
         };
 
         window.renderManualCategories = () => {
@@ -2734,7 +2793,7 @@
                 
                 if (isSelected) {
                      if (cat.cls.includes('food')) { bgStyle = '#fefce8'; colorStyle = '#ca8a04'; } // Yellow
-                     else if (cat.cls.includes('shopping')) { bgStyle = '#fff7ed'; colorStyle = '#f97316'; } // Orange
+                     else if (cat.cls.includes('shopping') || cat.cls.includes('online')) { bgStyle = '#fff7ed'; colorStyle = '#f97316'; } // Orange
                      else if (cat.cls.includes('vehicle')) { bgStyle = '#f5f3ff'; colorStyle = '#8b5cf6'; }
                      else if (cat.cls.includes('cat-aqua')) { bgStyle = '#ecfeff'; colorStyle = '#0891b2'; } // Dark Aqua
                      else if (cat.cls.includes('Service')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
@@ -2795,33 +2854,30 @@
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 
-                // Check if editing or creating new
+                // Show loader on button
+                btn.style.pointerEvents = 'none';
+                btn.style.opacity = '0.7';
+                btn.innerHTML = '<i class="material-icons spin" style="font-size:16px;">sync</i>';
+
+                const updateData = {
+                    date: dateObj.toISOString(),
+                    amount: parseFloat(amtVal),
+                    manualAmount: parseFloat(amtVal),
+                    merchant: merchantName || cat.label,
+                    note: note || '',
+                    manualCategory: selectedManualCatId,
+                    category: selectedManualCatId,
+                    type: manualTxnType
+                };
+
                 if (window.editingTxnId) {
-                    // UPDATE existing transaction
-                    await updateDoc(doc(db, "users", uid, "transactions", window.editingTxnId), {
-                        date: dateObj.toISOString(),
-                        amount: parseFloat(amtVal),
-                        manualAmount: parseFloat(amtVal),
-                        merchant: merchantName || cat.label,
-                        note: note || '',
-                        manualCategory: selectedManualCatId,
-                        category: selectedManualCatId,
-                        type: manualTxnType
-                    });
+                    await updateDoc(doc(db, "users", uid, "transactions", window.editingTxnId), updateData);
                     showToast('Transaction updated');
                 } else {
-                    // CREATE new transaction
-                    const newTxn = {
-                        date: dateObj.toISOString(),
-                        amount: parseFloat(amtVal),
-                        manualAmount: parseFloat(amtVal), 
-                        merchant: merchantName || cat.label,
-                        note: note || '',
-                        manualCategory: selectedManualCatId,
-                        category: selectedManualCatId,
-                        type: manualTxnType
-                    };
-                    await addDoc(collection(db, "users", uid, "transactions"), newTxn);
+                    await addDoc(collection(db, "users", uid, "transactions"), {
+                        ...updateData,
+                        createdAt: serverTimestamp()
+                    });
                     showToast('Transaction saved');
                 }
                 
@@ -2829,9 +2885,11 @@
             } catch (e) {
                 console.error(e);
                 showToast('Error saving');
-                // Re-enable on error
+            } finally {
+                // Restore button
                 btn.style.pointerEvents = 'auto';
                 btn.style.opacity = '1';
+                btn.innerHTML = 'Done';
             }
         };
 
@@ -2907,6 +2965,20 @@
                 // Hide the whole accordion if no visible items
                 acc.style.display = visibleCount > 0 ? 'block' : 'none';
             });
+
+            // Update Trends Chart based on filtered transactions
+            if (window.allTxns) {
+                const filteredTxns = window.allTxns.filter(t => {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const itemCatId = mapped.category || '';
+                    const itemCatLabel = displayCategoryName(itemCatId);
+                    
+                    return (catSelection === 'all') || 
+                           (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
+                           (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
+                });
+                drawTrendChart(filteredTxns);
+            }
         };
 
         // NEW: Independent Trend Chart Logic
@@ -3044,18 +3116,18 @@
 
     <!-- MANUAL TRANSACTION MODAL -->
     <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
-        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 95vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
+        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 96vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
             
             <!-- Swipe Handle Area (includes title) -->
-            <div id="modal-drag-handle" style="width: 100%; padding: max(30px, env(safe-area-inset-top)) 0 0 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
+            <div id="modal-drag-handle" style="width: 100%; padding: max(45px, env(safe-area-inset-top)) 0 8px 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
                 <div style="display: flex; justify-content: center; margin-bottom: 12px;">
                     <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                 </div>
                 <div style="padding: 0 20px 16px 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 24px; cursor: pointer;">close</i>
-                        <div id="modal-title" style="font-weight: 800; font-size: 16px; color: #1e293b;">New Transaction</div>
-                        <div id="done-btn" style="font-weight: 700; font-size: 14px; color: #10b981; cursor: pointer;" onclick="saveManualTxn()">Done</div>
+                        <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
+                        <div id="modal-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">New Transaction</div>
+                        <div id="done-btn" style="font-weight: 800; font-size: 16px; color: #10b981; cursor: pointer; text-transform: uppercase;" onclick="saveManualTxn()">Done</div>
                     </div>
                 </div>
             </div>
@@ -3095,7 +3167,7 @@
                     </div>
                     <div style="flex: 1;">
                         <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Date</div>
-                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%;">
+                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 16px; font-weight: 700; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%; padding: 0;">
                     </div>
                 </div>
 
@@ -3214,5 +3286,24 @@
         });
     </script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
+    <script>
+        // Shrink Header on Scroll
+        const header = document.getElementById('header');
+        // If the workspace is simulated in a mobile-wrapper with overflow
+        const scrollContainer = document.querySelector('.mobile-wrapper');
+        
+        const handleScroll = (container) => {
+            if (container.scrollTop > 50) {
+                header.classList.add('shrunk');
+            } else {
+                header.classList.remove('shrunk');
+            }
+        };
+
+        if (scrollContainer) {
+            scrollContainer.addEventListener('scroll', () => handleScroll(scrollContainer));
+        }
+        window.addEventListener('scroll', () => handleScroll(window.document.documentElement));
+    </script>
 </body>
 </html>

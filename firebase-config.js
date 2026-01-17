@@ -23,7 +23,7 @@ const analytics = getAnalytics(app);
 
 // Gmail API Configuration
 const GMAIL_API_KEY = firebaseConfig.apiKey;
-const GMAIL_CLIENT_ID = "64186651619-YOUR_CLIENT_ID.apps.googleusercontent.com"; // You'll need to get this from Google Cloud Console
+const GMAIL_CLIENT_ID = "64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com";
 const GMAIL_SCOPES = 'https://www.googleapis.com/auth/gmail.readonly';
 
 // Export for use in other files

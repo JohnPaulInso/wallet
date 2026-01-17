@@ -87,9 +87,21 @@ Your code is correct, but **Google Sign-In is not enabled** in your Firebase pro
 
 ✅ **Fix**: Allow popups in your browser for localhost:5500
 
-### Error: "Invalid OAuth client"
+### Error: "Error 400: redirect_uri_mismatch"
 
-✅ **Fix**: Make sure you added the correct Client ID and Secret in Firebase
+_(This occurs when your local URL or Firebase URL isn't authorized in Google Cloud)_
+
+✅ **Fix**:
+
+1. Go to [Google Cloud Credentials](https://console.cloud.google.com/apis/credentials?project=atome-wallet).
+2. Click the pen icon to edit your **OAuth 2.0 Client ID** (e.g., `SmartWallet Web Client`).
+3. Under **Authorized JavaScript origins**, add:
+   - **`http://127.0.0.1:5500`** (Your current error specifically mentions this one!)
+   - `http://localhost:5500`
+   - `https://atome-wallet.firebaseapp.com`
+4. Under **Authorized redirect URIs**, add:
+   - `https://atome-wallet.firebaseapp.com/__/auth/handler`
+5. Click **SAVE** and wait 5 minutes before trying again.
 
 ---
 

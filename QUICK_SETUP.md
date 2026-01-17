@@ -77,23 +77,23 @@ Enable Google Sign-In and Gmail scanning in your SmartWallet app.
    - Application type: **"Web application"**
    - Name: `SmartWallet Web Client`
 
-4. **Add Authorized JavaScript origins** (click "+ ADD URI" for each):
+4. **Add Authorized JavaScript origins** (where the app runs):
+   _If you use VS Code Live Server, it's usually 5500. If you use Python/Node, it's 8000._
 
    ```
    http://localhost
-   http://localhost:8000
    http://localhost:5500
-   http://127.0.0.1
-   ```
-
-5. **Add Authorized redirect URIs** (click "+ ADD URI" for each):
-
-   ```
-   http://localhost
    http://localhost:8000
-   http://localhost:5500
-   http://127.0.0.1
+   http://127.0.0.1:5500
+   http://127.0.0.1:8000
    https://atome-wallet.firebaseapp.com
+   ```
+
+5. **Wait! THIS IS CRITICAL - Add Authorized redirect URIs**:
+   _You MUST add the Firebase Auth Handler URI here for login to work._
+
+   ```
+   https://atome-wallet.firebaseapp.com/__/auth/handler
    ```
 
 6. **Click "CREATE"**

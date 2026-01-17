@@ -3610,7 +3610,7 @@
         // Import Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, doc, setDoc, updateDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, doc, setDoc, updateDoc, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         
@@ -3756,70 +3756,34 @@
             }
         };
 
-        // Authentication State Listener (Bypassed for Guest Mode)
-        // onAuthStateChanged(auth, async (user) => {
-        // Mock user sign-in for Guest Mode
-        (async () => {
-            const user = currentUser;
-             if (user) {
-                console.log('Guest mode active:', user.email);
-                
-                // Hide login screen
-                const loginScreen = document.getElementById('loginScreen');
-                if (loginScreen) loginScreen.classList.add('hidden');
-                
-                // Update UI with user info
-                document.getElementById('userName').textContent = user.displayName || 'User';
-                updateGreeting();
-                
-                // Load transactions from LocalStorage mostly, Firestore skipped
-                // await loadTransactionsFromFirestore();
-                
-                // Update sync status
-                updateSyncStatus('Guest Mode Active', true);
-            }
-        })();
-        /*
+        // Authentication State Listener
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                console.log('User signed in:', user.email);
+                console.log('User detected:', user.isAnonymous ? 'Guest' : user.email);
                 
-                // Hide login screen
-                document.getElementById('loginScreen').classList.add('hidden');
-                
-                // Update UI with user info
-                document.getElementById('userName').textContent = user.displayName || 'User';
+                // Update UI Header
+                if (document.getElementById('userName')) {
+                    document.getElementById('userName').textContent = user.displayName || (user.isAnonymous ? 'Guest User' : 'Standard User');
+                }
                 updateGreeting();
                 
-                // Update profile photo
-                if (user.photoURL) {
+                // Profile Pic
+                if (user.photoURL && document.getElementById('userPhoto')) {
                     document.getElementById('userPhoto').src = user.photoURL;
                     document.getElementById('userPhoto').style.display = 'block';
-                    document.getElementById('defaultProfileIcon').style.display = 'none';
+                    if (document.getElementById('defaultProfileIcon')) document.getElementById('defaultProfileIcon').style.display = 'none';
                 }
-                
-                // Load transactions from Firestore
+
+                // Isolation: Load Data
                 await loadTransactionsFromFirestore();
                 
-                // Update sync status
-                updateSyncStatus('Connected to Firebase', true);
-                
+                // Sync Status Label
+                updateSyncStatus(user.isAnonymous ? 'Local Mode (Unsynced)' : `Cloud Synced (${user.email})`, !user.isAnonymous);
             } else {
-                currentUser = null;
-                console.log('User signed out');
-                
-                // Show login screen
-                document.getElementById('loginScreen').classList.remove('hidden');
-                
-                // Reset UI
-                document.getElementById('userName').textContent = 'Loading...';
-                document.getElementById('userPhoto').style.display = 'none';
-                document.getElementById('defaultProfileIcon').style.display = 'block';
-                
-                updateSyncStatus('Not connected', false);
+                signInAnonymously(auth);
             }
-        })
-        */
+        });
         
         // Check for redirect result on page load
         async function checkRedirectResult() {
@@ -3856,32 +3820,54 @@
         // Call it immediately
         checkRedirectResult();
 
-        // Google Sign In with Redirect
+        // Google Sign In with Popup + Sync
         document.getElementById('googleSignInBtn').addEventListener('click', async () => {
-            logToConsole('>>> Sign In Button Clicked <<<');
-            
+            logToConsole('>>> Starting Popup Sign-In... <<<');
+            const prevUid = auth.currentUser?.uid;
+            const isAnonymous = auth.currentUser?.isAnonymous;
+
             try {
                 const provider = new GoogleAuthProvider();
-                
-                // Add custom parameters
-                provider.setCustomParameters({
-                    prompt: 'select_account'
-                });
-                
-                // Add scopes immediately
-                logToConsole('Adding Gmail scopes...');
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-                provider.addScope('email');
-                provider.addScope('profile');
                 
-                logToConsole('Calling signInWithRedirect...');
-                await signInWithRedirect(auth, provider);
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                logToConsole(`Success! Logged in as: ${user.email}`);
+
+                // MIGRATION / SYNC ENGINE
+                logToConsole('Checking if guest data needs to be claimed...');
+                const sources = [];
+                if (isAnonymous && prevUid) sources.push(prevUid);
+                sources.push('guest-user');
+
+                let totalMigrated = 0;
+                for (const sourceId of sources) {
+                    if (sourceId === user.uid) continue;
+                    const oldSnap = await getDocs(query(collection(db, "users", sourceId, "transactions")));
+                    if (!oldSnap.empty) {
+                        logToConsole(`Merging ${oldSnap.size} items from ${sourceId === 'guest-user' ? 'Legacy' : 'Local'}...`);
+                        const batch = [];
+                        oldSnap.forEach(d => {
+                            batch.push(setDoc(doc(db, "users", user.uid, "transactions", d.id), d.data(), { merge: true }));
+                        });
+                        await Promise.all(batch);
+                        totalMigrated += oldSnap.size;
+                    }
+                }
                 
-                logToConsole('Redirect command issued. Page should reload...');
-                
+                if (totalMigrated > 0) {
+                    alert(`Successfully synced ${totalMigrated} items to your Google Account!`);
+                } else {
+                    logToConsole('Cloud account already unified.');
+                }
+
+                // Close login screen if it was visible
+                const loginScreen = document.getElementById('loginScreen');
+                if (loginScreen) loginScreen.classList.add('hidden');
+
             } catch (error) {
-                logToConsole(`Sign In Init Error: ${error.message}`, 'error');
-                alert(`Error starting sign in: ${error.message}`);
+                logToConsole(`Sign In Error: ${error.message}`, 'error');
+                alert(`Error: ${error.message}`);
             }
         });
         
@@ -3951,26 +3937,30 @@
         // Load transactions from Firestore
         async function loadTransactionsFromFirestore() {
             if (!currentUser) return;
+            const isAnon = currentUser.isAnonymous;
             
             try {
                 const transactionsRef = collection(db, 'users', currentUser.uid, 'transactions');
-                const q = query(transactionsRef, orderBy('timestamp', 'desc'));
-                const querySnapshot = await getDocs(q);
+                const q = query(transactionsRef, orderBy('date', 'desc')); // Match index.html field name
+                let querySnapshot = await getDocs(q);
+                
+                // Legacy fallback ONLY for guests
+                if (querySnapshot.empty && isAnon) {
+                    const legacyQ = query(collection(db, 'users', 'guest-user', 'transactions'), orderBy('date', 'desc'));
+                    querySnapshot = await getDocs(legacyQ);
+                    if (!querySnapshot.empty) console.log('Loaded from legacy guest-user storage');
+                }
                 
                 const firestoreTransactions = [];
                 querySnapshot.forEach((doc) => {
                     firestoreTransactions.push({ id: doc.id, ...doc.data() });
                 });
                 
-                console.log('Loaded transactions from Firestore:', firestoreTransactions.length);
+                console.log(`Loaded ${firestoreTransactions.length} transactions from Firestore`);
                 
-                // Merge with local transactions (avoid duplicates)
-                firestoreTransactions.forEach(ft => {
-                    const exists = transactions.find(t => t.id === ft.id);
-                    if (!exists) {
-                        transactions.push(ft);
-                    }
-                });
+                // Clear local and add fresh from Firestore
+                transactions.length = 0; 
+                firestoreTransactions.forEach(ft => transactions.push(ft));
                 
                 // Re-render
                 renderTransactions();
@@ -3983,15 +3973,14 @@
         
         // Save transaction to Firestore
         async function saveTransactionToFirestore(transaction) {
-            if (!currentUser || currentUser.uid === 'guest-user') return; // Skip for guest
-            
+            if (!currentUser) return;
             try {
                 const transactionsRef = collection(db, 'users', currentUser.uid, 'transactions');
                 await setDoc(doc(transactionsRef, transaction.id), {
                     ...transaction,
                     timestamp: serverTimestamp()
-                });
-                console.log('Transaction saved to Firestore:', transaction.id);
+                }, { merge: true });
+                console.log('Saved to Cloud:', transaction.id);
             } catch (error) {
                 console.error('Error saving transaction:', error);
             }

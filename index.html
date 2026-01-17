@@ -319,7 +319,7 @@
         .modal-header { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
         .modal-body { margin-bottom: 12px; }
         .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
-        .cat-option { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; }
+        .cat-option { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
         .cat-option:hover { border-color: #1d4ed8; background: #eff6ff; }
         .cat-option.active { border-color: #1d4ed8; background: #eff6ff; box-shadow: 0 0 0 2px #1d4ed8; }
         .cat-option i { font-size: 24px; }
@@ -492,6 +492,8 @@
         .ios-action-item i { font-size: 18px; color: #3b82f6; }
         .ios-action-item.danger { color: #ef4444; }
         .ios-action-item.danger i { color: #ef4444; }
+        .ios-action-item.warning { color: #f59e0b; }
+        .ios-action-item.warning i { color: #f59e0b; }
     </style>
 </head>
 <body>
@@ -715,7 +717,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp, getDocs, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // FIREBASE CONFIG
         const firebaseConfig = {
@@ -803,7 +805,7 @@
                 const dbBadge = document.getElementById('db-status');
                 dbBadge.innerText = user.isAnonymous ? 'Mode: Local (Unsynced)' : `Mode: Cloud (${user.email})`;
                 dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
-                log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email));
+                log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
                 if (!user.isAnonymous) log('Cloud Sync Active!', 'info');
                 
                 // Update Profile Dropdown Content
@@ -898,11 +900,20 @@
             });
         });
 
-        // FETCH TRANSACTIONS FROM FIRESTORE
+        // FETCH TRANSACTIONS FROM FIRESTORE (REAL-TIME LISTENER)
+        window.unsubscribeSnapshot = null; // Store listener to detach later
+
         async function loadData() {
             const container = document.getElementById('history-container');
             const spinner = document.getElementById('loading-spinner');
             
+            // If already listening, don't re-attach unless we are forcing a reset (handling logic elsewhere)
+            // Ideally we clear it before calling loadData again if switching users.
+            if (window.unsubscribeSnapshot) {
+                window.unsubscribeSnapshot();
+                window.unsubscribeSnapshot = null;
+            }
+
             spinner.style.display = 'block';
             try {
                 if (!auth.currentUser) return;
@@ -910,93 +921,91 @@
                 const isAnon = auth.currentUser.isAnonymous;
                 
                 const syncStatusText = document.getElementById('syncStatusText');
-                if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Synced';
+                if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Live Sync';
                 
                 let q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
-                let snap = await getDocs(q);
+                
+                // DATA ISOLATION: Query ONLY the current user's path.
+                // Replaced getDocs with onSnapshot
+                window.unsubscribeSnapshot = onSnapshot(q, (snap) => {
+                    let txns = [];
+                    const batchUpdates = []; 
 
-                // REMOVED guest-user fallback for privacy/isolation
-                // Users will only see their own data or a fresh local start.
+                    snap.docs.forEach(d => {
+                        const data = d.data();
+                        if (data.deleted) return; 
 
-                let txns = [];
-                const batchUpdates = []; // Collect updates for fuel notes
-
-                snap.forEach(d => {
-                    const data = d.data();
-                    if (data.deleted) return; 
-
-                    const t = { id: d.id, ...data };
-                    txns.push(t);
+                        const t = { id: d.id, ...data };
+                        txns.push(t);
+                        
+                        // PERSIST AUTOMATED FUEL NOTES (Only if missing)
+                        if (!t.note) {
+                            const mapped = getMerchantDisplay(t.merchant || '', t);
+                            if (mapped.category === 'Vehicle') {
+                                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                                const autoNote = (amt > 250) ? "Car Refill" : "Motor Refill";
+                                // Update locally for display
+                                t.note = autoNote; 
+                                // Silent background update to DB (doesn't trigger re-render loop if strictly checked)
+                                // Note: Be careful with updateDoc triggering onSnapshot again. 
+                                // Since we check !t.note, and we are setting it, it should stabilise.
+                                updateDoc(doc(db, "users", uid, "transactions", t.id), { note: autoNote }); 
+                            }
+                        }
+                    });
                     
-                    // PERSIST AUTOMATED FUEL NOTES
-                    if (!t.note) {
-                        const mapped = getMerchantDisplay(t.merchant || '', t);
-                        if (mapped.category === 'Vehicle') {
-                            const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                            const autoNote = (amt > 250) ? "Car Refill" : "Motor Refill";
-                            
-                            // Queue update to Firestore
-                            const docRef = doc(db, "users", uid, "transactions", t.id);
-                            batchUpdates.push(updateDoc(docRef, { note: autoNote }));
-                            
-                            // Update local object effectively immediately
-                            t.note = autoNote; 
+                    // Store globally
+                    window.allTxns = txns;
+
+                    if (txns.length === 0) {
+                        // EMPTY STATE
+                        document.getElementById('expenses-total-summary').innerText = 'PHP 0.00';
+                        document.getElementById('trend-period-total').innerText = 'PHP 0.00';
+                        document.getElementById('chart-total-val').innerText = '0';
+                        const balanceEl = document.querySelector('.balance-amount');
+                        if (balanceEl) balanceEl.innerText = 'PHP 0.00';
+                        
+                        if (window.drawPieChart) window.drawPieChart([], 0);
+                        if (window.drawTrendChart) window.drawTrendChart([]);
+
+                        container.innerHTML = `
+                            <div style="text-align:center; padding:60px 20px; color:#64748b; background: white; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                                <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">inbox</i>
+                                <p style="margin:0; font-weight: 500;">No transactions found.</p>
+                                <p style="font-size: 13px; margin: 10px 0 0;">Click "Scan Gmail" to sync your Atome payments.</p>
+                            </div>`;
+                    } else {
+                        renderHistory(txns);
+                        // Persist filter
+                        const savedFilter = localStorage.getItem('wallet_chart_filter') || 'this_month';
+                        const filterEl = document.getElementById('chart-filter');
+                        if (filterEl) {
+                           filterEl.value = savedFilter;
+                           filterChart();
                         }
                     }
+                }, (error) => {
+                    log('Snapshot Error: ' + error.message, 'error');
                 });
-                
-                // Execute batch updates if any
-                if (batchUpdates.length > 0) {
-                    Promise.all(batchUpdates).then(() => log(`Persisted ${batchUpdates.length} automated notes.`));
-                }
 
-                // Store globally
-                window.allTxns = txns;
+                // Hide spinner immediately - don't wait for data to load
+                spinner.style.display = 'none';
 
-                if (txns.length === 0) {
-                    // RESET UI ON EMPTY ACCOUNT
-                    document.getElementById('expenses-total-summary').innerText = 'PHP 0.00';
-                    document.getElementById('trend-period-total').innerText = 'PHP 0.00';
-                    document.getElementById('chart-total-val').innerText = '0';
-                    const balanceEl = document.querySelector('.balance-amount');
-                    if (balanceEl) balanceEl.innerText = 'PHP 0.00';
-                    
-                    // Reset Graphs
-                    if (window.drawPieChart) window.drawPieChart([], 0);
-                    if (window.drawTrendChart) window.drawTrendChart([]);
-
-                    container.innerHTML = `
-                        <div style="text-align:center; padding:60px 20px; color:#64748b; background: white; border-radius: 12px; border: 1px dashed #cbd5e1;">
-                            <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">inbox</i>
-                            <p style="margin:0; font-weight: 500;">No transactions found.</p>
-                            <p style="font-size: 13px; margin: 10px 0 0;">Click "Scan Gmail" to sync your Atome payments.</p>
-                        </div>`;
-                } else {
-                    renderHistory(txns);
-                    // Initial chart filter with Persistence
-                    const filterEl = document.getElementById('chart-filter');
-                    filterEl.value = 'this_month'; // Always default to This Month
-                    filterChart();
-                }
                 window.highlightTransactions = (categoryName) => {
-            const items = document.querySelectorAll('.premium-txn');
-            items.forEach(item => {
-                // If clicking the same category again, we could toggle off (optional), 
-                // but for now let's just highlight the new one.
-                item.classList.remove('highlight-txn');
-                        
+                    const items = document.querySelectorAll('.premium-txn');
+                    items.forEach(item => {
+                        item.classList.remove('highlight-txn');
                         const catElement = item.querySelector('.txn-sub span:last-child');
                         if (catElement && catElement.innerText === categoryName) {
                             item.classList.add('highlight-txn');
                         }
                     });
-                    
                     // Scroll to first highlighted
                     const first = document.querySelector('.highlight-txn');
                     if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                };    } catch (e) { 
+                };    
+            } catch (e) { 
                 log('Failed to load history: ' + e.message, 'error');
-            } finally {
                 spinner.style.display = 'none';
             }
         }
@@ -1112,7 +1121,9 @@
             const past = window.allTxns.filter(t => checkPeriod(t, filter, 1));
             
             const pastTotal = past.reduce((sum, t) => {
-                 if (t.excluded) return sum;
+                 if (t.excluded || t.refund) return sum;
+                 const mapped = getMerchantDisplay(t.merchant, t);
+                 if (mapped.category === 'Income') return sum;
                  return sum + (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
             }, 0);
 
@@ -1132,7 +1143,7 @@
             'Financial Expenses': { color: '#ef4444', class: 'cat-financial' },
             'Transportation': { color: '#8b5cf6', class: 'cat-vehicle' },
             'Travel': { color: '#06b6d4', class: 'cat-aqua' },
-            'Education': { color: '#3b82f6', class: 'cat-shopping' }, /* Blue like Shopping */
+            'Education': { color: '#1e40af', class: 'cat-shopping' }, /* Dark Blue */
             'Sport': { color: '#10b981', class: 'cat-life' },
             'Income': { color: '#16a34a', class: 'cat-income' } /* Green */
         };
@@ -1146,7 +1157,7 @@
             let expenseTotal = 0;
 
             txns.forEach(t => {
-                if (t.excluded) return;
+                if (t.excluded || t.refund) return;
                 const mapped = getMerchantDisplay(t.merchant, t);
                 const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                 let cat = mapped.category || 'Other';
@@ -1238,9 +1249,9 @@
 
                 txns.forEach(t => {
                     const d = new Date(t.date);
-                    // Check exclusion and Income
+                    // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || d < startOfWeek || mappedTrn.category === 'Income') return; 
+                    if (t.excluded || t.refund || d < startOfWeek || mappedTrn.category === 'Income') return; 
 
                     const diff = Math.floor((d - startOfWeek) / 86400000);
                     if (diff >= 0 && diff < 7) {
@@ -1264,9 +1275,9 @@
 
                 txns.forEach(t => {
                     const d = new Date(t.date);
-                    // Check exclusion and Income
+                    // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
 
                     // Calculate month difference
                     const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
@@ -1303,9 +1314,9 @@
 
                 txns.forEach(t => {
                     const d = new Date(t.date);
-                    // Check exclusion and Income
+                    // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
                     
                     let idx;
                     if (filter === 'this_month') {
@@ -1581,9 +1592,9 @@
                 if (!groups[key]) groups[key] = { items: [], total: 0 };
                 
                 groups[key].items.push(t);
-                // ONLY add to total if NOT excluded AND NOT Income
+                // ONLY add to total if NOT excluded AND NOT Income AND NOT Refund
                 const mappedSumCheck = getMerchantDisplay(t.merchant, t);
-                if (!t.excluded && mappedSumCheck.category !== 'Income') {
+                if (!t.excluded && !t.refund && mappedSumCheck.category !== 'Income') {
                     const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                     groups[key].total += amt;
                 }
@@ -1613,7 +1624,9 @@
                     const item = document.createElement('div');
                     // Prevent strikethrough for Income even if it might be technically excluded
                     const isIncome = mapped.category === 'Income';
-                    item.className = `premium-txn ${t.excluded && !isIncome ? 'txn-excluded' : ''}`;
+                    const isRefund = t.refund || false;
+                    // Don't strikethrough if it's Income or Refund
+                    item.className = `premium-txn ${t.excluded && !isIncome && !isRefund ? 'txn-excluded' : ''}`;
                     const d = new Date(t.date);
                     const shortDate = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
                     const safeMerchant = (mapped.name).replace(/'/g, "\\'");
@@ -1631,6 +1644,13 @@
                     let displayAmtColor = '';
                     let displayName = mapped.name;
                     let displayIconStyle = `background: ${mapped.catClass === 'cat-red' ? '#fee2e2' : ''}; color: ${mapped.catClass === 'cat-red' ? '#ef4444' : ''};`;
+                    let refundChip = '';
+
+                    // REFUND STYLING
+                    if (t.refund) {
+                        displayAmtColor = 'color: #f59e0b;'; // Gold
+                        refundChip = '<span style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>';
+                    }
 
                     if (mapped.category === 'Income') {
                         displayName = 'INCOME'; // Always name it INCOME
@@ -1647,7 +1667,7 @@
                     else if (mUpper.includes('SHOPEE')) logo = 'logos/shopee.png';
                     else if (mUpper.includes('LAZADA')) logo = 'logos/lazada.jpg';
                     else if (mUpper.includes('GLOBE') || mUpper.includes('GOMO')) logo = 'logos/globe.png';
-                    else if (mUpper.includes('SM ') || mUpper.includes('SM STORE') || mUpper.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
+                    else if (mUpper.includes('SM') || mUpper.includes('SM STORE') || mUpper.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
                     else if (mUpper.includes('SPOTIFY')) logo = 'logos/spotify.png';
                     else if (mUpper.includes('TIKTOK')) logo = 'logos/tiktokshop.png';
                     else if (mUpper.includes('TECFUEL') || mUpper.includes('TEC FUEL')) logo = 'logos/tecfuel.png';
@@ -1660,6 +1680,8 @@
                     else if (mUpper.includes('SUPERMETRO')) logo = 'logos/supermetro.png';
                     else if (mUpper.includes('SEAOIL')) logo = 'logos/seaoil.png';
                     else if (mUpper.includes('PETRON')) logo = 'logos/petron.png';
+                    else if (mUpper.includes('7/11')) logo = 'logos/711.png';
+                    else if (mUpper.includes('7 11')) logo = 'logos/711.png';
 
                     const logoHTML = logo ? `<div class="brand-badge" style="display: ${typeof showLogos !== 'undefined' && showLogos ? 'flex' : 'none'}"><img src="${logo}"></div>` : '';
 
@@ -1669,13 +1691,13 @@
                             ${logoHTML}
                         </div>
                         <div class="txn-details" style="display: flex; flex-direction: column; gap: 2px;">
-                            <div class="txn-merch" style="${mapped.category === 'Income' ? 'color: #16a34a;' : ''}">${displayName}</div>
+                            <div class="txn-merch" style="${mapped.category === 'Income' ? 'color: #16a34a;' : t.refund ? 'color: #f59e0b;' : ''}">${displayName}${refundChip}</div>
                             <div class="txn-sub">
                                 <span>${shortDate}</span>
                                 <span style="margin: 0 4px; opacity: 0.5;">•</span>
                                 <span>${displayCategoryName(mapped.category)}</span>
                             </div>
-                            ${displayNote ? `<div class="txn-note" style="color: ${categoryConfig[mapped.category]?.color || '#94a3b8'}; opacity: 0.8;">${displayNote}</div>` : ''}
+                            ${displayNote ? `<div class="txn-note" style="color: ${t.refund ? '#f59e0b' : (categoryConfig[mapped.category]?.color || '#94a3b8')}; opacity: 0.8;">${displayNote}</div>` : ''}
                         </div>
                         <div class="txn-right" style="display: flex; align-items: center; justify-content: flex-end;">
                             <div class="txn-amount ${amount >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
@@ -1689,6 +1711,7 @@
                     item.dataset.merchant = safeMerchant;
                     item.dataset.amount = amount;
                     item.dataset.excluded = t.excluded || false;
+                    item.dataset.refund = t.refund || false;
                     item.dataset.category = mapped.category;
                     item.dataset.note = t.note || '';
                     
@@ -1804,52 +1827,12 @@
                     localStorage.setItem('user_pic', user.photoURL);
                 }
 
-                // ADVANCED MIGRATION (SYNC EVERYTHING TOGETHER)
+                /* DISABLED AUTO-MERGE FOR STRICT PRIVACY
+                   Only sync what's in the specific user's folder.
                 log('Checking for data to sync...');
-                const sources = [];
-                if (isAnonymous && prevUid) sources.push(prevUid);
-                sources.push('guest-user'); // Always check legacy too
-
-                let migratedCount = 0;
-                for (const sourceId of sources) {
-                    if (sourceId === user.uid) continue;
-                    
-                    const oldQ = query(collection(db, "users", sourceId, "transactions"));
-                    const oldSnap = await getDocs(oldQ);
-                    
-                    if (!oldSnap.empty) {
-                        log(`Found ${oldSnap.size} items in ${sourceId === 'guest-user' ? 'Legacy' : 'Guest'} storage...`);
-                        const migrationBatches = [];
-                        oldSnap.forEach(d => {
-                            const data = d.data();
-                            // Only migrate if it doesn't exist or is newer/different
-                            // For simplicity, we'll use setDoc which will merge/overwrite
-                            migrationBatches.push(setDoc(doc(db, "users", user.uid, "transactions", d.id), data, { merge: true }));
-                        });
-                        
-                        if (migrationBatches.length > 0) {
-                            await Promise.all(migrationBatches);
-                            migratedCount += migrationBatches.length;
-                            
-                            // CLEAN UP: Delete source data ONLY if migration was successful
-                            if (sourceId !== 'guest-user') {
-                                log(`Purging guest storage for ${sourceId}...`);
-                                const deletePromises = oldSnap.docs.map(d => deleteDoc(doc(db, "users", sourceId, "transactions", d.id)));
-                                await Promise.all(deletePromises);
-                                log('Guest storage cleared. No ghost data left.');
-                            }
-                        }
-                    }
-                }
-
-                if (migratedCount > 0) {
-                    log(`Data Sync Complete! Moved ${migratedCount} items to Cloud.`);
-                    showToast(`Synced ${migratedCount} items!`);
-                    // Reload to show fresh synced view
-                    loadData();
-                } else {
-                    log('Cloud account is already up to date.');
-                }
+                // ... (Migration logic removed)
+                */
+                log('Cloud account active. Loading isolated user data...');
 
                 await loadData();
                 handleScan(300);
@@ -1898,6 +1881,13 @@
         window.handleSignout = async () => {
             if (confirm('Sign out?')) {
                 log('🚨 Initiating deep sign-out and data purge...');
+                
+                // Detach realtime listener
+                if (window.unsubscribeSnapshot) {
+                    window.unsubscribeSnapshot();
+                    window.unsubscribeSnapshot = null;
+                }
+
                 localStorage.clear();
                 window.allTxns = [];
                 const historyContainer = document.getElementById('history-container');
@@ -1981,7 +1971,7 @@
                     }
                     
                     log(`Sync finished! ${savedCount} transactions processed.`);
-                    loadData();
+                    // loadData(); // Removed for performance - Listener will auto-update
                 }
             } catch (e) { log('Scan error: ' + e.message, 'error'); }
             finally {
@@ -2087,22 +2077,19 @@
             
             // 5. Build menu
             const menu = document.getElementById('iosActionMenu');
+            const isRefund = item.dataset.refund === 'true';
             menu.innerHTML = `
-                <div class="ios-action-item" onclick="handleIOSAction('price', '${txnId}', ${amount})">
+                <div class="ios-action-item" onclick="handleIOSAction('edit', '${txnId}', '${merchant}', ${amount}, '${category}', \`${note.replace(/`/g, '\\`')}\`)">
                     <i class="material-icons">edit</i>
-                    <span>Change Price</span>
+                    <span>Edit Transaction</span>
                 </div>
                 <div class="ios-action-item ${isExcluded ? '' : 'danger'}" onclick="handleIOSAction('exclude', '${txnId}', ${isExcluded}, '${merchant}')">
                     <i class="material-icons">${isExcluded ? 'add_circle' : 'block'}</i>
                     <span>${isExcluded ? 'Include' : 'Exclude'}</span>
                 </div>
-                <div class="ios-action-item" onclick="handleIOSAction('category', '${txnId}', '${merchant}', '${category}')">
-                    <i class="material-icons">category</i>
-                    <span>Change Category</span>
-                </div>
-                <div class="ios-action-item" onclick="handleIOSAction('note', '${txnId}', '${merchant}', \`${note.replace(/`/g, '\\`')}\`)">
-                    <i class="material-icons">note_add</i>
-                    <span>Add Note</span>
+                <div class="ios-action-item warning" onclick="handleIOSAction('refund', '${txnId}', ${isRefund})">
+                    <i class="material-icons">${isRefund ? 'undo' : 'sync_alt'}</i>
+                    <span>${isRefund ? 'Unmark Refund' : 'Mark as Refund'}</span>
                 </div>
                 <div class="ios-action-item danger" onclick="handleIOSAction('delete', '${txnId}')">
                     <i class="material-icons">delete</i>
@@ -2153,17 +2140,14 @@
             closeIOSMenu();
             
             switch(action) {
-                case 'price':
-                    openPriceModal(txnId, args[0]);
+                case 'edit':
+                    openEditModal(txnId, args[0], args[1], args[2], args[3]);
                     break;
                 case 'exclude':
                     toggleExclusion(txnId, args[1], args[0]);
                     break;
-                case 'category':
-                    openCategoryModal(txnId, args[0], args[1]);
-                    break;
-                case 'note':
-                    openNoteModal(txnId, args[0], args[1]);
+                case 'refund':
+                    toggleRefund(txnId, args[0]);
                     break;
                 case 'delete':
                     openDeleteModal(txnId);
@@ -2182,9 +2166,23 @@
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 await updateDoc(doc(db, "users", uid, "transactions", id), { excluded: !isCurrentlyExcluded });
-                log(`${isCurrentlyExcluded ? 'Included' : 'Excluded'}: ${merchant}`);
-                loadData();
+                showToast(isCurrentlyExcluded ? 'Transaction included' : 'Transaction excluded');
             } catch (e) { log('Toggle failed', 'error'); }
+        };
+
+        window.toggleRefund = async (id, isCurrentlyRefund) => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync changes to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
+            try {
+                if (!auth.currentUser) return;
+                const uid = auth.currentUser.uid;
+                await updateDoc(doc(db, "users", uid, "transactions", id), { refund: !isCurrentlyRefund });
+                showToast(isCurrentlyRefund ? 'Unmarked as refund' : 'Marked as refund');
+            } catch (e) { log('Toggle refund failed', 'error'); }
         };
 
         // DELETE LOGIC
@@ -2201,15 +2199,28 @@
                 }
             }
             if (!currentTxnId) return;
+            
+            // Show loading state
+            const modal = document.getElementById('delete-modal');
+            const deleteBtn = modal.querySelector('button');
+            const originalText = deleteBtn.innerHTML;
+            deleteBtn.disabled = true;
+            deleteBtn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> DELETING...';
+            deleteBtn.style.opacity = '0.7';
+
             try {
                  if (!auth.currentUser) return;
                  const uid = auth.currentUser.uid;
-                // SOFT DELETE to prevent re-sync
                 await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { deleted: true });
                 showToast('Transaction deleted');
                 closeModals();
-                loadData();
-            } catch (error) { log("Error deleting txn", "error"); }
+            } catch (error) { 
+                log("Error deleting: " + error.message, "error");
+                showToast('Delete failed');
+                deleteBtn.disabled = false;
+                deleteBtn.innerHTML = originalText;
+                deleteBtn.style.opacity = '1';
+            }
         };
 
         // --- CUSTOMIZATION MODALS ---
@@ -2226,7 +2237,7 @@
             { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
             { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
             { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
-            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-service-magenta' },
+            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
             { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
             { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
         ];
@@ -2234,6 +2245,11 @@
         window.closeModals = () => {
             document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
             currentTxnId = null;
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
         };
 
         // Close on outside click
@@ -2263,14 +2279,26 @@
                 }
             }
             if (!currentTxnId) return;
+            
+            // Show loading overlay on modal
+            const modal = document.getElementById('cat-modal');
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;border-radius:20px;z-index:9999;';
+            overlay.innerHTML = '<i class="material-icons spin" style="font-size:32px;color:#1d4ed8;">sync</i>';
+            modal.querySelector('.custom-modal').style.position = 'relative';
+            modal.querySelector('.custom-modal').appendChild(overlay);
+
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { manualCategory: catId });
                 showToast('Category updated');
                 closeModals();
-                loadData();
-            } catch (error) { log("Error saving category", "error"); }
+            } catch (error) { 
+                log("Error saving category: " + error.message, "error");
+                showToast('Update failed');
+                overlay.remove();
+            }
         };
 
         window.openNoteModal = (id, merchant, note) => {
@@ -2310,9 +2338,14 @@
             }
             if (!currentTxnId) return;
             let note = document.getElementById('note-text').value.trim();
-            
-            // Enforce Capitalization
             note = toTitleCase(note);
+
+            // Disable button and show loading
+            const btn = document.getElementById('save-note-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> SAVING...';
+            btn.style.opacity = '0.7';
 
             try {
                 if (!auth.currentUser) return;
@@ -2320,8 +2353,13 @@
                 await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { note: note });
                 showToast('Note saved');
                 closeModals();
-                loadData();
-            } catch (error) { log("Error saving note", "error"); }
+            } catch (error) { 
+                log("Error saving note: " + error.message, "error"); 
+                showToast('Save failed');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                btn.style.opacity = '1';
+            }
         };
 
         window.openPriceModal = (id, currentAmt) => {
@@ -2347,6 +2385,15 @@
             if (!currentTxnId) return;
             const val = document.getElementById('price-input').value;
             const amt = parseFloat(val);
+            
+            // Show loading overlay
+            const modal = document.getElementById('price-modal');
+            const saveBtn = modal.querySelector('button');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> SAVING...';
+            saveBtn.style.opacity = '0.7';
+
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
@@ -2358,8 +2405,13 @@
                 }
                 showToast('Price updated');
                 closeModals();
-                loadData();
-            } catch (error) { log("Error saving price", "error"); }
+            } catch (error) { 
+                log("Error saving price: " + error.message, "error"); 
+                showToast('Update failed');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+                saveBtn.style.opacity = '1';
+            }
         };
         window.savePrice = savePrice;
 
@@ -2557,6 +2609,10 @@
                 btnInc.style.background = 'transparent';
                 btnInc.style.color = '#64748b';
                 btnInc.style.boxShadow = 'none';
+                
+                // Show category section for expenses
+                document.getElementById('category-section').style.display = 'block';
+                selectedManualCatId = 'Financial Expenses';
             } else {
                 btnInc.style.background = '#10b981';
                 btnInc.style.color = '#fff';
@@ -2565,11 +2621,18 @@
                 btnExp.style.background = 'transparent';
                 btnExp.style.color = '#64748b';
                 btnExp.style.boxShadow = 'none';
+                
+                // Hide category section for income (only one category)
+                document.getElementById('category-section').style.display = 'none';
+                selectedManualCatId = 'Income';
             }
+            renderManualCategories();
         };
 
         window.openManualTxnModal = () => {
+            window.editingTxnId = null; // Clear edit mode
             document.getElementById('manual-amt').value = '';
+            document.getElementById('manual-merchant').value = '';
             document.getElementById('manual-note').value = '';
             
             // Default Category
@@ -2584,15 +2647,74 @@
             const btn = document.getElementById('done-btn');
             btn.style.pointerEvents = 'auto';
             btn.style.opacity = '1';
+            
+            // Update modal title
+            document.getElementById('modal-title').innerText = 'New Transaction';
 
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
+            
+            // Block body scroll
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            
+            setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+        };
+
+        window.openEditModal = (txnId, merchant, amount, category, note) => {
+            window.editingTxnId = txnId; // Set edit mode
+            
+            // Find the transaction to get all its data
+            const txn = window.allTxns.find(t => t.id === txnId);
+            if (!txn) return;
+            
+            // Populate fields
+            document.getElementById('manual-amt').value = amount;
+            document.getElementById('manual-merchant').value = merchant;
+            document.getElementById('manual-note').value = note || '';
+            
+            // Set date
+            const d = new Date(txn.date);
+            document.getElementById('manual-date').value = d.toISOString().split('T')[0];
+            
+            // Set category
+            selectedManualCatId = txn.manualCategory || category;
+            
+            // Determine type based on category
+            if (category === 'Income') {
+                setTxnType('income');
+            } else {
+                setTxnType('expense');
+            }
+            
+            // Enable Button
+            const btn = document.getElementById('done-btn');
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            
+            // Update modal title
+            document.getElementById('modal-title').innerText = 'Edit Transaction';
+
+            renderManualCategories();
+            document.getElementById('manual-txn-modal').classList.add('show');
+            
+            // Block body scroll
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+            
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
         };
 
         window.renderManualCategories = () => {
             const list = document.getElementById('manual-cat-list');
-            list.innerHTML = CATEGORIES.map(cat => {
+            // Filter out Income category when in expense mode
+            const categoriesToShow = manualTxnType === 'expense' 
+                ? CATEGORIES.filter(cat => cat.id !== 'Income')
+                : CATEGORIES.filter(cat => cat.id === 'Income');
+            
+            list.innerHTML = categoriesToShow.map(cat => {
                 const isSelected = cat.id === selectedManualCatId;
                 let bgStyle = '#f1f5f9';
                 let colorStyle = '#64748b';
@@ -2602,7 +2724,8 @@
                      else if (cat.cls.includes('shopping')) { bgStyle = '#fff7ed'; colorStyle = '#f97316'; } // Orange
                      else if (cat.cls.includes('vehicle')) { bgStyle = '#f5f3ff'; colorStyle = '#8b5cf6'; }
                      else if (cat.cls.includes('cat-aqua')) { bgStyle = '#ecfeff'; colorStyle = '#0891b2'; } // Dark Aqua
-                     else if (cat.label.includes('Service')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
+                     else if (cat.cls.includes('Service')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
+                     else if (cat.cls.includes('cat-education')) { bgStyle = '#eff6ff'; colorStyle = '#1d4ed8'; } // Dark Blue
                      else if (cat.label.includes('Financial') || cat.label.includes('Trading')) { bgStyle = '#fef2f2'; colorStyle = '#ef4444'; } // Red
                      else { bgStyle = '#f0fdf4'; colorStyle = '#10b981'; } 
                 }
@@ -2653,24 +2776,43 @@
             
             const cat = CATEGORIES.find(c => c.id === selectedManualCatId);
             
-            const newTxn = {
-                date: dateObj.toISOString(),
-                amount: parseFloat(amtVal),
-                manualAmount: parseFloat(amtVal), 
-                merchant: note ? note : cat.label,
-                note: note,
-                manualCategory: selectedManualCatId,
-                category: selectedManualCatId,
-                type: manualTxnType // 'expense' or 'income'
-            };
+            const merchantName = document.getElementById('manual-merchant').value.trim();
             
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                await addDoc(collection(db, "users", uid, "transactions"), newTxn);
-                showToast('Transaction Saved');
+                
+                // Check if editing or creating new
+                if (window.editingTxnId) {
+                    // UPDATE existing transaction
+                    await updateDoc(doc(db, "users", uid, "transactions", window.editingTxnId), {
+                        date: dateObj.toISOString(),
+                        amount: parseFloat(amtVal),
+                        manualAmount: parseFloat(amtVal),
+                        merchant: merchantName || cat.label,
+                        note: note || '',
+                        manualCategory: selectedManualCatId,
+                        category: selectedManualCatId,
+                        type: manualTxnType
+                    });
+                    showToast('Transaction updated');
+                } else {
+                    // CREATE new transaction
+                    const newTxn = {
+                        date: dateObj.toISOString(),
+                        amount: parseFloat(amtVal),
+                        manualAmount: parseFloat(amtVal), 
+                        merchant: merchantName || cat.label,
+                        note: note || '',
+                        manualCategory: selectedManualCatId,
+                        category: selectedManualCatId,
+                        type: manualTxnType
+                    };
+                    await addDoc(collection(db, "users", uid, "transactions"), newTxn);
+                    showToast('Transaction saved');
+                }
+                
                 closeModals();
-                loadData(); 
             } catch (e) {
                 console.error(e);
                 showToast('Error saving');
@@ -2840,18 +2982,36 @@
     </div>
 
     <!-- DELETE CONFIRMATION MODAL -->
+    <div id="delete-modal" class="modal-overlay">
+        <div class="custom-modal" style="text-align: center;">
+            <div class="modal-header" style="color: #ef4444; justify-content: center; margin-bottom: 8px;">Delete Transaction?</div>
+            <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">This action cannot be undone.</p>
+            <div class="modal-actions" style="justify-content: center; gap: 16px;">
+                <div class="cancel-link" onclick="closeModals()">CANCEL</div>
+                <button class="mui-btn mui-btn--raised" onclick="confirmDelete()" style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
+            </div>
+        </div>
+    </div>
 
     <!-- MANUAL TRANSACTION MODAL -->
-    <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: none;">
-        <div class="custom-modal" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 20px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 85vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
+        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 100vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
             
-            <!-- Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 24px; cursor: pointer;">close</i>
-                <div style="font-weight: 800; font-size: 16px; color: #1e293b;">New Transaction</div>
-                <div id="done-btn" style="font-weight: 700; font-size: 14px; color: #10b981; cursor: pointer;" onclick="saveManualTxn()">Done</div>
+            <!-- Swipe Handle Area (includes title) -->
+            <div id="modal-drag-handle" style="width: 100%; padding: 12px 0 0 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 10; cursor: grab;">
+                <div style="display: flex; justify-content: center; margin-bottom: 12px;">
+                    <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
+                </div>
+                <div style="padding: 0 20px 16px 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 24px; cursor: pointer;">close</i>
+                        <div id="modal-title" style="font-weight: 800; font-size: 16px; color: #1e293b;">New Transaction</div>
+                        <div id="done-btn" style="font-weight: 700; font-size: 14px; color: #10b981; cursor: pointer;" onclick="saveManualTxn()">Done</div>
+                    </div>
+                </div>
             </div>
-
+            
+            <div style="padding: 0 20px 20px 20px;">
             <!-- Toggler -->
             <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 30px;">
                 <div id="btn-expense" onclick="setTxnType('expense')" style="flex: 1; padding: 8px; text-align: center; background: #ef4444; color: #fff; font-weight: 700; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: all 0.2s; cursor: pointer;">Expense</div>
@@ -2869,7 +3029,7 @@
             </div>
 
             <!-- Category Section -->
-            <div style="margin-bottom: 0;">
+            <div id="category-section" style="margin-bottom: 0;">
                 <div style="font-size: 11px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 12px; padding-left: 4px;">CATEGORY</div>
                 <div id="manual-cat-list" style="display: flex; overflow-x: auto; gap: 20px; padding: 4px 4px 20px 4px; scroll-behavior: smooth; -webkit-overflow-scrolling: touch;">
                     <!-- Categories injected by JS -->
@@ -2881,29 +3041,38 @@
                 
                 <!-- Date Row -->
                 <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer;" onclick="document.getElementById('manual-date').showPicker()">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #10b981;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #60a5fa;">
                         <i class="material-icons">calendar_today</i>
                     </div>
                     <div style="flex: 1;">
                         <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Date</div>
-                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; font-family: inherit; width: 100%; background: transparent; cursor: pointer;">
+                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%;">
                     </div>
-                    <i class="material-icons" style="color: #cbd5e1;">chevron_right</i>
                 </div>
 
-                <!-- Note Row -->
+                <!-- Merchant Name Row -->
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #fffbeb; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #fbbf24;">
+                        <i class="material-icons">store</i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Merchant Name</div>
+                        <input type="text" id="manual-merchant" maxlength="50" placeholder="Enter merchant name..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                    </div>
+                </div>
+
+                <!-- Notes Row -->
                 <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                     <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #64748b;">
                         <i class="material-icons">notes</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Note</div>
-                        <input type="text" id="manual-note" maxlength="30" placeholder="Add description..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Notes</div>
+                        <input type="text" id="manual-note" maxlength="30" placeholder="Add notes..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                     </div>
                 </div>
 
             </div>
-
         </div>
     </div>
     
@@ -2913,11 +3082,67 @@
         #manual-cat-list::-webkit-scrollbar { display: none; }
         #manual-cat-list { -ms-overflow-style: none; scrollbar-width: none; }
         
-        .manual-cat-item { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 64px; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
+        .manual-cat-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 56px; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
         .manual-cat-item.selected { opacity: 1; transform: scale(1.05); }
-        .manual-cat-circle { width: 56px; height: 56px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; transition: all 0.2s; border: 2px solid transparent; }
-        .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
+        .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
+        .manual-cat-item span { font-size: 10px !important; }
     </style>
+
+    <script>
+        // Swipe-to-close functionality for manual transaction modal
+        document.addEventListener('DOMContentLoaded', () => {
+            const dragHandle = document.getElementById('modal-drag-handle');
+            const modalContent = document.getElementById('manual-modal-content');
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            dragHandle.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+                dragHandle.style.cursor = 'grabbing';
+            });
+
+            dragHandle.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const diff = currentY - startY;
+                
+                // Only allow downward swipe
+                if (diff > 0) {
+                    modalContent.style.transform = `translateY(${diff}px)`;
+                    modalContent.style.transition = 'none';
+                }
+            });
+
+            dragHandle.addEventListener('touchend', (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                dragHandle.style.cursor = 'grab';
+                
+                const diff = currentY - startY;
+                
+                // If swiped down more than 100px, close the modal
+                if (diff > 100) {
+                    modalContent.style.transition = 'transform 0.3s ease-out';
+                    modalContent.style.transform = 'translateY(100%)';
+                    setTimeout(() => {
+                        closeModals();
+                        modalContent.style.transform = '';
+                        modalContent.style.transition = '';
+                    }, 300);
+                } else {
+                    // Snap back
+                    modalContent.style.transition = 'transform 0.2s ease-out';
+                    modalContent.style.transform = '';
+                    setTimeout(() => {
+                        modalContent.style.transition = '';
+                    }, 200);
+                }
+            });
+        });
+    </script>
 
 
 

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts - SmartWallet</title>
+    <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #f0f2f5; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; justify-content: center; }
+        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
+        #header { padding: 30px 24px 10px; display: flex; align-items: center; justify-content: space-between; }
+        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; }
+        .content { padding: 24px; text-align: center; color: #64748b; }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; }
+        .nav-item.active { color: #1d4ed8; }
+        .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
+        .nav-item i { font-size: 24px; }
+        .nav-item span { font-size: 11px; font-weight: 700; }
+        @media (max-width: 430px) { .bottom-nav { left: 0; transform: none; } }
+    </style>
+</head>
+<body>
+    <div class="mobile-wrapper">
+        <div id="header">
+            <div class="user-name">Accounts</div>
+            <i class="material-icons" style="color: #94a3b8; cursor: pointer;" onclick="location.href='index.html'">arrow_back</i>
+        </div>
+        <div class="content">
+            <div style="margin-top: 100px;">
+                <i class="material-icons" style="font-size: 64px; color: #e2e8f0;">account_balance</i>
+                <h2 style="color: #1e293b;">My Accounts</h2>
+                <p>Manage your linked bank accounts and cards here.</p>
+                <button class="mui-btn mui-btn--raised" style="background: #1d4ed8; color: #fff; border-radius: 12px; font-weight: 700; text-transform: none; margin-top: 20px;">Add New Account</button>
+            </div>
+        </div>
+        <div class="bottom-nav">
+            <a href="index.html" class="nav-item">
+                <i class="material-icons">account_balance_wallet</i>
+                <span>Wallet</span>
+            </a>
+            <a href="accounts.html" class="nav-item active">
+                <i class="material-icons">account_balance</i>
+                <span>Accounts</span>
+            </a>
+            <a href="calendar.html" class="nav-item">
+                <i class="material-icons">calendar_today</i>
+                <span>Calendar</span>
+            </a>
+            <a href="goals.html" class="nav-item">
+                <i class="material-icons">track_changes</i>
+                <span>Goals</span>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

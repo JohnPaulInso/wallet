@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1e293b">
+    <meta name="theme-color" content="#1d4ed8">
 
     <style>
         * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -33,6 +33,43 @@
         #profile-badge i { font-size: 24px; color: #94a3b8; display: block; }
         #profile-badge.has-pic i { display: none; }
         #profile-badge.has-pic img { display: block; }
+
+        /* PROFILE DROPDOWN MENU */
+        .profile-container { position: relative; }
+        .profile-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            min-width: 200px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 2000;
+            border: 1px solid #f1f5f9;
+            padding: 6px;
+        }
+        .profile-dropdown.active { display: flex; animation: dropIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes dropIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .dropdown-item {
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .dropdown-item:hover { background: #f8fafc; color: #1e293b; }
+        .dropdown-item i { font-size: 20px; color: #94a3b8; }
+        .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
+        .dropdown-item.logout i { color: #ef4444; }
+        .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 
         /* ATM CARD STYLE (RICH BLACK - REALISTIC) */
         .balance-card { 
@@ -150,7 +187,7 @@
         }
         .card-sync-bar.active { background: rgba(255,255,255,0.1); }
         .card-sync-bar .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 6px rgba(76, 175, 80, 0.5); }
-        .card-sync-bar.syncing .dot { background: #3b82f6; box-shadow: 0 0 8px rgba(59, 130, 246, 0.6); animation: pulse 1s infinite; }
+        .card-sync-bar.syncing .dot { background: #1d4ed8; box-shadow: 0 0 8px rgba(29, 78, 216, 0.6); animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
 
         .mui-container { width: 100%; max-width: 100% !important; margin: 0; padding: 0 24px 100px; }
@@ -158,6 +195,46 @@
         .status-labels { display: flex; gap: 10px; margin-bottom: 20px; }
         .status-chip { font-size: 11px; padding: 4px 10px; border-radius: 12px; border: 1px solid #e2e8f0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .status-ready { border-color: #4caf50; color: #2e7d32; background: #f0fdf4; }
+        .status-local { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+
+        .sticky-banner { 
+            position: fixed;
+            top: 100px; /* Below header */
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 48px);
+            max-width: 380px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: #1e293b; 
+            z-index: 999; 
+            display: none; 
+            align-items: center; 
+            justify-content: space-between; 
+            padding: 12px 16px; 
+            border-radius: 20px;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+        }
+        .banner-pill-btn { 
+            background: #1e293b; 
+            color: #fff; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 12px; 
+            font-weight: 700; 
+            font-size: 12px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+        .banner-pill-btn:hover { background: #0f172a; transform: scale(1.05); }
+        .banner-btn:active { transform: translateY(0) scale(0.98); }
+        .local-nudge { animation: amberPulse 2s infinite; }
+        @keyframes amberPulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
         /* ACCORDION */
         .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #eef2f6; transition: box-shadow 0.2s; position: relative; }
@@ -165,7 +242,7 @@
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
         .month-header .month-title { font-weight: 700; font-size: 0.85rem; color: #1e293b; }
-        .month-header .month-total { font-weight: 800; color: #3b82f6; font-size: 0.85rem; }
+        .month-header .month-total { font-weight: 800; color: #1d4ed8; font-size: 0.85rem; }
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
@@ -184,7 +261,7 @@
         /* CATEGORY COLORS */
         .cat-online { background-color: #fff7ed; color: #f97316; } /* Orange */
         .cat-vehicle { background-color: #f5f3ff; color: #8b5cf6; } /* Purple */
-        .cat-shopping { background-color: #dbeafe; color: #3b82f6; } /* Soft Blue bg, Blue icon for Shopping */
+        .cat-shopping { background-color: #dbeafe; color: #1d4ed8; } /* Soft Blue bg, Blue icon for Shopping */
         .cat-services { background-color: #f0fdf4; color: #22c55e; } /* Green - General Services */
         .cat-service-magenta { background-color: #fdf2f9; color: #d946ef; } /* Magenta - Telco/Specific Service */
         .cat-food { background-color: #fefce8; color: #eab308; } /* Yellow/Gold */
@@ -193,7 +270,7 @@
         .cat-trading { background-color: #fff1f2; color: #ef4444; } /* Red - Trading */
         .cat-aqua { background-color: #ecfeff; color: #0891b2; } /* Dark Aqua/Cyan - Trade Copier */
         .cat-investments { background-color: #f0fdfa; color: #0d9488; } /* Teal/Dark Green */
-        .cat-school { background-color: #eff6ff; color: #3b82f6; } /* Blue */
+        .cat-school { background-color: #eff6ff; color: #1d4ed8; } /* Blue */
         .cat-red { background-color: #fef2f2; color: #ef4444 !important; } /* Force Red for Financial */
         
         .txn-info { display: flex; flex-direction: column; }
@@ -222,6 +299,18 @@
         .dropdown-item.danger { color: #ef4444; }
         .dropdown-item.danger:hover { background: #fef2f2; }
 
+        /* CATEGORY COLORS */
+        .cat-online { background: #ffedd5; color: #f97316; }
+        .cat-shopping { background: #dbeafe; color: #3b82f6; }
+        .cat-vehicle { background: #ede9fe; color: #8b5cf6; } 
+        .cat-food { background: #fef9c3; color: #eab308; }
+        .cat-life { background: #d1fae5; color: #10b981; } 
+        .cat-service-magenta { background: #fce7f3; color: #d946ef; }
+        .cat-aqua { background: #cffafe; color: #06b6d4; }
+        .cat-trading { background: #fee2e2; color: #ef4444; }
+        .cat-financial { background: #fee2e2; color: #ef4444; }
+        .cat-income { background: #dcfce7; color: #16a34a; }
+
         /* MODAL STYLES */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
         .modal-overlay.show { display: flex; }
@@ -231,12 +320,12 @@
         .modal-body { margin-bottom: 12px; }
         .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
         .cat-option { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s; }
-        .cat-option:hover { border-color: #3b82f6; background: #eff6ff; }
-        .cat-option.active { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 2px #3b82f6; }
+        .cat-option:hover { border-color: #1d4ed8; background: #eff6ff; }
+        .cat-option.active { border-color: #1d4ed8; background: #eff6ff; box-shadow: 0 0 0 2px #1d4ed8; }
         .cat-option i { font-size: 24px; }
         .cat-option span { font-size: 12px; font-weight: 600; color: #475569; text-align: center; }
         .note-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; font-size: 14px; min-height: 60px; resize: none; outline: none; transition: border-color 0.2s; color: #1e293b; }
-        .note-input:focus { border-color: #3b82f6; }
+        .note-input:focus { border-color: #1d4ed8; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 8px; }
         .cancel-link { color: #1e293b; font-weight: 700; font-size: 13px; text-transform: uppercase; cursor: pointer; padding: 10px 16px; border-radius: 4px; transition: background 0.2s; }
         .cancel-link:hover { background: #f1f5f9; }
@@ -256,7 +345,7 @@
         .log-error { color: #f87171; font-weight: bold; }
         
         .loading-overlay { display: none; text-align: center; padding: 60px; color: #64748b; }
-        .btn-sync { background-color: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
+        .btn-sync { background-color: #1d4ed8; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
         .btn-sync:hover { background-color: #2563eb; }
         .btn-sync:active { transform: scale(0.98); }
         .btn-sync:disabled { background-color: #94a3b8; cursor: not-allowed; }
@@ -266,7 +355,17 @@
 
         /* PIE CHART STYLES - THICKER & MODERN */
         .chart-card { background: #fff; border-radius: 24px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
-        .chart-container { position: relative; width: 220px; height: 220px; margin: 0 auto 24px; filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.05)); }
+        .chart-container { 
+            position: relative; width: 220px; height: 220px; margin: 0 auto 24px; 
+            filter: drop-shadow(0 0 15px rgba(29, 78, 216, 0.05)); 
+        }
+        
+        .chart-segment {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .chart-segment:hover {
+            transform: scale(1.02);
+        }
         .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: #fff; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 12px rgba(0,0,0,0.03); border: 4px solid #f8fafc; z-index: 10; pointer-events: none; gap: 2px; }
         .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; line-height: 1; margin: 0; }
         .chart-center-value { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1; text-align: center; }
@@ -301,12 +400,13 @@
         /* BOTTOM NAV */
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.02); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
-        .nav-item.active { color: #10b981; }
+        .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
+        .nav-item.active { color: #1d4ed8; }
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
         /* FAB */
-        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #10b981; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
+        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(29, 78, 216, 0.3); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
         .fab:active { transform: scale(0.95); }
         .fab i { font-size: 32px; }
         
@@ -316,19 +416,19 @@
         }
 
         /* TREND CHART */
-        .trend-card { background: #fff; border-radius: 20px; padding: 24px; margin-bottom: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
-        .trend-path { filter: drop-shadow(0 4px 6px rgba(59, 130, 246, 0.2)); }
-        .trend-dot { fill: #fff; stroke: #3b82f6; stroke-width: 2.5; }
+        .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        .trend-path { filter: drop-shadow(0 4px 6px rgba(29, 78, 216, 0.2)); }
+        .trend-dot { fill: #fff; stroke: #1d4ed8; stroke-width: 2.5; }
         .trend-label { font-size: 10px; fill: #94a3b8; font-weight: 600; }
         
         /* RECENT ACTIVITIES PREMIUM LIST */
         .recent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 4px; }
         .recent-header h3 { margin: 0; font-weight: 700; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; }
-        .recent-header .see-all { color: #10b981; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
+        .recent-header .see-all { color: #1d4ed8; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
 
         .premium-txn { padding: 12px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #f8fafc; background: #fff; }
         .premium-txn:last-child { border-bottom: none; }
-        .premium-txn .icon-box { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .premium-txn .icon-box { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; position: relative; }
         .premium-txn .txn-details { flex: 1; min-width: 0; }
         .premium-txn .txn-merch { font-weight: 800; color: #1e293b; letter-spacing: -0.3px; font-size: 12.5px; text-transform: uppercase; }
         .premium-txn .txn-sub { font-size: 11px; color: #94a3b8; font-weight: 500; }
@@ -359,6 +459,30 @@
         /* Shadow for the elevated clone */
         .premium-txn.elevated-clone { position: fixed; z-index: 2001; background: #fff; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); transform: scale(1.02); pointer-events: auto; border: 1px solid rgba(0,0,0,0.05); }
         
+        /* BRAND LOGO BADGE */
+        .brand-badge {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #fff;
+            z-index: 10;
+            overflow: hidden;
+        }
+        .brand-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transform: scale(1.15);
+        }
+
         .ios-action-menu { display: none; position: fixed; background: rgba(255,255,255,0.95); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 14px; padding: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 2002; min-width: 180px; max-width: 200px; overflow: hidden; }
         .ios-action-menu.show { display: block; animation: menuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes menuSlideIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -381,10 +505,22 @@
                 <div class="greeting-text">GOOD MORNING</div>
                 <div class="user-name" id="user-display-name">Guest</div>
             </div>
-            <div id="profile-badge" onclick="handleAuthClick()">
+            <div class="profile-container">
+            <div id="profile-badge" onclick="toggleProfileDropdown(event)">
                 <i class="material-icons">person</i>
                 <img id="user-pic" src="" alt="Profile">
             </div>
+            <div id="profile-dropdown" class="profile-dropdown">
+                <div class="dropdown-item" onclick="handleAuthClick()">
+                    <i class="material-icons">sync</i>
+                    <span>Google Sync</span>
+                </div>
+                <div class="dropdown-item logout" onclick="handleSignout()">
+                    <i class="material-icons">logout</i>
+                    <span>Log Out</span>
+                </div>
+            </div>
+        </div>
         </div>
 
         <!-- RICH BLACK ATM CARD -->
@@ -429,7 +565,7 @@
             </div>
 
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
-            <div id="chart-section" class="chart-card" style="display: none;">
+            <div id="chart-section" class="chart-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Expenses structure</h3>
                     <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat" style="font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 8px 0 12px; border-radius: 8px; height: 30px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 110px;">
@@ -457,8 +593,10 @@
                     </div>
                 </div>
 
-                <div class="chart-container">
-                    <svg id="pieChart" width="220" height="220" viewBox="0 0 240 240"></svg>
+                <div class="chart-container" id="chart-anim-container">
+                    <svg id="pieChart" width="220" height="220" viewBox="0 0 240 240">
+                        <g id="pieContent"></g>
+                    </svg>
                     <div class="chart-center">
                         <div class="chart-center-label">TOTAL</div>
                         <div class="chart-center-value" id="chart-total-val">0</div>
@@ -473,8 +611,11 @@
             <div class="trend-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">Spending Trends</h3>
-                    <select class="mui-btn mui-btn--flat" style="font-size: 12px; font-weight: 700; color: #1e293b; background: #f8fafc; padding: 0 16px; border-radius: 12px; height: 36px; text-transform: none; border: 1px solid #e2e8f0; border-bottom: none; -webkit-appearance: none; appearance: none;">
-                        <option>This Month</option>
+                    <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f1f5f9; padding: 0 8px; border-radius: 6px; height: 26px; text-transform: none; border: none; outline: none; cursor: pointer;">
+                        <option value="this_month" selected>This Month</option>
+                        <option value="this_week">This Week</option>
+                        <option value="last_3_months">Past 3 Months</option>
+                        <option value="last_6_months">Past 6 Months</option>
                     </select>
                 </div>
                 <div style="height: 140px; width: 100%; position: relative; margin-bottom: 20px;">
@@ -489,7 +630,7 @@
                         <path id="trendPath" class="trend-path" d="" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"></path>
                         <g id="trendDots"></g>
                     </svg>
-                    <div style="display: flex; justify-content: space-between; margin-top: 10px; padding: 0 5px;">
+                    <div id="trend-labels" style="display: flex; justify-content: space-between; margin-top: 10px; padding: 0 5px;">
                         <span class="trend-label">Week 1</span>
                         <span class="trend-label">Week 2</span>
                         <span class="trend-label">Week 3</span>
@@ -504,7 +645,26 @@
 
             <div class="recent-header">
                 <h3>Recent Transactions</h3>
-                <a href="#" class="see-all">See All</a>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: #e0f2fe; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: #0284c7;">visibility</i>
+                        <span style="font-size: 11px; font-weight: 700; color: #0284c7;"></span>
+                    </div>
+                    <select id="txn-cat-filter" onchange="filterTxnList()" style="font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; cursor: pointer;">
+                        <option value="all">All Items</option>
+                        <option value="Food & Drinks">Food</option>
+                        <option value="Vehicle">Vehicle</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Online shopping">Online</option>
+                        <option value="Transportation">Transport</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Education">Education</option>
+                        <option value="Sport">Sport</option>
+                        <option value="Service">Services</option>
+                        <option value="Income">Income</option>
+                        <option value="Financial Expenses">Finance</option>
+                    </select>
+                </div>
             </div>
 
             <div id="loading-spinner" class="loading-overlay">
@@ -521,21 +681,21 @@
 
         <!-- BOTTOM NAV -->
         <div class="bottom-nav">
-            <a href="#" class="nav-item active">
-                <i class="material-icons">home</i>
-                <span>Home</span>
-            </a>
-            <a href="#" class="nav-item">
-                <i class="material-icons">history</i>
-                <span>History</span>
-            </a>
-            <a href="#" class="nav-item">
+            <a href="index.html" class="nav-item active">
                 <i class="material-icons">account_balance_wallet</i>
                 <span>Wallet</span>
             </a>
-            <a href="#" class="nav-item">
-                <i class="material-icons">settings</i>
-                <span>Settings</span>
+            <a href="accounts.html" class="nav-item">
+                <i class="material-icons">account_balance</i>
+                <span>Accounts</span>
+            </a>
+            <a href="calendar.html" class="nav-item">
+                <i class="material-icons">calendar_today</i>
+                <span>Calendar</span>
+            </a>
+            <a href="goals.html" class="nav-item">
+                <i class="material-icons">track_changes</i>
+                <span>Goals</span>
             </a>
         </div>
     </div>
@@ -554,8 +714,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp, getDocs, query, orderBy, updateDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp, getDocs, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // FIREBASE CONFIG
         const firebaseConfig = {
@@ -570,6 +730,11 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
+
+        window.closeModals = () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+        };
+
 
         // ENABLE OFFLINE PERSISTENCE
         enableIndexedDbPersistence(db).catch((err) => {
@@ -594,9 +759,22 @@
         let accessToken = localStorage.getItem('g_access_token');
         let expiry = localStorage.getItem('g_token_expiry');
 
+        if (window.location.search.includes('logout=true')) {
+            // Force a deep reset on the first load after logout
+            log('🧹 Session purge complete. User isolated.', 'info');
+        }
+
         // INITIALIZE APP
         window.addEventListener('DOMContentLoaded', async () => {
-            log('SmartWallet Sync - v1.2 Optimizing...');
+            log('SmartWallet Sync - v1.2 Active');
+            const origin = window.location.origin;
+            log('--- 🛡️ FINAL AUTH FIX ---', 'warn');
+            log('You see "Requested action is invalid" because your local server address is not authorized.', 'error');
+            log('1. Go to Firebase Console > Authentication > Settings > Authorized Domains');
+            log('2. Add BOTH "127.0.0.1" AND "localhost" to the list.', 'info');
+            log('3. Current URL: ' + window.location.href);
+            log('4. Ensure your server is running on ' + origin, 'info');
+            log('-------------------------', 'warn');
 
             // 1. Immediate UI population from Cache
             const cachedName = localStorage.getItem('user_name');
@@ -609,28 +787,115 @@
                 badge.classList.add('has-pic');
             }
             
-            // 2. Firebase Init
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                const dbBadge = document.getElementById('db-status');
-                dbBadge.innerText = 'DB: Connected';
-                dbBadge.classList.add('status-ready');
-                log('Firebase connected.');
-            } catch (e) { log('Firebase Fail: ' + e.message, 'error'); }
-
-            // 3. Initial Data Load (Firestore)
-            await loadData();
-
-            // 4. Auto-refresh profile & Auto-sync if token is valid
-            const expiry = localStorage.getItem('g_token_expiry');
-            if (accessToken && expiry && Date.now() < parseInt(expiry)) {
-                log('Google session valid. Refreshing profile...');
-                fetchUserProfile(accessToken);
-                // Auto-sync on load
-                setTimeout(() => handleScan(300), 1000); 
-            } else {
-                log('No active Google session. Using cached profile.');
+            // Safety: Check if GIS already loaded (async/defer race)
+            if (typeof google !== 'undefined' && google.accounts) {
+                window.gisLoaded();
             }
+            
+            // 2. Auth State Observer
+            onAuthStateChanged(auth, async (user) => {
+                if (!user) {
+                    log('Establishing secure local session...');
+                    signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
+                    return;
+                }
+
+                const dbBadge = document.getElementById('db-status');
+                dbBadge.innerText = user.isAnonymous ? 'Mode: Local (Unsynced)' : `Mode: Cloud (${user.email})`;
+                dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
+                log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email));
+                if (!user.isAnonymous) log('Cloud Sync Active!', 'info');
+                
+                // Update Profile Dropdown Content
+                const dropdown = document.getElementById('profile-dropdown');
+                if (user.isAnonymous) {
+                     dropdown.innerHTML = `
+                        <div class="dropdown-header">Guest Session</div>
+                        <div class="dropdown-item" onclick="handleAuthClick()">
+                            <i class="material-icons">cloud_upload</i>
+                            <span>Sign in with Google</span>
+                        </div>
+                     `;
+                } else {
+                     dropdown.innerHTML = `
+                        <div class="dropdown-header">${user.email}</div>
+                        <div class="dropdown-item" onclick="handleAuthClick()">
+                            <i class="material-icons">swap_horiz</i>
+                            <span>Switch Account</span>
+                        </div>
+                        <div class="dropdown-item logout" onclick="handleSignout()">
+                            <i class="material-icons">logout</i>
+                            <span>Log Out</span>
+                        </div>
+                     `;
+                }
+
+                if (user.isAnonymous) {
+                     // Nudge to claim data
+                     const profileBadge = document.getElementById('profile-badge');
+                     profileBadge.style.border = '2px solid #f59e0b';
+                     profileBadge.classList.add('local-nudge');
+                     
+                     // Create/Show Floating Pill
+                     let banner = document.getElementById('local-banner');
+                     if (!banner) {
+                         banner = document.createElement('div');
+                         banner.id = 'local-banner';
+                         banner.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <i class="material-icons" style="color:#f59e0b; font-size:20px;">cloud_off</i>
+                                <span style="font-size:12px; font-weight:800; color:#1e293b; letter-spacing:0.2px;">SYNC YOUR DATA</span>
+                            </div>
+                            <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
+                         `;
+                         banner.className = 'sticky-banner';
+                         const wrapper = document.querySelector('.mobile-wrapper');
+                         if (wrapper) wrapper.prepend(banner);
+                         else document.body.prepend(banner);
+                     }
+                     banner.style.display = 'flex';
+                } else {
+                     document.getElementById('profile-badge').style.border = 'none';
+                     document.getElementById('profile-badge').classList.remove('local-nudge');
+                     const banner = document.getElementById('local-banner');
+                     if (banner) banner.style.display = 'none';
+                }
+                
+                // Update Profile if synced
+                if (!user.isAnonymous) {
+                     document.getElementById('user-display-name').innerText = user.displayName?.split(' ')[0] || 'User';
+                     if (user.photoURL) {
+                         const picEl = document.getElementById('user-pic');
+                         picEl.src = user.photoURL;
+                         document.getElementById('profile-badge').classList.add('has-pic');
+                     }
+                }
+
+                // Load Data for this UID
+                await loadData();
+                
+                // Refresh global token state for handleScan
+                accessToken = localStorage.getItem('g_access_token');
+                expiry = localStorage.getItem('g_token_expiry');
+
+                if (accessToken && expiry && Date.now() < parseInt(expiry)) {
+                    // ADAPTIVE SYNC: Deep sync (400) if > 1 day, else Routine sync (25)
+                    const lastDeepSync = localStorage.getItem('last_deep_sync');
+                    const now = Date.now();
+                    const dayInMs = 24 * 60 * 60 * 1000;
+                    
+                    if (!lastDeepSync || (now - parseInt(lastDeepSync)) > dayInMs) {
+                        log('Initial deep sync (400 items)...');
+                        setTimeout(() => {
+                            handleScan(400);
+                            localStorage.setItem('last_deep_sync', now);
+                        }, 1000);
+                    } else {
+                        log('Routine quick sync (25 items)...');
+                        setTimeout(() => handleScan(25), 1000);
+                    }
+                }
+            });
         });
 
         // FETCH TRANSACTIONS FROM FIRESTORE
@@ -640,17 +905,18 @@
             
             spinner.style.display = 'block';
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
+                const isAnon = auth.currentUser.isAnonymous;
+                
+                const syncStatusText = document.getElementById('syncStatusText');
+                if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Synced';
+                
                 let q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
                 let snap = await getDocs(q);
 
-                // Fallback to guest-user if UID is new/empty
-                if (snap.empty) {
-                    const legacyQ = query(collection(db, "users", "guest-user", "transactions"), orderBy("date", "desc"));
-                    snap = await getDocs(legacyQ);
-                    if (!snap.empty) log('Fetched data from legacy guest session.');
-                }
+                // REMOVED guest-user fallback for privacy/isolation
+                // Users will only see their own data or a fresh local start.
 
                 let txns = [];
                 const batchUpdates = []; // Collect updates for fuel notes
@@ -688,6 +954,17 @@
                 window.allTxns = txns;
 
                 if (txns.length === 0) {
+                    // RESET UI ON EMPTY ACCOUNT
+                    document.getElementById('expenses-total-summary').innerText = 'PHP 0.00';
+                    document.getElementById('trend-period-total').innerText = 'PHP 0.00';
+                    document.getElementById('chart-total-val').innerText = '0';
+                    const balanceEl = document.querySelector('.balance-amount');
+                    if (balanceEl) balanceEl.innerText = 'PHP 0.00';
+                    
+                    // Reset Graphs
+                    if (window.drawPieChart) window.drawPieChart([], 0);
+                    if (window.drawTrendChart) window.drawTrendChart([]);
+
                     container.innerHTML = `
                         <div style="text-align:center; padding:60px 20px; color:#64748b; background: white; border-radius: 12px; border: 1px dashed #cbd5e1;">
                             <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">inbox</i>
@@ -697,16 +974,8 @@
                 } else {
                     renderHistory(txns);
                     // Initial chart filter with Persistence
-                    const savedFilter = localStorage.getItem('wallet_chart_filter');
                     const filterEl = document.getElementById('chart-filter');
-                    
-                    if (savedFilter && filterEl.querySelector(`option[value="${savedFilter}"]`)) {
-                        filterEl.value = savedFilter;
-                    } else {
-                        // Default to 'this_week' if not saved
-                        filterEl.value = 'this_week';
-                    }
-                    
+                    filterEl.value = 'this_month'; // Always default to This Month
                     filterChart();
                 }
                 window.highlightTransactions = (categoryName) => {
@@ -860,37 +1129,49 @@
             'Life & Entertainment': { color: '#10b981', class: 'cat-life' },
             'Trading Expenses': { color: '#ef4444', class: 'cat-trading' },
             'Trade Copier': { color: '#0891b2', class: 'cat-aqua' },
-            'Financial Expenses': { color: '#ef4444', class: 'cat-financial' }
+            'Financial Expenses': { color: '#ef4444', class: 'cat-financial' },
+            'Transportation': { color: '#8b5cf6', class: 'cat-vehicle' },
+            'Travel': { color: '#06b6d4', class: 'cat-aqua' },
+            'Education': { color: '#3b82f6', class: 'cat-shopping' }, /* Blue like Shopping */
+            'Sport': { color: '#10b981', class: 'cat-life' },
+            'Income': { color: '#16a34a', class: 'cat-income' } /* Green */
         };
 
         function refreshChart(txns, pastTotal = 0) {
             const chartSection = document.getElementById('chart-section');
-            if (txns.length === 0) {
-                chartSection.style.display = 'none';
-                return;
-            }
-            chartSection.style.display = 'block';
-
             const totals = {};
             let grandTotal = 0;
+
+            let incomeTotal = 0;
+            let expenseTotal = 0;
 
             txns.forEach(t => {
                 if (t.excluded) return;
                 const mapped = getMerchantDisplay(t.merchant, t);
                 const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                // BACKWARD COMPATIBILITY & MAPPING
                 let cat = mapped.category || 'Other';
                 if (cat === 'Financial expenses') cat = 'Financial Expenses';
                 if (cat === 'Trading expenses') cat = 'Trading Expenses';
                 
-                totals[cat] = (totals[cat] || 0) + amt;
-                grandTotal += amt;
+                if (cat === 'Income') {
+                    incomeTotal += amt;
+                } else {
+                    totals[cat] = (totals[cat] || 0) + amt;
+                    expenseTotal += amt;
+                }
             });
+            
+            grandTotal = expenseTotal; // Chart shows Expenses only
 
-            if (grandTotal === 0) {
-                chartSection.style.display = 'none';
-                return;
+            // UPDATE WALLET BALANCE
+            const balanceEl = document.querySelector('.balance-amount');
+            if (balanceEl) {
+                const balance = incomeTotal - expenseTotal;
+                balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
             }
+
+            // Always show progress even if zero
+            chartSection.style.display = 'block';
 
             const segments = Object.entries(totals).map(([name, value]) => ({
                 name,
@@ -931,40 +1212,157 @@
             const area = document.getElementById('trendArea');
             const dots = document.getElementById('trendDots');
             const totalEl = document.getElementById('trend-period-total');
+            const filterEl = document.getElementById('trend-filter'); // Correct ID for trend filter
+            const filter = filterEl ? filterEl.value : 'this_month';
+            
             if (!path || txns.length === 0) return;
 
-            // Group by Week (4 weeks of current month)
+            // Reset labels
+            const labelsContainer = document.getElementById('trend-labels');
+            if (labelsContainer) labelsContainer.innerHTML = '';
+
             const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const weekTotals = [0, 0, 0, 0];
             let periodTotal = 0;
+            let dataPoints = [];
+            let labels = [];
 
-            txns.forEach(t => {
-                const d = new Date(t.date);
-                if (t.excluded || d.getMonth() !== month || d.getFullYear() !== year) return;
+            if (filter === 'this_week') {
+                // Group by Day (Sun-Sat) as requested
+                dataPoints = [0,0,0,0,0,0,0];
+                labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
                 
-                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                periodTotal += amt;
-                
-                const date = d.getDate();
-                if (date <= 7) weekTotals[0] += amt;
-                else if (date <= 14) weekTotals[1] += amt;
-                else if (date <= 21) weekTotals[2] += amt;
-                else weekTotals[3] += amt;
-            });
+                // Calculate Start of Week (Sunday)
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay()); // Go back to Sunday
+                startOfWeek.setHours(0,0,0,0);
 
+                txns.forEach(t => {
+                    const d = new Date(t.date);
+                    // Check exclusion and Income
+                    const mappedTrn = getMerchantDisplay(t.merchant, t);
+                    if (t.excluded || d < startOfWeek || mappedTrn.category === 'Income') return; 
+
+                    const diff = Math.floor((d - startOfWeek) / 86400000);
+                    if (diff >= 0 && diff < 7) {
+                        const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                        dataPoints[diff] += amt;
+                        periodTotal += amt;
+                    }
+                });
+            } else if (filter === 'last_6_months') {
+                // Monthly View (6 Data Points)
+                const monthsCount = 6;
+                dataPoints = new Array(monthsCount).fill(0);
+                
+                // Generate labels (e.g. Jan, Feb)
+                for (let i = monthsCount - 1; i >= 0; i--) {
+                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    labels.push(d.toLocaleString('default', { month: 'short' }));
+                }
+
+                const limitDate = new Date(now.getFullYear(), now.getMonth() - 5, 1); // Start of 6th month back
+
+                txns.forEach(t => {
+                    const d = new Date(t.date);
+                    // Check exclusion and Income
+                    const mappedTrn = getMerchantDisplay(t.merchant, t);
+                    if (t.excluded || d < limitDate || mappedTrn.category === 'Income') return;
+
+                    // Calculate month difference
+                    const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+                    const idx = (monthsCount - 1) - monthDiff;
+                    
+                    if (idx >= 0 && idx < monthsCount) {
+                        const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                        dataPoints[idx] += amt;
+                        periodTotal += amt;
+                    }
+                });
+
+            } else {
+                // Default: Weekly Buckets (This Month: 4-5 weeks, 3M: 12 weeks)
+                let weeksCount = 4;
+                if (filter === 'last_3_months') weeksCount = 12;
+                else if (filter === 'this_month') {
+                    // Dynamic weeks in month
+                    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    const used = firstDay.getDay() + lastDay.getDate();
+                    weeksCount = Math.ceil(used / 7);
+                }
+
+                dataPoints = new Array(weeksCount).fill(0);
+                
+                let limitDate;
+                if (filter === 'this_month') {
+                     limitDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                } else {
+                     limitDate = new Date(now);
+                     limitDate.setDate(now.getDate() - (weeksCount * 7));
+                }
+
+                txns.forEach(t => {
+                    const d = new Date(t.date);
+                    // Check exclusion and Income
+                    const mappedTrn = getMerchantDisplay(t.merchant, t);
+                    if (t.excluded || d < limitDate || mappedTrn.category === 'Income') return;
+                    
+                    let idx;
+                    if (filter === 'this_month') {
+                        // Week of the month (0-4)
+                        const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+                        const dayOfWeek = firstDay.getDay(); // 0-6
+                        const dayOfMonth = d.getDate();
+                        const adjustedDate = dayOfMonth + dayOfWeek;
+                        idx = Math.ceil(adjustedDate / 7) - 1;
+                        if (idx >= weeksCount) idx = weeksCount - 1; // Clamp
+                    } else {
+                        // Rolling back from Now
+                        const diffWeeks = Math.floor((now - d) / (7 * 86400000));
+                        idx = (weeksCount - 1) - diffWeeks;
+                    }
+
+                    if (idx >= 0 && idx < weeksCount) {
+                        const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                        dataPoints[idx] += amt;
+                        periodTotal += amt;
+                    }
+                });
+
+                // Labels
+                for(let i=1; i<=weeksCount; i++) {
+                    if (filter === 'this_month') {
+                         labels.push(`Week ${i}`);
+                    } else {
+                        if (i % 4 === 1 || i === weeksCount) labels.push(`W${i}`);
+                        else labels.push('');
+                    }
+                }
+            }
+
+            // Update Labels UI
+            if (labelsContainer) {
+                labels.forEach(l => {
+                    const span = document.createElement('span');
+                    span.className = 'trend-label';
+                    // Simplify labels for small screens
+                    span.innerText = l;
+                    labelsContainer.appendChild(span);
+                });
+            }
+
+            // Update Total
+            totalEl.style.color = '#1d4ed8';
             totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 
-            const points = weekTotals;
-            const max = Math.max(...points, 1000) * 1.2;
+            const points = dataPoints;
+            const max = Math.max(...points, 500) * 1.2;
             const w = 400;
-            const h = 140;
-            const padding = 40;
+            const h = 130; 
+            const padding = 20; 
             const chartW = w - (padding * 2);
-            const step = chartW / 3;
+            const step = chartW / (points.length - 1 || 1);
 
-            // Curved Line Logic (Catmull-Rom approximate)
             let d = "";
             let areaD = "";
             dots.innerHTML = '';
@@ -978,13 +1376,23 @@
             for (let i = 0; i < points.length; i++) {
                 const p = getPoint(i);
                 
-                // Add Dot
-                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                circle.setAttribute('cx', p.x);
-                circle.setAttribute('cy', p.y);
-                circle.setAttribute('r', '5');
-                circle.setAttribute('class', 'trend-dot');
-                dots.appendChild(circle);
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', p.x - step/2);
+                rect.setAttribute('y', 0);
+                rect.setAttribute('width', step);
+                rect.setAttribute('height', h);
+                rect.setAttribute('fill', 'transparent');
+                rect.style.cursor = 'pointer';
+                
+                rect.onmouseenter = (e) => {
+                    const tooltip = document.getElementById('chart-tooltip');
+                    tooltip.innerHTML = `${labels[i] || 'Period'}<br><span style="color:#d1fae5">₱${Math.round(points[i]).toLocaleString()}</span>`;
+                    tooltip.style.opacity = '1';
+                    tooltip.style.left = `${e.pageX}px`;
+                    tooltip.style.top = `${e.pageY - 10}px`;
+                };
+                rect.onmouseleave = () => document.getElementById('chart-tooltip').style.opacity = '0';
+                dots.appendChild(rect);
 
                 if (i === 0) {
                     d += `M ${p.x} ${p.y}`;
@@ -997,29 +1405,43 @@
                 }
             }
 
-            areaD += ` L ${padding + 3 * step} ${h} Z`;
+            const lastP = getPoint(points.length - 1);
+            areaD += ` L ${lastP.x} ${h} Z`;
             path.setAttribute('d', d);
             area.setAttribute('d', areaD);
+            path.setAttribute('stroke', '#1d4ed8'); 
         }
 
         function drawPieChart(segments, total) {
-            const svg = document.getElementById('pieChart');
+            const container = document.getElementById('chart-anim-container');
+            const svgGroup = document.getElementById('pieContent');
             const legend = document.getElementById('chart-legend');
             const totalVal = document.getElementById('chart-total-val');
             
-            svg.innerHTML = '';
+            svgGroup.innerHTML = '';
             legend.innerHTML = '';
-            totalVal.innerText = `₱${Math.round(total).toLocaleString()}`;
+            totalVal.innerText = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
 
-            const centerX = 110;
-            const centerY = 110;
-            const radius = 105; 
+            const centerX = 120; // Centered for the 240 viewBox
+            const centerY = 120;
+            const radius = 110; 
+            const innerRadius = 70;
             let currentAngle = -90;
             
-            // Handle Single Category (100%) case
+            // Handle Empty State (0 segments)
+            if (segments.length === 0 || total === 0) {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', centerX);
+                circle.setAttribute('cy', centerY);
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', '#f1f5f9');
+                svgGroup.appendChild(circle);
+                
+                legend.innerHTML = '<div style="font-size:12px; color:#94a3b8; font-weight:600; grid-column: span 2; text-align:center;">No data for this period</div>';
+                return;
+            }
             if (segments.length === 1) {
                 const seg = segments[0];
-                const innerRadius = 60;
                 
                 // Draw full donut
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1037,6 +1459,7 @@
                 path.setAttribute('d', d);
                 path.setAttribute('fill', seg.color);
                 path.setAttribute('fill-rule', 'evenodd');
+                path.classList.add('chart-segment'); // Add animation
                 path.style.cursor = 'pointer';
                 path.onclick = () => {
                     document.getElementById('chart-total-label').innerText = seg.name;
@@ -1044,13 +1467,14 @@
                     window.highlightTransactions(seg.name);
                 };
                 
-                svg.appendChild(path);
+                svgGroup.appendChild(path);
                 
                 // Legend
                 const lItem = document.createElement('div');
                 lItem.className = 'legend-item';
                 lItem.innerHTML = `<div class="legend-color" style="background: ${seg.color}"></div><span>${seg.name}</span>`;
                 legend.appendChild(lItem);
+                
                 return;
             }
 
@@ -1062,7 +1486,6 @@
                 const endAngle = currentAngle + angle;
 
                 const largeArc = angle > 180 ? 1 : 0;
-                const innerRadius = 60; // Thicker pie
                 
                 const x1 = centerX + radius * Math.cos((currentAngle * Math.PI) / 180);
                 const y1 = centerY + radius * Math.sin((currentAngle * Math.PI) / 180);
@@ -1097,7 +1520,7 @@
                     
                     // Logic to position tooltip near cursor
                     // We need to account for scrolling and absolute positioning
-                    const rect = svg.getBoundingClientRect();
+                    const rect = document.getElementById('pieChart').getBoundingClientRect();
                     // Because tooltip is fixed/absolute to body usually, or relative to container
                     // Let's rely on e.pageX/Y
                     tooltip.style.left = `${e.pageX}px`;
@@ -1119,7 +1542,7 @@
                     window.highlightTransactions(seg.name);
                 };
                 
-                svg.appendChild(path);
+                svgGroup.appendChild(path);
 
                 // Add to legend (Simple style)
                 const lItem = document.createElement('div');
@@ -1132,6 +1555,8 @@
 
                 currentAngle = endAngle;
             });
+
+            // Animation trigger removed as requested (Visibility fix)
         }
 
         // RENDER ACCORDIONS
@@ -1156,8 +1581,9 @@
                 if (!groups[key]) groups[key] = { items: [], total: 0 };
                 
                 groups[key].items.push(t);
-                // ONLY add to total if NOT excluded
-                if (!t.excluded) {
+                // ONLY add to total if NOT excluded AND NOT Income
+                const mappedSumCheck = getMerchantDisplay(t.merchant, t);
+                if (!t.excluded && mappedSumCheck.category !== 'Income') {
                     const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                     groups[key].total += amt;
                 }
@@ -1185,7 +1611,9 @@
                 data.items.forEach(t => {
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const item = document.createElement('div');
-                    item.className = `premium-txn ${t.excluded ? 'txn-excluded' : ''}`;
+                    // Prevent strikethrough for Income even if it might be technically excluded
+                    const isIncome = mapped.category === 'Income';
+                    item.className = `premium-txn ${t.excluded && !isIncome ? 'txn-excluded' : ''}`;
                     const d = new Date(t.date);
                     const shortDate = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
                     const safeMerchant = (mapped.name).replace(/'/g, "\\'");
@@ -1198,13 +1626,50 @@
                             displayNote = (amount > 250) ? "Car Refill" : "Motor Refill";
                         }
                     }
+                    
+                    // INCOME OVERRIDES
+                    let displayAmtColor = '';
+                    let displayName = mapped.name;
+                    let displayIconStyle = `background: ${mapped.catClass === 'cat-red' ? '#fee2e2' : ''}; color: ${mapped.catClass === 'cat-red' ? '#ef4444' : ''};`;
+
+                    if (mapped.category === 'Income') {
+                        displayName = 'INCOME'; // Always name it INCOME
+                        displayAmtColor = 'color: #16a34a;'; // Green Price
+                        // Icon styling handled by cat-income class, but ensure overrides are clean
+                    }
+
+                    // LOGO DETECTION (Direct Injection)
+                    const mUpper = mapped.name.toUpperCase();
+                    let logo = null;
+                    if (mUpper.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
+                    else if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) logo = 'logos/mcdo.png';
+                    else if (mUpper.includes('SHELL')) logo = 'logos/shell.png';
+                    else if (mUpper.includes('SHOPEE')) logo = 'logos/shopee.png';
+                    else if (mUpper.includes('LAZADA')) logo = 'logos/lazada.jpg';
+                    else if (mUpper.includes('GLOBE') || mUpper.includes('GOMO')) logo = 'logos/globe.png';
+                    else if (mUpper.includes('SM ') || mUpper.includes('SM STORE') || mUpper.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
+                    else if (mUpper.includes('SPOTIFY')) logo = 'logos/spotify.png';
+                    else if (mUpper.includes('TIKTOK')) logo = 'logos/tiktokshop.png';
+                    else if (mUpper.includes('TECFUEL') || mUpper.includes('TEC FUEL')) logo = 'logos/tecfuel.png';
+                    else if (mUpper.includes('TRADERS')) logo = 'logos/tradersconnect.png';
+                    else if (mUpper.includes('AYALA')) logo = 'logos/ayala.png';
+                    else if (mUpper.includes('J AND L') || mUpper.includes('JANL')) logo = 'logos/jandlmall.png';
+                    else if (mUpper.includes('MR DIY')) logo = 'logos/mrdiy.png';
+                    else if (mUpper.includes('WATSONS')) logo = 'logos/watsons.png';
+                    else if (mUpper.includes('METRO')) logo = 'logos/supermetro.png';
+                    else if (mUpper.includes('SUPERMETRO')) logo = 'logos/supermetro.png';
+                    else if (mUpper.includes('SEAOIL')) logo = 'logos/seaoil.png';
+                    else if (mUpper.includes('PETRON')) logo = 'logos/petron.png';
+
+                    const logoHTML = logo ? `<div class="brand-badge" style="display: ${typeof showLogos !== 'undefined' && showLogos ? 'flex' : 'none'}"><img src="${logo}"></div>` : '';
 
                     item.innerHTML = `
-                        <div class="icon-box ${mapped.catClass}" style="background: ${mapped.catClass === 'cat-red' ? '#fee2e2' : ''}; color: ${mapped.catClass === 'cat-red' ? '#ef4444' : ''};">
+                        <div class="icon-box ${mapped.catClass}" style="${displayIconStyle} position: relative;">
                             <i class="material-icons">${mapped.icon}</i>
+                            ${logoHTML}
                         </div>
                         <div class="txn-details" style="display: flex; flex-direction: column; gap: 2px;">
-                            <div class="txn-merch">${mapped.name}</div>
+                            <div class="txn-merch" style="${mapped.category === 'Income' ? 'color: #16a34a;' : ''}">${displayName}</div>
                             <div class="txn-sub">
                                 <span>${shortDate}</span>
                                 <span style="margin: 0 4px; opacity: 0.5;">•</span>
@@ -1213,7 +1678,7 @@
                             ${displayNote ? `<div class="txn-note" style="color: ${categoryConfig[mapped.category]?.color || '#94a3b8'}; opacity: 0.8;">${displayNote}</div>` : ''}
                         </div>
                         <div class="txn-right" style="display: flex; align-items: center; justify-content: flex-end;">
-                            <div class="txn-amount ${amount >= 1000 ? 'large' : ''}">
+                            <div class="txn-amount ${amount >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
                                 ₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
                             </div>
                         </div>
@@ -1292,24 +1757,173 @@
             } catch (e) { log('Profile refresh fail: ' + e.message, 'error'); }
         }
 
-        window.handleAuthClick = () => {
-            if (!tokenClient) {
-                log('GIS not ready.', 'error');
-                if (typeof google !== 'undefined' && google.accounts) initGIS();
-                return;
+        window.handleAuthClick = async () => {
+            log('Starting Google Sign-In...');
+            const prevUid = auth.currentUser?.uid;
+            const isAnonymous = auth.currentUser?.isAnonymous;
+
+            const provider = new GoogleAuthProvider();
+            provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+            
+            try {
+                log('Calling signInWithPopup... Browser should show a window.');
+                const result = await signInWithPopup(auth, provider);
+                log('Popup Result Received!');
+                
+                if (!result || !result.user) {
+                    log('Popup closed, but no user data found.', 'error');
+                    return;
+                }
+                
+                log('Sign-in success! Email: ' + result.user.email);
+                
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                if (credential) {
+                    accessToken = credential.accessToken;
+                    const expMs = Date.now() + 3600000; // Default 1 hour
+                    localStorage.setItem('g_access_token', accessToken);
+                    localStorage.setItem('g_token_expiry', expMs);
+                    log('Google Access Token secured.');
+                } else {
+                    log('Warning: Google Credential not returned, Gmail sync might wait.', 'warn');
+                }
+                
+                log('Sign-in successful.');
+                
+                const user = result.user;
+                if (user.displayName) {
+                    const firstName = user.displayName.split(' ')[0];
+                    document.getElementById('user-display-name').innerText = firstName;
+                    localStorage.setItem('user_name', firstName);
+                }
+                if (user.photoURL) {
+                    const badge = document.getElementById('profile-badge');
+                    const picEl = document.getElementById('user-pic');
+                    picEl.src = user.photoURL;
+                    badge.classList.add('has-pic');
+                    localStorage.setItem('user_pic', user.photoURL);
+                }
+
+                // ADVANCED MIGRATION (SYNC EVERYTHING TOGETHER)
+                log('Checking for data to sync...');
+                const sources = [];
+                if (isAnonymous && prevUid) sources.push(prevUid);
+                sources.push('guest-user'); // Always check legacy too
+
+                let migratedCount = 0;
+                for (const sourceId of sources) {
+                    if (sourceId === user.uid) continue;
+                    
+                    const oldQ = query(collection(db, "users", sourceId, "transactions"));
+                    const oldSnap = await getDocs(oldQ);
+                    
+                    if (!oldSnap.empty) {
+                        log(`Found ${oldSnap.size} items in ${sourceId === 'guest-user' ? 'Legacy' : 'Guest'} storage...`);
+                        const migrationBatches = [];
+                        oldSnap.forEach(d => {
+                            const data = d.data();
+                            // Only migrate if it doesn't exist or is newer/different
+                            // For simplicity, we'll use setDoc which will merge/overwrite
+                            migrationBatches.push(setDoc(doc(db, "users", user.uid, "transactions", d.id), data, { merge: true }));
+                        });
+                        
+                        if (migrationBatches.length > 0) {
+                            await Promise.all(migrationBatches);
+                            migratedCount += migrationBatches.length;
+                            
+                            // CLEAN UP: Delete source data ONLY if migration was successful
+                            if (sourceId !== 'guest-user') {
+                                log(`Purging guest storage for ${sourceId}...`);
+                                const deletePromises = oldSnap.docs.map(d => deleteDoc(doc(db, "users", sourceId, "transactions", d.id)));
+                                await Promise.all(deletePromises);
+                                log('Guest storage cleared. No ghost data left.');
+                            }
+                        }
+                    }
+                }
+
+                if (migratedCount > 0) {
+                    log(`Data Sync Complete! Moved ${migratedCount} items to Cloud.`);
+                    showToast(`Synced ${migratedCount} items!`);
+                    // Reload to show fresh synced view
+                    loadData();
+                } else {
+                    log('Cloud account is already up to date.');
+                }
+
+                await loadData();
+                handleScan(300);
+            } catch (error) {
+                log('Auth Error: ' + error.code, 'error');
+                log('Message: ' + error.message, 'error');
+                console.error('Detailed Auth Failure:', error);
+                
+                // Show high-visibility troubleshooter for common developer errors
+                if (error.code === 'auth/invalid-action-code' || 
+                    error.code === 'auth/unauthorized-domain' || 
+                    error.code === 'auth/configuration-not-found' ||
+                    error.message.includes('invalid action')) {
+                    
+                    const codeLabel = document.getElementById('auth-error-code');
+                    if (codeLabel) {
+                        codeLabel.innerText = error.code || 'Configuration Mismatch';
+                        document.getElementById('auth-trouble-modal').classList.add('show');
+                    }
+                } else if (error.code === 'auth/popup-closed-by-user') {
+                    showToast('Sign-in cancelled');
+                } else {
+                    showToast('Sign-in failed');
+                }
             }
-            tokenClient.requestAccessToken({ prompt: 'consent' });
         };
         
-        window.handleSignout = () => {
+        // PROFILE DROPDOWN LOGIC
+        window.toggleProfileDropdown = (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('profile-dropdown');
+            dropdown.classList.toggle('active');
+        };
+
+        // Close dropdown when clicking elsewhere
+        window.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (dropdown && dropdown.classList.contains('active')) {
+                const badge = document.getElementById('profile-badge');
+                if (!badge.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            }
+        });
+
+        window.handleSignout = async () => {
             if (confirm('Sign out?')) {
+                log('🚨 Initiating deep sign-out and data purge...');
                 localStorage.clear();
-                location.reload();
+                window.allTxns = [];
+                const historyContainer = document.getElementById('history-container');
+                const logContainer = document.getElementById('log-container');
+                if (historyContainer) historyContainer.innerHTML = '';
+                if (logContainer) logContainer.innerHTML = '';
+                
+                try {
+                    await auth.signOut();
+                    // Hard reload to flush all memory states and clear persistence
+                    window.location.href = window.location.origin + window.location.pathname + '?logout=true&t=' + Date.now();
+                } catch (e) {
+                    log('Sign out error: ' + e.message, 'error');
+                }
             }
         };
 
         // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
         window.handleScan = async (limit) => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
+
             const expiry = localStorage.getItem('g_token_expiry');
             const isExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
             
@@ -1319,7 +1933,7 @@
                 return; // The callback will trigger handleScan again
             }
             
-            const btn = limit === 50 ? document.getElementById('scan-btn') : document.getElementById('deep-scan-btn');
+            const btn = limit === 300 ? document.getElementById('scan-btn') : document.getElementById('deep-scan-btn');
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> Syncing...';
@@ -1558,8 +2172,14 @@
         };
 
         window.toggleExclusion = async (id, merchant, isCurrentlyExcluded) => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync this exclusion to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 await updateDoc(doc(db, "users", uid, "transactions", id), { excluded: !isCurrentlyExcluded });
                 log(`${isCurrentlyExcluded ? 'Included' : 'Excluded'}: ${merchant}`);
@@ -1574,10 +2194,16 @@
         };
 
         window.confirmDelete = async () => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync deletions to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
             if (!currentTxnId) return;
             try {
-                 if (!auth.currentUser) await signInAnonymously(auth);
-                const uid = auth.currentUser.uid;
+                 if (!auth.currentUser) return;
+                 const uid = auth.currentUser.uid;
                 // SOFT DELETE to prevent re-sync
                 await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { deleted: true });
                 showToast('Transaction deleted');
@@ -1597,7 +2223,12 @@
             { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
             { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
             { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
-            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' }
+            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
+            { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
+            { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
+            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-service-magenta' },
+            { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
+            { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
         ];
 
         window.closeModals = () => {
@@ -1625,9 +2256,15 @@
         };
 
         window.saveCategory = async (catId) => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync category changes to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
             if (!currentTxnId) return;
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { manualCategory: catId });
                 showToast('Category updated');
@@ -1665,6 +2302,12 @@
         }
 
         document.getElementById('save-note-btn').onclick = async () => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync your notes to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
             if (!currentTxnId) return;
             let note = document.getElementById('note-text').value.trim();
             
@@ -1672,7 +2315,7 @@
             note = toTitleCase(note);
 
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { note: note });
                 showToast('Note saved');
@@ -1695,11 +2338,17 @@
         };
 
         const savePrice = async () => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync prices to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
             if (!currentTxnId) return;
             const val = document.getElementById('price-input').value;
             const amt = parseFloat(val);
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 const docRef = doc(db, "users", uid, "transactions", currentTxnId);
                 if (isNaN(amt) || val.trim() === "") {
@@ -1798,9 +2447,14 @@
                         'Service': 'cat-service-magenta',
                         'Food & Drinks': 'cat-food',
                         'Life & Entertainment': 'cat-life',
-                        'Financial Expenses': 'cat-financial'
+                        'Financial Expenses': 'cat-financial',
+                        'Transportation': 'cat-vehicle',
+                        'Travel': 'cat-aqua',
+                        'Education': 'cat-shopping', /* Blue */
+                        'Sport': 'cat-life',
+                        'Income': 'cat-income'
                     };
-                    display.catClass = catMap[userCat.id] || 'cat-financial';
+                    display.catClass = userCat.cls || catMap[userCat.id] || 'cat-financial';
                     return display;
                 }
             }
@@ -1970,6 +2624,12 @@
         };
 
         window.saveManualTxn = async () => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to permanently save this to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
             const btn = document.getElementById('done-btn');
             const amtVal = document.getElementById('manual-amt').value;
             
@@ -2005,7 +2665,7 @@
             };
             
             try {
-                if (!auth.currentUser) await signInAnonymously(auth);
+                if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 await addDoc(collection(db, "users", uid, "transactions"), newTxn);
                 showToast('Transaction Saved');
@@ -2018,6 +2678,88 @@
                 btn.style.pointerEvents = 'auto';
                 btn.style.opacity = '1';
             }
+        };
+
+        // NEW: TRANSACTION FILTERS & LOGO TOGGLE
+        let showLogos = true;
+        
+        window.toggleLogos = () => {
+            showLogos = !showLogos;
+            const icon = document.getElementById('logo-toggle-icon');
+            const wrapper = document.querySelector('.logo-toggle-wrapper');
+            
+            if (showLogos) {
+                icon.innerText = 'visibility';
+                icon.style.color = '#0284c7';
+                wrapper.style.background = '#e0f2fe';
+                document.querySelectorAll('.brand-badge').forEach(b => b.style.display = 'flex');
+            } else {
+                icon.innerText = 'visibility_off';
+                icon.style.color = '#94a3b8';
+                wrapper.style.background = '#f1f5f9';
+                document.querySelectorAll('.brand-badge').forEach(b => b.style.display = 'none');
+            }
+        };
+
+        window.filterTxnList = () => {
+            const cat = document.getElementById('txn-cat-filter').value;
+            const txns = document.querySelectorAll('.premium-txn');
+            
+            txns.forEach(t => {
+                const itemCat = t.querySelector('.txn-sub span:last-child')?.innerText || '';
+                // Simple partial match or exact match logic based on value
+                const matchCat = (cat === 'all') || (itemCat === cat);
+
+                if (matchCat) {
+                    t.style.display = 'flex';
+                } else {
+                    t.style.display = 'none';
+                }
+            });
+        };
+
+        // NEW: Independent Trend Chart Logic
+        window.refreshTrendChart = () => {
+            if (!window.allTxns) return;
+            drawTrendChart(window.allTxns);
+        };
+
+        // Override injectBrandLogos to respect visibility
+        const originalInject = injectBrandLogos;
+        injectBrandLogos = () => {
+            const txns = document.querySelectorAll('.premium-txn');
+            txns.forEach(txn => {
+                const merchantEl = txn.querySelector('.txn-merch');
+                if (!merchantEl) return;
+                const merchantName = merchantEl.textContent.toUpperCase();
+                const iconBox = txn.querySelector('.icon-box');
+                if (!iconBox || iconBox.querySelector('.brand-badge')) return;
+                
+                let logo = null;
+                if (merchantName.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
+                else if (merchantName.includes('MCDO') || merchantName.includes('MCDONALDS')) logo = 'logos/mcdo.png';
+                else if (merchantName.includes('SHELL')) logo = 'logos/shell.png';
+                else if (merchantName.includes('SHOPEE')) logo = 'logos/shopee.png';
+                else if (merchantName.includes('LAZADA')) logo = 'logos/lazada.jpg';
+                else if (merchantName.includes('GLOBE') || merchantName.includes('GOMO')) logo = 'logos/globe.png';
+                else if (merchantName.includes('SM ') || merchantName.includes('SM STORE') || merchantName.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
+                else if (merchantName.includes('SPOTIFY')) logo = 'logos/spotify.png';
+                else if (merchantName.includes('TIKTOK')) logo = 'logos/tiktokshop.png';
+                else if (merchantName.includes('TECFUEL') || merchantName.includes('TEC FUEL')) logo = 'logos/tecfuel.png';
+                else if (merchantName.includes('TRADERS')) logo = 'logos/tradersconnect.png';
+                else if (merchantName.includes('AYALA')) logo = 'logos/ayala.png';
+                else if (merchantName.includes('J AND L') || merchantName.includes('JANL')) logo = 'logos/jandlmall.png';
+                else if (merchantName.includes('MR DIY')) logo = 'logos/mrdiy.png';
+                else if (merchantName.includes('WATSONS')) logo = 'logos/watsons.png';
+
+                if (logo) {
+                    const badge = document.createElement('div');
+                    badge.className = 'brand-badge';
+                    badge.innerHTML = `<img src="${logo}" alt="brand">`;
+                    badge.style.display = showLogos ? 'flex' : 'none';
+                    iconBox.appendChild(badge);
+                }
+            });
         };
     </script>
     
@@ -2072,17 +2814,32 @@
         </div>
     </div>
 
-    <!-- DELETE CONFIRMATION MODAL -->
-    <div id="delete-modal" class="modal-overlay">
-        <div class="custom-modal">
-            <div class="modal-header" style="color: #ef4444;">Delete Transaction?</div>
-            <p style="color: #64748b; font-size: 13px;">This action cannot be undone. If this was synced, it will not reappear.</p>
-            <div class="modal-actions" style="margin-top: 16px; align-items: center;">
-                <div class="cancel-link" onclick="closeModals()" style="letter-spacing: 0.5px; margin-right: 4px;">CANCEL</div>
-                <button class="mui-btn mui-btn--raised mui-btn--danger" onclick="confirmDelete()" style="border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #ef4444; color: white;">DELETE</button>
+    <!-- AUTH TROUBLESHOOTER MODAL -->
+    <div id="auth-trouble-modal" class="modal-overlay">
+        <div class="custom-modal" style="border-top: 5px solid #ef4444;">
+            <div class="modal-header" style="display:flex; align-items:center; gap:8px; color:#ef4444;">
+                <i class="material-icons">warning</i> 
+                <span>Login Error</span>
+            </div>
+            <div style="font-size: 14px; color: #1e293b; margin-bottom: 15px; font-weight: 600;">
+                The request returned: <code id="auth-error-code" style="color:#ef4444; background:#fee2e2; padding:2px 4px; border-radius:4px;">auth/invalid-action...</code>
+            </div>
+            <div style="background: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                <p style="font-size: 13px; font-weight: 700; color: #475569; margin: 0 0 10px 0;">Troubleshoot checklist:</p>
+                <ul style="font-size: 12.5px; color: #64748b; margin: 0; padding-left: 20px; line-height: 1.6;">
+                    <li><strong>Check URL:</strong> Ensure you are using <code style="font-weight:bold;">127.0.0.1:5500</code> (Not localhost if unauthorized).</li>
+                    <li><strong>Authorized Domains:</strong> Add <code style="font-weight:bold;">127.0.0.1</code> to Firebase Console > Authentication > Settings.</li>
+                    <li><strong>API Restrictions:</strong> Ensure your API key in Google Cloud Console allows this domain.</li>
+                </ul>
+            </div>
+            <div class="modal-actions">
+                <button class="mui-btn mui-btn--raised" onclick="closeModals()" style="border-radius:10px; font-weight:700; background:#f1f5f9; color:#475569;">CLOSE</button>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="window.location.reload()" style="border-radius:10px; font-weight:700;">RELOAD APP</button>
             </div>
         </div>
     </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
 
     <!-- MANUAL TRANSACTION MODAL -->
     <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: none;">
@@ -2170,6 +2927,6 @@
         <span id="toast-msg">Updated</span>
     </div>
 
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
 </body>
 </html>

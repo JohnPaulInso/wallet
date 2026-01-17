@@ -2,55 +2,206 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar - SmartWallet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SmartWallet - Calendar</title>
+    <link rel="icon" type="image/png" href="applogo.png?v=3">
+    <link rel="apple-touch-icon" href="applogo.png">
+    
+    <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1d4ed8">
+
     <style>
-        * { box-sizing: border-box; }
-        body { background: #f0f2f5; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; justify-content: center; }
-        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; display: flex; flex-direction: column; }
-        #header { padding: 30px 24px 10px; display: flex; align-items: center; justify-content: space-between; }
-        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; }
-        .content { padding: 24px; text-align: center; color: #64748b; }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; }
-        .nav-item.active { color: #1d4ed8; }
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+        html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
+        
+        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
+        @media (min-width: 431px) { .mobile-wrapper { height: 100vh; overflow-y: scroll; } }
+
+        #header { padding: 30px 24px 20px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        .header-title { font-size: 24px; font-weight: 800; color: #1e293b; }
+        
+        .mui-container { width: 100%; max-width: 100% !important; margin: 0; padding: 0 20px; }
+
+        /* CALENDAR STYLES */
+        .calendar-card { background: #fff; border-radius: 28px; padding: 24px; margin-top: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .current-month { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
+        .nav-btns { display: flex; gap: 8px; }
+        .nav-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
+        .nav-btn:hover { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; transform: scale(1.05); }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .weekday { text-align: center; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding-bottom: 12px; }
+        .day-cell { aspect-ratio: 1/1.4; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 8px; position: relative; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; background: #fafafa; }
+        .day-cell:hover { background: #f1f5f9; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .day-cell.today { background: #eff6ff; border-color: #93c5fd; }
+        .day-cell.selected { background: #3b82f6; color: #fff; box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4); transform: translateY(-2px); }
+        .day-cell.other-month { opacity: 0.25; pointer-events: none; background: transparent; }
+        .day-num { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+        
+        /* Balance chips on calendar dates */
+        .balance-chips { display: flex; flex-direction: column; gap: 3px; margin-top: auto; margin-bottom: 6px; width: 100%; padding: 0 4px; }
+        .balance-chip { display: flex; align-items: center; justify-content: center; gap: 2px; padding: 3px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; white-space: nowrap; }
+        .balance-chip.income { background: #d1fae5; color: #059669; }
+        .balance-chip.expense { background: #fee2e2; color: #dc2626; }
+        .balance-chip i { font-size: 10px; }
+        .selected .balance-chip.income { background: rgba(255,255,255,0.25); color: #fff; }
+        .selected .balance-chip.expense { background: rgba(255,255,255,0.25); color: #fff; }
+
+        /* CHIPS VIEW */
+        .day-details { margin-top: 24px; }
+        .details-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .details-date { font-size: 15px; font-weight: 800; color: #1e293b; }
+        .no-txns { text-align: center; padding: 40px 20px; color: #94a3b8; border: 1px dashed #e2e8f0; border-radius: 16px; font-size: 13px; font-weight: 500; }
+
+        .txn-chip { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 16px; margin-bottom: 12px; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .txn-chip:active { transform: scale(0.98); }
+        .txn-chip.expense { background: #fef2f2; border: 1.5px solid #fecaca; }
+        .txn-chip.income { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+        
+        .txn-chip-left { display: flex; align-items: center; gap: 14px; }
+        .txn-chip-icon { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .expense .txn-chip-icon { background: #fff; color: #ef4444; border: 1.5px solid #fecaca; }
+        .income .txn-chip-icon { background: #fff; color: #10b981; border: 1.5px solid #bbf7d0; }
+        .txn-chip-icon i { font-size: 20px; }
+        
+        .txn-chip-info { display: flex; flex-direction: column; gap: 2px; }
+        .txn-chip-name { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
+        .txn-chip-cat { font-size: 11px; font-weight: 600; color: #64748b; }
+        .txn-chip-amount { font-size: 15px; font-weight: 800; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: -0.3px; }
+        .expense .txn-chip-amount { color: #dc2626; }
+        .income .txn-chip-amount { color: #059669; }
+
+        /* SUMMARY PILLS */
+        .summary-pills { display: flex; gap: 12px; margin-bottom: 20px; }
+        .summary-pill { flex: 1; padding: 12px; border-radius: 16px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #f1f5f9; }
+        .pill-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pill-value { font-size: 16px; font-weight: 800; }
+        .expense-pill .pill-value { color: #ef4444; }
+        .income-pill .pill-value { color: #16a34a; }
+
+        /* BOTTOM NAV */
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 80px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
         .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
+        .nav-item.active { color: #1d4ed8; }
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
-        @media (max-width: 430px) { .bottom-nav { left: 0; transform: none; } }
+
+        /* CUSTOM CONTENT SECTION */
+        .custom-section { margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 24px; color: #fff; position: relative; overflow: hidden; }
+        .custom-section::after { content: ''; position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 60%); pointer-events: none; }
+        .custom-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+        .custom-desc { font-size: 13px; color: #94a3b8; line-height: 1.6; }
+        .custom-btn { margin-top: 16px; background: #fff; color: #1e293b; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 800; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        /* TOAST */
+        .toast-container { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 12px 24px; border-radius: 50px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); z-index: 2000; display: flex; align-items: center; gap: 8px; opacity: 0; pointer-events: none; transition: all 0.3s; }
+        .toast-container.show { opacity: 1; bottom: 110px; pointer-events: auto; }
+
+        /* MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); backdrop-filter: blur(6px); z-index: 3000; display: none; align-items: center; justify-content: center; animation: fadeIn 0.2s; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: #fff; border-radius: 28px; width: 90%; max-width: 420px; max-height: 82vh; overflow-y: auto; box-shadow: 0 24px 80px rgba(0,0,0,0.2); animation: slideUp 0.3s; }
+        .modal-header { padding: 24px 24px 18px; border-bottom: 1.5px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 10; border-radius: 28px 28px 0 0; }
+        .modal-title { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
+        .modal-close { width: 34px; height: 34px; border-radius: 50%; background: #f8fafc; border: 1.5px solid #e2e8f0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
+        .modal-close:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; transform: scale(1.05); }
+        .modal-body { padding: 20px 24px 28px; }
+        .modal-category-group { margin-bottom: 26px; }
+        .modal-category-header { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .modal-category-icon { width: 26px; height: 26px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .modal-txn-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 16px; margin-bottom: 10px; transition: all 0.2s; border: 1.5px solid; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .modal-txn-item.expense { background: #fef2f2; border-color: #fecaca; }
+        .modal-txn-item.income { background: #f0fdf4; border-color: #bbf7d0; }
+        .modal-txn-name { font-size: 13px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
+        .modal-txn-amount { font-size: 14px; font-weight: 800; letter-spacing: -0.3px; }
+        .modal-txn-item.expense .modal-txn-amount { color: #dc2626; }
+        .modal-txn-item.income .modal-txn-amount { color: #059669; }
+        .modal-summary { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 16px; padding: 16px; margin-top: 16px; border: 1px solid #e2e8f0; }
+        .modal-summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .modal-summary-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+        .modal-summary-label { font-size: 12px; font-weight: 700; color: #64748b; }
+        .modal-summary-value { font-size: 14px; font-weight: 800; }
+        .modal-summary-row.total .modal-summary-label { font-size: 14px; color: #1e293b; }
+        .modal-summary-row.total .modal-summary-value { font-size: 16px; color: #1d4ed8; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; }
     </style>
 </head>
 <body>
+
     <div class="mobile-wrapper">
         <div id="header">
-            <div class="user-name">Calendar</div>
-            <i class="material-icons" style="color: #94a3b8; cursor: pointer;" onclick="location.href='index.html'">arrow_back</i>
-        </div>
-        <div class="content">
-            <div style="margin-top: 100px;">
-                <i class="material-icons" style="font-size: 64px; color: #e2e8f0;">calendar_today</i>
-                <h2 style="color: #1e293b;">Spending Calendar</h2>
-                <p>Track your daily expenses on a visual calendar.</p>
-                <div style="background: #f8fafc; border-radius: 12px; padding: 30px; margin-top: 20px; border: 1px dashed #cbd5e1;">
-                    Calendar Visualization Coming Soon
-                </div>
+            <div class="header-title">Calendar</div>
+            <div id="profile-badge" style="width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <i class="material-icons" style="color: #94a3b8;">person</i>
+                <img id="user-pic" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
             </div>
         </div>
+
+        <div class="mui-container">
+            <div class="calendar-card">
+                <div class="calendar-header">
+                    <div class="current-month" id="calendar-title">January 2026</div>
+                    <div class="nav-btns">
+                        <div class="nav-btn" onclick="changeMonth(-1)"><i class="material-icons">chevron_left</i></div>
+                        <div class="nav-btn" onclick="changeMonth(1)"><i class="material-icons">chevron_right</i></div>
+                    </div>
+                </div>
+
+                <div class="calendar-grid" id="calendar-grid">
+                    <div class="weekday">S</div>
+                    <div class="weekday">M</div>
+                    <div class="weekday">T</div>
+                    <div class="weekday">W</div>
+                    <div class="weekday">T</div>
+                    <div class="weekday">F</div>
+                    <div class="weekday">S</div>
+                    <!-- Days injected here -->
+                </div>
+            </div>
+
+            <div class="day-details">
+                <div class="details-header">
+                    <div class="details-date" id="selected-date-label">Today, Jan 17</div>
+                </div>
+
+                <div id="day-txns-container">
+                    <!-- Transactions for the day -->
+                </div>
+            </div>
+
+            <div class="custom-section">
+                <div class="custom-title">Financial Insights</div>
+                <div class="custom-desc">Your daily spending patterns are visualized above. Green chips denote income, while red chips reflect expenses for specifically that date.</div>
+                <button class="custom-btn">
+                    <span>Analyze Monthly Plan</span>
+                    <i class="material-icons" style="font-size: 18px;">arrow_forward</i>
+                </button>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAV -->
         <div class="bottom-nav">
             <a href="index.html" class="nav-item">
                 <i class="material-icons">account_balance_wallet</i>
                 <span>Wallet</span>
             </a>
-            <a href="accounts.html" class="nav-item">
-                <i class="material-icons">account_balance</i>
-                <span>Accounts</span>
-            </a>
             <a href="calendar.html" class="nav-item active">
                 <i class="material-icons">calendar_today</i>
                 <span>Calendar</span>
+            </a>
+            <a href="accounts.html" class="nav-item">
+                <i class="material-icons">account_balance</i>
+                <span>Accounts</span>
             </a>
             <a href="goals.html" class="nav-item">
                 <i class="material-icons">track_changes</i>
@@ -58,5 +209,564 @@
             </a>
         </div>
     </div>
+
+    <div id="toast-box" class="toast-container">
+        <i class="material-icons">check_circle</i>
+        <span id="toast-msg"></span>
+    </div>
+
+    <!-- MODAL -->
+    <div id="txn-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-date-title">Transactions</div>
+                <div class="modal-close" onclick="closeModal()">
+                    <i class="material-icons" style="font-size: 18px;">close</i>
+                </div>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Transaction details will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
+            authDomain: "atome-wallet.firebaseapp.com",
+            projectId: "atome-wallet",
+            storageBucket: "atome-wallet.firebasestorage.app",
+            messagingSenderId: "64186651619",
+            appId: "1:64186651619:web:cd7d426cfb663aab6606d6"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentViewDate = new Date();
+        let selectedDate = new Date();
+        window.allTxns = [];
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Profile
+                if (!user.isAnonymous) {
+                    if (user.photoURL) {
+                        const pic = document.getElementById('user-pic');
+                        pic.src = user.photoURL;
+                        pic.style.display = 'block';
+                        document.querySelector('#profile-badge i').style.display = 'none';
+                    }
+                }
+                loadData(user.uid);
+            }
+        });
+
+        function loadData(uid) {
+            const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
+            onSnapshot(q, (snap) => {
+                window.allTxns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                renderCalendar();
+                renderDayDetails();
+            });
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('calendar-title');
+            
+            // Clear existing days
+            const dayCells = grid.querySelectorAll('.day-cell');
+            dayCells.forEach(d => d.remove());
+
+            const year = currentViewDate.getFullYear();
+            const month = currentViewDate.getMonth();
+            title.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentViewDate);
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            // Previous month padding
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell other-month';
+                cell.innerHTML = `<span class="day-num">${daysInPrevMonth - i}</span>`;
+                grid.appendChild(cell);
+            }
+
+            // Current month days
+            const today = new Date();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const cellDate = new Date(year, month, d);
+                
+                const cell = document.createElement('div');
+                cell.className = 'day-cell';
+                if (today.toDateString() === cellDate.toDateString()) cell.classList.add('today');
+                if (selectedDate && selectedDate.toDateString() === cellDate.toDateString()) cell.classList.add('selected');
+
+                // Balance chips for transactions
+                const dayTxns = window.allTxns.filter(t => t.date === dateStr && !t.excluded && !t.refund);
+                
+                // Calculate totals
+                let totalExpense = 0;
+                let totalIncome = 0;
+                
+                dayTxns.forEach(t => {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    if (mapped.category === 'Income') {
+                        totalIncome += amt;
+                    } else {
+                        totalExpense += amt;
+                    }
+                });
+
+                let chipsHTML = '<div class="balance-chips">';
+                
+                // Show net balance or separate chips
+                const netBalance = totalIncome - totalExpense;
+                
+                if (totalIncome > 0 && totalExpense > 0) {
+                    // Show net balance
+                    if (netBalance > 0) {
+                        chipsHTML += `<div class="balance-chip income"><i class="material-icons">trending_up</i>+${netBalance.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
+                    } else if (netBalance < 0) {
+                        chipsHTML += `<div class="balance-chip expense"><i class="material-icons">trending_down</i>${netBalance.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
+                    }
+                } else {
+                    // Show individual chips
+                    if (totalIncome > 0) {
+                        chipsHTML += `<div class="balance-chip income"><i class="material-icons">trending_up</i>+${totalIncome.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
+                    }
+                    if (totalExpense > 0) {
+                        chipsHTML += `<div class="balance-chip expense"><i class="material-icons">trending_down</i>-${totalExpense.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>`;
+                    }
+                }
+                
+                chipsHTML += '</div>';
+
+                cell.innerHTML = `<span class="day-num">${d}</span>${chipsHTML}`;
+                cell.onclick = () => {
+                    selectedDate = new Date(year, month, d);
+                    renderCalendar();
+                    renderDayDetails();
+                    openModal(selectedDate); // Open modal with transaction details
+                };
+                grid.appendChild(cell);
+            }
+        }
+
+        function renderDayDetails() {
+            const container = document.getElementById('day-txns-container');
+            const label = document.getElementById('selected-date-label');
+            
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            label.innerText = selectedDate.toLocaleDateString('en-US', options);
+
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            // Filter to only show INCLUDED transactions (not excluded, not refunded)
+            const dayTxns = window.allTxns.filter(t => t.date === dateStr && !t.excluded && !t.refund);
+
+            if (dayTxns.length === 0) {
+                container.innerHTML = `<div class="no-txns">No transactions recorded for this day.</div>`;
+                return;
+            }
+
+            // Group & Sort: Expenses first, then income
+            const expenses = dayTxns.filter(t => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                return mapped.category !== 'Income';
+            });
+            const income = dayTxns.filter(t => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                return mapped.category === 'Income';
+            });
+
+            container.innerHTML = '';
+            
+            // Render Expenses
+            expenses.forEach(t => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                container.appendChild(createTxnChip(t, mapped, amt, 'expense'));
+            });
+
+            // Render Income
+            income.forEach(t => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                container.appendChild(createTxnChip(t, mapped, amt, 'income'));
+            });
+        }
+
+        function createTxnChip(t, mapped, amt, type) {
+            const chip = document.createElement('div');
+            chip.className = `txn-chip ${type}`;
+            if (t.excluded) chip.style.opacity = '0.5';
+            
+            const name = type === 'income' ? 'INCOME' : mapped.name;
+            const category = displayCategoryName(mapped.category);
+
+            chip.innerHTML = `
+                <div class="txn-chip-left">
+                    <div class="txn-chip-icon"><i class="material-icons">${mapped.icon}</i></div>
+                    <div class="txn-chip-info">
+                        <span class="txn-chip-name">${name}</span>
+                        <span class="txn-chip-cat">${category}</span>
+                    </div>
+                </div>
+                <div class="txn-chip-amount">${type === 'expense' ? '-' : '+'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+            `;
+            return chip;
+        }
+
+        window.changeMonth = (delta) => {
+            currentViewDate.setMonth(currentViewDate.getMonth() + delta);
+            renderCalendar();
+        };
+
+        // Shared Logic Imports/Mocks
+        const CATEGORIES = [
+            { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
+            { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
+            { id: 'Vehicle', icon: 'local_gas_station', label: 'Vehicle', cls: 'cat-vehicle' },
+            { id: 'Food & Drinks', icon: 'restaurant', label: 'Food & Drinks', cls: 'cat-food' },
+            { id: 'Service', icon: 'settings_cell', label: 'Service', cls: 'cat-service-magenta' },
+            { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
+            { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
+            { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
+            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
+            { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
+            { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
+            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
+            { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
+            { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
+        ];
+
+        function displayCategoryName(id) {
+            const cat = CATEGORIES.find(c => c.id === id);
+            return cat ? cat.label : id;
+        }
+
+        function getMerchantDisplay(name = '', t = {}) {
+            let raw = name.toUpperCase();
+            
+            // 1. GENERAL CLEANUP (Remove PHL, Locations, messy suffixes)
+            let cleaned = name
+                .replace(/\s+PHL$/i, '')
+                .replace(/\s+CEBU\s+CITY\s+PHL$/i, '')
+                .replace(/\s+CEBU\s+CITY$/i, '')
+                .replace(/\s+DUBAI\s+ARE$/i, '')
+                .replace(/\s+LONDON\s+GBR$/i, '')
+                .replace(/\s+PH\s+PHL$/i, '')
+                .replace(/\s+PH$/i, '')
+                .trim();
+            
+            // 2. PATTERN REPLACEMENT
+            if (cleaned.toUpperCase().includes('GADC') || cleaned.toUpperCase().includes('MCDONALDS') || cleaned.toUpperCase().includes('MCDO')) {
+                let u = cleaned.toUpperCase();
+                if (u.includes('SOUTHCBU') || u.includes('325CLN')) {
+                    cleaned = 'MCDONALDS SOUTH CEBU';
+                } else {
+                    cleaned = cleaned.replace(/(GADC|MCDONALDS|MCDO)/i, 'MCDONALDS').trim();
+                    cleaned = cleaned.replace(/MCDONALDS\s+\d+[A-Z]*/i, 'MCDONALDS').trim();
+                }
+            }
+            
+            if (cleaned.toUpperCase().includes('JOLLIBEE')) {
+                cleaned = cleaned.replace(/JB\d+\s+\w+/i, '').trim();
+            }
+
+            if (cleaned.toUpperCase().includes('RIBSHACK')) {
+                 cleaned = cleaned.replace(/PH\d+/i, '').trim();
+            }
+
+            if (cleaned.toUpperCase().includes('SHOPEE')) {
+                cleaned = 'SHOPEE PH';
+            }
+
+            if (cleaned.toUpperCase().includes('TRADERSCONNECT')) {
+                cleaned = 'TRADERS CONNECT';
+            }
+
+            if (cleaned.toUpperCase().includes('TIKTOK SHOP')) {
+                cleaned = 'TIKTOK SHOP';
+            }
+
+            if (cleaned.toUpperCase().includes('SPOTIFY')) {
+                cleaned = 'SPOTIFY';
+            }
+
+            let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
+
+            // 3. MANUAL OVERRIDE
+            if (t.manualCategory) {
+                const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
+                if (userCat) {
+                    display.category = userCat.id;
+                    display.icon = userCat.icon;
+                    const catMap = {
+                        'Online shopping': 'cat-online',
+                        'Shopping': 'cat-shopping',
+                        'Vehicle': 'cat-vehicle',
+                        'Trade Copier': 'cat-aqua',
+                        'Trading Expenses': 'cat-trading',
+                        'Service': 'cat-service-magenta',
+                        'Food & Drinks': 'cat-food',
+                        'Life & Entertainment': 'cat-life',
+                        'Financial Expenses': 'cat-financial',
+                        'Transportation': 'cat-vehicle',
+                        'Travel': 'cat-aqua',
+                        'Education': 'cat-education',
+                        'Sport': 'cat-life',
+                        'Income': 'cat-income'
+                    };
+                    display.catClass = userCat.cls || catMap[userCat.id] || 'cat-financial';
+                    return display;
+                }
+            }
+
+            // 4. EXACT OVERRIDES
+            const mapping = {
+                'MR DIY BGCC BOGO': 'MR DIY BOGO',
+                'MR DIY ZBOG BOGO': 'MR DIY BOGO',
+                'TEC FUEL SAN REMIGIO': 'TECFUEL SAN REMIGIO',
+                'J AND L SHOPPING BOGO': 'J AND L MALL BOGO',
+                'TECFUEL BOGO CEBU': 'TECFUEL BOGO',
+                'KKV SM J Mall Cebu': 'KKV SM J MALL CEBU',
+                'SM STORE-CEBU': 'SM STORE - CEBU CITY',
+                'GLOBE-BILLSPAY PH': 'GLOBE / GOMO LOAD',
+                'SHELL FILLWISE BOGO CEBU': 'SHELL BOGO CEBU',
+                'GLOBE WEBLOADING EC PH': 'GLOBE / GOMO LOAD',
+                'WATSONS HISOLER BLDG B': 'WATSONS HISOLER BLDG BOGO',
+                'SUPER METRO S/M-BOGO': 'SUPER METRO BOGO',
+                'SM SUPERMARKET SM SRP CEBU': 'SM SUPERMARKET SRP',
+                'OCTAGON AYALA CENTRAL CEBU': 'OCTAGON AYALA CENTRAL CEBU',
+                'STARBUCKS 540 CENTRAL CEBU CITY': 'STARBUCKS 540 CENTRAL CEBU CITY',
+                'ICE SKATING SM SRP CEB': 'ICE SKATING SM SRP CEBU',
+                'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND',
+                'MRCRMT': 'MRCRMT',
+                'tradersconnect.com': 'TRADERS CONNECT',
+                'TRADERSCONNECT': 'TRADERS CONNECT'
+            };
+
+            const finalRaw = cleaned.toUpperCase();
+            if (mapping[cleaned]) display.name = mapping[cleaned];
+            else if (mapping[finalRaw]) display.name = mapping[finalRaw];
+
+            // 5. CATEGORY DETECTION
+            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
+                display.category = 'Online shopping';
+                display.icon = 'shopping_bag';
+                display.catClass = 'cat-online';
+            } else if (finalRaw.includes('FUEL') || finalRaw.includes('SHELL') || finalRaw.includes('TECFUEL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL')) {
+                display.category = 'Vehicle';
+                display.icon = 'local_gas_station';
+                display.catClass = 'cat-vehicle';
+            } else if (finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS') || finalRaw.includes('SM STORE') || finalRaw.includes('KKV') || finalRaw.includes('SHOPPING') || finalRaw.includes('MALL') || finalRaw.includes('METRO') || finalRaw.includes('SUPERMARKET') || finalRaw.includes('OCTAGON')) {
+                display.category = 'Shopping';
+                display.icon = 'shopping_cart';
+                display.catClass = 'cat-shopping';
+            } else if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
+                display.category = 'Trade Copier';
+                display.icon = 'hub';
+                display.catClass = 'cat-aqua';
+            } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
+                display.category = 'Trading Expenses';
+                display.icon = 'insights';
+                display.catClass = 'cat-trading';
+            } else if (finalRaw.includes('GLOBE') || finalRaw.includes('GOMO') || finalRaw.includes('BILLSPAY')) {
+                display.category = 'Service';
+                display.icon = 'settings_cell';
+                display.catClass = 'cat-service-magenta';
+            } else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('MCDONALDS') || finalRaw.includes('FOOD') || finalRaw.includes('RESTAURANT') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) {
+                display.category = 'Food & Drinks';
+                display.icon = 'restaurant';
+                display.catClass = 'cat-food';
+            } else if (finalRaw.includes('ICE SKATING') || finalRaw.includes('CINEMA') || finalRaw.includes('ENTERTAINMENT') || finalRaw.includes('SPOTIFY') || finalRaw.includes('NETFLIX')) {
+                display.category = 'Life & Entertainment';
+                display.icon = 'confirmation_number';
+                display.catClass = 'cat-life';
+            } else {
+                display.category = 'Financial expenses';
+                display.icon = 'payments';
+                display.catClass = 'cat-financial';
+            }
+
+            return display;
+        }
+
+        function createTxnChip(t, mapped, amt, type) {
+            const chip = document.createElement('div');
+            chip.className = `txn-chip ${type}`;
+            if (t.excluded) chip.style.opacity = '0.5';
+            
+            const name = type === 'income' ? 'INCOME' : mapped.name;
+            const category = displayCategoryName(mapped.category);
+
+            // LOGO DETECTION
+            const mUpper = mapped.name.toUpperCase();
+            let logo = null;
+            if (mUpper.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
+            else if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) logo = 'logos/mcdo.png';
+            else if (mUpper.includes('SHELL')) logo = 'logos/shell.png';
+            else if (mUpper.includes('SHOPEE')) logo = 'logos/shopee.png';
+            else if (mUpper.includes('LAZADA')) logo = 'logos/lazada.jpg';
+            else if (mUpper.includes('GLOBE') || mUpper.includes('GOMO')) logo = 'logos/globe.png';
+            else if (mUpper.includes('SM') || mUpper.includes('SM STORE') || mUpper.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
+            else if (mUpper.includes('SPOTIFY')) logo = 'logos/spotify.png';
+            else if (mUpper.includes('TIKTOK')) logo = 'logos/tiktokshop.png';
+            else if (mUpper.includes('TECFUEL') || mUpper.includes('TEC FUEL')) logo = 'logos/tecfuel.png';
+            else if (mUpper.includes('TRADERS')) logo = 'logos/tradersconnect.png';
+            else if (mUpper.includes('7/11') || mUpper.includes('7 11')) logo = 'logos/711.png';
+
+            const logoHTML = logo ? `<div style="position: absolute; bottom: -2px; right: -2px; width: 14px; height: 14px; background: white; border-radius: 50%; padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;"><img src="${logo}" style="width: 100%; height: 100%; object-fit: contain;"></div>` : '';
+
+            chip.innerHTML = `
+                <div class="txn-chip-left">
+                    <div class="txn-chip-icon" style="position: relative;">
+                        <i class="material-icons">${mapped.icon}</i>
+                        ${logoHTML}
+                    </div>
+                    <div class="txn-chip-info">
+                        <span class="txn-chip-name">${name}</span>
+                        <span class="txn-chip-cat">${category}</span>
+                    </div>
+                </div>
+                <div class="txn-chip-amount">${type === 'expense' ? '-' : '+'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+            `;
+            return chip;
+        }
+
+        // MODAL FUNCTIONS
+        window.openModal = (date) => {
+            const modal = document.getElementById('txn-modal');
+            const modalBody = document.getElementById('modal-body');
+            const modalTitle = document.getElementById('modal-date-title');
+            
+            const options = { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' };
+            modalTitle.innerText = date.toLocaleDateString('en-US', options);
+            
+            const dateStr = date.toISOString().split('T')[0];
+            // Filter to only show INCLUDED transactions (not excluded, not refunded)
+            const dayTxns = window.allTxns.filter(t => t.date === dateStr && !t.excluded && !t.refund);
+            
+            if (dayTxns.length === 0) {
+                modalBody.innerHTML = `<div class="no-txns">No transactions recorded for this day.</div>`;
+                modal.classList.add('show');
+                return;
+            }
+            
+            // Group transactions by category
+            const categoryGroups = {};
+            let totalExpenses = 0;
+            let totalIncome = 0;
+            
+            dayTxns.forEach(t => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                const category = mapped.category;
+                const isIncome = category === 'Income';
+                
+                if (!categoryGroups[category]) {
+                    categoryGroups[category] = {
+                        icon: mapped.icon,
+                        catClass: mapped.catClass,
+                        transactions: [],
+                        isIncome: isIncome
+                    };
+                }
+                
+                categoryGroups[category].transactions.push({
+                    name: isIncome ? 'INCOME' : mapped.name,
+                    amount: amt,
+                    type: isIncome ? 'income' : 'expense'
+                });
+                
+                if (isIncome) {
+                    totalIncome += amt;
+                } else {
+                    totalExpenses += amt;
+                }
+            });
+            
+            // Render modal content
+            let html = '';
+            
+            // Sort categories: Expenses first, then Income
+            const sortedCategories = Object.keys(categoryGroups).sort((a, b) => {
+                if (a === 'Income') return 1;
+                if (b === 'Income') return -1;
+                return 0;
+            });
+            
+            sortedCategories.forEach(category => {
+                const group = categoryGroups[category];
+                const catInfo = CATEGORIES.find(c => c.id === category) || { label: category, icon: 'payments' };
+                
+                html += `
+                    <div class="modal-category-group">
+                        <div class="modal-category-header">
+                            <div class="modal-category-icon" style="background: ${group.isIncome ? '#dcfce7' : '#fee2e2'}; color: ${group.isIncome ? '#16a34a' : '#ef4444'};">
+                                <i class="material-icons">${group.icon}</i>
+                            </div>
+                            <span>${catInfo.label}</span>
+                        </div>
+                `;
+                
+                group.transactions.forEach(txn => {
+                    html += `
+                        <div class="modal-txn-item ${txn.type}">
+                            <div class="modal-txn-name">${txn.name}</div>
+                            <div class="modal-txn-amount">${txn.type === 'expense' ? '-' : '+'} ₱${txn.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+            });
+            
+            // Add summary
+            const netAmount = totalIncome - totalExpenses;
+            html += `
+                <div class="modal-summary">
+                    <div class="modal-summary-row">
+                        <div class="modal-summary-label">Total Expenses</div>
+                        <div class="modal-summary-value" style="color: #ef4444;">- ₱${totalExpenses.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    </div>
+                    <div class="modal-summary-row">
+                        <div class="modal-summary-label">Total Income</div>
+                        <div class="modal-summary-value" style="color: #16a34a;">+ ₱${totalIncome.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    </div>
+                    <div class="modal-summary-row total">
+                        <div class="modal-summary-label">Net</div>
+                        <div class="modal-summary-value" style="color: ${netAmount >= 0 ? '#16a34a' : '#ef4444'};">${netAmount >= 0 ? '+' : ''} ₱${netAmount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    </div>
+                </div>
+            `;
+            
+            modalBody.innerHTML = html;
+            modal.classList.add('show');
+        };
+
+        window.closeModal = () => {
+            const modal = document.getElementById('txn-modal');
+            modal.classList.remove('show');
+        };
+
+        // Close modal when clicking outside
+        document.getElementById('txn-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'txn-modal') {
+                closeModal();
+            }
+        });
+
+    </script>
 </body>
 </html>

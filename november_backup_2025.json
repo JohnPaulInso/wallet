@@ -1,0 +1,17 @@
+[
+  { "merchant": "MR DIY ZBOG BOGO PHL", "date": "2025-12-04", "amount": 204.00, "category": "Shopping" },
+  { "merchant": "TEC FUEL SAN REMIGIO PHL", "date": "2025-12-03", "amount": 500.00, "category": "Vehicle" },
+  { "merchant": "TECFUEL BOGO CEBU PHL", "date": "2025-12-02", "amount": 500.00, "category": "Vehicle" },
+  { "merchant": "Spotify Stockholm SWE", "date": "2025-11-29", "amount": 87.64, "category": "Service" },
+  { "merchant": "TEC FUEL SAN REMIGIO PHL", "date": "2025-11-28", "amount": 300.00, "category": "Vehicle" },
+  { "merchant": "TEC FUEL SAN REMIGIO PHL", "date": "2025-11-26", "amount": 500.00, "category": "Vehicle" },
+  { "merchant": "TRADERSCONNECT.COM LONDON GBR", "date": "2025-11-24", "amount": 1218.98, "category": "Financial Expenses" },
+  { "merchant": "SHOPEE PH MANDALUYONG PHL", "date": "2025-11-24", "amount": 312.00, "category": "Online shopping" },
+  { "merchant": "SHOPEE PH MANDALUYONG PHL", "date": "2025-11-17", "amount": 65.00, "category": "Online shopping" },
+  { "merchant": "TECFUEL BOGO CEBU PHL", "date": "2025-11-16", "amount": 100.00, "category": "Vehicle" },
+  { "merchant": "SHOPEE PH MANDALUYONG PHL", "date": "2025-11-15", "amount": 472.00, "category": "Online shopping" },
+  { "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL", "date": "2025-11-12", "amount": 200.65, "category": "Online shopping" },
+  { "merchant": "TEC FUEL SAN REMIGIO PHL", "date": "2025-11-10", "amount": 300.00, "category": "Vehicle" },
+  { "merchant": "TECFUEL BOGO CEBU PHL", "date": "2025-11-08", "amount": 100.00, "category": "Vehicle" },
+  { "merchant": "JOLLIBEE JB0415 BOGO PHL", "date": "2025-11-08", "amount": 210.00, "category": "Food & Drinks" }
+]

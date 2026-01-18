@@ -91,7 +91,7 @@
             color: #fff; 
             position: relative; 
             overflow: hidden; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.1); 
             min-height: 210px;
             display: flex;
             flex-direction: column;
@@ -178,9 +178,9 @@
 
         /* INTEGRATED SYNC BAR - Glassmorphic Pill */
         .card-sync-bar { 
-            background: rgba(255,255,255,0.05); 
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            background: rgba(255,255,255,0.06); 
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
             border-radius: 12px; 
             padding: 10px 14px; 
             display: flex; 
@@ -188,16 +188,38 @@
             gap: 10px; 
             font-size: 11px; 
             font-weight: 600; 
-            color: rgba(255,255,255,0.8); 
-            border: 1px solid rgba(255,255,255,0.08); 
+            color: rgba(255,255,255,0.7); 
+            border: 0.5px solid rgba(255,255,255,0.08); 
             margin-top: 10px; 
             transition: all 0.3s; 
             position: relative;
             z-index: 2;
             width: 100%;
+            box-shadow: inset 0 0 10px rgba(255,255,255,0.02);
         }
         .card-sync-bar.active { background: rgba(255,255,255,0.1); }
         .card-sync-bar .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 6px rgba(76, 175, 80, 0.5); }
+
+        .integrated-sync-btn {
+            background: rgba(255,255,255,0.03);
+            border: none;
+            border-radius: 8px;
+            color: rgba(255,255,255,0.4);
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .integrated-sync-btn:hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); }
+        .integrated-sync-btn:disabled { opacity: 0.5; cursor: default; }
+        .spin { animation: spinRotate 1.5s linear infinite; }
+        @keyframes spinRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .card-sync-bar.syncing .dot { background: #1d4ed8; box-shadow: 0 0 8px rgba(29, 78, 216, 0.6); animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
 
@@ -245,7 +267,7 @@
         @keyframes amberPulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
         /* ACCORDION */
-        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #eef2f6; transition: box-shadow 0.2s; position: relative; }
+        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: box-shadow 0.2s; position: relative; }
         .month-accordion:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
@@ -258,7 +280,7 @@
         .month-content.collapsed { max-height: 0; overflow: hidden; border-top: none; }
 
         /* TRANSACTION ITEM - PREMIUM REDESIGN */
-        .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f8fafc; position: relative; transition: all 0.2s; background: #fff; }
+        .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.2s; background: #fff; }
         .txn-item:last-child { border-bottom: none; }
         .txn-item:hover { background-color: #f8fafc; }
         
@@ -267,11 +289,11 @@
         .txn-icon-box i { font-size: 22px; }
         
         /* CATEGORY COLORS */
-        .cat-online { background-color: #fff7ed; color: #f97316; } /* Orange */
+        .cat-online { background-color: #f0f9ff; color: #0284c7; } /* Blue for Online shopping */
         .cat-vehicle { background-color: #f5f3ff; color: #8b5cf6; } /* Purple */
-        .cat-shopping { background-color: #dbeafe; color: #1d4ed8; } /* Soft Blue bg, Blue icon for Shopping */
+        .cat-shopping { background-color: #f0f9ff; color: #0284c7; } /* Blue for Shopping */
         .cat-services { background-color: #f0fdf4; color: #22c55e; } /* Green - General Services */
-        .cat-service-magenta { background-color: #fdf2f9; color: #d946ef; } /* Magenta - Telco/Specific Service */
+        .cat-service-magenta { background-color: #fdf4ff; color: #d946ef; } /* Magenta for Service */
         .cat-food { background-color: #fefce8; color: #eab308; } /* Yellow/Gold */
         .cat-life { background-color: #ecfdf5; color: #10b981; } /* Emerald */
         .cat-financial { background-color: #fef2f2; color: #ef4444; } /* Red */
@@ -282,12 +304,24 @@
         .cat-red { background-color: #fef2f2; color: #ef4444 !important; } /* Force Red for Financial */
         
         .txn-info { display: flex; flex-direction: column; }
-        .txn-merchant { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 3px; letter-spacing: -0.2px; }
-        .txn-subtitle { font-size: 0.8rem; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+        .txn-merchant { 
+            font-weight: 700; 
+            font-size: 0.88rem; 
+            color: #1e293b; 
+            margin-bottom: 3px; 
+            letter-spacing: -0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            position: relative;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+        .txn-subtitle { font-size: 0.7rem; color: #475569; font-weight: 700; display: flex; align-items: center; gap: 4px; }
         .txn-dot { font-size: 14px; opacity: 0.5; }
         
         .txn-right { display: flex; align-items: center; gap: 8px; }
-        .txn-amount { font-weight: 800; font-size: 1rem; color: #0f172a; white-space: nowrap; }
+        .txn-amount { font-weight: 800; font-size: 13px; color: #0f172a; white-space: nowrap; }
 
         /* EXCLUDED STATE - Only fade content, keep actions clear */
         .txn-item.txn-excluded .txn-left,
@@ -308,7 +342,7 @@
         .dropdown-item.danger:hover { background: #fef2f2; }
 
         /* CATEGORY COLORS */
-        .cat-online { background: #fff7ed; color: #f97316; }
+        .cat-online { background: #fff7ed; color: #ea580c; }
         .cat-shopping { background: #dbeafe; color: #3b82f6; }
         .cat-vehicle { background: #ede9fe; color: #8b5cf6; } 
         .cat-food { background: #fef9c3; color: #eab308; }
@@ -363,7 +397,7 @@
         .spin { animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
 
         /* PIE CHART STYLES - THICKER & MODERN */
-        .chart-card { background: #fff; border-radius: 24px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; }
+        .chart-card { background: #fff; border-radius: 24px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
         .chart-container { 
             position: relative; width: 220px; height: 220px; margin: 0 auto 24px; 
             filter: drop-shadow(0 0 15px rgba(29, 78, 216, 0.05)); 
@@ -425,7 +459,7 @@
         }
 
         /* TREND CHART */
-        .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #f1f5f9; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
         .trend-path { filter: drop-shadow(0 4px 6px rgba(29, 78, 216, 0.2)); }
         .trend-dot { fill: #fff; stroke: #1d4ed8; stroke-width: 2.5; }
         .trend-label { font-size: 10px; fill: #94a3b8; font-weight: 600; }
@@ -435,15 +469,27 @@
         .recent-header h3 { margin: 0; font-weight: 700; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; }
         .recent-header .see-all { color: #1d4ed8; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
 
-        .premium-txn { padding: 12px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #f8fafc; background: #fff; }
+        .premium-txn { padding: 12px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #f1f5f9; background: #fff; }
         .premium-txn:last-child { border-bottom: none; }
         .premium-txn .icon-box { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; position: relative; }
         .premium-txn .txn-details { flex: 1; min-width: 0; }
-        .premium-txn .txn-merch { font-weight: 800; color: #1e293b; letter-spacing: -0.3px; font-size: 12.5px; text-transform: uppercase; }
-        .premium-txn .txn-sub { font-size: 11px; color: #94a3b8; font-weight: 500; }
-        .premium-txn .txn-amount { font-weight: 800; color: #1e293b; text-align: right; font-size: 13px; }
+        .premium-txn .txn-merch { 
+            font-weight: 800; 
+            color: #1e293b; 
+            letter-spacing: -0.3px; 
+            font-size: 12px; 
+            text-transform: uppercase; 
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            padding-right: 25px;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+        .premium-txn .txn-sub { font-size: 9.5px; color: #475569; font-weight: 700; }
+        .premium-txn .txn-amount { font-weight: 800; color: #1e293b; text-align: right; font-size: 13px; margin-left: auto; }
         .premium-txn .txn-amount.large { color: #991b1b; }
-        .premium-txn .txn-note { font-size: 11px; font-weight: 500; margin-top: 1px; }
+        .premium-txn .txn-note { font-size: 9.5px; font-weight: 700; margin-top: 1px; }
         
         /* ACTIONS & DROPDOWN */
         .premium-txn .txn-actions { opacity: 1; z-index: 100; }
@@ -557,27 +603,21 @@
             </div>
             
             <!-- INTEGRATED SYNC BAR -->
-            <div class="card-sync-bar" id="cardSyncBar">
-                <div class="dot" id="syncDot"></div>
-                <span id="syncStatusText">Gmail Synced</span>
+            <div class="card-sync-bar" id="cardSyncBar" style="justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="dot" id="syncDot"></div>
+                    <span id="syncStatusText">Gmail Synced</span>
+                </div>
+                <button id="scan-btn" class="integrated-sync-btn" onclick="handleScan(50)">
+                    <i class="material-icons" style="font-size: 14px;">sync</i>
+                    <span>Sync</span>
+                </button>
             </div>
         </div>
 
         <div class="mui-container">
-            <div class="control-panel">
-                <div class="status-labels" style="justify-content: center; margin-bottom: 24px;">
-                    <div id="gis-status" class="status-chip">GIS: Loading...</div>
-                    <div id="db-status" class="status-chip">DB: Ready</div>
-                </div>
-                
-                <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 30px;">
-                    <button id="scan-btn" class="mui-btn mui-btn--flat" style="border-radius:20px; text-transform:none; font-weight:700; background:#f1f5f9; color:#475569;" onclick="handleScan(50)">
-                        <i class="material-icons" style="font-size:18px; vertical-align:middle; margin-right:4px;">sync</i> Sync Gmail
-                    </button>
-                    <button class="mui-btn mui-btn--flat" style="border-radius:20px; text-transform:none; font-weight:700; background:#f1f5f9; color:#475569;" onclick="loadData()">History</button>
-                </div>
-            </div>
-
+            <!-- Buttons integrated into card sync bar -->
+            
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
             <div id="chart-section" class="chart-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -675,7 +715,46 @@
             </div>
 
             <div id="history-container"></div>
-            <div id="log-container"></div>
+            
+            <!-- DATA MANAGEMENT SECTION (PREMIUM DESIGN) -->
+            <div class="data-mgmt-card" style="margin: 30px 16px 20px; padding: 12px 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; color: #1d4ed8; display: flex; align-items: center; justify-content: center;">
+                        <i class="material-icons" style="font-size: 16px;">storage</i>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-size: 11px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px;">Account Backup</div>
+                        <div style="font-size: 9px; color: #64748b; font-weight: 600;">Secure your data locally</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 8px;">
+                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #1d4ed8; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);" onclick="exportData()">
+                        <i class="material-icons" style="font-size: 14px;">download</i> Export
+                    </button>
+                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #fff; color: #1e293b; border: 1px solid #e2e8f0; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="document.getElementById('import-file').click()">
+                        <i class="material-icons" style="font-size: 14px;">upload</i> Import
+                    </button>
+                </div>
+                <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+            </div>
+
+            <!-- ADMIN CONTROLS (SECRETS) -->
+            <div id="admin-controls" style="display: none; padding: 20px 16px;">
+                <div class="status-labels" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px;">
+                    <div id="gis-status" class="status-chip" style="height: auto; padding: 8px 12px; line-height: 1.4;">GIS:<br>READY</div>
+                    <div id="mode-status" class="status-chip status-ready" style="height: auto; padding: 8px 12px; line-height: 1.4; text-align: left;">
+                        MODE: CLOUD<br>
+                        <span id="admin-email-display" style="font-size: 9px; opacity: 0.8;">(LOADING...)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
+            
+            <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.2.7</div>
+            </div>
         </div>
 
         <button class="fab" onclick="openManualTxnModal()">
@@ -803,9 +882,14 @@
                     return;
                 }
 
-                const dbBadge = document.getElementById('db-status');
-                dbBadge.innerText = user.isAnonymous ? 'Mode: Local (Unsynced)' : `Mode: Cloud (${user.email})`;
-                dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
+                const dbBadge = document.getElementById('mode-status'); // Use mode-status for admin view
+                const emailDisplay = document.getElementById('admin-email-display');
+                
+                if (dbBadge) {
+                   dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
+                   if (emailDisplay) emailDisplay.innerText = user.isAnonymous ? '(UNSYNCED)' : `(${user.email.toUpperCase()})`;
+                }
+                
                 log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
                 if (!user.isAnonymous) log('Cloud Sync Active!', 'info');
                 
@@ -915,10 +999,28 @@
                 window.unsubscribeSnapshot = null;
             }
 
+            const uid = auth.currentUser?.uid;
+            if (!uid) return;
+
+            // INSTANT CACHE LOAD for seamless switching
+            const cacheKey = `wallet_cache_${uid}`;
+            const cachedData = localStorage.getItem(cacheKey);
+            if (cachedData) {
+                try {
+                    const cache = JSON.parse(cachedData);
+                    const now = Date.now();
+                    // 24 hour expiry (86400000 ms)
+                    if (cache.txns && (now - cache.timestamp < 86400000)) {
+                        window.allTxns = cache.txns;
+                        renderHistory(cache.txns);
+                        updateBalanceToThisMonth(cache.txns);
+                        spinner.style.display = 'none'; 
+                    }
+                } catch(e) { console.warn("Cache error", e); }
+            }
+
             spinner.style.display = 'block';
             try {
-                if (!auth.currentUser) return;
-                const uid = auth.currentUser.uid;
                 const isAnon = auth.currentUser.isAnonymous;
                 
                 const syncStatusText = document.getElementById('syncStatusText');
@@ -977,9 +1079,14 @@
                         return createB - createA;
                     });
                     
-                    // Store globally
+                    // Store globally & Cache with timestamp
                     window.allTxns = txns;
-                    updateMainWalletBalance(txns); // Update total balance regardless of period filter
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        txns: txns,
+                        timestamp: Date.now()
+                    }));
+                    
+                    updateBalanceToThisMonth(txns); 
 
                     if (txns.length === 0) {
                         // EMPTY STATE
@@ -1038,6 +1145,96 @@
             }
         }
         window.loadData = loadData;
+
+        function updateBalanceToThisMonth(txns) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            
+            let incomeTotal = 0;
+            let expenseTotal = 0;
+
+            txns.forEach(t => {
+                if (t.excluded || t.refund) return;
+                const d = new Date(t.date);
+                if (d.getFullYear() !== year || d.getMonth() !== month) return;
+
+                const mapped = getMerchantDisplay(t.merchant, t);
+                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                
+                if (mapped.category === 'Income') {
+                    incomeTotal += amt;
+                } else {
+                    expenseTotal += amt;
+                }
+            });
+
+            const balanceEl = document.querySelector('.balance-amount');
+            if (balanceEl) {
+                const balance = incomeTotal - expenseTotal;
+                balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            }
+        }
+
+        window.toggleAdminMode = () => {
+            const user = auth.currentUser;
+            const adminEmail = 'johnpaulinso123@gmail.com';
+            if (user && user.email && user.email.toLowerCase().trim() === adminEmail) {
+                const adminDiv = document.getElementById('admin-controls');
+                const logDiv = document.getElementById('log-container');
+                if (!adminDiv || !logDiv) return showToast('Admin elements missing');
+                const isHidden = adminDiv.style.display === 'none';
+                adminDiv.style.display = isHidden ? 'block' : 'none';
+                logDiv.style.display = isHidden ? 'block' : 'none';
+                showToast(isHidden ? 'Admin View On' : 'Admin View Off');
+            } else {
+                showToast('Action restricted');
+            }
+        };
+
+        window.exportData = () => {
+            if (!window.allTxns || window.allTxns.length === 0) {
+                showToast('No data to export');
+                return;
+            }
+            const dataStr = JSON.stringify(window.allTxns, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `wallet_backup_${new Date().toISOString().split('T')[0]}.json`;
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            showToast('Backup Created');
+        };
+
+        window.importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const importedTxns = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedTxns)) throw new Error('Invalid format');
+                    if (!confirm(`Import ${importedTxns.length} transactions? These will be added to your current history.`)) return;
+                    showToast('Importing...');
+                    const uid = auth.currentUser.uid;
+                    const txnsCol = collection(db, `users/${uid}/transactions`);
+                    for (const t of importedTxns) {
+                        const { id, ...cleanT } = t;
+                        if (id) {
+                            await setDoc(doc(db, `users/${uid}/transactions`, id), cleanT, { merge: true });
+                        } else {
+                            await addDoc(txnsCol, { ...cleanT, createdAt: serverTimestamp() });
+                        }
+                    }
+                    showToast('Import Complete');
+                    event.target.value = '';
+                } catch (err) {
+                    showToast('Import failed: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        };
 
         // FILTERING LOGIC
         window.filterChart = () => {
@@ -1160,20 +1357,20 @@
 
         // CHART LOGIC
         const categoryConfig = {
-            'Online shopping': { color: '#f97316', class: 'cat-online' },
-            'Vehicle': { color: '#8b5cf6', class: 'cat-vehicle' },
-            'Shopping': { color: '#3b82f6', class: 'cat-shopping' },
-            'Service': { color: '#d946ef', class: 'cat-service-magenta' },
-            'Food & Drinks': { color: '#eab308', class: 'cat-food' },
-            'Life & Entertainment': { color: '#10b981', class: 'cat-life' },
-            'Trading Expenses': { color: '#ef4444', class: 'cat-trading' },
-            'Trade Copier': { color: '#0891b2', class: 'cat-aqua' },
-            'Financial Expenses': { color: '#ef4444', class: 'cat-financial' },
-            'Transportation': { color: '#8b5cf6', class: 'cat-vehicle' },
-            'Travel': { color: '#06b6d4', class: 'cat-aqua' },
-            'Education': { color: '#1e40af', class: 'cat-shopping' }, /* Dark Blue */
-            'Sport': { color: '#10b981', class: 'cat-life' },
-            'Income': { color: '#16a34a', class: 'cat-income' } /* Green */
+            'Online shopping': { color: '#f97316', darkColor: '#ea580c', class: 'cat-online' },
+            'Vehicle': { color: '#8b5cf6', darkColor: '#7c3aed', class: 'cat-vehicle' },
+            'Shopping': { color: '#3b82f6', darkColor: '#2563eb', class: 'cat-shopping' },
+            'Service': { color: '#d946ef', darkColor: '#c026d3', class: 'cat-service-magenta' },
+            'Food & Drinks': { color: '#eab308', darkColor: '#ca8a04', class: 'cat-food' },
+            'Life & Entertainment': { color: '#10b981', darkColor: '#059669', class: 'cat-life' },
+            'Trading Expenses': { color: '#ef4444', darkColor: '#dc2626', class: 'cat-trading' },
+            'Trade Copier': { color: '#0891b2', darkColor: '#0e7490', class: 'cat-aqua' },
+            'Financial Expenses': { color: '#ef4444', darkColor: '#dc2626', class: 'cat-financial' },
+            'Transportation': { color: '#8b5cf6', darkColor: '#7c3aed', class: 'cat-vehicle' },
+            'Travel': { color: '#06b6d4', darkColor: '#0891b2', class: 'cat-aqua' },
+            'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' }, /* Dark Blue */
+            'Sport': { color: '#10b981', darkColor: '#059669', class: 'cat-life' },
+            'Income': { color: '#16a34a', darkColor: '#15803d', class: 'cat-income' } /* Green */
         };
 
         function refreshChart(txns, pastTotal = 0) {
@@ -1202,13 +1399,8 @@
             
             grandTotal = expenseTotal; // Chart shows Expenses only
 
-            // UPDATE WALLET BALANCE (Restored Interactivity)
-            const balanceEl = document.querySelector('.balance-amount');
-            if (balanceEl) {
-                const balance = incomeTotal - expenseTotal;
-                balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-            }
-
+            // Balance update removed from chart filter to stay as 'This Month'
+            
             // Always show progress even if zero
             chartSection.style.display = 'block';
 
@@ -1554,14 +1746,9 @@
                 // Interaction Events
                 const showTooltip = (e) => {
                     const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.innerHTML = `${seg.name}<br><span style="color:#d1fae5">₱${Math.round(seg.value).toLocaleString()}</span>`;
+                    const percentText = percent.toFixed(1) + '%';
+                    tooltip.innerHTML = `${seg.name}<br><span style="color:#d1fae5">₱${Math.round(seg.value).toLocaleString()} (${percentText})</span>`;
                     tooltip.style.opacity = '1';
-                    
-                    // Logic to position tooltip near cursor
-                    // We need to account for scrolling and absolute positioning
-                    const rect = document.getElementById('pieChart').getBoundingClientRect();
-                    // Because tooltip is fixed/absolute to body usually, or relative to container
-                    // Let's rely on e.pageX/Y
                     tooltip.style.left = `${e.pageX}px`;
                     tooltip.style.top = `${e.pageY - 10}px`;
                 };
@@ -1576,8 +1763,9 @@
 
                 path.onclick = (e) => {
                     // Update Center Label
+                    const percentText = percent.toFixed(1) + '%';
                     document.getElementById('chart-total-label').innerText = seg.name;
-                    document.getElementById('chart-total-val').innerText = `₱${Math.round(seg.value).toLocaleString()}`;
+                    document.getElementById('chart-total-val').innerText = `₱${Math.round(seg.value).toLocaleString()} (${percentText})`;
                     window.highlightTransactions(seg.name);
                 };
                 
@@ -1632,9 +1820,12 @@
                 const accordion = document.createElement('div');
                 accordion.className = 'month-accordion';
                 
-                const isFirst = index === 0;
+                // Persistence: Check localStorage for saved state, default to collapsed for all but first
+                const savedState = localStorage.getItem(`accordion_${month}`);
+                const isCollapsed = savedState === 'collapsed' || (savedState === null && index !== 0);
+                
                 const header = document.createElement('div');
-                header.className = `month-header ${!isFirst ? 'collapsed' : ''}`;
+                header.className = `month-header ${isCollapsed ? 'collapsed' : ''}`;
                 header.innerHTML = `
                     <span class="month-title">${month}</span>
                     <div style="display:flex; align-items:center; gap:12px;">
@@ -1644,7 +1835,7 @@
                 `;
                 
                 const content = document.createElement('div');
-                content.className = `month-content ${!isFirst ? 'collapsed' : ''}`;
+                content.className = `month-content ${isCollapsed ? 'collapsed' : ''}`;
                 
                 data.items.forEach(t => {
                     const mapped = getMerchantDisplay(t.merchant, t);
@@ -1724,7 +1915,7 @@
                                 <span style="margin: 0 4px; opacity: 0.5;">•</span>
                                 <span>${displayCategoryName(mapped.category)}</span>
                             </div>
-                            ${displayNote ? `<div class="txn-note" style="color: ${t.refund ? '#f59e0b' : (categoryConfig[mapped.category]?.color || '#94a3b8')}; opacity: 0.8;">${displayNote}</div>` : ''}
+                            ${displayNote ? `<div class="txn-note" style="color: ${t.refund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')};">${displayNote}</div>` : ''}
                         </div>
                         <div class="txn-right" style="display: flex; align-items: center; justify-content: flex-end;">
                             <div class="txn-amount ${amount >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
@@ -1748,6 +1939,8 @@
                 header.onclick = () => {
                     const isCollapsedNow = content.classList.toggle('collapsed');
                     header.classList.toggle('collapsed', isCollapsedNow);
+                    // Save state
+                    localStorage.setItem(`accordion_${month}`, isCollapsedNow ? 'collapsed' : 'expanded');
                 };
                 
                 accordion.appendChild(header);
@@ -1792,7 +1985,7 @@
                 });
                 const data = await res.json();
                 if (data.name) {
-                    const firstName = data.name.split(' ')[0];
+                    const firstName = data.given_name || data.name.split(',')[0].split(' ').slice(0, 2).join(' ');
                     document.getElementById('user-display-name').innerText = firstName;
                     
                     const badge = document.getElementById('profile-badge');
@@ -1842,7 +2035,11 @@
                 
                 const user = result.user;
                 if (user.displayName) {
-                    const firstName = user.displayName.split(' ')[0];
+                    const parts = user.displayName.split(' ');
+                    // If first name is short (<=5 chars) like Zea, John, TJ, take the next part too
+                    const firstName = parts.length > 1 && parts[0].length <= 5 
+                                      ? parts.slice(0, 2).join(' ') 
+                                      : parts[0];
                     document.getElementById('user-display-name').innerText = firstName;
                     localStorage.setItem('user_name', firstName);
                 }
@@ -1950,10 +2147,12 @@
                 return; // The callback will trigger handleScan again
             }
             
-            const btn = limit === 300 ? document.getElementById('scan-btn') : document.getElementById('deep-scan-btn');
-            const originalHTML = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> Syncing...';
+            const btn = document.getElementById('scan-btn');
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="material-icons spin" style="font-size:14px;">sync</i>';
+            }
             const bar = document.getElementById('cardSyncBar');
             const statusText = document.getElementById('syncStatusText');
             if (bar) bar.classList.add('syncing');
@@ -2318,7 +2517,9 @@
             document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
             currentTxnId = null;
             
-            // Restore body scroll
+            // Restore scroll
+            const wrapper = document.querySelector('.mobile-wrapper');
+            if (wrapper) wrapper.style.overflow = 'auto';
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
@@ -2613,7 +2814,11 @@
             else if (mapping[finalRaw]) display.name = mapping[finalRaw];
 
             // 5. CATEGORY DETECTION
-            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
+            if (finalRaw === 'INCOME' || finalRaw.includes('SALARY') || finalRaw.includes('DIVIDEND') || finalRaw.includes('REFUND SOURCE')) {
+                display.category = 'Income';
+                display.icon = 'savings';
+                display.catClass = 'cat-income';
+            } else if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
                 display.category = 'Online shopping';
                 display.icon = 'shopping_bag';
                 display.catClass = 'cat-online';
@@ -2684,7 +2889,7 @@
                 
                 // Show category section for expenses
                 document.getElementById('category-section').style.display = 'block';
-                selectedManualCatId = 'Financial Expenses';
+                if (!window.editingTxnId) selectedManualCatId = 'Financial Expenses';
             } else {
                 btnInc.style.background = '#10b981';
                 btnInc.style.color = '#fff';
@@ -2726,10 +2931,10 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Block body scroll
+            // Block scroll
+            const wrapper = document.querySelector('.mobile-wrapper');
+            if (wrapper) wrapper.style.overflow = 'hidden';
             document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.width = '100%';
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
         };
@@ -2793,10 +2998,11 @@
                 
                 if (isSelected) {
                      if (cat.cls.includes('food')) { bgStyle = '#fefce8'; colorStyle = '#ca8a04'; } // Yellow
-                     else if (cat.cls.includes('shopping') || cat.cls.includes('online')) { bgStyle = '#fff7ed'; colorStyle = '#f97316'; } // Orange
+                     else if (cat.cls.includes('online')) { bgStyle = '#fff7ed'; colorStyle = '#ea580c'; } // Orange
+                     else if (cat.cls.includes('shopping')) { bgStyle = '#f0f9ff'; colorStyle = '#0284c7'; } // Blue
                      else if (cat.cls.includes('vehicle')) { bgStyle = '#f5f3ff'; colorStyle = '#8b5cf6'; }
                      else if (cat.cls.includes('cat-aqua')) { bgStyle = '#ecfeff'; colorStyle = '#0891b2'; } // Dark Aqua
-                     else if (cat.cls.includes('Service')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
+                     else if (cat.cls.includes('Service') || cat.cls.includes('magenta')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
                      else if (cat.cls.includes('cat-education')) { bgStyle = '#eff6ff'; colorStyle = '#1d4ed8'; } // Dark Blue
                      else if (cat.label.includes('Financial') || cat.label.includes('Trading')) { bgStyle = '#fef2f2'; colorStyle = '#ef4444'; } // Red
                      else { bgStyle = '#f0fdf4'; colorStyle = '#10b981'; } 
@@ -2860,7 +3066,7 @@
                 btn.innerHTML = '<i class="material-icons spin" style="font-size:16px;">sync</i>';
 
                 const updateData = {
-                    date: dateObj.toISOString(),
+                    date: dateObj.toISOString().split('T')[0],
                     amount: parseFloat(amtVal),
                     manualAmount: parseFloat(amtVal),
                     merchant: merchantName || cat.label,

@@ -578,9 +578,49 @@
         window.addEventListener('scroll', () => handleScroll(window.document.documentElement));
 
         function loadData(uid) {
-            const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
+            const currentAcc = localStorage.getItem('wallet_current_account') || 'atome';
+            const cacheKey = `wallet_cache_${uid}_${currentAcc}`;
+            
+            // 1. Instant Cache Load
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    if (data.txns) {
+                        window.allTxns = data.txns;
+                        renderCalendar();
+                    }
+                } catch(e) {}
+            }
+
+            const collectionName = currentAcc === 'atome' ? "transactions" : "bpi_transactions";
+            const q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"));
+            
             onSnapshot(q, (snap) => {
-                window.allTxns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                
+                // Compare with current to avoid redundant render (Check first 10 for edits)
+                const isSame = window.allTxns && window.allTxns.length === txns.length && 
+                               txns.slice(0, 10).every((t, i) => 
+                                   window.allTxns[i] && 
+                                   window.allTxns[i].id === t.id && 
+                                   window.allTxns[i].note === t.note && 
+                                   window.allTxns[i].manualCategory === t.manualCategory &&
+                                   window.allTxns[i].manualAmount === t.manualAmount &&
+                                   window.allTxns[i].excluded === t.excluded &&
+                                   window.allTxns[i].refund === t.refund
+                               );
+
+                if (isSame) return;
+
+                window.allTxns = txns;
+                
+                // Update Cache
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    txns: txns,
+                    timestamp: Date.now()
+                }));
+                
                 renderCalendar();
             });
         }

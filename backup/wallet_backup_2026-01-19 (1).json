@@ -1,0 +1,1800 @@
+[
+  {
+    "id": "bpi_1768748543000",
+    "note": "To Maribank Philippines Inc. (A Rural Bank)",
+    "amount": 1063,
+    "type": "expense",
+    "date": "2026-01-18",
+    "deleted": false,
+    "manualCategory": "Life & Entertainment",
+    "category": "Life & Entertainment",
+    "manualAmount": 1063,
+    "merchant": "ISLAND PAINT FUNRUN",
+    "createdAt": {
+      "seconds": 1768797019,
+      "nanoseconds": 585000000
+    }
+  },
+  {
+    "id": "bpi_1768540763000",
+    "date": "2026-01-16",
+    "amount": 415,
+    "merchant": "SOFTBOUND PAYMENT",
+    "deleted": false,
+    "category": "Education",
+    "type": "expense",
+    "createdAt": {
+      "seconds": 1768797019,
+      "nanoseconds": 965000000
+    },
+    "note": "To Bpi",
+    "manualAmount": 415,
+    "manualCategory": "Education"
+  },
+  {
+    "id": "bpi_1768477332000",
+    "category": "Education",
+    "merchant": "CLEARBOOK PAYMENT",
+    "amount": 700,
+    "createdAt": {
+      "seconds": 1768797021,
+      "nanoseconds": 106000000
+    },
+    "note": "To Gcash/g-xchange",
+    "manualCategory": "Education",
+    "type": "expense",
+    "deleted": false,
+    "date": "2026-01-15",
+    "manualAmount": 700
+  },
+  {
+    "id": "bpi_1768520993000",
+    "merchant": "ATOME PAYMENT",
+    "date": "2026-01-15",
+    "amount": 4325.25,
+    "deleted": false,
+    "note": "- 7k |Ref No: 004601607510001",
+    "type": "expense",
+    "category": "Credit Card Payment",
+    "manualAmount": 4325.25,
+    "manualCategory": "Credit Card Payment",
+    "createdAt": {
+      "seconds": 1768797020,
+      "nanoseconds": 71000000
+    }
+  },
+  {
+    "id": "bpi_1768518279000",
+    "merchant": "allowance",
+    "manualAmount": 8860,
+    "amount": 8860,
+    "createdAt": {
+      "seconds": 1768797020,
+      "nanoseconds": 15000000
+    },
+    "manualCategory": "Income",
+    "type": "income",
+    "date": "2026-01-15",
+    "deleted": false,
+    "category": "Income",
+    "note": "From Union Bank Of The Philippines"
+  },
+  {
+    "id": "bpi_1768426425000",
+    "date": "2026-01-14",
+    "deleted": false,
+    "amount": 964,
+    "excluded": false,
+    "note": "FROM SHOPEEPAY PHILIPPINES INC",
+    "createdAt": {
+      "seconds": 1768797021,
+      "nanoseconds": 537000000
+    },
+    "merchant": "INCOME",
+    "manualCategory": "Income"
+  },
+  {
+    "id": "UWqFoN1aZU5URPDoNnpY",
+    "amount": 7000,
+    "manualAmount": 7000,
+    "excluded": true,
+    "createdAt": {
+      "seconds": 1768798046,
+      "nanoseconds": 38000000
+    },
+    "merchant": "Kuya Tepen",
+    "type": "income",
+    "note": "Kuya Tepen - Shopee",
+    "date": "2026-01-11",
+    "manualCategory": "Income",
+    "category": "Income"
+  },
+  {
+    "id": "bpi_1767575483000",
+    "manualCategory": "Income",
+    "note": "From Maya Philippines, Inc.",
+    "merchant": "TRANSFER",
+    "category": "Income",
+    "createdAt": {
+      "seconds": 1768797021,
+      "nanoseconds": 579000000
+    },
+    "manualAmount": 8000,
+    "date": "2026-01-05",
+    "amount": 8000,
+    "deleted": false,
+    "type": "income"
+  },
+  {
+    "id": "bpi_1767575537000",
+    "manualAmount": 12000,
+    "category": "Education",
+    "type": "expense",
+    "merchant": "UC TUITION PAYMENT",
+    "date": "2026-01-05",
+    "deleted": false,
+    "manualCategory": "Education",
+    "note": "To Metrobank",
+    "createdAt": {
+      "seconds": 1768797021,
+      "nanoseconds": 503000000
+    },
+    "amount": 12000
+  },
+  {
+    "id": "bpi_1767318194000",
+    "date": "2026-01-02",
+    "manualAmount": 8157.91,
+    "category": "Financial Expenses",
+    "amount": 8157.91,
+    "manualCategory": "Credit Card Payment",
+    "deleted": false,
+    "type": "expense",
+    "createdAt": {
+      "seconds": 1768797022,
+      "nanoseconds": 663000000
+    },
+    "note": "Ref No: 004600209830624",
+    "merchant": "ATOME PAYMENT"
+  },
+  {
+    "id": "LTTrkE8BpuycaskZqiZ5",
+    "merchant": "Balancing",
+    "category": "Income",
+    "manualAmount": 15196.11,
+    "date": "2026-01-01",
+    "createdAt": {
+      "seconds": 1768807341,
+      "nanoseconds": 626000000
+    },
+    "manualCategory": "Income",
+    "note": "",
+    "type": "income",
+    "amount": 15196.11
+  },
+  {
+    "id": "bpi_1767190070000",
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "date": "2025-12-31",
+    "manualCategory": "Income",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797023,
+      "nanoseconds": 44000000
+    },
+    "amount": 8853,
+    "merchant": "INCOME"
+  },
+  {
+    "id": "bpi_1767062560000",
+    "createdAt": {
+      "seconds": 1768797023,
+      "nanoseconds": 83000000
+    },
+    "amount": 4000,
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "date": "2025-12-30",
+    "note": "TO MAYA WALLET/MAYA PHILIPPINES",
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1766909108000",
+    "merchant": "INCOME",
+    "deleted": false,
+    "amount": 7000,
+    "note": "FROM G-XCHANGE, INC.",
+    "date": "2025-12-28",
+    "manualCategory": "Income",
+    "createdAt": {
+      "seconds": 1768797024,
+      "nanoseconds": 64000000
+    }
+  },
+  {
+    "id": "bpi_1766371159000",
+    "createdAt": {
+      "seconds": 1768797024,
+      "nanoseconds": 545000000
+    },
+    "note": "TO BPI",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-12-22",
+    "amount": 1035,
+    "merchant": "PAYMENT",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1766371287000",
+    "merchant": "PAYMENT",
+    "note": "TO UNIONBANK",
+    "createdAt": {
+      "seconds": 1768797024,
+      "nanoseconds": 505000000
+    },
+    "date": "2025-12-22",
+    "deleted": false,
+    "amount": 250,
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1765855728000",
+    "deleted": false,
+    "manualCategory": "Credit Card Payment",
+    "date": "2025-12-16",
+    "createdAt": {
+      "seconds": 1768797024,
+      "nanoseconds": 453000000
+    },
+    "amount": 5592,
+    "note": "Ref No: 004535011104502",
+    "merchant": "ATOME PAYMENT"
+  },
+  {
+    "id": "bpi_1765815782000",
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "merchant": "INCOME",
+    "deleted": false,
+    "amount": 8860,
+    "date": "2025-12-15",
+    "createdAt": {
+      "seconds": 1768797026,
+      "nanoseconds": 84000000
+    },
+    "manualCategory": "Income"
+  },
+  {
+    "id": "bpi_1765179177000",
+    "date": "2025-12-08",
+    "merchant": "ATOME PAYMENT",
+    "createdAt": {
+      "seconds": 1768797026,
+      "nanoseconds": 43000000
+    },
+    "amount": 626.04,
+    "manualCategory": "Credit Card Payment",
+    "note": "Ref No: 004534215926656",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1765179338000",
+    "manualCategory": "Credit Card Payment",
+    "amount": 1252.08,
+    "merchant": "ATOME PAYMENT",
+    "note": "Ref No: 004534215927213",
+    "date": "2025-12-08",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797025,
+      "nanoseconds": 997000000
+    }
+  },
+  {
+    "id": "bpi_1765011030000",
+    "note": "FROM G-XCHANGE, INC.",
+    "date": "2025-12-06",
+    "merchant": "INCOME",
+    "deleted": false,
+    "manualCategory": "Income",
+    "amount": 6000,
+    "createdAt": {
+      "seconds": 1768797025,
+      "nanoseconds": 950000000
+    }
+  },
+  {
+    "id": "bpi_1764925519000",
+    "createdAt": {
+      "seconds": 1768797025,
+      "nanoseconds": 552000000
+    },
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "amount": 5750,
+    "manualCategory": "Financial Expenses",
+    "date": "2025-12-05",
+    "note": "TO BPI"
+  },
+  {
+    "id": "bpi_1760930294000",
+    "deleted": false,
+    "date": "2025-10-20",
+    "manualCategory": "Financial Expenses",
+    "merchant": "PAYMENT",
+    "amount": 300,
+    "note": "TO GCASH/G-XCHANGE",
+    "createdAt": {
+      "seconds": 1768797027,
+      "nanoseconds": 174000000
+    }
+  },
+  {
+    "id": "bpi_1760747178000",
+    "createdAt": {
+      "seconds": 1768797027,
+      "nanoseconds": 544000000
+    },
+    "amount": 3470.05,
+    "merchant": "ATOME PAYMENT",
+    "note": "Ref No: 101237",
+    "date": "2025-10-18",
+    "deleted": false,
+    "manualCategory": "Credit Card Payment"
+  },
+  {
+    "id": "bpi_1760672688000",
+    "note": "TO MAYA WALLET/MAYA PHILIPPINES",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797028,
+      "nanoseconds": 546000000
+    },
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "amount": 1500,
+    "date": "2025-10-17"
+  },
+  {
+    "id": "bpi_1760543883000",
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "deleted": false,
+    "date": "2025-10-15",
+    "createdAt": {
+      "seconds": 1768797029,
+      "nanoseconds": 15000000
+    },
+    "manualCategory": "Income",
+    "amount": 8733,
+    "merchant": "INCOME"
+  },
+  {
+    "id": "bpi_1760141692000",
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797028,
+      "nanoseconds": 959000000
+    },
+    "amount": 2000,
+    "merchant": "PAYMENT",
+    "date": "2025-10-11",
+    "note": "TO GCASH/G-XCHANGE"
+  },
+  {
+    "id": "bpi_1760139868000",
+    "manualCategory": "Income",
+    "date": "2025-10-10",
+    "note": "FROM G-XCHANGE, INC.",
+    "merchant": "INCOME",
+    "createdAt": {
+      "seconds": 1768797030,
+      "nanoseconds": 422000000
+    },
+    "amount": 3000,
+    "deleted": false
+  },
+  {
+    "id": "bpi_1759963387000",
+    "deleted": false,
+    "date": "2025-10-08",
+    "createdAt": {
+      "seconds": 1768797030,
+      "nanoseconds": 463000000
+    },
+    "amount": 2896.25,
+    "merchant": "ATOME PAYMENT",
+    "manualCategory": "Credit Card Payment",
+    "note": "Ref No: 993670"
+  },
+  {
+    "id": "bpi_1759633742000",
+    "date": "2025-10-05",
+    "amount": 800,
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797030,
+      "nanoseconds": 41000000
+    },
+    "manualCategory": "Financial Expenses",
+    "note": "TO GCASH/G-XCHANGE"
+  },
+  {
+    "id": "bpi_1759499252000",
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "date": "2025-10-03",
+    "note": "TO GCASH/G-XCHANGE",
+    "amount": 500,
+    "merchant": "PAYMENT",
+    "createdAt": {
+      "seconds": 1768797031,
+      "nanoseconds": 847000000
+    }
+  },
+  {
+    "id": "bpi_1759505416000",
+    "merchant": "PAYMENT",
+    "amount": 1000,
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797031,
+      "nanoseconds": 454000000
+    },
+    "deleted": false,
+    "date": "2025-10-03",
+    "note": "TO GCASH/G-XCHANGE"
+  },
+  {
+    "id": "bpi_1759506202000",
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797030,
+      "nanoseconds": 482000000
+    },
+    "amount": 1000,
+    "note": "TO GCASH/G-XCHANGE",
+    "date": "2025-10-03",
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1759414063000",
+    "amount": 5104.74,
+    "createdAt": {
+      "seconds": 1768797031,
+      "nanoseconds": 888000000
+    },
+    "note": "Ref No: 074887",
+    "deleted": false,
+    "merchant": "ATOME PAYMENT",
+    "manualCategory": "Credit Card Payment",
+    "date": "2025-10-02"
+  },
+  {
+    "id": "bpi_1759325544000",
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "amount": 11736,
+    "manualCategory": "Income",
+    "merchant": "INCOME",
+    "date": "2025-10-01",
+    "createdAt": {
+      "seconds": 1768797031,
+      "nanoseconds": 867000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1758770354000",
+    "amount": 200,
+    "manualCategory": "Financial Expenses",
+    "note": "TO GCASH/G-XCHANGE",
+    "merchant": "PAYMENT",
+    "date": "2025-09-25",
+    "createdAt": {
+      "seconds": 1768797032,
+      "nanoseconds": 929000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1758602774000",
+    "amount": 4293.96,
+    "note": "Ref No: 740177",
+    "date": "2025-09-23",
+    "createdAt": {
+      "seconds": 1768797033,
+      "nanoseconds": 302000000
+    },
+    "deleted": false,
+    "manualCategory": "Credit Card Payment",
+    "merchant": "ATOME PAYMENT"
+  },
+  {
+    "id": "bpi_1758035218000",
+    "manualCategory": "Income",
+    "date": "2025-09-16",
+    "deleted": false,
+    "amount": 5996,
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "merchant": "INCOME",
+    "createdAt": {
+      "seconds": 1768797033,
+      "nanoseconds": 322000000
+    }
+  },
+  {
+    "id": "bpi_1757343706000",
+    "note": "Ref No: 493701",
+    "deleted": false,
+    "manualCategory": "Credit Card Payment",
+    "merchant": "ATOME PAYMENT",
+    "createdAt": {
+      "seconds": 1768797034,
+      "nanoseconds": 806000000
+    },
+    "date": "2025-09-08",
+    "amount": 2350
+  },
+  {
+    "id": "bpi_1757028223000",
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797034,
+      "nanoseconds": 783000000
+    },
+    "merchant": "PAYMENT",
+    "note": "TO GCASH/G-XCHANGE",
+    "deleted": false,
+    "amount": 1700,
+    "date": "2025-09-04"
+  },
+  {
+    "id": "bpi_1756526462000",
+    "amount": 8568,
+    "createdAt": {
+      "seconds": 1768797034,
+      "nanoseconds": 737000000
+    },
+    "deleted": false,
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "date": "2025-08-30",
+    "manualCategory": "Income",
+    "merchant": "INCOME"
+  },
+  {
+    "id": "bpi_1756527137000",
+    "createdAt": {
+      "seconds": 1768797034,
+      "nanoseconds": 323000000
+    },
+    "merchant": "ATOME PAYMENT",
+    "amount": 3718,
+    "note": "Ref No: 291030",
+    "manualCategory": "Credit Card Payment",
+    "date": "2025-08-30",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1756276698000",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797036,
+      "nanoseconds": 189000000
+    },
+    "note": "TO UNIONBANK",
+    "amount": 2000,
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-08-27"
+  },
+  {
+    "id": "bpi_1756293657000",
+    "amount": 2000,
+    "merchant": "INCOME",
+    "manualCategory": "Income",
+    "createdAt": {
+      "seconds": 1768797034,
+      "nanoseconds": 704000000
+    },
+    "date": "2025-08-27",
+    "note": "",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1756169716000",
+    "merchant": "PAYMENT",
+    "createdAt": {
+      "seconds": 1768797035,
+      "nanoseconds": 796000000
+    },
+    "date": "2025-08-26",
+    "note": "TO GCASH/G-XCHANGE",
+    "manualCategory": "Financial Expenses",
+    "amount": 1200,
+    "deleted": false
+  },
+  {
+    "id": "bpi_1755662049000",
+    "note": "TO UNIONDIGITAL BANK",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-08-20",
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "amount": 2000,
+    "createdAt": {
+      "seconds": 1768797036,
+      "nanoseconds": 239000000
+    }
+  },
+  {
+    "id": "bpi_1755570174000",
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-08-19",
+    "note": "TO GCASH/G-XCHANGE",
+    "amount": 600,
+    "createdAt": {
+      "seconds": 1768797036,
+      "nanoseconds": 272000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1755489441000",
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "amount": 2000,
+    "createdAt": {
+      "seconds": 1768797037,
+      "nanoseconds": 771000000
+    },
+    "date": "2025-08-18",
+    "manualCategory": "Financial Expenses",
+    "note": "TO MAYA WALLET/MAYA PHILIPPINES"
+  },
+  {
+    "id": "bpi_1755315438000",
+    "manualCategory": "Income",
+    "deleted": false,
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "amount": 8541,
+    "merchant": "INCOME",
+    "date": "2025-08-16",
+    "createdAt": {
+      "seconds": 1768797037,
+      "nanoseconds": 793000000
+    }
+  },
+  {
+    "id": "bpi_1755317339000",
+    "merchant": "ATOME PAYMENT",
+    "deleted": false,
+    "date": "2025-08-16",
+    "manualCategory": "Credit Card Payment",
+    "amount": 2043.94,
+    "createdAt": {
+      "seconds": 1768797037,
+      "nanoseconds": 326000000
+    },
+    "note": "Ref No: 363950"
+  },
+  {
+    "id": "bpi_1755140765000",
+    "manualCategory": "Financial Expenses",
+    "note": "TO GCASH/G-XCHANGE",
+    "merchant": "PAYMENT",
+    "date": "2025-08-14",
+    "createdAt": {
+      "seconds": 1768797037,
+      "nanoseconds": 736000000
+    },
+    "deleted": false,
+    "amount": 300
+  },
+  {
+    "id": "bpi_1755064526000",
+    "manualCategory": "Financial Expenses",
+    "amount": 500,
+    "deleted": false,
+    "note": "TO GCASH/G-XCHANGE",
+    "createdAt": {
+      "seconds": 1768797038,
+      "nanoseconds": 906000000
+    },
+    "date": "2025-08-13",
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1754574801000",
+    "manualCategory": "Credit Card Payment",
+    "amount": 1604,
+    "merchant": "ATOME PAYMENT",
+    "createdAt": {
+      "seconds": 1768797040,
+      "nanoseconds": 257000000
+    },
+    "deleted": false,
+    "note": "Ref No: 953476",
+    "date": "2025-08-07"
+  },
+  {
+    "id": "bpi_1754100890000",
+    "date": "2025-08-02",
+    "merchant": "PAYMENT",
+    "note": "TO DCPAY/COINS.PH",
+    "deleted": false,
+    "amount": 2000,
+    "createdAt": {
+      "seconds": 1768797040,
+      "nanoseconds": 281000000
+    },
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1754010509000",
+    "createdAt": {
+      "seconds": 1768797039,
+      "nanoseconds": 857000000
+    },
+    "date": "2025-08-01",
+    "merchant": "ATOME PAYMENT",
+    "deleted": false,
+    "note": "Ref No: 651320",
+    "amount": 3368,
+    "manualCategory": "Credit Card Payment"
+  },
+  {
+    "id": "bpi_1753527345000",
+    "createdAt": {
+      "seconds": 1768797042,
+      "nanoseconds": 307000000
+    },
+    "deleted": false,
+    "note": "FROM MAYA PHILIPPINES, INC.",
+    "date": "2025-07-26",
+    "merchant": "INCOME",
+    "manualCategory": "Income",
+    "amount": 1500
+  },
+  {
+    "id": "bpi_1753335915000",
+    "date": "2025-07-24",
+    "manualCategory": "Financial Expenses",
+    "amount": 2000,
+    "note": "TO UNIONBANK",
+    "merchant": "PAYMENT",
+    "createdAt": {
+      "seconds": 1768797042,
+      "nanoseconds": 342000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1753271800000",
+    "note": "TO GCASH/G-XCHANGE",
+    "createdAt": {
+      "seconds": 1768797042,
+      "nanoseconds": 263000000
+    },
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "date": "2025-07-23",
+    "amount": 734,
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1753079267000",
+    "deleted": false,
+    "note": "TO GCASH/G-XCHANGE",
+    "createdAt": {
+      "seconds": 1768797041,
+      "nanoseconds": 893000000
+    },
+    "date": "2025-07-21",
+    "merchant": "PAYMENT",
+    "amount": 100,
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1752799313000",
+    "createdAt": {
+      "seconds": 1768797043,
+      "nanoseconds": 354000000
+    },
+    "manualCategory": "Financial Expenses",
+    "amount": 11621,
+    "note": "TO METROBANK",
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "date": "2025-07-18"
+  },
+  {
+    "id": "bpi_1752641971000",
+    "amount": 8495,
+    "date": "2025-07-16",
+    "note": "FROM BDO UNIBANK, INC.",
+    "merchant": "INCOME",
+    "manualCategory": "Income",
+    "createdAt": {
+      "seconds": 1768797043,
+      "nanoseconds": 744000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1752402902000",
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "date": "2025-07-13",
+    "amount": 1000,
+    "note": "TO UNIONBANK",
+    "createdAt": {
+      "seconds": 1768797045,
+      "nanoseconds": 140000000
+    }
+  },
+  {
+    "id": "bpi_1752270563000",
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "note": "TO GCASH/G-XCHANGE",
+    "createdAt": {
+      "seconds": 1768797045,
+      "nanoseconds": 161000000
+    },
+    "amount": 200,
+    "date": "2025-07-11",
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1752229605000",
+    "note": "TO GCASH/G-XCHANGE",
+    "createdAt": {
+      "seconds": 1768797044,
+      "nanoseconds": 747000000
+    },
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-07-11",
+    "amount": 210
+  },
+  {
+    "id": "bpi_1752118052000",
+    "date": "2025-07-10",
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "amount": 800,
+    "createdAt": {
+      "seconds": 1768797046,
+      "nanoseconds": 617000000
+    },
+    "deleted": false,
+    "note": "TO BPI"
+  },
+  {
+    "id": "bpi_1752032293000",
+    "merchant": "ATOME PAYMENT",
+    "createdAt": {
+      "seconds": 1768797046,
+      "nanoseconds": 575000000
+    },
+    "manualCategory": "Credit Card Payment",
+    "amount": 205.32,
+    "deleted": false,
+    "date": "2025-07-09",
+    "note": "Ref No: 225275"
+  },
+  {
+    "id": "bpi_1752032331000",
+    "note": "Ref No: 225619",
+    "deleted": false,
+    "date": "2025-07-09",
+    "createdAt": {
+      "seconds": 1768797046,
+      "nanoseconds": 204000000
+    },
+    "merchant": "ATOME PAYMENT",
+    "amount": 410.64,
+    "manualCategory": "Credit Card Payment"
+  },
+  {
+    "id": "bpi_1751686610000",
+    "createdAt": {
+      "seconds": 1768797048,
+      "nanoseconds": 51000000
+    },
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-07-05",
+    "amount": 400,
+    "note": "TO GCASH/G-XCHANGE"
+  },
+  {
+    "id": "bpi_1751688432000",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-07-05",
+    "createdAt": {
+      "seconds": 1768797047,
+      "nanoseconds": 655000000
+    },
+    "amount": 300,
+    "note": "TO GCASH/G-XCHANGE",
+    "deleted": false,
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1751610520000",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797048,
+      "nanoseconds": 114000000
+    },
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "amount": 300,
+    "note": "TO GCASH/G-XCHANGE",
+    "date": "2025-07-04"
+  },
+  {
+    "id": "bpi_1751380592000",
+    "createdAt": {
+      "seconds": 1768797048,
+      "nanoseconds": 94000000
+    },
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "amount": 290,
+    "date": "2025-07-01",
+    "merchant": "PAYMENT",
+    "note": "TO GCASH/G-XCHANGE"
+  },
+  {
+    "id": "bpi_1751287229000",
+    "merchant": "INCOME",
+    "date": "2025-06-30",
+    "note": "FROM UNION BANK OF THE PHILIPPINES",
+    "manualCategory": "Income",
+    "amount": 8486,
+    "createdAt": {
+      "seconds": 1768797049,
+      "nanoseconds": 532000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1751103740000",
+    "manualCategory": "Credit Card Payment",
+    "createdAt": {
+      "seconds": 1768797049,
+      "nanoseconds": 156000000
+    },
+    "merchant": "ATOME PAYMENT",
+    "date": "2025-06-28",
+    "amount": 2899,
+    "note": "Ref No: 571451",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1750856830000",
+    "amount": 290,
+    "date": "2025-06-25",
+    "merchant": "BPI Transfer",
+    "createdAt": {
+      "seconds": 1768797049,
+      "nanoseconds": 599000000
+    },
+    "note": "",
+    "deleted": false,
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1750744410000",
+    "amount": 2395.88,
+    "deleted": false,
+    "merchant": "ATOME PAYMENT",
+    "date": "2025-06-24",
+    "createdAt": {
+      "seconds": 1768797049,
+      "nanoseconds": 555000000
+    },
+    "manualCategory": "Credit Card Payment",
+    "note": "Ref No: 771197"
+  },
+  {
+    "id": "bpi_1750690408000",
+    "merchant": "PAYMENT",
+    "note": "",
+    "amount": 290,
+    "deleted": false,
+    "date": "2025-06-23",
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797051,
+      "nanoseconds": 105000000
+    }
+  },
+  {
+    "id": "bpi_1750490026000",
+    "deleted": false,
+    "date": "2025-06-21",
+    "createdAt": {
+      "seconds": 1768797051,
+      "nanoseconds": 162000000
+    },
+    "merchant": "ATOME PAYMENT",
+    "manualCategory": "Credit Card Payment",
+    "amount": 747.62,
+    "note": "Ref No: 304523"
+  },
+  {
+    "id": "bpi_1750390217000",
+    "createdAt": {
+      "seconds": 1768797051,
+      "nanoseconds": 128000000
+    },
+    "amount": 350,
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "note": "",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-06-20"
+  },
+  {
+    "id": "bpi_1750137074000",
+    "date": "2025-06-17",
+    "note": "Ref No: 923738",
+    "amount": 497.73,
+    "manualCategory": "Credit Card Payment",
+    "merchant": "ATOME PAYMENT",
+    "createdAt": {
+      "seconds": 1768797052,
+      "nanoseconds": 567000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1749960196000",
+    "deleted": false,
+    "note": "Union Bank of the Philippines",
+    "manualCategory": "Income",
+    "date": "2025-06-15",
+    "createdAt": {
+      "seconds": 1768797052,
+      "nanoseconds": 177000000
+    },
+    "merchant": "INCOME",
+    "amount": 8432
+  },
+  {
+    "id": "bpi_1749379462000",
+    "merchant": "INCOME",
+    "date": "2025-06-08",
+    "createdAt": {
+      "seconds": 1768797053,
+      "nanoseconds": 548000000
+    },
+    "manualCategory": "Income",
+    "amount": 1460.8,
+    "deleted": false,
+    "note": "Wise Pilipinas, Inc."
+  },
+  {
+    "id": "bpi_1749379610000",
+    "note": "Transfer to GCASH/G-XCHANGE",
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797052,
+      "nanoseconds": 545000000
+    },
+    "manualCategory": "Financial Expenses",
+    "amount": 1100,
+    "date": "2025-06-08"
+  },
+  {
+    "id": "bpi_1748997331000",
+    "date": "2025-06-04",
+    "merchant": "ATOME PAYMENT",
+    "note": "Ref No: 908584",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797053,
+      "nanoseconds": 997000000
+    },
+    "amount": 1013.96,
+    "manualCategory": "Credit Card Payment"
+  },
+  {
+    "id": "bpi_1749044901000",
+    "deleted": false,
+    "date": "2025-06-04",
+    "createdAt": {
+      "seconds": 1768797053,
+      "nanoseconds": 948000000
+    },
+    "amount": 300,
+    "merchant": "INCOME",
+    "manualCategory": "Income",
+    "note": "SEABANK, Philippines"
+  },
+  {
+    "id": "bpi_1748833677000",
+    "deleted": false,
+    "note": "",
+    "createdAt": {
+      "seconds": 1768797053,
+      "nanoseconds": 927000000
+    },
+    "merchant": "BPI Transfer",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-06-02",
+    "amount": 300
+  },
+  {
+    "id": "bpi_1748757639000",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-06-01",
+    "amount": 800,
+    "createdAt": {
+      "seconds": 1768797055,
+      "nanoseconds": 386000000
+    },
+    "merchant": "PAYMENT",
+    "deleted": false,
+    "note": ""
+  },
+  {
+    "id": "bpi_1748782531000",
+    "merchant": "PAYMENT",
+    "note": "Transfer to UNIONBANK",
+    "amount": 4000,
+    "deleted": false,
+    "date": "2025-06-01",
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797055,
+      "nanoseconds": 353000000
+    }
+  },
+  {
+    "id": "bpi_1748670227000",
+    "date": "2025-05-31",
+    "merchant": "INCOME",
+    "createdAt": {
+      "seconds": 1768797056,
+      "nanoseconds": 740000000
+    },
+    "deleted": false,
+    "note": "Union Bank of the Philippines",
+    "manualCategory": "Income",
+    "amount": 8218
+  },
+  {
+    "id": "bpi_1748670424000",
+    "merchant": "ATOME PAYMENT",
+    "date": "2025-05-31",
+    "note": "Ref No: 692243",
+    "amount": 1800.84,
+    "manualCategory": "Credit Card Payment",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797054,
+      "nanoseconds": 966000000
+    }
+  },
+  {
+    "id": "bpi_1747928058000",
+    "manualCategory": "Income",
+    "note": "G-Xchange, Inc.",
+    "createdAt": {
+      "seconds": 1768797056,
+      "nanoseconds": 719000000
+    },
+    "deleted": false,
+    "amount": 100,
+    "date": "2025-05-22",
+    "merchant": "INCOME"
+  },
+  {
+    "id": "bpi_1747741711000",
+    "deleted": false,
+    "amount": 4705,
+    "merchant": "PAYMENT",
+    "date": "2025-05-20",
+    "createdAt": {
+      "seconds": 1768797056,
+      "nanoseconds": 353000000
+    },
+    "manualCategory": "Financial Expenses",
+    "note": "Transfer to METROBANK"
+  },
+  {
+    "id": "bpi_1747316866000",
+    "note": "Union Bank of the Philippines",
+    "deleted": false,
+    "date": "2025-05-15",
+    "amount": 8379,
+    "manualCategory": "Income",
+    "createdAt": {
+      "seconds": 1768797058,
+      "nanoseconds": 962000000
+    },
+    "merchant": "INCOME"
+  },
+  {
+    "id": "bpi_1747323113000",
+    "merchant": "ATOME PAYMENT",
+    "deleted": false,
+    "amount": 1890.4,
+    "manualCategory": "Credit Card Payment",
+    "createdAt": {
+      "seconds": 1768797057,
+      "nanoseconds": 708000000
+    },
+    "date": "2025-05-15",
+    "note": "Ref No: 627807"
+  },
+  {
+    "id": "bpi_1746779284000",
+    "note": "",
+    "createdAt": {
+      "seconds": 1768797059,
+      "nanoseconds": 411000000
+    },
+    "date": "2025-05-09",
+    "amount": 337,
+    "deleted": false,
+    "merchant": "BPI Transfer",
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1746783782000",
+    "merchant": "PAYMENT",
+    "amount": 180,
+    "deleted": false,
+    "date": "2025-05-09",
+    "note": "Transfer to SEABANK",
+    "createdAt": {
+      "seconds": 1768797059,
+      "nanoseconds": 372000000
+    },
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1746622649000",
+    "date": "2025-05-07",
+    "amount": 3220.39,
+    "createdAt": {
+      "seconds": 1768797059,
+      "nanoseconds": 331000000
+    },
+    "manualCategory": "Credit Card Payment",
+    "deleted": false,
+    "merchant": "ATOME PAYMENT",
+    "note": "Ref No: 946530"
+  },
+  {
+    "id": "bpi_1746162936000",
+    "amount": 600,
+    "merchant": "PAYMENT",
+    "note": "Transfer to GCASH/G-XCHANGE",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-05-02",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797060,
+      "nanoseconds": 410000000
+    }
+  },
+  {
+    "id": "bpi_1746079967000",
+    "amount": 660,
+    "deleted": false,
+    "manualCategory": "Credit Card Payment",
+    "note": "Ref No: 384728",
+    "createdAt": {
+      "seconds": 1768797060,
+      "nanoseconds": 778000000
+    },
+    "merchant": "ATOME PAYMENT",
+    "date": "2025-05-01"
+  },
+  {
+    "id": "bpi_1746016116000",
+    "merchant": "PAYMENT",
+    "amount": 10000,
+    "createdAt": {
+      "seconds": 1768797062,
+      "nanoseconds": 104000000
+    },
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "note": "Transfer to METROBANK",
+    "date": "2025-04-30"
+  },
+  {
+    "id": "bpi_1746015458000",
+    "merchant": "INCOME",
+    "createdAt": {
+      "seconds": 1768797061,
+      "nanoseconds": 721000000
+    },
+    "amount": 8423,
+    "manualCategory": "Income",
+    "date": "2025-04-30",
+    "deleted": false,
+    "note": "Union Bank of the Philippines"
+  },
+  {
+    "id": "bpi_1745214778000",
+    "manualCategory": "Income",
+    "date": "2025-04-21",
+    "merchant": "INCOME",
+    "deleted": false,
+    "note": "Rizal Commercial Banking Corporation",
+    "createdAt": {
+      "seconds": 1768797063,
+      "nanoseconds": 502000000
+    },
+    "amount": 4493
+  },
+  {
+    "id": "bpi_1744961391000",
+    "createdAt": {
+      "seconds": 1768797063,
+      "nanoseconds": 470000000
+    },
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "amount": 3000,
+    "date": "2025-04-18",
+    "note": "Transfer to GCASH/G-XCHANGE"
+  },
+  {
+    "id": "bpi_1744961730000",
+    "date": "2025-04-18",
+    "merchant": "INCOME",
+    "amount": 3000,
+    "createdAt": {
+      "seconds": 1768797063,
+      "nanoseconds": 97000000
+    },
+    "note": "G-Xchange, Inc.",
+    "deleted": false,
+    "manualCategory": "Income"
+  },
+  {
+    "id": "bpi_1744891205000",
+    "date": "2025-04-17",
+    "note": "Transfer to MAYA WALLET/MAYA PHILIPPINES",
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797064,
+      "nanoseconds": 959000000
+    },
+    "deleted": false,
+    "amount": 5000,
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1744893032000",
+    "note": "",
+    "amount": 5700,
+    "createdAt": {
+      "seconds": 1768797064,
+      "nanoseconds": 920000000
+    },
+    "merchant": "BPI Transfer",
+    "date": "2025-04-17",
+    "manualCategory": "Financial Expenses",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1744893217000",
+    "amount": 5700,
+    "manualCategory": "Income",
+    "deleted": false,
+    "note": "Maya Philippines, Inc.",
+    "createdAt": {
+      "seconds": 1768797063,
+      "nanoseconds": 542000000
+    },
+    "date": "2025-04-17",
+    "merchant": "INCOME"
+  },
+  {
+    "id": "bpi_1744769080000",
+    "note": "Union Bank of the Philippines",
+    "amount": 5060,
+    "date": "2025-04-16",
+    "merchant": "INCOME",
+    "createdAt": {
+      "seconds": 1768797066,
+      "nanoseconds": 302000000
+    },
+    "deleted": false,
+    "manualCategory": "Income"
+  },
+  {
+    "id": "bpi_1744763954000",
+    "createdAt": {
+      "seconds": 1768797065,
+      "nanoseconds": 933000000
+    },
+    "merchant": "BPI Transfer",
+    "manualCategory": "Financial Expenses",
+    "note": "",
+    "amount": 2500,
+    "deleted": false,
+    "date": "2025-04-16"
+  },
+  {
+    "id": "bpi_1744769905000",
+    "note": "Transfer to MAYA WALLET/MAYA PHILIPPINES",
+    "amount": 5300,
+    "deleted": false,
+    "date": "2025-04-16",
+    "merchant": "PAYMENT",
+    "createdAt": {
+      "seconds": 1768797064,
+      "nanoseconds": 552000000
+    },
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1744740473000",
+    "amount": 8562,
+    "date": "2025-04-15",
+    "createdAt": {
+      "seconds": 1768797066,
+      "nanoseconds": 351000000
+    },
+    "deleted": false,
+    "merchant": "INCOME",
+    "note": "Union Bank of the Philippines",
+    "manualCategory": "Income"
+  },
+  {
+    "id": "bpi_1744184721000",
+    "date": "2025-04-09",
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "merchant": "BPI Transfer",
+    "amount": 5800,
+    "createdAt": {
+      "seconds": 1768797067,
+      "nanoseconds": 690000000
+    },
+    "note": ""
+  },
+  {
+    "id": "bpi_1744014770000",
+    "date": "2025-04-07",
+    "note": "",
+    "manualCategory": "Financial Expenses",
+    "amount": 1000,
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797067,
+      "nanoseconds": 324000000
+    },
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1743638152000",
+    "manualCategory": "Financial Expenses",
+    "amount": 1800,
+    "createdAt": {
+      "seconds": 1768797068,
+      "nanoseconds": 645000000
+    },
+    "merchant": "PAYMENT",
+    "note": "Transfer to MAYA PHILIPPINES, INC./MAYA WALLET",
+    "deleted": false,
+    "date": "2025-04-02"
+  },
+  {
+    "id": "bpi_1743425272000",
+    "note": "Transfer to UNIONBANK OF THE PHILIPPINES",
+    "merchant": "PAYMENT",
+    "amount": 10000,
+    "manualCategory": "Financial Expenses",
+    "date": "2025-03-31",
+    "createdAt": {
+      "seconds": 1768797069,
+      "nanoseconds": 639000000
+    },
+    "deleted": false
+  },
+  {
+    "id": "bpi_1743182188000",
+    "merchant": "PAYMENT",
+    "date": "2025-03-28",
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797070,
+      "nanoseconds": 7000000
+    },
+    "deleted": false,
+    "amount": 350,
+    "note": "Transfer to SHOPEEPAY PHILIPPINES INC"
+  },
+  {
+    "id": "bpi_1742965248000",
+    "note": "Transfer to G-XCHANGE/GCASH",
+    "createdAt": {
+      "seconds": 1768797070,
+      "nanoseconds": 987000000
+    },
+    "manualCategory": "Financial Expenses",
+    "amount": 1000,
+    "merchant": "PAYMENT",
+    "date": "2025-03-26",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1742871125000",
+    "amount": 1151,
+    "manualCategory": "Financial Expenses",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797071,
+      "nanoseconds": 353000000
+    },
+    "date": "2025-03-25",
+    "note": "Transfer to OWN BANK THE RURAL BANK OF CAVITE CITY",
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1742631230000",
+    "merchant": "PAYMENT",
+    "note": "",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768797071,
+      "nanoseconds": 385000000
+    },
+    "amount": 120,
+    "date": "2025-03-22",
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1742272119000",
+    "createdAt": {
+      "seconds": 1768797072,
+      "nanoseconds": 704000000
+    },
+    "manualCategory": "Financial Expenses",
+    "date": "2025-03-18",
+    "note": "Transfer to UNIONBANK OF THE PHILIPPINES",
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "amount": 3000
+  },
+  {
+    "id": "bpi_1742224501000",
+    "note": "Transfer to WISE PILIPINAS, INC.",
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768797074,
+      "nanoseconds": 34000000
+    },
+    "date": "2025-03-17",
+    "amount": 1400,
+    "merchant": "PAYMENT"
+  },
+  {
+    "id": "bpi_1742225552000",
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-03-17",
+    "amount": 1460,
+    "createdAt": {
+      "seconds": 1768797073,
+      "nanoseconds": 663000000
+    },
+    "deleted": false,
+    "note": "Transfer to MAYA PHILIPPINES, INC./MAYA WALLET"
+  },
+  {
+    "id": "bpi_1742226627000",
+    "note": "Transfer to WISE PILIPINAS, INC.",
+    "date": "2025-03-17",
+    "createdAt": {
+      "seconds": 1768797072,
+      "nanoseconds": 337000000
+    },
+    "deleted": false,
+    "amount": 700,
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1742031311000",
+    "deleted": false,
+    "merchant": "BPI Transfer",
+    "createdAt": {
+      "seconds": 1768806936,
+      "nanoseconds": 22000000
+    },
+    "note": "",
+    "manualCategory": "Financial Expenses",
+    "date": "2025-03-14",
+    "amount": 15000
+  },
+  {
+    "id": "bpi_1728825023000",
+    "note": "TO BPI",
+    "manualCategory": "Financial Expenses",
+    "createdAt": {
+      "seconds": 1768806942,
+      "nanoseconds": 80000000
+    },
+    "amount": 1300,
+    "deleted": false,
+    "merchant": "PAYMENT",
+    "date": "2024-10-12"
+  },
+  {
+    "id": "bpi_1728700256000",
+    "merchant": "BPI Transfer",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768806942,
+      "nanoseconds": 559000000
+    },
+    "note": "",
+    "date": "2024-10-11",
+    "amount": 390,
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1727870512000",
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "amount": 500,
+    "note": "TO UNIONBANK OF THE PHILIPPINES",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768806943,
+      "nanoseconds": 88000000
+    },
+    "date": "2024-10-01"
+  },
+  {
+    "id": "bpi_1727411428000",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768806945,
+      "nanoseconds": 85000000
+    },
+    "merchant": "PAYMENT",
+    "manualCategory": "Financial Expenses",
+    "note": "TO BPI",
+    "amount": 1000,
+    "date": "2024-09-26"
+  },
+  {
+    "id": "bpi_1727329409000",
+    "merchant": "PAYMENT",
+    "note": "TO MAYA PHILIPPINES, INC./MAYA WALLET",
+    "date": "2024-09-25",
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "amount": 35000,
+    "createdAt": {
+      "seconds": 1768806945,
+      "nanoseconds": 479000000
+    }
+  },
+  {
+    "id": "bpi_1726829609000",
+    "date": "2024-09-19",
+    "amount": 1000,
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768806947,
+      "nanoseconds": 403000000
+    },
+    "manualCategory": "Financial Expenses",
+    "merchant": "PAYMENT",
+    "note": "TO BPI"
+  },
+  {
+    "id": "bpi_1726328330000",
+    "merchant": "PAYMENT",
+    "date": "2024-09-13",
+    "amount": 1290,
+    "createdAt": {
+      "seconds": 1768806948,
+      "nanoseconds": 273000000
+    },
+    "deleted": false,
+    "note": "TO BPI",
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1726060758000",
+    "merchant": "PAYMENT",
+    "createdAt": {
+      "seconds": 1768806947,
+      "nanoseconds": 790000000
+    },
+    "date": "2024-09-10",
+    "note": "TO MAYA PHILIPPINES, INC./MAYA WALLET",
+    "manualCategory": "Financial Expenses",
+    "amount": 3000,
+    "deleted": false
+  },
+  {
+    "id": "bpi_1702985617000",
+    "createdAt": {
+      "seconds": 1768806957,
+      "nanoseconds": 140000000
+    },
+    "date": "2023-12-18",
+    "amount": 500,
+    "manualCategory": "Financial Expenses",
+    "note": "",
+    "deleted": false,
+    "merchant": "BPI Transfer"
+  },
+  {
+    "id": "bpi_1702984180000",
+    "date": "2023-12-18",
+    "merchant": "BPI Transfer",
+    "note": "",
+    "deleted": false,
+    "createdAt": {
+      "seconds": 1768806956,
+      "nanoseconds": 725000000
+    },
+    "amount": 500,
+    "manualCategory": "Financial Expenses"
+  },
+  {
+    "id": "bpi_1700876340000",
+    "merchant": "BPI Transfer",
+    "amount": 2705,
+    "createdAt": {
+      "seconds": 1768806959,
+      "nanoseconds": 693000000
+    },
+    "date": "2023-11-24",
+    "note": "",
+    "manualCategory": "Financial Expenses",
+    "deleted": false
+  },
+  {
+    "id": "bpi_1700810577000",
+    "note": "",
+    "deleted": false,
+    "manualCategory": "Financial Expenses",
+    "merchant": "BPI Transfer",
+    "createdAt": {
+      "seconds": 1768806958,
+      "nanoseconds": 928000000
+    },
+    "date": "2023-11-23",
+    "amount": 250
+  },
+  {
+    "id": "bpi_1700120643000",
+    "deleted": false,
+    "note": "",
+    "date": "2023-11-15",
+    "createdAt": {
+      "seconds": 1768806959,
+      "nanoseconds": 307000000
+    },
+    "manualCategory": "Financial Expenses",
+    "amount": 350,
+    "merchant": "BPI Transfer"
+  }
+]

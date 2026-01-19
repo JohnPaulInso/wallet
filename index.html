@@ -1619,6 +1619,12 @@
 
         // ACCOUNT MANAGEMENT & SWIPE LOGIC
         window.currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
+
+        window.getCollectionName = (accId) => {
+            if (accId === 'atome') return "transactions";
+            if (accId === 'bpi') return "bpi_transactions";
+            return `txns_${accId}`;
+        };
         
         // APPLY THEME ON LOAD
         window.addEventListener('DOMContentLoaded', () => {
@@ -1951,7 +1957,7 @@
                 if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Live Sync';
                 
                 // MULTI-ACCOUNT COLLECTION SELECTION
-                const collectionName = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const collectionName = getCollectionName(window.currentAccount);
                 let q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"));
                 
                 // DATA ISOLATION: Query ONLY the current account's path.
@@ -1985,7 +1991,7 @@
                     });
 
                     const isSame = prevTxns.length === txns.length && 
-                                   txns.slice(0, 10).every((t, i) => 
+                                   txns.every((t, i) => 
                                        prevTxns[i] && 
                                        prevTxns[i].id === t.id && 
                                        prevTxns[i].note === t.note && 
@@ -3464,7 +3470,7 @@
                                 if (txn) {
                                     if (!auth.currentUser) await signInAnonymously(auth);
                                     const uid = auth.currentUser.uid;
-                                    const collectionName = syncAccount === 'atome' ? "transactions" : "bpi_transactions";
+                                    const collectionName = getCollectionName(syncAccount);
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
                                     const snap = await getDoc(docRef);
@@ -3830,7 +3836,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, id), { excluded: !isCurrentlyExcluded });
                 showToast(isCurrentlyExcluded ? 'Transaction included' : 'Transaction excluded');
             } catch (e) { log('Toggle failed', 'error'); }
@@ -3846,7 +3852,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, id), { refund: !isCurrentlyRefund });
                 showToast(isCurrentlyRefund ? 'Unmarked as refund' : 'Marked as refund');
             } catch (e) { log('Toggle refund failed', 'error'); }
@@ -3878,7 +3884,7 @@
             try {
                  if (!auth.currentUser) return;
                  const uid = auth.currentUser.uid;
-                 const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                 const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, currentTxnId), { deleted: true });
                 showToast('Transaction deleted');
                 closeModals();
@@ -4007,7 +4013,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, currentTxnId), { manualCategory: catId });
                 showToast('Category updated');
                 closeModals();
@@ -4067,7 +4073,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, currentTxnId), { note: note });
                 showToast('Note saved');
                 closeModals();
@@ -4115,7 +4121,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 const docRef = doc(db, "users", uid, col, currentTxnId);
                 if (isNaN(amt) || val.trim() === "") {
                     await updateDoc(docRef, { manualAmount: deleteField() });
@@ -4554,7 +4560,7 @@
                 };
 
                 // Use the selected account in the modal
-                const col = selectedAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(selectedAccount);
 
                 if (window.editingTxnId) {
                     const origAcc = window.originalAccount || (window.editingTxnId.startsWith('bpi_') ? 'bpi' : 'atome');

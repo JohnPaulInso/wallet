@@ -18,19 +18,19 @@
         * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
         html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         
-        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
+        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
         @media (min-width: 431px) { .mobile-wrapper { height: 100vh; overflow-y: scroll; } }
 
-        #header { padding: 30px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
         #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
-        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
-        #header.shrunk .user-name { font-size: 18px; }
+        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
+        #header.shrunk .user-name { font-size: 15px; }
         
-        .header-logo { width: 42px; height: 42px; border-radius: 12px; object-fit: contain; transition: all 0.3s ease; }
-        #header.shrunk .header-logo { width: 32px; height: 32px; border-radius: 8px; }
+        .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #header.shrunk .header-logo { width: 40px; height: 25px; }
         
         #profile-badge { transition: all 0.3s ease; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         #header.shrunk #profile-badge { transform: scale(0.8); }
@@ -247,7 +247,7 @@
         .nav-item span { font-size: 11px; font-weight: 700; }
 
         /* GUEST GATE OVERLAY */
-        .guest-gate-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; animation: fadeIn 0.4s ease-out; }
+        .guest-gate-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .guest-gate-card { background: #fff; padding: 32px 24px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .guest-gate-btn { background: #121212; color: #fff; border: none; padding: 14px 28px; border-radius: 50px; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s; width: 100%; justify-content: center; }
@@ -332,29 +332,43 @@
         </div>
 
         <div id="header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="applogo.png?v=4" alt="Logo" class="header-logo">
+            <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
+                <!-- Dynamic Card Icon -->
+                <svg id="header-card-icon" class="header-logo" viewBox="0 0 48 30" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Card Background -->
+                    <rect width="48" height="30" rx="4" fill="#1a1a1a" id="card-bg"/>
+                    
+                    <!-- Mastercard Logo (bottom right) -->
+                    <g transform="translate(32, 20)">
+                        <circle cx="4" cy="4" r="3.5" fill="#eb001b" opacity="0.9"/>
+                        <circle cx="8" cy="4" r="3.5" fill="#f79e1b" opacity="0.9"/>
+                    </g>
+                    
+                    <!-- Card Chip (optional detail) -->
+                    <rect x="6" y="8" width="8" height="6" rx="1" fill="#d4af37" opacity="0.3"/>
+                </svg>
+                
                 <div class="greeting-section">
                     <div class="greeting-text">Hello,</div>
                     <div class="user-name" id="user-display-name">Guest</div>
                 </div>
             </div>
             <div class="profile-container">
-                <div id="profile-badge" onclick="toggleProfileDropdown(event)">
-                    <i class="material-icons">person</i>
-                    <img id="user-pic" src="" alt="Profile">
+            <div id="profile-badge" onclick="toggleProfileDropdown(event)">
+                <i class="material-icons">person</i>
+                <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
+            </div>
+            <div id="profile-dropdown" class="profile-dropdown">
+                <div class="dropdown-item" onclick="handleAuthClick()">
+                    <i class="material-icons">sync</i>
+                    <span>Google Sync</span>
                 </div>
-                <div id="profile-dropdown" class="profile-dropdown">
-                    <div class="dropdown-item" onclick="handleAuthClick()">
-                        <i class="material-icons">sync</i>
-                        <span>Google Sync</span>
-                    </div>
-                    <div class="dropdown-item logout" onclick="handleSignout()">
-                        <i class="material-icons">logout</i>
-                        <span>Log Out</span>
-                    </div>
+                <div class="dropdown-item logout" onclick="handleSignout()">
+                    <i class="material-icons">logout</i>
+                    <span>Log Out</span>
                 </div>
             </div>
+        </div>
         </div>
 
         <div class="mui-container">
@@ -454,6 +468,30 @@
         let selectedDate = new Date();
         window.allTxns = [];
 
+        // Initial UI population from Cache
+        const cachedName = localStorage.getItem('user_name');
+        const cachedPic = localStorage.getItem('user_pic');
+        if (cachedName) document.getElementById('user-display-name').innerText = cachedName;
+        if (cachedPic) {
+            const badge = document.getElementById('profile-badge');
+            const picEl = document.getElementById('user-pic');
+            picEl.src = cachedPic;
+            badge.classList.add('has-pic');
+        }
+
+        // Apply Header Theme from Current Account
+        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
+        const cardBg = document.getElementById('card-bg');
+        if (cardBg) {
+            if (currentAccount === 'bpi') cardBg.setAttribute('fill', '#931B1B');
+            else if (currentAccount === 'atome') cardBg.setAttribute('fill', '#1a1a1a');
+            else {
+                const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+                const acc = accounts.find(a => a.id === currentAccount);
+                if (acc) cardBg.setAttribute('fill', acc.color);
+            }
+        }
+
         onAuthStateChanged(auth, (user) => {
             const isAnon = !user || user.isAnonymous;
             const gate = document.getElementById('guestGate');
@@ -468,18 +506,22 @@
                                           ? parts.slice(0, 2).join(' ') 
                                           : parts[0];
                         document.getElementById('user-display-name').innerText = firstName;
+                        localStorage.setItem('user_name', firstName);
                     }
                     if (user.photoURL) {
                         const badge = document.getElementById('profile-badge');
                         const pic = document.getElementById('user-pic');
-                        pic.src = user.photoURL;
-                        pic.style.display = 'block';
+                        let photoUrl = user.photoURL;
+                        if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                            photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                        }
+                        pic.src = photoUrl;
                         badge.classList.add('has-pic');
+                        localStorage.setItem('user_pic', photoUrl);
                     }
                 } else {
                     document.getElementById('user-display-name').innerText = 'Guest';
                     document.getElementById('profile-badge').classList.remove('has-pic');
-                    document.getElementById('user-pic').style.display = 'none';
                 }
                 loadData(user.uid);
             } else {

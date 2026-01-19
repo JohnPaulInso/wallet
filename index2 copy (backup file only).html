@@ -836,6 +836,7 @@
             padding: 40px;
             text-align: center;
             animation: fadeIn 0.4s ease-out;
+            overflow: hidden;
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .guest-gate-card {
@@ -849,6 +850,7 @@
             flex-direction: column;
             align-items: center;
             gap: 20px;
+            overflow: visible;
         }
         .guest-gate-btn {
             background: #121212;
@@ -978,7 +980,12 @@
                         </div>
                     </div>
                     
-                    <div class="balance-amount" id="atome-balance">PHP 0.00</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount" id="atome-balance">PHP 0.00</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
                     
                     <div class="card-footer">
                         <div class="card-number-box">
@@ -1011,8 +1018,13 @@
                         </div>
                     </div>
                     
-                    <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
-                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -12px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
+                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
                     
                     <div class="card-footer">
                         <div class="card-number-box">
@@ -1210,8 +1222,8 @@
                         <span id="sub-count-badge" style="background:#f1f5f9; color:#64748b; font-size:9px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
                     </div>
                     <div style="text-align: right;">
-                        <div id="sub-limit-label" onclick="promptSetSubLimit()" style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; cursor: pointer;">Limit: ₱0</div>
-                        <div id="sub-total-label" style="font-size: 11px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
+                        <div id="sub-limit-label" class="privacy-mask" onclick="promptSetSubLimit()" style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; cursor: pointer;">Limit: ₱0</div>
+                        <div id="sub-total-label" class="privacy-mask" style="font-size: 11px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
                     </div>
                 </div>
                 <div class="sub-limit-bar">
@@ -1243,6 +1255,16 @@
                     </button>
                 </div>
                 <input type="file" id="import-file" accept=".json" style="display: none;" onchange="importData(event)">
+            </div>
+
+            <!-- TROUBLESHOOTING SECTION -->
+            <div class="data-mgmt-card" style="margin: 0 16px 20px; padding: 12px 16px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b;">Having sync issues?</div>
+                    <button onclick="window.hardRefresh()" style="background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                        <i class="material-icons" style="font-size: 14px;">refresh</i> HARD REFRESH
+                    </button>
+                </div>
             </div>
 
             <!-- ADMIN CONTROLS (SECRETS) -->
@@ -1619,6 +1641,12 @@
 
         // ACCOUNT MANAGEMENT & SWIPE LOGIC
         window.currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
+
+        window.getCollectionName = (accId) => {
+            if (accId === 'atome') return "transactions";
+            if (accId === 'bpi') return "bpi_transactions";
+            return `txns_${accId}`;
+        };
         
         // APPLY THEME ON LOAD
         window.addEventListener('DOMContentLoaded', () => {
@@ -1735,7 +1763,12 @@
                         </div>
                     </div>
                     
-                    <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
                     
                     <div class="card-footer">
                         <div class="card-number-box">
@@ -1903,6 +1936,23 @@
             const container = document.getElementById('history-container');
             const spinner = document.getElementById('loading-spinner');
             
+            // HARD REFRESH LOGIC: If this is a page reload, clear cache to force fresh fetch
+            try {
+                const nav = performance.getEntriesByType("navigation")[0];
+                if (nav && nav.type === 'reload') {
+                    // Only clear the current account's cache to be efficient, or all if preferred.
+                    // Let's clear current account cache to fix perceived sync issues
+                    const uid = auth.currentUser?.uid;
+                    if (uid) {
+                        log('Hard Reload Detected. Busting Cache...', 'warn');
+                        localStorage.removeItem(`wallet_cache_${uid}_${window.currentAccount}`);
+                        // Also clear deep/quick sync timestamps to force a scan if needed
+                        localStorage.removeItem(`last_deep_sync_${window.currentAccount}`);
+                        localStorage.removeItem(`last_quick_sync_${window.currentAccount}`);
+                    }
+                }
+            } catch(e) { console.warn('Nav timing not supported'); }
+            
             // If already listening, don't re-attach unless we are forcing a reset (handling logic elsewhere)
             if (window.unsubscribeSnapshot) {
                 window.unsubscribeSnapshot();
@@ -1951,7 +2001,7 @@
                 if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Live Sync';
                 
                 // MULTI-ACCOUNT COLLECTION SELECTION
-                const collectionName = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const collectionName = getCollectionName(window.currentAccount);
                 let q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"));
                 
                 // DATA ISOLATION: Query ONLY the current account's path.
@@ -1985,7 +2035,7 @@
                     });
 
                     const isSame = prevTxns.length === txns.length && 
-                                   txns.slice(0, 10).every((t, i) => 
+                                   txns.every((t, i) => 
                                        prevTxns[i] && 
                                        prevTxns[i].id === t.id && 
                                        prevTxns[i].note === t.note && 
@@ -2029,7 +2079,12 @@
                         document.getElementById('trend-period-total').innerText = 'PHP 0.00';
                         document.getElementById('chart-total-val').innerText = '0';
                         const balanceEl = document.querySelector(`.balance-card[data-account="${syncAccount}"] .balance-amount`) || document.getElementById(`${syncAccount}-balance`);
-                        if (balanceEl) balanceEl.innerText = 'PHP 0.00';
+                        if (balanceEl) {
+                            balanceEl.innerText = 'PHP 0.00';
+                            balanceEl.dataset.raw = 'PHP 0.00';
+                            balanceEl.classList.add('privacy-mask');
+                            if(localStorage.getItem('balance_hidden') === 'true') balanceEl.innerText = '******';
+                        }
                         
                         if (window.drawPieChart) window.drawPieChart([], 0);
                         if (window.drawTrendChart) window.drawTrendChart([]);
@@ -2137,9 +2192,72 @@
             const remaining = bpi + atome;
             const atomeLabel = (atome < 0 ? '-' : '+') + '₱' + Math.abs(atome).toLocaleString(undefined, {minimumFractionDigits:2});
             
-            insightEl.innerHTML = `₱${remaining.toLocaleString(undefined, {minimumFractionDigits:2})} <span style="opacity: 0.6; font-weight: 600;">(${atomeLabel})</span>`;
+            const rawHTML = `₱${remaining.toLocaleString(undefined, {minimumFractionDigits:2})} <span style="opacity: 0.6; font-weight: 600;">(${atomeLabel})</span>`;
+            
+            insightEl.dataset.raw = rawHTML;
+            insightEl.classList.add('privacy-mask');
+            
+            if (localStorage.getItem('balance_hidden') === 'true') {
+                insightEl.innerText = '******';
+            } else {
+                insightEl.innerHTML = rawHTML;
+            }
             insightEl.style.opacity = '1';
         }
+
+        window.toggleBalanceVisibility = (e) => {
+             if(e) e.stopPropagation();
+             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+             const newState = !isHidden;
+             localStorage.setItem('balance_hidden', newState);
+             
+             console.log('🔒 Privacy Toggle:', newState ? 'HIDING' : 'SHOWING');
+             
+             // Update all visibility buttons (eye icons)
+             const buttons = document.querySelectorAll('.visibility-btn i');
+             buttons.forEach(btn => {
+                 btn.innerText = newState ? 'visibility_off' : 'visibility';
+             });
+             
+             // Update ALL masked elements
+             const maskedElements = document.querySelectorAll('.privacy-mask');
+             console.log('📊 Found', maskedElements.length, 'privacy-mask elements');
+             
+             maskedElements.forEach((el, index) => {
+                 const raw = el.dataset.raw || el.innerText;
+                 if(!el.dataset.raw) el.dataset.raw = raw; // Init if missing
+                 
+                 console.log(`  [${index}] ${el.className}:`, raw, '→', newState ? '******' : raw);
+                 
+                 // Apply mask or show raw
+                 if(newState) {
+                     el.innerText = '******';
+                 } else {
+                     el.innerText = raw;
+                 }
+             });
+             
+             // Update BPI insight if exists (Special case handling inside function)
+             updateBPIInsight();
+        };
+
+        // SAFETY: Initialize visibility on load
+        window.addEventListener('DOMContentLoaded', () => {
+             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+             if(isHidden) {
+                 setTimeout(() => {
+                    const buttons = document.querySelectorAll('.visibility-btn i');
+                    buttons.forEach(btn => btn.innerText = 'visibility_off');
+                    
+                    // Force mask on all elements that might have rendered early
+                    const maskedElements = document.querySelectorAll('.privacy-mask');
+                    maskedElements.forEach(el => {
+                        if(!el.dataset.raw) el.dataset.raw = el.innerText;
+                        el.innerText = '******';
+                    });
+                 }, 50);
+             }
+        });
 
         function updateBalanceToThisMonth(txns, targetAccount) {
             const now = new Date();
@@ -2169,7 +2287,17 @@
             const balanceEl = document.querySelector(`.balance-card[data-account="${acc}"] .balance-amount`) || document.getElementById(`${acc}-balance`);
             if (balanceEl) {
                 const balance = incomeTotal - expenseTotal;
-                balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                const formatted = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                
+                // Store raw for toggle
+                balanceEl.dataset.raw = formatted;
+                
+                // Add privacy class
+                balanceEl.classList.add('privacy-mask');
+                
+                // Apply visibility state
+                const isHidden = localStorage.getItem('balance_hidden') === 'true';
+                balanceEl.innerText = isHidden ? '******' : formatted;
                 
                 // Store globally and update insight
                 if (acc === 'atome') window.atomeBalanceVal = balance;
@@ -2274,6 +2402,31 @@
                 }
             };
             reader.readAsText(file);
+        };
+
+        // HARD REFRESH FUNCTION
+        window.hardRefresh = () => {
+             if(!confirm('This will clear local cache and reload the app to fix sync issues. Continue?')) return;
+             
+             // Clear Data Caches
+             const keys = Object.keys(localStorage);
+             for(let k of keys) {
+                 if(k.startsWith('wallet_cache_') || k.startsWith('last_deep_sync_') || k.startsWith('last_quick_sync_')) {
+                     localStorage.removeItem(k);
+                 }
+             }
+             
+             // Unregister Service Workers (Force Update)
+             if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+             }
+             
+             // Force Reload
+             window.location.reload();
         };
 
         // FILTERING LOGIC
@@ -2451,7 +2604,12 @@
 
             // Update Summary Total
             const summaryTotalEl = document.getElementById('expenses-total-summary');
-            if (summaryTotalEl) summaryTotalEl.innerText = `PHP ${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            if (summaryTotalEl) {
+                const formatted = `PHP ${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                summaryTotalEl.dataset.raw = formatted;
+                summaryTotalEl.classList.add('privacy-mask');
+                summaryTotalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
+            }
 
             // Update Growth with passed pastTotal
             const growthEl = document.getElementById('mom-growth');
@@ -2622,7 +2780,10 @@
 
             // Update Total
             // totalEl.style.color = '#000'; // REMOVED HARDCODE
-            totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            const periodFormatted = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            totalEl.dataset.raw = periodFormatted;
+            totalEl.classList.add('privacy-mask');
+            totalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : periodFormatted;
 
             const points = dataPoints;
             const max = Math.max(...points, 500) * 1.2;
@@ -2692,7 +2853,10 @@
             
             svgGroup.innerHTML = '';
             legend.innerHTML = '';
-            totalVal.innerText = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+            const totalFormatted = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+            totalVal.dataset.raw = totalFormatted;
+            totalVal.classList.add('privacy-mask');
+            totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
 
             const centerX = 120; 
             const centerY = 120;
@@ -2999,13 +3163,17 @@
                 
                 const header = document.createElement('div');
                 header.className = `month-header ${isCollapsed ? 'collapsed' : ''}`;
+                const isHidden = localStorage.getItem('balance_hidden') === 'true';
                 header.innerHTML = `
                     <span class="month-title">${month}</span>
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <span class="month-total">₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                        <span class="month-total privacy-mask" data-raw="₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
+                            ${isHidden ? '******' : '₱' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
+                        </span>
                         <i class="material-icons expand-icon">expand_more</i>
                     </div>
                 `;
+
                 
                 const content = document.createElement('div');
                 content.className = `month-content ${isCollapsed ? 'collapsed' : ''}`;
@@ -3094,8 +3262,8 @@
                                 ${displayNote ? `<div class="txn-note" style="color: ${isRefund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                             </div>
                             <div class="txn-right">
-                                <div class="txn-amount ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
-                                    ${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                    ${localStorage.getItem('balance_hidden') === 'true' ? '******' : ((!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                                 </div>
                             </div>
                         </div>`;
@@ -3464,7 +3632,7 @@
                                 if (txn) {
                                     if (!auth.currentUser) await signInAnonymously(auth);
                                     const uid = auth.currentUser.uid;
-                                    const collectionName = syncAccount === 'atome' ? "transactions" : "bpi_transactions";
+                                    const collectionName = getCollectionName(syncAccount);
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
                                     const snap = await getDoc(docRef);
@@ -3827,13 +3995,33 @@
                     return;
                 }
             }
+            
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === id);
+            const originalState = isCurrentlyExcluded;
+            if (idx > -1) {
+                window.allTxns[idx].excluded = !isCurrentlyExcluded;
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+                // Also refresh charts/subscriptions if needed
+                if (window.detectSubscriptions) detectSubscriptions();
+                if (window.drawCashFlowChart) drawCashFlowChart();
+            }
+
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, id), { excluded: !isCurrentlyExcluded });
                 showToast(isCurrentlyExcluded ? 'Transaction included' : 'Transaction excluded');
-            } catch (e) { log('Toggle failed', 'error'); }
+            } catch (e) { 
+                log('Toggle failed', 'error');
+                // Revert logic could be added here if critical
+                 if (idx > -1) {
+                    window.allTxns[idx].excluded = originalState;
+                    renderHistory(window.allTxns);
+                }
+            }
         };
 
         window.toggleRefund = async (id, isCurrentlyRefund) => {
@@ -3843,13 +4031,31 @@
                     return;
                 }
             }
+            
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === id);
+            const originalState = isCurrentlyRefund;
+            if (idx > -1) {
+                window.allTxns[idx].refund = !isCurrentlyRefund;
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+                if (window.drawCashFlowChart) drawCashFlowChart();
+            }
+
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, id), { refund: !isCurrentlyRefund });
                 showToast(isCurrentlyRefund ? 'Unmarked as refund' : 'Marked as refund');
-            } catch (e) { log('Toggle refund failed', 'error'); }
+            } catch (e) { 
+                log('Toggle refund failed: ' + e.message, 'error');
+                 // Revert
+                 if (idx > -1) {
+                    window.allTxns[idx].refund = originalState;
+                    renderHistory(window.allTxns);
+                }
+            }
         };
 
         // DELETE LOGIC
@@ -3859,7 +4065,7 @@
         };
 
         window.confirmDelete = async () => {
-            if (auth.currentUser?.isAnonymous) {
+             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is in "Local Mode". Sign in with Google to sync deletions to the cloud?')) {
                     handleAuthClick();
                     return;
@@ -3867,28 +4073,37 @@
             }
             if (!currentTxnId) return;
             
-            // Show loading state
-            const modal = document.getElementById('delete-modal');
-            const deleteBtn = modal.querySelector('button');
-            const originalText = deleteBtn.innerHTML;
-            deleteBtn.disabled = true;
-            deleteBtn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> DELETING...';
-            deleteBtn.style.opacity = '0.7';
+            const btn = document.querySelector('#delete-modal button');
+            if (btn) btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> DELETING...';
+
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            let deletedItem = null;
+            if (idx > -1) {
+                deletedItem = window.allTxns[idx];
+                window.allTxns.splice(idx, 1); // Remove from array
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+            }
+            closeModals(); // Close immediately
 
             try {
                  if (!auth.currentUser) return;
                  const uid = auth.currentUser.uid;
-                 const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                 const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, currentTxnId), { deleted: true });
                 showToast('Transaction deleted');
-                closeModals();
             } catch (error) { 
                 log("Error deleting: " + error.message, "error");
                 showToast('Delete failed');
+                // Revert
+                if (deletedItem) {
+                    window.allTxns.push(deletedItem); // Add back (order might be wrong until refresh but better than nothing)
+                    window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); // Simple re-sort
+                    renderHistory(window.allTxns);
+                }
             } finally {
-                deleteBtn.disabled = false;
-                deleteBtn.innerHTML = originalText;
-                deleteBtn.style.opacity = '1';
+               if(btn) btn.innerHTML = 'DELETE';
             }
         };
 
@@ -3995,26 +4210,33 @@
                 }
             }
             if (!currentTxnId) return;
-            
-            // Show loading overlay on modal
-            const modal = document.getElementById('cat-modal');
-            const overlay = document.createElement('div');
-            overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;border-radius:20px;z-index:9999;';
-            overlay.innerHTML = '<i class="material-icons spin" style="font-size:32px;color:#000;">sync</i>';
-            modal.querySelector('.custom-modal').style.position = 'relative';
-            modal.querySelector('.custom-modal').appendChild(overlay);
+
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            const originalCat = idx > -1 ? window.allTxns[idx].manualCategory : null;
+            if (idx > -1) {
+                window.allTxns[idx].manualCategory = catId;
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+                if (window.detectSubscriptions) detectSubscriptions();
+                if (window.drawCashFlowChart) drawCashFlowChart();
+            }
+            closeModals(); // Close immediately
 
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, currentTxnId), { manualCategory: catId });
                 showToast('Category updated');
-                closeModals();
             } catch (error) { 
                 log("Error saving category: " + error.message, "error");
                 showToast('Update failed');
-                overlay.remove();
+                 // Revert
+                 if (idx > -1) {
+                    window.allTxns[idx].manualCategory = originalCat;
+                    renderHistory(window.allTxns);
+                }
             }
         };
 
@@ -4047,7 +4269,7 @@
         }
 
         document.getElementById('save-note-btn').onclick = async () => {
-            if (auth.currentUser?.isAnonymous) {
+             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is in "Local Mode". Sign in with Google to sync your notes to the cloud?')) {
                     handleAuthClick();
                     return;
@@ -4055,28 +4277,30 @@
             }
             if (!currentTxnId) return;
             let note = document.getElementById('note-text').value.trim();
-            // note = toTitleCase(note); // REMOVED to allow ALL CAPS
 
-            // Disable button and show loading
-            const btn = document.getElementById('save-note-btn');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> SAVING...';
-            btn.style.opacity = '0.7';
+             // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            const originalNote = idx > -1 ? window.allTxns[idx].note : null;
+            if (idx > -1) {
+                window.allTxns[idx].note = note;
+                renderHistory(window.allTxns);
+            }
+            closeModals();
 
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 await updateDoc(doc(db, "users", uid, col, currentTxnId), { note: note });
                 showToast('Note saved');
-                closeModals();
             } catch (error) { 
                 log("Error saving note: " + error.message, "error"); 
                 showToast('Save failed');
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                btn.style.opacity = '1';
+                 // Revert
+                 if (idx > -1) {
+                    window.allTxns[idx].note = originalNote;
+                    renderHistory(window.allTxns);
+                }
             }
         };
 
@@ -4103,33 +4327,43 @@
             if (!currentTxnId) return;
             const val = document.getElementById('price-input').value;
             const amt = parseFloat(val);
+            const isValid = !isNaN(amt) && val.trim() !== "";
             
-            // Show loading overlay
-            const modal = document.getElementById('price-modal');
-            const saveBtn = modal.querySelector('button');
-            const originalText = saveBtn.innerHTML;
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> SAVING...';
-            saveBtn.style.opacity = '0.7';
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            const originalAmt = idx > -1 ? window.allTxns[idx].manualAmount : undefined;
+            if (idx > -1) {
+                if (isValid) {
+                     window.allTxns[idx].manualAmount = amt;
+                } else {
+                     delete window.allTxns[idx].manualAmount;
+                }
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+                if (window.drawCashFlowChart) drawCashFlowChart();
+            }
+            closeModals();
 
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(window.currentAccount);
                 const docRef = doc(db, "users", uid, col, currentTxnId);
-                if (isNaN(amt) || val.trim() === "") {
+                if (!isValid) {
                     await updateDoc(docRef, { manualAmount: deleteField() });
                 } else {
                     await updateDoc(docRef, { manualAmount: amt });
                 }
                 showToast('Price updated');
-                closeModals();
             } catch (error) { 
                 log("Error saving price: " + error.message, "error"); 
                 showToast('Update failed');
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = originalText;
-                saveBtn.style.opacity = '1';
+                // Revert
+                 if (idx > -1) {
+                    if (originalAmt === undefined) delete window.allTxns[idx].manualAmount;
+                    else window.allTxns[idx].manualAmount = originalAmt;
+                    renderHistory(window.allTxns);
+                }
             }
         };
         window.savePrice = savePrice;
@@ -4554,7 +4788,7 @@
                 };
 
                 // Use the selected account in the modal
-                const col = selectedAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const col = getCollectionName(selectedAccount);
 
                 if (window.editingTxnId) {
                     const origAcc = window.originalAccount || (window.editingTxnId.startsWith('bpi_') ? 'bpi' : 'atome');

@@ -3027,8 +3027,12 @@
                 path.classList.add('pie-animate'); // Add spin animation
                 path.style.cursor = 'pointer';
                 path.onclick = () => {
+                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
                     document.getElementById('chart-total-label').innerText = seg.name;
-                    document.getElementById('chart-total-val').innerText = `₱${Math.round(seg.value).toLocaleString()}`;
+                    const valText = `₱${Math.round(seg.value).toLocaleString()}`;
+                    const valEl = document.getElementById('chart-total-val');
+                    valEl.dataset.raw = valText;
+                    valEl.innerText = isHidden ? '******' : valText;
                     window.highlightTransactions(seg.name);
                 };
                 
@@ -3141,10 +3145,14 @@
                 });
 
                 path.onclick = (e) => {
+                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
                     // Update Center Label
                     const percentText = percent.toFixed(1) + '%';
                     document.getElementById('chart-total-label').innerText = seg.name;
-                    document.getElementById('chart-total-val').innerText = `₱${Math.round(seg.value).toLocaleString()} (${percentText})`;
+                    const valText = `₱${Math.round(seg.value).toLocaleString()} (${percentText})`;
+                    const valEl = document.getElementById('chart-total-val');
+                    valEl.dataset.raw = valText;
+                    valEl.innerText = isHidden ? '******' : valText;
                     window.highlightTransactions(seg.name);
                 };
                 
@@ -3540,6 +3548,16 @@
                 const badge = document.getElementById('profile-badge');
                 if (!badge.contains(e.target)) {
                     dropdown.classList.remove('active');
+                }
+            }
+            
+            // PIE CHART TOOLTIP CLOSE ON OUTSIDE TAP
+            const tooltip = document.getElementById('chart-tooltip');
+            if (tooltip && tooltip.style.opacity === '1') {
+                const isSegment = e.target.classList.contains('chart-segment') || e.target.classList.contains('pie-animate');
+                if (!isSegment) {
+                    tooltip.style.opacity = '0';
+                    setTimeout(() => { tooltip.style.display = 'none'; }, 200);
                 }
             }
         });
@@ -4961,7 +4979,9 @@
                 // Update Header Total for this month
                 const totalEl = acc.querySelector('.month-total');
                 if (totalEl) {
-                    totalEl.innerText = `₱${filteredTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
+                    totalEl.dataset.raw = `₱${filteredTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                    totalEl.innerText = isHidden ? '******' : totalEl.dataset.raw;
                 }
 
                 // Auto-expand if search results found (only for specific searches >= 3 chars)

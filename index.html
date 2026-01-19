@@ -42,8 +42,8 @@
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
         #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
-        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
-        #header.shrunk .user-name { font-size: 18px; }
+        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
+        #header.shrunk .user-name { font-size: 15px; }
         
         .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         #header.shrunk .header-logo { width: 40px; height: 25px; }
@@ -334,7 +334,7 @@
         .integrated-sync-btn:disabled { opacity: 0.5; cursor: default; }
         .spin { animation: spinRotate 1.5s linear infinite; }
         @keyframes spinRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .card-sync-bar.syncing .dot { background: #1d4ed8; box-shadow: 0 0 8px rgba(29, 78, 216, 0.6); animation: pulse 1s infinite; }
+        .card-sync-bar.syncing .dot { background: #000000; box-shadow: 0 0 8px rgba(0, 0, 0, 0.6); animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
 
         .mui-container { width: 100%; max-width: 100% !important; margin: 0; padding: 0 24px 100px; }
@@ -386,7 +386,7 @@
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
         .month-header .month-title { font-weight: 700; font-size: 0.8rem; color: #1e293b; }
-        .month-header .month-total { font-weight: 800; color: #1d4ed8; font-size: 0.8rem; }
+        .month-header .month-total { font-weight: 800; color: #000; font-size: 0.8rem; }
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
@@ -479,7 +479,7 @@
         .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
         .cat-option { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
         .cat-option:hover { border-color: #1d4ed8; background: #eff6ff; }
-        .cat-option.active { border-color: #1d4ed8; background: #eff6ff; box-shadow: 0 0 0 2px #1d4ed8; }
+        .cat-option.active { border-color: #1d4ed8; background: #eff6ff; box-shadow: 0 0 0 2px #000; }
         .cat-option i { font-size: 24px; }
         .cat-option span { font-size: 12px; font-weight: 600; color: #475569; text-align: center; }
         .note-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; font-size: 14px; min-height: 60px; resize: none; outline: none; transition: border-color 0.2s; color: #1e293b; }
@@ -503,8 +503,8 @@
         .log-error { color: #f87171; font-weight: bold; }
         
         .loading-overlay { display: none; text-align: center; padding: 60px; color: #64748b; }
-        .btn-sync { background-color: #1d4ed8; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
-        .btn-sync:hover { background-color: #2563eb; }
+        .btn-sync { background-color: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
+        .btn-sync:hover { background-color: #191919; }
         .btn-sync:active { transform: scale(0.98); }
         .btn-sync:disabled { background-color: #94a3b8; cursor: not-allowed; }
 
@@ -558,13 +558,13 @@
         /* BOTTOM NAV */
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
-        .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
-        .nav-item.active { color: #1d4ed8; }
+        .nav-item:hover { text-decoration: none !important; color: #000; }
+        .nav-item.active { color: #000; }
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
         /* FAB */
-        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(29, 78, 216, 0.3); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
+        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
         .fab:active { transform: scale(0.95); }
         .fab i { font-size: 32px; }
         
@@ -576,13 +576,13 @@
         /* TREND CHART */
         .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
         .trend-path { filter: drop-shadow(0 4px 6px rgba(29, 78, 216, 0.2)); }
-        .trend-dot { fill: #fff; stroke: #1d4ed8; stroke-width: 2.5; }
+        .trend-dot { fill: #fff; stroke: #000; stroke-width: 2.5; }
         .trend-label { font-size: 10px; fill: #94a3b8; font-weight: 600; }
         
         /* RECENT ACTIVITIES PREMIUM LIST */
         .recent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 4px; }
         .recent-header h3 { margin: 0; font-weight: 700; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; }
-        .recent-header .see-all { color: #1d4ed8; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
+        .recent-header .see-all { color: #000; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
 
         .premium-txn { padding: 12px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #f1f5f9; background: #fff; }
         .premium-txn:last-child { border-bottom: none; }
@@ -627,6 +627,60 @@
         .premium-txn.txn-excluded .txn-amount,
         .premium-txn.txn-excluded .txn-note { text-decoration: line-through; }
         .premium-txn.txn-excluded .icon-box { filter: grayscale(1); opacity: 0.5; }
+
+        /* SEARCH STYLING */
+        .search-container {
+            margin: -4px 0px 20px;
+            position: relative;
+        }
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 0 14px;
+            height: 48px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .search-wrapper:focus-within {
+            background: #fff;
+            border-color: #000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+        .search-wrapper i {
+            color: #94a3b8;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+        #txn-search {
+            background: none;
+            border: none;
+            outline: none;
+            width: 100%;
+            height: 100%;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        #txn-search::placeholder {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .search-clear {
+            padding: 4px;
+            cursor: pointer;
+            color: #94a3b8;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .search-clear.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
         
         /* iOS-STYLE LONG-PRESS BLUR EFFECT */
         .blur-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; }
@@ -770,7 +824,7 @@
             <div class="profile-container">
             <div id="profile-badge" onclick="toggleProfileDropdown(event)">
                 <i class="material-icons">person</i>
-                <img id="user-pic" src="" alt="Profile">
+                <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
             </div>
             <div id="profile-dropdown" class="profile-dropdown">
                 <div class="dropdown-item" onclick="handleAuthClick()">
@@ -952,11 +1006,19 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: #e0f2fe; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                         <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: #0284c7;">visibility</i>
-                       
+                        
                     </div>
                     <select id="txn-cat-filter" onchange="filterTxnList()" style="font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; cursor: pointer;">
                         <option value="all">All Items</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <i class="material-icons">search</i>
+                    <input type="text" id="txn-search" placeholder="Search merchant, note, or price..." oninput="handleSearchInput()">
+                    <i class="material-icons search-clear" id="search-clear-btn" onclick="clearSearch()">cancel</i>
                 </div>
             </div>
 
@@ -969,7 +1031,7 @@
             <!-- DATA MANAGEMENT SECTION (PREMIUM DESIGN) -->
             <div class="data-mgmt-card" style="margin: 30px 16px 20px; padding: 12px 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02);">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; color: #1d4ed8; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; color: #000; display: flex; align-items: center; justify-content: center;">
                         <i class="material-icons" style="font-size: 16px;">storage</i>
                     </div>
                     <div style="text-align: left;">
@@ -979,7 +1041,7 @@
                 </div>
 
                 <div style="display: flex; gap: 8px;">
-                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #1d4ed8; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);" onclick="exportData()">
+                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #000; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);" onclick="exportData()">
                         <i class="material-icons" style="font-size: 14px;">download</i> Export
                     </button>
                     <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #fff; color: #1e293b; border: 1px solid #e2e8f0; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="document.getElementById('import-file').click()">
@@ -1203,11 +1265,22 @@
                      const parts = user.displayName?.split(' ') || [];
                      const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
                      document.getElementById('user-display-name').innerText = firstName;
+                     localStorage.setItem('user_name', firstName);
+                     
                      if (user.photoURL) {
                          const picEl = document.getElementById('user-pic');
-                         picEl.src = user.photoURL;
+                         // Force size for Google photos if needed
+                         let photoUrl = user.photoURL;
+                         if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                             photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                         }
+                         picEl.src = photoUrl;
                          document.getElementById('profile-badge').classList.add('has-pic');
+                         localStorage.setItem('user_pic', photoUrl);
                      }
+                } else {
+                    document.getElementById('user-display-name').innerText = 'Guest';
+                    document.getElementById('profile-badge').classList.remove('has-pic');
                 }
 
                 // Load Data for this UID
@@ -1451,24 +1524,61 @@
             const cards = document.querySelectorAll('.balance-card');
             if (!viewport || cards.length === 0) return;
 
-            // PREVENT CLICK-SWITCHING (Prevent scroll on mere click)
-            let isMoving = false;
-            let startClientX = 0;
-            
+            // DRAG & SWIPE LOGIC (Both Touch + PC Mouse)
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+            let hasDragged = false;
+
+            // MOUSE EVENTS (PC Swipe)
+            viewport.addEventListener('mousedown', (e) => {
+                isDown = true;
+                viewport.style.cursor = 'grabbing';
+                viewport.style.scrollSnapType = 'none'; // Disable snapping while dragging
+                startX = e.pageX - viewport.offsetLeft;
+                scrollLeft = viewport.scrollLeft;
+                hasDragged = false;
+            });
+
+            viewport.addEventListener('mouseleave', () => {
+                if (!isDown) return;
+                isDown = false;
+                viewport.style.cursor = 'grab';
+                viewport.style.scrollSnapType = 'x mandatory';
+            });
+
+            viewport.addEventListener('mouseup', () => {
+                if (!isDown) return;
+                isDown = false;
+                viewport.style.cursor = 'grab';
+                viewport.style.scrollSnapType = 'x mandatory';
+            });
+
+            viewport.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - viewport.offsetLeft;
+                const walk = (x - startX) * 1.5; // Drag speed
+                if (Math.abs(walk) > 5) hasDragged = true;
+                viewport.scrollLeft = scrollLeft - walk;
+            });
+
+            // TOUCH EVENTS
             viewport.addEventListener('touchstart', (e) => {
-                startClientX = e.touches[0].clientX;
-                isMoving = false;
+                startX = e.touches[0].pageX - viewport.offsetLeft;
+                scrollLeft = viewport.scrollLeft;
+                isDown = true;
+                hasDragged = false;
             }, { passive: true });
 
-            viewport.addEventListener('touchmove', (e) => {
-                const diff = Math.abs(e.touches[0].clientX - startClientX);
-                if (diff > 10) isMoving = true;
+            viewport.addEventListener('touchend', () => {
+                isDown = false;
             }, { passive: true });
 
             // SWIPE OBSERVER
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    // Only trigger if truly intersecting and we are moving (or first load)
+                    // Only trigger if truly intersecting
                     if (entry.isIntersecting) {
                         const account = entry.target.dataset.account;
                         
@@ -2192,7 +2302,7 @@
             }
 
             // Update Total
-            // totalEl.style.color = '#1d4ed8'; // REMOVED HARDCODE
+            // totalEl.style.color = '#000'; // REMOVED HARDCODE
             totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 
             const points = dataPoints;
@@ -2648,7 +2758,7 @@
                 const loadMoreWrap = document.createElement('div');
                 loadMoreWrap.style.cssText = 'padding: 10px 0 40px; text-align: center;';
                 const btn = document.createElement('button');
-                btn.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: #1d4ed8; font-weight: 800; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; background: #ebf5ff; border: none; border-radius: 25px; padding: 12px 32px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08);';
+                btn.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: #000; font-weight: 800; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; background: #ebf5ff; border: none; border-radius: 25px; padding: 12px 32px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08);';
                 btn.innerHTML = '<span>Load More</span><i class="material-icons" style="font-size: 20px;">keyboard_arrow_down</i>';
                 
                 btn.onclick = () => {
@@ -2666,6 +2776,11 @@
                 
                 loadMoreWrap.appendChild(btn);
                 container.appendChild(loadMoreWrap);
+            }
+
+            // Re-apply search if it was active
+            if ((document.getElementById('txn-search')?.value || '') !== '' || document.getElementById('txn-cat-filter').value !== 'all') {
+                filterTxnList();
             }
 
             setTimeout(() => setupLongPressHandlers(), 50);
@@ -2765,9 +2880,15 @@
                 if (user.photoURL) {
                     const badge = document.getElementById('profile-badge');
                     const picEl = document.getElementById('user-pic');
-                    picEl.src = user.photoURL;
+                    let photoUrl = user.photoURL;
+                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                    }
+                    picEl.src = photoUrl;
                     badge.classList.add('has-pic');
-                    localStorage.setItem('user_pic', user.photoURL);
+                    localStorage.setItem('user_pic', photoUrl);
+                } else {
+                    document.getElementById('profile-badge').classList.remove('has-pic');
                 }
 
                 /* DISABLED AUTO-MERGE FOR STRICT PRIVACY
@@ -3217,6 +3338,10 @@
             const nav = document.querySelector('.bottom-nav');
             if (nav) nav.classList.add('blur-active');
             
+            // Prevent scrolling
+            document.body.style.overflow = 'hidden';
+            document.querySelector('.mobile-wrapper').style.overflow = 'hidden';
+            
             // 5. Build menu - escape values properly
             const menu = document.getElementById('ios-menu');
             const merchantSafe = merchant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -3286,6 +3411,10 @@
             const nav = document.querySelector('.bottom-nav');
             if (fab) fab.classList.remove('blur-active');
             if (nav) nav.classList.remove('blur-active');
+            
+            // Restore scrolling
+            document.body.style.overflow = '';
+            document.querySelector('.mobile-wrapper').style.overflow = 'auto';
             
             if (clonedItem) {
                 clonedItem.remove();
@@ -3496,7 +3625,7 @@
             const modal = document.getElementById('cat-modal');
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;border-radius:20px;z-index:9999;';
-            overlay.innerHTML = '<i class="material-icons spin" style="font-size:32px;color:#1d4ed8;">sync</i>';
+            overlay.innerHTML = '<i class="material-icons spin" style="font-size:32px;color:#000;">sync</i>';
             modal.querySelector('.custom-modal').style.position = 'relative';
             modal.querySelector('.custom-modal').appendChild(overlay);
 
@@ -4105,6 +4234,9 @@
 
         window.filterTxnList = () => {
             const catSelection = document.getElementById('txn-cat-filter').value;
+            const keyword = (document.getElementById('txn-search')?.value || '').toLowerCase().trim();
+            const cleanKeyword = keyword.replace(/,/g, '');
+            
             const accordions = document.querySelectorAll('.month-accordion');
             
             accordions.forEach(acc => {
@@ -4114,13 +4246,23 @@
                 
                 txns.forEach(t => {
                     const itemCatId = t.dataset.category || '';
-                    const itemCatLabel = displayCategoryName(itemCatId); 
+                    const itemCatLabel = displayCategoryName(itemCatId);
+                    const merchantName = (t.dataset.merchant || '').toLowerCase();
+                    const note = (t.dataset.note || '').toLowerCase();
+                    const amount = (t.dataset.amount || '').toString();
+                    const cleanAmount = amount.replace(/,/g, '');
                     
                     const matchCat = (catSelection === 'all') || 
                                    (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
                                    (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
 
-                    if (matchCat) {
+                    const matchKeyword = !keyword || 
+                                       merchantName.includes(keyword) || 
+                                       note.includes(keyword) || 
+                                       amount.includes(keyword) || 
+                                       (cleanKeyword.length > 0 && cleanAmount.includes(cleanKeyword));
+
+                    if (matchCat && matchKeyword) {
                         t.style.display = 'flex';
                         visibleCount++;
                         
@@ -4151,6 +4293,14 @@
                     totalEl.innerText = `₱${filteredTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 }
 
+                // Auto-expand if search results found
+                const content = acc.querySelector('.month-content');
+                const header = acc.querySelector('.month-header');
+                if (keyword.length > 0 && visibleCount > 0) {
+                    content.classList.remove('collapsed');
+                    header.classList.remove('collapsed');
+                }
+
                 // Hide the whole accordion if no visible items
                 acc.style.display = visibleCount > 0 ? 'block' : 'none';
             });
@@ -4161,13 +4311,43 @@
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const itemCatId = mapped.category || '';
                     const itemCatLabel = displayCategoryName(itemCatId);
+                    const merchantName = (t.merchant || '').toLowerCase();
+                    const note = (t.note || '').toLowerCase();
+                    const amount = (t.amount || (t.manualAmount || 0)).toString();
+                    const cleanAmount = amount.replace(/,/g, '');
+
+                    const matchCat = (catSelection === 'all') || 
+                                   (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
+                                   (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
+
+                    const matchKeyword = !keyword || 
+                                       merchantName.includes(keyword) || 
+                                       note.includes(keyword) || 
+                                       amount.includes(keyword) || 
+                                       (cleanKeyword.length > 0 && cleanAmount.includes(cleanKeyword));
                     
-                    return (catSelection === 'all') || 
-                           (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
-                           (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
+                    return matchCat && matchKeyword;
                 });
                 drawTrendChart(filteredTxns);
             }
+        };
+
+        window.handleSearchInput = () => {
+            const val = document.getElementById('txn-search').value;
+            const clearBtn = document.getElementById('search-clear-btn');
+            if (clearBtn) {
+                if (val.length > 0) clearBtn.classList.add('active');
+                else clearBtn.classList.remove('active');
+            }
+            filterTxnList();
+        };
+
+        window.clearSearch = () => {
+            const input = document.getElementById('txn-search');
+            input.value = '';
+            document.getElementById('search-clear-btn').classList.remove('active');
+            filterTxnList();
+            input.focus();
         };
 
         // NEW: Independent Trend Chart Logic

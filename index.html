@@ -21,7 +21,18 @@
         html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; }
         
         /* Mobile Wrapper with PC Scroll Simulation */
-        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; }
+        .mobile-wrapper { 
+            width: 100%; 
+            max-width: 430px; 
+            background: #fff; 
+            height: 100vh; /* Fixed height for sticky to work on mobile */
+            position: relative; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.1); 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: hidden; 
+            overflow-y: auto; 
+        }
         @media (min-width: 431px) {
             .mobile-wrapper { height: 100vh; overflow-y: scroll; }
         }
@@ -96,20 +107,23 @@
             display: flex;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             -ms-overflow-style: none;
             /* Padding for 'peek' centering */
-            padding: 30px 35px 25px 35px; 
-            gap: 20px;
+            padding: 30px 48px 25px 48px; 
+            gap: 12px;
             cursor: grab;
         }
-        .card-carousel-scroll:active { cursor: grabbing; scroll-snap-type: none; }
+        .card-carousel-scroll:active { cursor: grabbing; }
         .card-carousel-scroll::-webkit-scrollbar { display: none; }
 
         .balance-card { 
-            flex: 0 0 calc(100% - 30px);
-            max-width: 360px;
+            flex: 0 0 calc(100%);
+            max-width: 334px;
             scroll-snap-align: center;
+            scroll-snap-stop: always; /* Force 1 card per swipe */
             padding: 24px 20px 18px;
             border-radius: 20px;
             color: #fff; 
@@ -663,7 +677,7 @@
 
         /* GUEST GATE OVERLAY */
         .guest-gate-overlay {
-            position: absolute;
+            position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(18, 18, 18, 0.6);
             backdrop-filter: blur(15px);
@@ -1437,30 +1451,24 @@
             const cards = document.querySelectorAll('.balance-card');
             if (!viewport || cards.length === 0) return;
 
-            // DRAG SCROLL LOGIC
-            let isDown = false;
-            let startX;
-            let scrollLeft;
+            // PREVENT CLICK-SWITCHING (Prevent scroll on mere click)
+            let isMoving = false;
+            let startClientX = 0;
+            
+            viewport.addEventListener('touchstart', (e) => {
+                startClientX = e.touches[0].clientX;
+                isMoving = false;
+            }, { passive: true });
 
-            viewport.addEventListener('mousedown', (e) => {
-                isDown = true;
-                viewport.classList.add('active'); // Optional class for styling
-                startX = e.pageX - viewport.offsetLeft;
-                scrollLeft = viewport.scrollLeft;
-            });
-            viewport.addEventListener('mouseleave', () => { isDown = false; });
-            viewport.addEventListener('mouseup', () => { isDown = false; });
-            viewport.addEventListener('mousemove', (e) => {
-                if (!isDown) return;
-                e.preventDefault();
-                const x = e.pageX - viewport.offsetLeft;
-                const walk = (x - startX) * 2; // Scroll speed multiplier
-                viewport.scrollLeft = scrollLeft - walk;
-            });
+            viewport.addEventListener('touchmove', (e) => {
+                const diff = Math.abs(e.touches[0].clientX - startClientX);
+                if (diff > 10) isMoving = true;
+            }, { passive: true });
 
             // SWIPE OBSERVER
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
+                    // Only trigger if truly intersecting and we are moving (or first load)
                     if (entry.isIntersecting) {
                         const account = entry.target.dataset.account;
                         
@@ -1508,7 +1516,7 @@
                     }
                 });
             }, { 
-                threshold: 0.8,
+                threshold: 0.7, // Lower threshold for better sensitivity without skipping
                 root: viewport
             });
 

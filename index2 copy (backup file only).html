@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SmartWallet - JP</title>
-    <link rel="icon" type="image/png" href="applogo.png?v=3">
-    <link rel="apple-touch-icon" href="applogo.png">
+    <link rel="icon" type="image/png" href="applogo.png?v=4">
+    <link rel="apple-touch-icon" href="applogo.png?v=4">
     
     <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-    <link rel="manifest" href="manifest.json">
+    <link rel="manifest" href="manifest.json?v=1">
     <meta name="theme-color" content="#1d4ed8">
 
     <style>
@@ -25,7 +25,7 @@
             .mobile-wrapper { height: 100vh; overflow-y: scroll; }
         }
 
-        #header { padding: 30px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
@@ -33,8 +33,8 @@
         .user-name { font-size: 24px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
         #header.shrunk .user-name { font-size: 18px; }
         
-        .header-logo { width: 42px; height: 42px; border-radius: 12px; object-fit: contain; transition: all 0.3s ease; }
-        #header.shrunk .header-logo { width: 32px; height: 32px; border-radius: 8px; }
+        .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #header.shrunk .header-logo { width: 40px; height: 25px; }
         
         #profile-badge { transition: all 0.3s ease; }
         #header.shrunk #profile-badge { transform: scale(0.8); }
@@ -82,20 +82,133 @@
         .dropdown-item.logout i { color: #ef4444; }
         .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* ATM CARD STYLE (RICH BLACK - REALISTIC) */
+        /* CARD CAROUSEL SYSTEM */
+        .card-viewport {
+            width: 100%;
+            overflow: visible; 
+            margin-top: 5px; 
+            margin-bottom: 20px;
+        }
+        
+        .card-carousel-scroll {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            /* Padding for 'peek' centering */
+            padding: 15px 35px 35px 35px; 
+            gap: 20px;
+            cursor: grab;
+        }
+        .card-carousel-scroll:active { cursor: grabbing; scroll-snap-type: none; }
+        .card-carousel-scroll::-webkit-scrollbar { display: none; }
+
         .balance-card { 
-            margin: 20px 24px; 
-            padding: 24px 24px 20px 24px;
-            background: linear-gradient(135deg, #1c1c1e 0%, #000000 100%); 
-            border-radius: 24px; /* Slightly tighter radius for realism */
+            flex: 0 0 calc(100% - 30px);
+            max-width: 360px;
+            scroll-snap-align: center;
+            padding: 24px;
+            border-radius: 24px;
             color: #fff; 
             position: relative; 
             overflow: hidden; 
-            box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.1); 
-            min-height: 210px;
+            min-height: 200px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            cursor: pointer;
+            user-select: none;
+            /* Inactive State: Smaller & Faded */
+            transform: scale(0.92);
+            opacity: 0.7;
+            filter: grayscale(0.5);
+        }
+        
+        .balance-card.active {
+            transform: scale(1.0);
+            opacity: 1;
+            filter: grayscale(0);
+            z-index: 10;
+        }
+
+        /* Add Card Placeholder */
+        .add-card-placeholder {
+            background: transparent;
+            border: 2px dashed #cbd5e1;
+            box-shadow: none !important;
+            color: #94a3b8;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+        .add-card-placeholder i { font-size: 32px; margin-bottom: 8px; color: #cbd5e1; }
+        .add-card-placeholder span { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* CARD BACKGROUNDS */
+        .atome-card {
+            background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+        .atome-card.active {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transform: scale(1.05); 
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .bpi-card {
+            background: #7A1616;
+            box-shadow: 0 2px 6px rgba(122, 22, 22, 0.15);
+            position: relative;
+        }
+        
+        /* BPI RAYS EFFECT */
+        .bpi-rays {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                repeating-linear-gradient(105deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 40px),
+                radial-gradient(circle at 10% 10%, rgba(200, 0, 0, 0.4) 0%, transparent 60%);
+            mix-blend-mode: overlay;
+            pointer-events: none;
+        }
+
+        .bpi-card.active {
+            box-shadow: 0 4px 12px rgba(139,0,0,0.25); 
+            transform: scale(1.05);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* PIE CHART ANIMATION */
+        @keyframes spinPie {
+            0% { transform: scale(0) rotate(-90deg); opacity: 0; }
+            100% { transform: scale(1) rotate(-90deg); opacity: 1; }
+        }
+        .pie-animate {
+            animation: spinPie 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            transform-origin: center;
+        }
+
+        /* CARD LOGOS */
+        .card-brand-logo { 
+            position: absolute;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .atome-brand-logo {
+            top: -20px;
+            left: -20px;
+            font-size: 200px;
+            font-weight: 900;
+            color: #ffff00;
+        }
+        .bpi-brand-logo {
+            bottom: -20px;
+            right: -20px;
+            font-size: 140px;
+            font-weight: 900;
+            color: #fff;
         }
         
         /* Matte Texture Overlay */
@@ -104,77 +217,23 @@
             position: absolute; 
             top: 0; left: 0; width: 100%; height: 100%; 
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-            opacity: 0.6;
+            opacity: 0.4;
             pointer-events: none;
             mix-blend-mode: overlay;
+            z-index: 1;
         }
 
-        /* Subtle Spotlight */
-        .balance-card::after {
-            content: '';
-            position: absolute;
-            top: -50%; right: -50%;
-            width: 200%; height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
-            pointer-events: none;
-            transform: rotate(-15deg);
-        }
-
-        /* Generated EMV Chip */
-        .card-chip {
-            width: 42px;
-            height: 32px;
-            background: linear-gradient(135deg, #e2cba6 0%, #d4af37 50%, #b8860b 100%);
-            border-radius: 6px;
-            position: relative;
-            margin-bottom: 20px;
-            margin-top: 15px;
-            box-shadow: inset 0 1px 2px rgba(255,255,255,0.2), 0 1px 2px rgba(0,0,0,0.2);
-        }
-        .card-chip::before {
-            content: '';
-            position: absolute;
-            top: 50%; left: 0; width: 100%; height: 1px;
-            background: rgba(0,0,0,0.2);
-            box-shadow: 0 -8px 0 rgba(0,0,0,0.2), 0 8px 0 rgba(0,0,0,0.2);
-        }
-        .card-chip::after {
-            content: '';
-            position: absolute;
-            left: 50%; top: 15%; width: 1px; height: 70%;
-            background: rgba(0,0,0,0.2);
-            box-shadow: -10px 0 0 rgba(0,0,0,0.2), 10px 0 0 rgba(0,0,0,0.2);
-            border-radius: 4px; /* Soften lines a bit */
-        }
-
-        /* Wifi Icon (Contactless) */
-        .contactless-icon {
-            position: absolute;
-            top: 28px;
-            right: 28px;
-            color: rgba(255,255,255,0.5);
-            transform: rotate(90deg);
-            font-size: 24px;
-        }
-
-        /* Concentric Circles - Removed for cleaner 'less obvious' look as requested */
-        .card-bg-circles { display: none; } 
-
-        .card-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.5); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 1.5px; }
-        /* Fixed Balance - Inter/System font for numbers looks better */
-        .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: auto; text-shadow: 0 4px 8px rgba(0,0,0,0.3); padding-top: 4px; }
-        
-        /* Footer area pushed to bottom */
-        .card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; position: relative; z-index: 2; }
-        
+        .card-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 1.5px; position: relative; z-index: 2; }
+        .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: auto; text-shadow: 0 4px 8px rgba(0,0,0,0.3); padding-top: 4px; position: relative; z-index: 2; }
+        .card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; position: relative; z-index: 2; }
         .card-number-box { line-height: 1.4; }
-        .card-number-label { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
-        .card-number { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.9); letter-spacing: 3px; font-family: monospace; }
+        .card-number-label { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
+        .card-number { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.95); letter-spacing: 3px; font-family: monospace; }
         
-        .mastercard-circles { display: flex; position: relative; width: 44px; height: 28px; }
+        .mastercard-circles { display: flex; position: relative; width: 44px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
         .circle { width: 28px; height: 28px; border-radius: 50%; position: absolute; }
-        .circle-1 { background: rgba(255,255,255,0.2); left: 0; backdrop-filter: blur(2px); }
-        .circle-2 { background: rgba(255,255,255,0.15); left: 16px; backdrop-filter: blur(2px); }
+        .circle-1 { background: rgba(255,255,255,0.25); left: 0; backdrop-filter: blur(4px); }
+        .circle-2 { background: rgba(255,255,255,0.2); left: 16px; backdrop-filter: blur(4px); }
 
         /* INTEGRATED SYNC BAR - Glassmorphic Pill */
         .card-sync-bar { 
@@ -351,6 +410,7 @@
         .cat-aqua { background: #cffafe; color: #06b6d4; }
         .cat-trading { background: #fee2e2; color: #ef4444; }
         .cat-financial { background: #fee2e2; color: #ef4444; }
+        .cat-credit-card { background: #fff7ed; color: #eaaf0c; }
         .cat-education { background: #eff6ff; color: #1d4ed8; }
         .cat-income { background: #dcfce7; color: #16a34a; }
 
@@ -488,8 +548,18 @@
         }
         .premium-txn .txn-sub { font-size: 9.5px; color: #475569; font-weight: 700; }
         .premium-txn .txn-amount { font-weight: 800; color: #1e293b; text-align: right; font-size: 13px; margin-left: auto; }
-        .premium-txn .txn-amount.large { color: #991b1b; }
-        .premium-txn .txn-note { font-size: 9.5px; font-weight: 700; margin-top: 1px; }
+        .premium-txn .txn-amount.large { color: #ef4444; }
+        .premium-txn .txn-note { 
+            font-size: 9.5px; 
+            font-weight: 700; 
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
         
         /* ACTIONS & DROPDOWN */
         .premium-txn .txn-actions { opacity: 1; z-index: 100; }
@@ -558,8 +628,22 @@
 
     <div class="mobile-wrapper">
         <div id="header">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <img src="applogo.png" alt="Logo" class="header-logo">
+            <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
+                <!-- Dynamic Card Icon -->
+                <svg id="header-card-icon" class="header-logo" viewBox="0 0 48 30" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Card Background -->
+                    <rect width="48" height="30" rx="4" fill="#1a1a1a" id="card-bg"/>
+                    
+                    <!-- Mastercard Logo (bottom right) -->
+                    <g transform="translate(32, 20)">
+                        <circle cx="4" cy="4" r="3.5" fill="#eb001b" opacity="0.9"/>
+                        <circle cx="8" cy="4" r="3.5" fill="#f79e1b" opacity="0.9"/>
+                    </g>
+                    
+                    <!-- Card Chip (optional detail) -->
+                    <rect x="6" y="8" width="8" height="6" rx="1" fill="#d4af37" opacity="0.3"/>
+                </svg>
+                
                 <div class="greeting-section">
                     <div class="greeting-text">Hello,</div>
                     <div class="user-name" id="user-display-name">Guest</div>
@@ -583,32 +667,68 @@
         </div>
         </div>
 
-        <!-- RICH BLACK ATM CARD -->
-        <div class="balance-card">
-                <!-- Contactless Icon Removed -->
-                <!-- EMV Chip Removed -->
-                
-                <div class="card-label">SPENDING BALANCE</div>
-                <div class="balance-amount">PHP 0.00</div>
-                
-                <div class="card-footer">
-                <div class="card-number-box">
-                    <div class="card-number-label">Account Number</div>
-                    <div class="card-number">**** **** 7312</div>
+        <!-- SWIPEABLE CARD VIEWPORT -->
+        <div class="card-viewport" id="cardViewport">
+            <div class="card-carousel-scroll" id="cardCarouselScroll">
+                <!-- ATOME CARD -->
+                <div class="balance-card atome-card" data-account="atome" id="atomeCard">
+                    <div class="card-brand-logo atome-brand-logo">A</div>
+                    <div class="card-label">ATOME SPENDING BALANCE</div>
+                    <div class="balance-amount" id="atome-balance">PHP 0.00</div>
+                    
+                    <div class="card-footer">
+                        <div class="card-number-box">
+                            <div class="card-number-label">Account Number</div>
+                            <div class="card-number">**** **** 7312</div>
+                        </div>
+                        <div class="mastercard-circles">
+                            <div class="circle circle-1"></div>
+                            <div class="circle circle-2"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="mastercard-circles">
-                    <div class="circle circle-1"></div>
-                    <div class="circle circle-2"></div>
+
+                <!-- BPI CARD -->
+                <div class="balance-card bpi-card" data-account="bpi" id="bpiCard">
+                    <div class="bpi-rays"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 2;">
+                        <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7); letter-spacing: 1px; text-transform: uppercase;">BPI CARD BALANCE</div>
+                        <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.5px;">debit</div>
+                    </div>
+                    
+                    <div class="balance-amount" id="bpi-balance" style="z-index:2; margin-top:20px;">PHP 0.00</div>
+                    
+                    <div class="card-footer" style="z-index:2;">
+                        <div class="card-number-box">
+                            <div class="card-number-label" style="opacity:0.6;">Account Number</div>
+                            <div class="card-number" style="font-family:'Courier New', monospace; letter-spacing:2px; font-weight:600;">**** **** 6727</div>
+                        </div>
+                        <div class="mastercard-circles">
+                            <div class="circle circle-1" style="background:#ea001b; opacity:0.9;"></div> 
+                            <div class="circle circle-2" style="background:#f79e1b; opacity:0.9;"></div> 
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADD CARD PLACEHOLDER -->
+                <div class="balance-card add-card-placeholder" onclick="window.location.href='accounts.html'">
+                    <div style="text-align:center;">
+                        <i class="material-icons">add_circle_outline</i>
+                        <div>Add Another Card</div>
+                    </div>
                 </div>
             </div>
-            
-            <!-- INTEGRATED SYNC BAR -->
-            <div class="card-sync-bar" id="cardSyncBar" style="justify-content: space-between;">
+        </div>
+
+        <!-- SHARED SYNC BAR (FLOATS BELOW) -->
+        <div style="padding: 0 24px; margin-top: -15px; margin-bottom: 20px;">
+            <div class="card-sync-bar" id="cardSyncBar" style="justify-content: space-between; background: rgba(0,0,0,0.03);">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="dot" id="syncDot"></div>
-                    <span id="syncStatusText">Gmail Synced</span>
+                    <span id="syncStatusText" style="color: #475569;">Ready</span>
                 </div>
-                <button id="scan-btn" class="integrated-sync-btn" onclick="handleScan(50)">
+                <button id="scan-btn" class="integrated-sync-btn" onclick="handleScan(400)" style="color: #1e293b; background: rgba(0,0,0,0.05);">
                     <i class="material-icons" style="font-size: 14px;">sync</i>
                     <span>Sync</span>
                 </button>
@@ -753,7 +873,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.2.7</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.2.8</div>
             </div>
         </div>
 
@@ -797,7 +917,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // FIREBASE CONFIG
         const firebaseConfig = {
@@ -848,7 +968,7 @@
 
         // INITIALIZE APP
         window.addEventListener('DOMContentLoaded', async () => {
-            log('SmartWallet Sync - v1.2 Active');
+            log('SmartWallet Sync - v1.2.8 Active');
             const origin = window.location.origin;
             log('--- 🛡️ FINAL AUTH FIX ---', 'warn');
             log('You see "Requested action is invalid" because your local server address is not authorized.', 'error');
@@ -950,7 +1070,9 @@
                 
                 // Update Profile if synced
                 if (!user.isAnonymous) {
-                     document.getElementById('user-display-name').innerText = user.displayName?.split(' ')[0] || 'User';
+                     const parts = user.displayName?.split(' ') || [];
+                     const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
+                     document.getElementById('user-display-name').innerText = firstName;
                      if (user.photoURL) {
                          const picEl = document.getElementById('user-pic');
                          picEl.src = user.photoURL;
@@ -960,30 +1082,252 @@
 
                 // Load Data for this UID
                 await loadData();
+                setupAccountSwitcher();
                 
                 // Refresh global token state for handleScan
                 accessToken = localStorage.getItem('g_access_token');
                 expiry = localStorage.getItem('g_token_expiry');
 
                 if (accessToken && expiry && Date.now() < parseInt(expiry)) {
-                    // ADAPTIVE SYNC: Deep sync (400) if > 1 day, else Routine sync (25)
-                    const lastDeepSync = localStorage.getItem('last_deep_sync');
+                    // ADAPTIVE SYNC
+                    const lastDeepSync = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
                     const now = Date.now();
                     const dayInMs = 24 * 60 * 60 * 1000;
                     
                     if (!lastDeepSync || (now - parseInt(lastDeepSync)) > dayInMs) {
-                        log('Initial deep sync (400 items)...');
+                        log(`First sync for ${window.currentAccount} (400 items)...`);
                         setTimeout(() => {
-                            handleScan(400);
-                            localStorage.setItem('last_deep_sync', now);
+                            handleScan(800); // Trigger deep scan
+                            // Key is now specific to account in handleScan usually, but we set it here too if needed
                         }, 1000);
                     } else {
-                        log('Routine quick sync (25 items)...');
+                        log(`Routine quick sync for ${window.currentAccount}...`);
                         setTimeout(() => handleScan(25), 1000);
                     }
                 }
             });
         });
+
+        // ACCOUNT MANAGEMENT & SWIPE LOGIC
+        window.currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
+        
+        // APPLY THEME ON LOAD
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                applyTheme(window.currentAccount);
+            }, 100);
+        });
+
+        // DYNAMIC THEME APPLICATOR
+        window.applyTheme = (account) => {
+            const themes = {
+                'atome': {
+                    primary: '#121212', // Black for FAB
+                    nav: '#121212',     // Black for Nav
+                    trend: '#121212',   // Black for Chart
+                    light: '#334155'    // Slate 700 for lighter elements
+                },
+                'bpi': {
+                    primary: '#7A1616', // Red for FAB (Deep Red)
+                    nav: '#7A1616',     // Red for Nav
+                    trend: '#7A1616',   // Deep Red for Chart
+                    light: '#931B1B'    
+                },
+                'default': {
+                    primary: '#1d4ed8', // Blue
+                    nav: '#1d4ed8',
+                    trend: '#3b82f6',
+                    light: '#60a5fa'
+                }
+            };
+            
+            const theme = themes[account] || themes['default'];
+            window.currentThemeTrend = theme.trend; // Store for redraws
+            
+            // 1. Update FAB
+            const fab = document.querySelector('.fab');
+            if(fab) {
+                fab.style.backgroundColor = theme.primary;
+                fab.style.transition = 'background-color 0.4s ease'; 
+            }
+            
+            // 2. Update Active Nav Item
+            const activeNav = document.querySelector('.nav-item.active');
+            if(activeNav) {
+                activeNav.style.color = theme.nav;
+                activeNav.style.transition = 'color 0.4s ease';
+            }
+
+            // 3. Update Trend Chart Line & Text
+            const trendPath = document.getElementById('trendPath');
+            if(trendPath) {
+                trendPath.setAttribute('stroke', theme.trend);
+                trendPath.style.transition = 'stroke 0.5s ease';
+            }
+            
+            const trendTotal = document.getElementById('trend-period-total');
+            if(trendTotal) {
+                trendTotal.style.color = theme.trend;
+                trendTotal.style.transition = 'color 0.4s ease';
+            }
+
+            // 4. Update SVG Gradient
+            const stop1 = document.querySelector('#trendGradient stop[offset="0%"]');
+            const stop2 = document.querySelector('#trendGradient stop[offset="100%"]');
+            if(stop1) {
+                stop1.style.stopColor = theme.trend;
+                stop1.setAttribute('stop-color', theme.trend);
+                stop1.style.transition = 'stop-color 0.5s ease';
+            }
+            if(stop2) {
+                stop2.style.stopColor = theme.trend;
+                stop2.setAttribute('stop-color', theme.trend);
+                stop2.style.transition = 'stop-color 0.5s ease';
+            }
+            
+            // 5. Update Logo Toggle Icon (if active)
+            const logoIcon = document.getElementById('logo-toggle-icon');
+            if(logoIcon && logoIcon.innerText === 'visibility') {
+                 logoIcon.style.color = theme.trend;
+                 logoIcon.style.transition = 'color 0.4s ease';
+            }
+
+            // 6. Update Chart Summary Heading (Optional dramatic effect)
+            const summaryAmount = document.getElementById('expenses-total-summary');
+            // if(summaryAmount) summaryAmount.style.color = theme.trend;
+        };
+
+        // DYNAMIC CARDS LOADER
+        function loadSavedCardsToIndex() {
+            const scrollContainer = document.getElementById('cardCarouselScroll');
+            const placeholder = document.querySelector('.add-card-placeholder');
+            const savedAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+            
+            savedAccounts.forEach(acc => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'balance-card';
+                cardDiv.dataset.account = acc.id;
+                cardDiv.style.background = acc.color;
+                cardDiv.innerHTML = `
+                    <div class="card-label">${acc.name.toUpperCase()} BALANCE</div>
+                    <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div class="card-footer">
+                        <div class="card-number-box">
+                            <div class="card-number-label">Account Number</div>
+                            <div class="card-number">•••• •••• •••• ${acc.last4}</div>
+                        </div>
+                        <div class="mastercard-circles">
+                            <div class="circle circle-1"></div>
+                            <div class="circle circle-2"></div>
+                        </div>
+                    </div>
+                `;
+                // Insert before placeholder
+                scrollContainer.insertBefore(cardDiv, placeholder);
+            });
+        }
+
+        function setupAccountSwitcher() {
+            loadSavedCardsToIndex();
+            const viewport = document.getElementById('cardCarouselScroll');
+            const cards = document.querySelectorAll('.balance-card');
+            if (!viewport || cards.length === 0) return;
+
+            // DRAG SCROLL LOGIC
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            viewport.addEventListener('mousedown', (e) => {
+                isDown = true;
+                viewport.classList.add('active'); // Optional class for styling
+                startX = e.pageX - viewport.offsetLeft;
+                scrollLeft = viewport.scrollLeft;
+            });
+            viewport.addEventListener('mouseleave', () => { isDown = false; });
+            viewport.addEventListener('mouseup', () => { isDown = false; });
+            viewport.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - viewport.offsetLeft;
+                const walk = (x - startX) * 2; // Scroll speed multiplier
+                viewport.scrollLeft = scrollLeft - walk;
+            });
+
+            // SWIPE OBSERVER
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const account = entry.target.dataset.account;
+                        
+                        // Update UI Scale/Shadow
+                        cards.forEach(c => c.classList.remove('active'));
+                        entry.target.classList.add('active');
+
+                        if (window.currentAccount !== account) {
+                            window.currentAccount = account;
+                            localStorage.setItem('wallet_current_account', account);
+                            
+                            // Apply Dynamic Theme
+                            applyTheme(account);
+
+                            // CLEAR CHART DATA TO FIX PERSISTENCE BUGS
+                            window.allTxns = []; 
+                            const pieSvg = document.getElementById('pie-chart-svg');
+                            const trendSvg = document.getElementById('trend-chart-svg');
+                            if (pieSvg) pieSvg.innerHTML = '';
+                            if (trendSvg) trendSvg.innerHTML = '';
+                            
+                            // Clear chart center labels
+                            const chartTotalLabel = document.getElementById('chart-total-label');
+                            const chartTotalVal = document.getElementById('chart-total-val');
+                            if (chartTotalLabel) chartTotalLabel.innerText = 'TOTAL';
+                            if (chartTotalVal) chartTotalVal.innerText = '₱0.00';
+                            
+                            // Clear legend
+                            const legend = document.getElementById('chart-legend');
+                            if (legend) legend.innerHTML = '';
+                            
+                            log(`Active: ${account.toUpperCase()}`);
+                            
+                            updateHeaderIcon(account); // Update sticky header icon
+
+                            const syncText = document.getElementById('syncStatusText');
+                            if (syncText) syncText.innerText = `Active Account: ${account.toUpperCase()}`;
+                            
+                            loadData(); 
+                        }
+                    }
+                });
+            }, { 
+                threshold: 0.8,
+                root: viewport
+            });
+
+            cards.forEach(card => observer.observe(card));
+            
+            // Initial Scroll to saved account
+            const savedCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
+            if (savedCard) {
+                setTimeout(() => {
+                    savedCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    updateHeaderIcon(window.currentAccount);
+                    applyTheme(window.currentAccount); // Ensure theme matches initial card
+                }, 200);
+            }
+        }
+        
+        function updateHeaderIcon(account) {
+            // Change card color based on account
+            const cardBg = document.getElementById('card-bg');
+            if (cardBg) {
+                if (account === 'bpi') {
+                    cardBg.setAttribute('fill', '#8b0000'); // BPI red
+                } else {
+                    cardBg.setAttribute('fill', '#1a1a1a'); // Atome black
+                }
+            }
+        }
 
         // FETCH TRANSACTIONS FROM FIRESTORE (REAL-TIME LISTENER)
         window.unsubscribeSnapshot = null; // Store listener to detach later
@@ -1026,9 +1370,11 @@
                 const syncStatusText = document.getElementById('syncStatusText');
                 if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Live Sync';
                 
-                let q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
+                // MULTI-ACCOUNT COLLECTION SELECTION
+                const collectionName = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                let q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"));
                 
-                // DATA ISOLATION: Query ONLY the current user's path.
+                // DATA ISOLATION: Query ONLY the current account's path.
                 // Replaced getDocs with onSnapshot
                 window.unsubscribeSnapshot = onSnapshot(q, (snap) => {
                     let txns = [];
@@ -1052,7 +1398,7 @@
                                 // Silent background update to DB (doesn't trigger re-render loop if strictly checked)
                                 // Note: Be careful with updateDoc triggering onSnapshot again. 
                                 // Since we check !t.note, and we are setting it, it should stabilise.
-                                updateDoc(doc(db, "users", uid, "transactions", t.id), { note: autoNote }); 
+                                updateDoc(doc(db, "users", uid, collectionName, t.id), { note: autoNote }); 
                             }
                         }
                     });
@@ -1093,7 +1439,7 @@
                         document.getElementById('expenses-total-summary').innerText = 'PHP 0.00';
                         document.getElementById('trend-period-total').innerText = 'PHP 0.00';
                         document.getElementById('chart-total-val').innerText = '0';
-                        const balanceEl = document.querySelector('.balance-amount');
+                        const balanceEl = document.getElementById(`${window.currentAccount}-balance`);
                         if (balanceEl) balanceEl.innerText = 'PHP 0.00';
                         
                         if (window.drawPieChart) window.drawPieChart([], 0);
@@ -1366,6 +1712,7 @@
             'Trading Expenses': { color: '#ef4444', darkColor: '#dc2626', class: 'cat-trading' },
             'Trade Copier': { color: '#0891b2', darkColor: '#0e7490', class: 'cat-aqua' },
             'Financial Expenses': { color: '#ef4444', darkColor: '#dc2626', class: 'cat-financial' },
+            'Credit Card Payment': { color: '#f59e0b', darkColor: '#d97706', class: 'cat-credit-card' },
             'Transportation': { color: '#8b5cf6', darkColor: '#7c3aed', class: 'cat-vehicle' },
             'Travel': { color: '#06b6d4', darkColor: '#0891b2', class: 'cat-aqua' },
             'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' }, /* Dark Blue */
@@ -1583,7 +1930,7 @@
             }
 
             // Update Total
-            totalEl.style.color = '#1d4ed8';
+            // totalEl.style.color = '#1d4ed8'; // REMOVED HARDCODE
             totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 
             const points = dataPoints;
@@ -1638,12 +1985,100 @@
 
             const lastP = getPoint(points.length - 1);
             areaD += ` L ${lastP.x} ${h} Z`;
-            path.setAttribute('d', d);
             area.setAttribute('d', areaD);
-            path.setAttribute('stroke', '#1d4ed8'); 
+            path.setAttribute('d', d);
+            if (window.currentThemeTrend) {
+                path.setAttribute('stroke', window.currentThemeTrend);
+                totalEl.style.color = window.currentThemeTrend;
+            }
         }
 
         function drawPieChart(segments, total) {
+            const container = document.getElementById('chart-anim-container');
+            const svgGroup = document.getElementById('pieContent');
+            const legend = document.getElementById('chart-legend');
+            const totalVal = document.getElementById('chart-total-val');
+            
+            svgGroup.innerHTML = '';
+            legend.innerHTML = '';
+            totalVal.innerText = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+
+            const centerX = 120; 
+            const centerY = 120;
+            const radius = 90; 
+            const strokeWidth = 40; 
+            const circumference = 2 * Math.PI * radius;
+            
+            // 1. Gray Background Ring (Track)
+            const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            bgCircle.setAttribute('cx', centerX);
+            bgCircle.setAttribute('cy', centerY);
+            bgCircle.setAttribute('r', radius);
+            bgCircle.setAttribute('fill', 'none');
+            bgCircle.setAttribute('stroke', '#f8fafc');
+            bgCircle.setAttribute('stroke-width', strokeWidth); 
+            svgGroup.appendChild(bgCircle);
+            
+            // Handle Empty
+            if (segments.length === 0 || total === 0) {
+                legend.innerHTML = '<div style="font-size:12px; color:#94a3b8; font-weight:600; grid-column: span 2; text-align:center;">No data for this period</div>';
+                return;
+            }
+
+            let currentAngle = -90; // Start at 12 o'clock
+
+            segments.forEach((seg, index) => {
+                const percent = seg.value / total;
+                const arcLength = percent * circumference;
+                
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', centerX);
+                circle.setAttribute('cy', centerY);
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', seg.color);
+                circle.setAttribute('stroke-width', strokeWidth);
+                circle.setAttribute('stroke-dasharray', `0 ${circumference}`); // Start invisible
+                circle.setAttribute('transform', `rotate(${currentAngle} ${centerX} ${centerY})`);
+                
+                // CSS transition for the fill effect
+                circle.style.transition = 'stroke-dasharray 1s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                circle.style.cursor = 'pointer';
+                
+                // Interaction
+                circle.onmouseenter = (e) => {
+                     const tooltip = document.getElementById('chart-tooltip');
+                     const pText = (percent * 100).toFixed(1) + '%';
+                     tooltip.innerHTML = `${seg.name}<br><span style="color:#d1fae5">₱${Math.round(seg.value).toLocaleString()} (${pText})</span>`;
+                     tooltip.style.opacity = '1';
+                     tooltip.style.left = `${e.pageX}px`;
+                     tooltip.style.top = `${e.pageY - 10}px`;
+                };
+                circle.onmouseleave = () => document.getElementById('chart-tooltip').style.opacity = '0';
+                circle.onclick = (e) => {
+                    e.stopPropagation();
+                    document.getElementById('chart-total-label').innerText = seg.name;
+                    document.getElementById('chart-total-val').innerText = `₱${Math.round(seg.value).toLocaleString()}`;
+                    window.highlightTransactions(seg.name);
+                };
+
+                svgGroup.appendChild(circle);
+                
+                // Trigger Animation with slight stagger
+                setTimeout(() => {
+                    circle.setAttribute('stroke-dasharray', `${arcLength} ${circumference}`);
+                }, 100 + (index * 50)); 
+
+                currentAngle += (percent * 360);
+                
+                // Legend
+                const lItem = document.createElement('div');
+                lItem.className = 'legend-item';
+                lItem.innerHTML = `<div class="legend-color" style="background: ${seg.color}"></div><span>${seg.name}</span>`;
+                legend.appendChild(lItem);
+            });
+        }
+        function drawPieChart_OLD_Implementation(segments, total) {
             const container = document.getElementById('chart-anim-container');
             const svgGroup = document.getElementById('pieContent');
             const legend = document.getElementById('chart-legend');
@@ -1661,6 +2096,9 @@
             
             // Handle Empty State (0 segments)
             if (segments.length === 0 || total === 0) {
+                // Clear any previous chart first
+                svgGroup.innerHTML = '';
+                
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', centerX);
                 circle.setAttribute('cy', centerY);
@@ -1690,7 +2128,8 @@
                 path.setAttribute('d', d);
                 path.setAttribute('fill', seg.color);
                 path.setAttribute('fill-rule', 'evenodd');
-                path.classList.add('chart-segment'); // Add animation
+                path.classList.add('chart-segment'); 
+                path.classList.add('pie-animate'); // Add spin animation
                 path.style.cursor = 'pointer';
                 path.onclick = () => {
                     document.getElementById('chart-total-label').innerText = seg.name;
@@ -1741,6 +2180,7 @@
                 path.setAttribute('fill', seg.color);
                 path.setAttribute('stroke', '#fff');
                 path.setAttribute('stroke-width', '4'); 
+                path.classList.add('pie-animate'); // Add spin animation
                 path.style.transition = 'all 0.3s';
                 
                 // Interaction Events
@@ -1786,28 +2226,21 @@
             // Animation trigger removed as requested (Visibility fix)
         }
 
-        // RENDER ACCORDIONS
+        // RENDER ACCORDIONS (OPTIMIZED)
         function renderHistory(txns) {
             const container = document.getElementById('history-container');
-            container.innerHTML = '';
+            const fragment = document.createDocumentFragment();
             
-            // refreshChart is now called via filterChart separately, but we still need trend
             drawTrendChart(txns);
 
-            // Update ATM Card balance handled by refreshChart/updateMainWalletBalance
-            const balanceEl = document.querySelector('.balance-amount');
-            
             const groups = {};
             txns.forEach(t => {
-                if (!t.date) return;
-
                 const d = new Date(t.date);
                 if (isNaN(d)) return;
                 const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 if (!groups[key]) groups[key] = { items: [], total: 0 };
                 
                 groups[key].items.push(t);
-                // ONLY add to total if NOT excluded AND NOT Income AND NOT Refund
                 const mappedSumCheck = getMerchantDisplay(t.merchant, t);
                 if (!t.excluded && !t.refund && mappedSumCheck.category !== 'Income') {
                     const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
@@ -1820,7 +2253,6 @@
                 const accordion = document.createElement('div');
                 accordion.className = 'month-accordion';
                 
-                // Persistence: Check localStorage for saved state, default to collapsed for all but first
                 const savedState = localStorage.getItem(`accordion_${month}`);
                 const isCollapsed = savedState === 'collapsed' || (savedState === null && index !== 0);
                 
@@ -1837,46 +2269,51 @@
                 const content = document.createElement('div');
                 content.className = `month-content ${isCollapsed ? 'collapsed' : ''}`;
                 
+                let contentHTML = '';
                 data.items.forEach(t => {
                     const mapped = getMerchantDisplay(t.merchant, t);
-                    const item = document.createElement('div');
-                    // Prevent strikethrough for Income even if it might be technically excluded
                     const isIncome = mapped.category === 'Income';
                     const isRefund = t.refund || false;
-                    // Don't strikethrough if it's Income or Refund
-                    item.className = `premium-txn ${t.excluded && !isIncome && !isRefund ? 'txn-excluded' : ''}`;
+                    const excludedClass = (t.excluded && !isIncome && !isRefund) ? 'txn-excluded' : '';
+                    
                     const d = new Date(t.date);
                     const shortDate = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
-                    const safeMerchant = (mapped.name).replace(/'/g, "\\'");
                     const amount = (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                     
-                    // Automated Fuel Note Logic
-                    let displayNote = t.note;
-                    if (!displayNote) {
-                        if (mapped.category === 'Vehicle') {
-                            displayNote = (amount > 250) ? "Car Refill" : "Motor Refill";
-                        }
+                    let displayNote = t.note || '';
+                    if (!displayNote && mapped.category === 'Vehicle') {
+                        displayNote = (amount > 250) ? "Car Refill" : "Motor Refill";
                     }
                     
-                    // INCOME OVERRIDES
                     let displayAmtColor = '';
-                    let displayName = mapped.name;
-                    let displayIconStyle = `background: ${mapped.catClass === 'cat-red' ? '#fee2e2' : ''}; color: ${mapped.catClass === 'cat-red' ? '#ef4444' : ''};`;
-                    let refundChip = '';
+                    let displayTitleColor = '';
 
-                    // REFUND STYLING
-                    if (t.refund) {
-                        displayAmtColor = 'color: #f59e0b;'; // Gold
-                        refundChip = '<span style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>';
+                    if (isIncome) {
+                        displayAmtColor = 'color: #16a34a;';
+                        displayTitleColor = 'color: #16a34a;';
+                    } else if (isRefund) {
+                        displayAmtColor = 'color: #f59e0b;';
+                        displayTitleColor = 'color: #f59e0b;';
+                    } else if (mapped.category === 'Credit Card Payment') {
+                        // Credit Card / Atome Specific Styling
+                        displayAmtColor = 'color: #f59e0b;'; // Orange Gold
+                        displayTitleColor = 'color: #f59e0b;'; // Orange Gold
+                    } else {
+                        // Expense Logic
+                        if (Math.abs(amount) >= 1000) {
+                            displayAmtColor = 'color: #ef4444;'; // Red Red
+                        } else if (window.currentAccount === 'bpi') {
+                            displayAmtColor = 'color: #991b1b;'; // Dark Red
+                        }
                     }
-
-                    if (mapped.category === 'Income') {
-                        displayName = 'INCOME'; // Always name it INCOME
-                        displayAmtColor = 'color: #16a34a;'; // Green Price
-                        // Icon styling handled by cat-income class, but ensure overrides are clean
-                    }
-
-                    // LOGO DETECTION (Direct Injection)
+                    let displayName = (mapped.category === 'Credit Card Payment' || isIncome) ? mapped.name : mapped.name;
+                    // Note: If merchant was set to 'Atome' in parse, it might be lowercase. 
+                    // Let's ensure 'ATOME PAYMENT' is honored if that was the intent.
+                    if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
+                    // else if (isIncome) displayName = 'INCOME'; // REMOVED to allow database overrides
+                    let refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
+                    
+                    // LOGO DETECTION
                     const mUpper = mapped.name.toUpperCase();
                     let logo = null;
                     if (mUpper.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
@@ -1885,71 +2322,59 @@
                     else if (mUpper.includes('SHOPEE')) logo = 'logos/shopee.png';
                     else if (mUpper.includes('LAZADA')) logo = 'logos/lazada.jpg';
                     else if (mUpper.includes('GLOBE') || mUpper.includes('GOMO')) logo = 'logos/globe.png';
-                    else if (mUpper.includes('SM') || mUpper.includes('SM STORE') || mUpper.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
+                    else if (mUpper.includes('SM') || mUpper.includes('SM STORE')) logo = 'logos/sm.png';
                     else if (mUpper.includes('SPOTIFY')) logo = 'logos/spotify.png';
                     else if (mUpper.includes('TIKTOK')) logo = 'logos/tiktokshop.png';
-                    else if (mUpper.includes('TECFUEL') || mUpper.includes('TEC FUEL')) logo = 'logos/tecfuel.png';
-                    else if (mUpper.includes('TRADERS')) logo = 'logos/tradersconnect.png';
-                    else if (mUpper.includes('AYALA')) logo = 'logos/ayala.png';
-                    else if (mUpper.includes('J AND L') || mUpper.includes('JANL')) logo = 'logos/jandlmall.png';
+                    else if (mUpper.includes('TECFUEL')) logo = 'logos/tecfuel.png';
                     else if (mUpper.includes('MR DIY')) logo = 'logos/mrdiy.png';
-                    else if (mUpper.includes('WATSONS')) logo = 'logos/watsons.png';
                     else if (mUpper.includes('METRO')) logo = 'logos/supermetro.png';
-                    else if (mUpper.includes('SUPERMETRO')) logo = 'logos/supermetro.png';
-                    else if (mUpper.includes('SEAOIL')) logo = 'logos/seaoil.png';
-                    else if (mUpper.includes('PETRON')) logo = 'logos/petron.png';
-                    else if (mUpper.includes('7/11')) logo = 'logos/711.png';
-                    else if (mUpper.includes('7 11')) logo = 'logos/711.png';
-
+                    
                     const logoHTML = logo ? `<div class="brand-badge" style="display: ${typeof showLogos !== 'undefined' && showLogos ? 'flex' : 'none'}"><img src="${logo}"></div>` : '';
 
-                    item.innerHTML = `
-                        <div class="icon-box ${mapped.catClass}" style="${displayIconStyle} position: relative;">
-                            <i class="material-icons">${mapped.icon}</i>
-                            ${logoHTML}
-                        </div>
-                        <div class="txn-details" style="display: flex; flex-direction: column; gap: 2px;">
-                            <div class="txn-merch" style="${mapped.category === 'Income' ? 'color: #16a34a;' : t.refund ? 'color: #f59e0b;' : ''}">${displayName}${refundChip}</div>
-                            <div class="txn-sub">
-                                <span>${shortDate}</span>
-                                <span style="margin: 0 4px; opacity: 0.5;">•</span>
-                                <span>${displayCategoryName(mapped.category)}</span>
+                    const noteSafe = (t.note || '').replace(/"/g, '&quot;');
+                    contentHTML += `
+                        <div class="premium-txn ${excludedClass}" 
+                             data-txn-id="${t.id}" 
+                             data-merchant="${mapped.name.replace(/'/g, "\\'")}" 
+                             data-amount="${amount}"
+                             data-category="${mapped.category}"
+                             data-note="${noteSafe}"
+                             data-excluded="${t.excluded || false}"
+                             data-refund="${t.refund || false}">
+                            <div class="icon-box ${mapped.catClass}">
+                                <i class="material-icons">${mapped.icon}</i>
+                                ${logoHTML}
                             </div>
-                            ${displayNote ? `<div class="txn-note" style="color: ${t.refund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')};">${displayNote}</div>` : ''}
-                        </div>
-                        <div class="txn-right" style="display: flex; align-items: center; justify-content: flex-end;">
-                            <div class="txn-amount ${amount >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
-                                ₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}
+                            <div class="txn-details">
+                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}</div>
+                                <div class="txn-sub">
+                                    <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
+                                </div>
+                                ${displayNote ? `<div class="txn-note" style="color: ${isRefund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                             </div>
-                        </div>
-                    `;
-                    
-                    // Add long-press data attributes
-                    item.dataset.txnId = t.id;
-                    item.dataset.merchant = safeMerchant;
-                    item.dataset.amount = amount;
-                    item.dataset.excluded = t.excluded || false;
-                    item.dataset.refund = t.refund || false;
-                    item.dataset.category = mapped.category;
-                    item.dataset.note = t.note || '';
-                    
-                    content.appendChild(item);
+                            <div class="txn-right">
+                                <div class="txn-amount ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
+                                    ${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                </div>
+                            </div>
+                        </div>`;
                 });
-
+                
+                content.innerHTML = contentHTML;
                 header.onclick = () => {
-                    const isCollapsedNow = content.classList.toggle('collapsed');
-                    header.classList.toggle('collapsed', isCollapsedNow);
-                    // Save state
-                    localStorage.setItem(`accordion_${month}`, isCollapsedNow ? 'collapsed' : 'expanded');
+                    const isNowCollapsed = content.classList.toggle('collapsed');
+                    header.classList.toggle('collapsed', isNowCollapsed);
+                    localStorage.setItem(`accordion_${month}`, isNowCollapsed ? 'collapsed' : 'expanded');
                 };
                 
                 accordion.appendChild(header);
                 accordion.appendChild(content);
-                container.appendChild(accordion);
+                fragment.appendChild(accordion);
             });
             
-            // Setup long-press handlers after rendering
-            setTimeout(() => setupLongPressHandlers(), 100);
+            container.innerHTML = '';
+            container.appendChild(fragment);
+            setTimeout(() => setupLongPressHandlers(), 50);
         }
 
         // GOOGLE IDENTITY SERVICES
@@ -2036,8 +2461,8 @@
                 const user = result.user;
                 if (user.displayName) {
                     const parts = user.displayName.split(' ');
-                    // If first name is short (<=5 chars) like Zea, John, TJ, take the next part too
-                    const firstName = parts.length > 1 && parts[0].length <= 5 
+                    // Always take first 2 parts (first name + middle name) if available
+                    const firstName = parts.length > 1 
                                       ? parts.slice(0, 2).join(' ') 
                                       : parts[0];
                     document.getElementById('user-display-name').innerText = firstName;
@@ -2059,7 +2484,19 @@
                 log('Cloud account active. Loading isolated user data...');
 
                 await loadData();
-                handleScan(300);
+                
+                // PREPARE SYNC LIMITS
+                const lastDeep = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
+                const now = Date.now();
+                const dayInMs = 24 * 60 * 60 * 1000;
+                let limit = 25; // Default Quick Sync
+                
+                if (!lastDeep || (now - parseInt(lastDeep)) > dayInMs) {
+                    limit = 400; // Deep Sync
+                    log(`Deep sync needed for ${window.currentAccount}...`);
+                }
+                
+                handleScan(limit);
             } catch (error) {
                 log('Auth Error: ' + error.code, 'error');
                 log('Message: ' + error.message, 'error');
@@ -2129,6 +2566,35 @@
             }
         };
 
+        const getBody = (payload) => {
+            let body = "";
+            if (payload.body && payload.body.data) {
+                const b64 = payload.body.data.replace(/-/g, '+').replace(/_/g, '/');
+                try {
+                    // Standard way to handle UTF-8 in base64
+                    body = decodeURIComponent(escape(atob(b64)));
+                } catch(e) { body = atob(b64); }
+            } else if (payload.parts) {
+                payload.parts.forEach(part => {
+                    body += getBody(part);
+                });
+            }
+            return body;
+        };
+
+        const stripTags = (html) => {
+            if (!html) return "";
+            return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+                       .replace(/<br\s*\/?>/gi, '\n')
+                       .replace(/<\/p>| <\/div>|<\/tr>/gi, '\n')
+                       .replace(/<\/td>/gi, ' | ')
+                       .replace(/<[^>]*>/g, ' ')
+                       .replace(/[ \t]+/g, ' ')
+                       .replace(/\n\s+/g, '\n')
+                       .trim();
+        };
+
         // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
         window.handleScan = async (limit) => {
             if (auth.currentUser?.isAnonymous) {
@@ -2159,32 +2625,72 @@
             if (statusText) statusText.innerText = 'Scanning Gmail...';
             
             try {
-                log(`Starting fast sync (Parallel processing)...`);
-                let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&q=subject:"Transaction Confirmation" (from:Atome OR from:no-reply@atome.ph)`;
-                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
-                const data = await res.json();
-                const msgs = data.messages || [];
+                log(`Syncing ${window.currentAccount.toUpperCase()}...`);
                 
-                if (msgs.length === 0) {
-                    log('No new transactions found.');
+                // MULTI-ACCOUNT QUERY
+                let query = '';
+                if (window.currentAccount === 'atome') {
+                    // Broader Atome Query
+                    query = `(subject:"Transaction Confirmation" OR subject:"payment confirmation" OR subject:"Atome Card") (from:Atome OR from:no-reply@atome.ph OR from:noreply@atome.ph)`;
                 } else {
-                    log(`Parsing ${msgs.length} messages in parallel...`);
-                    
-                    // Parallel Processing with batches of 10
+                    // BPI Query
+                    query = `(subject:"Funds Transfer" OR subject:"Fund Transfer" OR subject:"Interbank" OR subject:"Pay via QR" OR from:bpi_online@bpi.com.ph OR from:onlinebanking@bpi.com.ph OR from:bpiinstapay@bpi.com.ph OR from:BPI)`;
+                }
+                
+                log(`Scanning ${window.currentAccount} (Target Limit: ${limit})...`);
+                
+                let savedCount = 0;
+                let pageToken = '';
+                let totalProcessed = 0;
+
+                // Loop for pagination if limit > 500
+                while (totalProcessed < limit) {
+                    const maxResults = Math.min(500, limit - totalProcessed);
+                    let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(query)}`;
+                    if (pageToken) url += `&pageToken=${pageToken}`;
+
+                    const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
+                    const data = await res.json();
+                    const msgs = data.messages || [];
+                    pageToken = data.nextPageToken;
+
+                    if (msgs.length === 0) break;
+
                     const batchSize = 10;
-                    let savedCount = 0;
-                    
                     for (let i = 0; i < msgs.length; i += batchSize) {
                         const batch = msgs.slice(i, i + batchSize);
                         const promises = batch.map(async (m) => {
                             try {
                                 const detailRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}`, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                                 const d = await detailRes.json();
-                                const txn = parseAtomeEmail(d.snippet, d.internalDate);
+                                
+                                let txn = null;
+                                const fullBody = getBody(d.payload);
+                                // For parsing, we strip tags to handle HTML templates
+                                const cleanText = stripTags(fullBody) || d.snippet;
+
+                                if (window.currentAccount === 'atome') {
+                                    txn = parseAtomeEmail(cleanText, d.internalDate);
+                                } else {
+                                    const subjectHeader = d.payload.headers.find(h => h.name.toLowerCase() === 'subject');
+                                    const subject = subjectHeader ? subjectHeader.value : '';
+                                    txn = parseBPIEmail(cleanText, d.internalDate, subject);
+                                }
+
                                 if (txn) {
                                     if (!auth.currentUser) await signInAnonymously(auth);
                                     const uid = auth.currentUser.uid;
-                                    await setDoc(doc(db, "users", uid, "transactions", txn.id), { ...txn, createdAt: serverTimestamp() }, { merge: true });
+                                    const collectionName = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                                    const docRef = doc(db, "users", uid, collectionName, txn.id);
+                                    
+                                    const snap = await getDoc(docRef);
+                                    if (snap.exists()) {
+                                        // PROTECT MANUAL EDITS: Only restore if it was deleted. 
+                                        // Do NOT overwrite existing merchant, notes, or categories.
+                                        await updateDoc(docRef, { deleted: false });
+                                    } else {
+                                        await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                    }
                                     return true;
                                 }
                             } catch (err) { return false; }
@@ -2193,11 +2699,18 @@
                         
                         const results = await Promise.all(promises);
                         savedCount += results.filter(Boolean).length;
-                        log(`Processed batch ${Math.floor(i/batchSize) + 1}...`);
                     }
                     
-                    log(`Sync finished! ${savedCount} transactions processed.`);
-                    // loadData(); // Removed for performance - Listener will auto-update
+                    totalProcessed += msgs.length;
+                    if (!pageToken) break; 
+                }
+                
+                if (savedCount > 0) {
+                    if (limit > 100) localStorage.setItem(`last_deep_sync_${window.currentAccount}`, Date.now());
+                    log(`Sync complete! +${savedCount} processed.`, 'success');
+                    await loadData();
+                } else {
+                    log('Sync complete. No new valid txns found.');
                 }
             } catch (e) { log('Scan error: ' + e.message, 'error'); }
             finally {
@@ -2209,13 +2722,97 @@
         };
 
         function parseAtomeEmail(text, ts) {
-            const m = text.match(/payment of [^\d]*([\d,]+\.?\d*)\s+for\s+(.+?)\s+using/i);
-            if (!m) return null;
+            // Updated Atome Regex to handle stripped HTML and different wordings
+            const amtMatch = text.match(/payment\s+of[^\d]*([\d,]+\.?\d*)/i) || text.match(/amount[^\d]*([\d,]+\.?\d*)/i);
+            const merchMatch = text.match(/for\s+([^,]+?)\s+using/i) || text.match(/at\s+([^,]+?)\s+(?:using|on)/i);
+            
+            if (!amtMatch) return null;
+            
             return {
                 id: 'txn_' + ts,
-                amount: parseFloat(m[1].replace(/,/g, '')),
-                merchant: m[2].trim(),
+                amount: parseFloat(amtMatch[1].replace(/,/g, '')),
+                merchant: merchMatch ? merchMatch[1].trim() : "Atome Transaction",
                 date: new Date(parseInt(ts)).toISOString().split('T')[0]
+            };
+        }
+
+        function parseBPIEmail(text, ts, subject) {
+            let amount = 0;
+            let merchant = "BPI Transfer";
+            let note = "";
+            let isIncome = false;
+            let category = "Financial Expenses";
+            let dateVal = new Date(parseInt(ts)).toISOString().split('T')[0];
+
+            const tLower = text.toLowerCase();
+            const sLower = subject.toLowerCase();
+
+            // EXCLUSION: Skip marketing
+            if (tLower.includes("never ask for your bank details") && !tLower.includes("confirmation number")) return null;
+
+            // 1. Detect Amount
+            const amtMatch = text.match(/(?:Transfer Amount|Total Amount|Amount)\s*PHP\s*([\d,]+\.\d{2})/i) || 
+                             text.match(/(?:PHP|PHP\s|P)\s?([\d,]+\.\d{2})/i);
+            if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+            if (amount === 0) return null;
+
+            // 2. Detect Date from Body
+            const dateMatch = text.match(/Transaction Date and Time\s+([^;\n\r]+)/i) || text.match(/Date and Time\s+([^;\n\r]+)/i);
+            if (dateMatch) {
+                const parsedDate = new Date(dateMatch[1].trim());
+                if (!isNaN(parsedDate)) dateVal = parsedDate.toISOString().split('T')[0];
+            }
+
+            // 3. SPECIAL DETECTION: ATOME PAYMENTS & AUB
+            // Regex tailored for pipe-separated table structure from stripTags
+            const payToMatch = text.match(/Pay To\s*\|\s*([^|\n\r]+)/i);
+            const bankNameMatch = text.match(/Bank Name\s*\|\s*([^|\n\r]+)/i);
+            const refNoMatch = text.match(/Transaction Ref No\.\s*\|\s*([A-Z0-9]+)/i);
+
+            const isAtome = (payToMatch && payToMatch[1].toLowerCase().includes("atome")) || 
+                            (sLower.includes("pay atome")) ||
+                            (bankNameMatch && (
+                                bankNameMatch[1].toLowerCase().includes("aub") || 
+                                bankNameMatch[1].toLowerCase().includes("asia united bank") ||
+                                bankNameMatch[1].toLowerCase().includes("asian bank united")
+                            ));
+
+            if (isAtome) {
+                merchant = "ATOME PAYMENT";
+                category = "Credit Card Payment";
+                if (refNoMatch) note = "Ref No: " + refNoMatch[1].trim();
+                else if (bankNameMatch) note = "Ref No: " + bankNameMatch[1].trim(); // Fallback if no ref no
+            } else if (sLower.includes("incoming") || tLower.includes("incoming") || tLower.includes("you have an incoming") || text.includes("Incoming Funds") || text.includes("received a transfer")) {
+                // 4. INCOME
+                isIncome = true;
+                merchant = "INCOME"; 
+                category = "Income";
+                const bankMatch = bankNameMatch || text.match(/Transfer From\s*\|\s*([^|\n\r]+)/i);
+                if (bankMatch) note = "FROM " + bankMatch[1].trim().toUpperCase();
+            } else if (tLower.includes("transfer money") || sLower.includes("interbank") || sLower.includes("funds transfer") || sLower.includes("fund transfer") || payToMatch || text.includes("successfully submitted your")) {
+                // 5. OUTGOING PAYMENTS
+                isIncome = false;
+                merchant = "PAYMENT";
+                category = "Financial Expenses";
+                
+                let bank = bankNameMatch ? bankNameMatch[1].trim() : "";
+
+                // USER REQUEST: STRICT NOTES "TO [BANK]"
+                if (bank) {
+                    note = "TO " + bank.toUpperCase();
+                } else {
+                    // Internal BPI transfers don't show "Bank Name", so default to BPI
+                    note = "TO BPI";
+                }
+            }
+
+            return {
+                id: 'bpi_' + ts,
+                amount: amount,
+                merchant: merchant,
+                note: note,
+                date: dateVal,
+                manualCategory: category
             };
         }
 
@@ -2238,7 +2835,7 @@
                     
                     longPressTimer = setTimeout(() => {
                         showIOSMenu(newItem, e);
-                    }, 500);
+                    }, 400); // Faster response
                 };
                 
                 const cancelLongPress = (e) => {
@@ -2270,13 +2867,17 @@
         
         function showIOSMenu(item, event) {
             if (event.cancelable) event.preventDefault();
+
+            // Haptic feedback if available (Mobile feel)
+            if (navigator.vibrate) navigator.vibrate(50);
             
             const txnId = item.dataset.txnId;
-            const merchant = item.dataset.merchant;
-            const amount = parseFloat(item.dataset.amount);
+            const merchant = item.dataset.merchant || '';
+            const amount = parseFloat(item.dataset.amount) || 0;
             const isExcluded = item.dataset.excluded === 'true';
-            const category = item.dataset.category;
-            const note = item.dataset.note;
+            const category = item.dataset.category || '';
+            const note = item.dataset.note || '';
+            const isRefund = item.dataset.refund === 'true';
             
             // 1. Get exact position
             const rect = item.getBoundingClientRect();
@@ -2288,28 +2889,45 @@
             // 3. Create and position clone
             clonedItem = item.cloneNode(true);
             clonedItem.classList.add('elevated-clone');
-            clonedItem.style.top = `${rect.top}px`;
-            clonedItem.style.left = `${rect.left}px`;
-            clonedItem.style.width = `${rect.width}px`;
+            
+            // Strip IDs to prevent duplicate conflicts
+            clonedItem.removeAttribute('id');
+            clonedItem.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+            // Force exact positioning
+            clonedItem.style.setProperty('position', 'fixed', 'important');
+            clonedItem.style.setProperty('top', `${rect.top}px`, 'important');
+            clonedItem.style.setProperty('left', `${rect.left}px`, 'important');
+            clonedItem.style.setProperty('width', `${rect.width}px`, 'important');
+            clonedItem.style.setProperty('height', `${rect.height}px`, 'important');
+            clonedItem.style.setProperty('margin', '0', 'important');
+            clonedItem.style.setProperty('z-index', '2001', 'important');
+            clonedItem.style.setProperty('display', 'flex', 'important');
+            
             clonedItem.style.visibility = 'visible';
-            clonedItem.onclick = closeIOSMenu; // Clicking clone also closes
+            clonedItem.onclick = closeIOSMenu; 
             document.body.appendChild(clonedItem);
             
             // 4. Show blur and backdrop
-            document.getElementById('blurOverlay').classList.add('active');
+            document.getElementById('blur-overlay').classList.add('active');
             document.querySelector('.mobile-wrapper').classList.add('blur-active');
-            document.querySelector('.fab').classList.add('blur-active');
-            document.querySelector('.bottom-nav').classList.add('blur-active');
+            const fab = document.querySelector('.fab');
+            if (fab) fab.classList.add('blur-active');
+            const nav = document.querySelector('.bottom-nav');
+            if (nav) nav.classList.add('blur-active');
             
-            // 5. Build menu
-            const menu = document.getElementById('iosActionMenu');
-            const isRefund = item.dataset.refund === 'true';
+            // 5. Build menu - escape values properly
+            const menu = document.getElementById('ios-menu');
+            const merchantSafe = merchant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+            const noteSafe = note.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/`/g, '\\`');
+            const categorySafe = category.replace(/'/g, "\\'");
+            
             menu.innerHTML = `
-                <div class="ios-action-item" onclick="handleIOSAction('edit', '${txnId}', '${merchant}', ${amount}, '${category}', \`${note.replace(/`/g, '\\`')}\`)">
+                <div class="ios-action-item" onclick="handleIOSAction('edit', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}')">
                     <i class="material-icons">edit</i>
                     <span>Edit Transaction</span>
                 </div>
-                <div class="ios-action-item ${isExcluded ? '' : 'danger'}" onclick="handleIOSAction('exclude', '${txnId}', ${isExcluded}, '${merchant}')">
+                <div class="ios-action-item ${isExcluded ? '' : 'danger'}" onclick="handleIOSAction('exclude', '${txnId}', ${isExcluded}, '${merchantSafe}')">
                     <i class="material-icons">${isExcluded ? 'add_circle' : 'block'}</i>
                     <span>${isExcluded ? 'Include' : 'Exclude'}</span>
                 </div>
@@ -2324,28 +2942,44 @@
             `;
             
             // 6. Position menu
-            menu.classList.add('show'); // Show briefly to get offsetHeight
+            menu.classList.add('show');
             const menuHeight = menu.offsetHeight || 180;
+            const menuWidth = menu.offsetWidth || 200;
+            
+            // Get mobile wrapper bounds
             const mobileWrapper = document.querySelector('.mobile-wrapper');
-            const wrapperRect = mobileWrapper.getBoundingClientRect();
+            const wrapperRect = mobileWrapper ? mobileWrapper.getBoundingClientRect() : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
             
-            menu.style.right = `${window.innerWidth - wrapperRect.right + 20}px`;
+            // Position menu below the transaction item
+            let topPos = rect.bottom + 12;
             
-            // Decide if show above or below
-            if (rect.bottom + menuHeight + 20 > window.innerHeight) {
-                // Show above if not enough space below
-                menu.style.top = `${rect.top - menuHeight - 12}px`;
-            } else {
-                // Show below
-                menu.style.top = `${rect.bottom + 12}px`;
+            // If not enough space below, position above
+            if (topPos + menuHeight > window.innerHeight - 20) {
+                topPos = rect.top - menuHeight - 12;
             }
             
+            // Ensure menu doesn't go above viewport
+            if (topPos < 20) {
+                topPos = rect.bottom + 12; // Force below if above doesn't work
+            }
+            
+            // Align menu's right edge with transaction card's right edge
+            let leftPos = rect.right - menuWidth;
+            
+            // Ensure menu stays within wrapper bounds
+            if (leftPos < wrapperRect.left + 20) {
+                leftPos = wrapperRect.left + 20;
+            }
+            
+            menu.style.left = `${leftPos}px`;
+            menu.style.top = `${topPos}px`;
+            menu.style.right = 'auto';
             menu.style.transform = 'none';
         }
         
         window.closeIOSMenu = () => {
-            document.getElementById('blurOverlay').classList.remove('active');
-            document.getElementById('iosActionMenu').classList.remove('show');
+            document.getElementById('blur-overlay').classList.remove('active');
+            document.getElementById('ios-menu').classList.remove('show');
             document.querySelector('.mobile-wrapper').classList.remove('blur-active');
             const fab = document.querySelector('.fab');
             const nav = document.querySelector('.bottom-nav');
@@ -2391,7 +3025,8 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                await updateDoc(doc(db, "users", uid, "transactions", id), { excluded: !isCurrentlyExcluded });
+                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                await updateDoc(doc(db, "users", uid, col, id), { excluded: !isCurrentlyExcluded });
                 showToast(isCurrentlyExcluded ? 'Transaction included' : 'Transaction excluded');
             } catch (e) { log('Toggle failed', 'error'); }
         };
@@ -2406,7 +3041,8 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                await updateDoc(doc(db, "users", uid, "transactions", id), { refund: !isCurrentlyRefund });
+                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                await updateDoc(doc(db, "users", uid, col, id), { refund: !isCurrentlyRefund });
                 showToast(isCurrentlyRefund ? 'Unmarked as refund' : 'Marked as refund');
             } catch (e) { log('Toggle refund failed', 'error'); }
         };
@@ -2437,7 +3073,8 @@
             try {
                  if (!auth.currentUser) return;
                  const uid = auth.currentUser.uid;
-                await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { deleted: true });
+                 const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                await updateDoc(doc(db, "users", uid, col, currentTxnId), { deleted: true });
                 showToast('Transaction deleted');
                 closeModals();
             } catch (error) { 
@@ -2462,6 +3099,7 @@
             { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
             { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
             { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
+            { id: 'Credit Card Payment', icon: 'credit_card', label: 'Credit Card', cls: 'cat-credit-card' },
             { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
             { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
             { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
@@ -2487,7 +3125,7 @@
                 }
             });
             
-            const balanceEl = document.querySelector('.balance-amount');
+            const balanceEl = document.getElementById(`${window.currentAccount}-balance`);
             if (balanceEl) {
                 const balance = incomeTotal - expenseTotal;
                 balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -2564,7 +3202,8 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { manualCategory: catId });
+                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                await updateDoc(doc(db, "users", uid, col, currentTxnId), { manualCategory: catId });
                 showToast('Category updated');
                 closeModals();
             } catch (error) { 
@@ -2611,7 +3250,7 @@
             }
             if (!currentTxnId) return;
             let note = document.getElementById('note-text').value.trim();
-            note = toTitleCase(note);
+            // note = toTitleCase(note); // REMOVED to allow ALL CAPS
 
             // Disable button and show loading
             const btn = document.getElementById('save-note-btn');
@@ -2623,7 +3262,8 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                await updateDoc(doc(db, "users", uid, "transactions", currentTxnId), { note: note });
+                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                await updateDoc(doc(db, "users", uid, col, currentTxnId), { note: note });
                 showToast('Note saved');
                 closeModals();
             } catch (error) { 
@@ -2670,7 +3310,8 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const docRef = doc(db, "users", uid, "transactions", currentTxnId);
+                const col = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                const docRef = doc(db, "users", uid, col, currentTxnId);
                 if (isNaN(amt) || val.trim() === "") {
                     await updateDoc(docRef, { manualAmount: deleteField() });
                 } else {
@@ -2773,6 +3414,7 @@
                         'Food & Drinks': 'cat-food',
                         'Life & Entertainment': 'cat-life',
                         'Financial Expenses': 'cat-financial',
+                        'Credit Card Payment': 'cat-credit-card',
                         'Transportation': 'cat-vehicle',
                         'Travel': 'cat-aqua',
                         'Education': 'cat-education', /* Blue */
@@ -2906,11 +3548,27 @@
             renderManualCategories();
         };
 
+        window.updateManualAccountUI = (val) => {
+            const iconBox = document.getElementById('manual-account-icon-box');
+            if (iconBox) {
+                if (val === 'bpi') {
+                    iconBox.style.background = '#8b0000'; // BPI Red
+                } else {
+                    iconBox.style.background = '#1a1a1a'; // Atome Black
+                }
+            }
+        };
+
         window.openManualTxnModal = () => {
             window.editingTxnId = null; // Clear edit mode
             document.getElementById('manual-amt').value = '';
             document.getElementById('manual-merchant').value = '';
             document.getElementById('manual-note').value = '';
+            
+            // Default Account from switcher
+            const activeAcc = window.currentAccount || 'atome';
+            document.getElementById('manual-account').value = activeAcc;
+            updateManualAccountUI(activeAcc);
             
             // Default Category
             selectedManualCatId = 'Financial Expenses';
@@ -2931,10 +3589,10 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Block scroll
-            const wrapper = document.querySelector('.mobile-wrapper');
-            if (wrapper) wrapper.style.overflow = 'hidden';
-            document.body.style.overflow = 'hidden';
+            // ALLOW scroll (as requested)
+            // const wrapper = document.querySelector('.mobile-wrapper');
+            // if (wrapper) wrapper.style.overflow = 'hidden';
+            // document.body.style.overflow = 'hidden';
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
         };
@@ -2950,6 +3608,11 @@
             document.getElementById('manual-amt').value = amount;
             document.getElementById('manual-merchant').value = merchant;
             document.getElementById('manual-note').value = note || '';
+            
+            // Account (Determine from current active if unknown, but usually we know)
+            const activeAcc = window.currentAccount || 'atome';
+            document.getElementById('manual-account').value = activeAcc;
+            updateManualAccountUI(activeAcc);
             
             // Set date
             const d = new Date(txn.date);
@@ -2977,9 +3640,8 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Block body scroll
-            document.body.style.overflow = 'hidden';
-            // Removed position: fixed to avoid layout jumping
+            // ALLOW body scroll
+            // document.body.style.overflow = 'hidden';
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 100);
         };
@@ -3033,6 +3695,7 @@
             }
             const btn = document.getElementById('done-btn');
             const amtVal = document.getElementById('manual-amt').value;
+            const selectedAccount = document.getElementById('manual-account').value;
             
             if (!amtVal || parseFloat(amtVal) <= 0) {
                 showToast('Enter valid amount');
@@ -3076,11 +3739,14 @@
                     type: manualTxnType
                 };
 
+                // Use the selected account in the modal
+                const col = selectedAccount === 'atome' ? "transactions" : "bpi_transactions";
+
                 if (window.editingTxnId) {
-                    await updateDoc(doc(db, "users", uid, "transactions", window.editingTxnId), updateData);
+                    await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
                     showToast('Transaction updated');
                 } else {
-                    await addDoc(collection(db, "users", uid, "transactions"), {
+                    await addDoc(collection(db, "users", uid, col), {
                         ...updateData,
                         createdAt: serverTimestamp()
                     });
@@ -3320,6 +3986,28 @@
         </div>
     </div>
 
+    <!-- iOS STYLE LONG PRESS ELEMENTS -->
+    <div class="blur-overlay" id="blur-overlay" onclick="closeIOSMenu()"></div>
+    
+    <div class="ios-action-menu" id="ios-menu">
+        <div class="ios-action-item" id="ios-action-edit">
+            <i class="material-icons">edit</i>
+            <span>Edit Transaction</span>
+        </div>
+        <div class="ios-action-item" id="ios-action-exclude">
+            <i class="material-icons">block</i>
+            <span>Exclude</span>
+        </div>
+        <div class="ios-action-item warning" id="ios-action-refund">
+            <i class="material-icons">undo</i>
+            <span>Unmark Refund</span>
+        </div>
+        <div class="ios-action-item danger" id="ios-action-delete">
+            <i class="material-icons">delete</i>
+            <span>Delete</span>
+        </div>
+    </div>
+
     <!-- MANUAL TRANSACTION MODAL -->
     <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
         <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 96vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
@@ -3364,40 +4052,56 @@
             </div>
 
             <!-- Details List -->
-            <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                 
+                <!-- Account Selection Row -->
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div id="manual-account-icon-box" style="width: 40px; height: 40px; border-radius: 12px; background: #1a1a1a; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #fff; transition: all 0.3s ease;">
+                        <i class="material-icons" style="font-size: 20px;">account_balance_wallet</i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Account</div>
+                        <select id="manual-account" onchange="updateManualAccountUI(this.value)" style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 700; color: #1e293b; background: transparent; padding: 0; appearance: none; -webkit-appearance: none; cursor: pointer;">
+                            <option value="atome">Atome Account</option>
+                            <option value="bpi">BPI Account</option>
+                        </select>
+                    </div>
+                    <i class="material-icons" style="color: #cbd5e1; font-size: 20px;">unfold_more</i>
+                </div>
+
                 <!-- Date Row -->
-                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer;" onclick="document.getElementById('manual-date').showPicker()">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #eff6ff; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #60a5fa;">
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer;" onclick="document.getElementById('manual-date').showPicker()">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: #f0f9ff; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #0284c7;">
                         <i class="material-icons" style="font-size: 20px;">calendar_today</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Date</div>
-                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 16px; font-weight: 700; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%; padding: 0;">
+                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Date</div>
+                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 14px; font-weight: 700; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%; padding: 0;">
                     </div>
                 </div>
 
                 <!-- Merchant Name Row -->
-                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #fffbeb; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #fbbf24;">
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: #fefce8; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #ca8a04;">
                         <i class="material-icons" style="font-size: 20px;">store</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Merchant Name</div>
+                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Merchant Name</div>
                         <input type="text" id="manual-merchant" maxlength="50" placeholder="Enter merchant name..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                     </div>
                 </div>
 
                 <!-- Notes Row -->
-                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-right: 16px; color: #64748b;">
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #64748b;">
                         <i class="material-icons" style="font-size: 20px;">notes</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Notes</div>
+                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Notes</div>
                         <input type="text" id="manual-note" maxlength="30" placeholder="Add notes..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                     </div>
                 </div>
+            </div>
 
             </div>
         </div>

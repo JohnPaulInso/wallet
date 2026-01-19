@@ -836,6 +836,7 @@
             padding: 40px;
             text-align: center;
             animation: fadeIn 0.4s ease-out;
+            overflow: hidden;
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .guest-gate-card {
@@ -849,6 +850,7 @@
             flex-direction: column;
             align-items: center;
             gap: 20px;
+            overflow: visible;
         }
         .guest-gate-btn {
             background: #121212;
@@ -978,7 +980,12 @@
                         </div>
                     </div>
                     
-                    <div class="balance-amount" id="atome-balance">PHP 0.00</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount" id="atome-balance">PHP 0.00</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
                     
                     <div class="card-footer">
                         <div class="card-number-box">
@@ -1011,8 +1018,13 @@
                         </div>
                     </div>
                     
-                    <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
-                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -12px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
+                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
                     
                     <div class="card-footer">
                         <div class="card-number-box">
@@ -1210,8 +1222,8 @@
                         <span id="sub-count-badge" style="background:#f1f5f9; color:#64748b; font-size:9px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
                     </div>
                     <div style="text-align: right;">
-                        <div id="sub-limit-label" onclick="promptSetSubLimit()" style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; cursor: pointer;">Limit: ₱0</div>
-                        <div id="sub-total-label" style="font-size: 11px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
+                        <div id="sub-limit-label" class="privacy-mask" onclick="promptSetSubLimit()" style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; cursor: pointer;">Limit: ₱0</div>
+                        <div id="sub-total-label" class="privacy-mask" style="font-size: 11px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
                     </div>
                 </div>
                 <div class="sub-limit-bar">
@@ -1751,7 +1763,12 @@
                         </div>
                     </div>
                     
-                    <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
                     
                     <div class="card-footer">
                         <div class="card-number-box">
@@ -2062,7 +2079,12 @@
                         document.getElementById('trend-period-total').innerText = 'PHP 0.00';
                         document.getElementById('chart-total-val').innerText = '0';
                         const balanceEl = document.querySelector(`.balance-card[data-account="${syncAccount}"] .balance-amount`) || document.getElementById(`${syncAccount}-balance`);
-                        if (balanceEl) balanceEl.innerText = 'PHP 0.00';
+                        if (balanceEl) {
+                            balanceEl.innerText = 'PHP 0.00';
+                            balanceEl.dataset.raw = 'PHP 0.00';
+                            balanceEl.classList.add('privacy-mask');
+                            if(localStorage.getItem('balance_hidden') === 'true') balanceEl.innerText = '******';
+                        }
                         
                         if (window.drawPieChart) window.drawPieChart([], 0);
                         if (window.drawTrendChart) window.drawTrendChart([]);
@@ -2170,9 +2192,72 @@
             const remaining = bpi + atome;
             const atomeLabel = (atome < 0 ? '-' : '+') + '₱' + Math.abs(atome).toLocaleString(undefined, {minimumFractionDigits:2});
             
-            insightEl.innerHTML = `₱${remaining.toLocaleString(undefined, {minimumFractionDigits:2})} <span style="opacity: 0.6; font-weight: 600;">(${atomeLabel})</span>`;
+            const rawHTML = `₱${remaining.toLocaleString(undefined, {minimumFractionDigits:2})} <span style="opacity: 0.6; font-weight: 600;">(${atomeLabel})</span>`;
+            
+            insightEl.dataset.raw = rawHTML;
+            insightEl.classList.add('privacy-mask');
+            
+            if (localStorage.getItem('balance_hidden') === 'true') {
+                insightEl.innerText = '******';
+            } else {
+                insightEl.innerHTML = rawHTML;
+            }
             insightEl.style.opacity = '1';
         }
+
+        window.toggleBalanceVisibility = (e) => {
+             if(e) e.stopPropagation();
+             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+             const newState = !isHidden;
+             localStorage.setItem('balance_hidden', newState);
+             
+             console.log('🔒 Privacy Toggle:', newState ? 'HIDING' : 'SHOWING');
+             
+             // Update all visibility buttons (eye icons)
+             const buttons = document.querySelectorAll('.visibility-btn i');
+             buttons.forEach(btn => {
+                 btn.innerText = newState ? 'visibility_off' : 'visibility';
+             });
+             
+             // Update ALL masked elements
+             const maskedElements = document.querySelectorAll('.privacy-mask');
+             console.log('📊 Found', maskedElements.length, 'privacy-mask elements');
+             
+             maskedElements.forEach((el, index) => {
+                 const raw = el.dataset.raw || el.innerText;
+                 if(!el.dataset.raw) el.dataset.raw = raw; // Init if missing
+                 
+                 console.log(`  [${index}] ${el.className}:`, raw, '→', newState ? '******' : raw);
+                 
+                 // Apply mask or show raw
+                 if(newState) {
+                     el.innerText = '******';
+                 } else {
+                     el.innerText = raw;
+                 }
+             });
+             
+             // Update BPI insight if exists (Special case handling inside function)
+             updateBPIInsight();
+        };
+
+        // SAFETY: Initialize visibility on load
+        window.addEventListener('DOMContentLoaded', () => {
+             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+             if(isHidden) {
+                 setTimeout(() => {
+                    const buttons = document.querySelectorAll('.visibility-btn i');
+                    buttons.forEach(btn => btn.innerText = 'visibility_off');
+                    
+                    // Force mask on all elements that might have rendered early
+                    const maskedElements = document.querySelectorAll('.privacy-mask');
+                    maskedElements.forEach(el => {
+                        if(!el.dataset.raw) el.dataset.raw = el.innerText;
+                        el.innerText = '******';
+                    });
+                 }, 50);
+             }
+        });
 
         function updateBalanceToThisMonth(txns, targetAccount) {
             const now = new Date();
@@ -2202,7 +2287,17 @@
             const balanceEl = document.querySelector(`.balance-card[data-account="${acc}"] .balance-amount`) || document.getElementById(`${acc}-balance`);
             if (balanceEl) {
                 const balance = incomeTotal - expenseTotal;
-                balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                const formatted = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                
+                // Store raw for toggle
+                balanceEl.dataset.raw = formatted;
+                
+                // Add privacy class
+                balanceEl.classList.add('privacy-mask');
+                
+                // Apply visibility state
+                const isHidden = localStorage.getItem('balance_hidden') === 'true';
+                balanceEl.innerText = isHidden ? '******' : formatted;
                 
                 // Store globally and update insight
                 if (acc === 'atome') window.atomeBalanceVal = balance;
@@ -2509,7 +2604,12 @@
 
             // Update Summary Total
             const summaryTotalEl = document.getElementById('expenses-total-summary');
-            if (summaryTotalEl) summaryTotalEl.innerText = `PHP ${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            if (summaryTotalEl) {
+                const formatted = `PHP ${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                summaryTotalEl.dataset.raw = formatted;
+                summaryTotalEl.classList.add('privacy-mask');
+                summaryTotalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
+            }
 
             // Update Growth with passed pastTotal
             const growthEl = document.getElementById('mom-growth');
@@ -2680,7 +2780,10 @@
 
             // Update Total
             // totalEl.style.color = '#000'; // REMOVED HARDCODE
-            totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            const periodFormatted = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            totalEl.dataset.raw = periodFormatted;
+            totalEl.classList.add('privacy-mask');
+            totalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : periodFormatted;
 
             const points = dataPoints;
             const max = Math.max(...points, 500) * 1.2;
@@ -2750,7 +2853,10 @@
             
             svgGroup.innerHTML = '';
             legend.innerHTML = '';
-            totalVal.innerText = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+            const totalFormatted = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+            totalVal.dataset.raw = totalFormatted;
+            totalVal.classList.add('privacy-mask');
+            totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
 
             const centerX = 120; 
             const centerY = 120;
@@ -3057,13 +3163,17 @@
                 
                 const header = document.createElement('div');
                 header.className = `month-header ${isCollapsed ? 'collapsed' : ''}`;
+                const isHidden = localStorage.getItem('balance_hidden') === 'true';
                 header.innerHTML = `
                     <span class="month-title">${month}</span>
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <span class="month-total">₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}</span>
+                        <span class="month-total privacy-mask" data-raw="₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
+                            ${isHidden ? '******' : '₱' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
+                        </span>
                         <i class="material-icons expand-icon">expand_more</i>
                     </div>
                 `;
+
                 
                 const content = document.createElement('div');
                 content.className = `month-content ${isCollapsed ? 'collapsed' : ''}`;
@@ -3152,8 +3262,8 @@
                                 ${displayNote ? `<div class="txn-note" style="color: ${isRefund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                             </div>
                             <div class="txn-right">
-                                <div class="txn-amount ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}">
-                                    ${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                    ${localStorage.getItem('balance_hidden') === 'true' ? '******' : ((!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                                 </div>
                             </div>
                         </div>`;

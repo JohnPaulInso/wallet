@@ -9,18 +9,30 @@
     
     <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Lexend:wght@700;800;900&display=swap">
+    <link href="https://fonts.cdnfonts.com/css/lemon-milk" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     <link rel="manifest" href="manifest.json?v=1">
-    <meta name="theme-color" content="#1d4ed8">
+    <meta name="theme-color" content="#121212">
 
     <style>
         * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
         html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; }
         
         /* Mobile Wrapper with PC Scroll Simulation */
-        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; }
+        .mobile-wrapper { 
+            width: 100%; 
+            max-width: 430px; 
+            background: #fff; 
+            height: 100vh; /* Fixed height for sticky to work on mobile */
+            position: relative; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.1); 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: hidden; 
+            overflow-y: auto; 
+        }
         @media (min-width: 431px) {
             .mobile-wrapper { height: 100vh; overflow-y: scroll; }
         }
@@ -30,8 +42,8 @@
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
         #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
-        .user-name { font-size: 24px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
-        #header.shrunk .user-name { font-size: 18px; }
+        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
+        #header.shrunk .user-name { font-size: 15px; }
         
         .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         #header.shrunk .header-logo { width: 40px; height: 25px; }
@@ -87,29 +99,33 @@
             width: 100%;
             overflow: visible; 
             margin-top: 5px; 
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            z-index:10;
         }
         
         .card-carousel-scroll {
             display: flex;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             -ms-overflow-style: none;
             /* Padding for 'peek' centering */
-            padding: 15px 35px 35px 35px; 
-            gap: 20px;
+            padding: 30px 48px 25px 48px; 
+            gap: 12px;
             cursor: grab;
         }
-        .card-carousel-scroll:active { cursor: grabbing; scroll-snap-type: none; }
+        .card-carousel-scroll:active { cursor: grabbing; }
         .card-carousel-scroll::-webkit-scrollbar { display: none; }
 
         .balance-card { 
-            flex: 0 0 calc(100% - 30px);
-            max-width: 360px;
+            flex: 0 0 calc(100%);
+            max-width: 334px;
             scroll-snap-align: center;
-            padding: 24px;
-            border-radius: 24px;
+            scroll-snap-stop: always; /* Force 1 card per swipe */
+            padding: 24px 20px 18px;
+            border-radius: 20px;
             color: #fff; 
             position: relative; 
             overflow: hidden; 
@@ -120,6 +136,7 @@
             transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             cursor: pointer;
             user-select: none;
+            z-index:100;
             /* Inactive State: Smaller & Faded */
             transform: scale(0.92);
             opacity: 0.7;
@@ -130,7 +147,7 @@
             transform: scale(1.0);
             opacity: 1;
             filter: grayscale(0);
-            z-index: 10;
+            z-index: 200;
         }
 
         /* Add Card Placeholder */
@@ -148,18 +165,31 @@
         
         /* CARD BACKGROUNDS */
         .atome-card {
-            background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            background: linear-gradient(135deg, #1a1a1a 0%, #080808 100%);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            position: relative;
         }
+        /* Premium Dot Mesh Texture */
+        .atome-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, #c0ff00 0.5px, transparent 0.5px);
+            background-size: 10px 10px;
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 1;
+        }
+
         .atome-card.active {
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
             transform: scale(1.05); 
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid rgba(192, 255, 0, 0.15); /* Lime tint border */
         }
 
         .bpi-card {
-            background: #7A1616;
-            box-shadow: 0 2px 6px rgba(122, 22, 22, 0.15);
+            background: linear-gradient(135deg, #5c0a0a 0%, #1e0505 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             position: relative;
         }
         
@@ -168,16 +198,23 @@
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
             background: 
-                repeating-linear-gradient(105deg, transparent, transparent 20px, rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 40px),
-                radial-gradient(circle at 10% 10%, rgba(200, 0, 0, 0.4) 0%, transparent 60%);
-            mix-blend-mode: overlay;
+                conic-gradient(from 70deg at -10% 50%, 
+                    transparent 0deg, 
+                    rgba(255,255,255,0.03) 10deg, 
+                    transparent 20deg, 
+                    rgba(255,255,255,0.02) 40deg, 
+                    transparent 60deg, 
+                    rgba(255,255,255,0.03) 90deg, 
+                    transparent 110deg);
+            mix-blend-mode: screen;
+            filter: blur(8px);
             pointer-events: none;
         }
 
         .bpi-card.active {
-            box-shadow: 0 4px 12px rgba(139,0,0,0.25); 
+            box-shadow: 0 5px 15px rgba(92, 10, 10, 0.4); 
             transform: scale(1.05);
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.08); /* Minimalist border */
         }
 
         /* PIE CHART ANIMATION */
@@ -197,18 +234,26 @@
             pointer-events: none;
         }
         .atome-brand-logo {
-            top: -20px;
-            left: -20px;
+            top: 20px;
+            left: -12px;
             font-size: 200px;
-            font-weight: 900;
-            color: #ffff00;
+            font-weight: 950;
+            color: #c0ff00; /* Dark Lemon Lime */
+            opacity: 0.1;
+            line-height: 1;
+            font-family: 'LEMON MILK', sans-serif;
+            letter-spacing: -10px;
+            z-index: 1;
         }
         .bpi-brand-logo {
-            bottom: -20px;
-            right: -20px;
-            font-size: 140px;
+            bottom: -30px;
+            right: -30px;
+            font-size: 160px;
             font-weight: 900;
             color: #fff;
+            opacity: 0.04; /* Very subtle minimalist logo */
+            font-family: 'Lexend', sans-serif;
+            letter-spacing: -10px;
         }
         
         /* Matte Texture Overlay */
@@ -216,62 +261,72 @@
             content: ''; 
             position: absolute; 
             top: 0; left: 0; width: 100%; height: 100%; 
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-            opacity: 0.4;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.05) 100%);
+            opacity: 0.6;
             pointer-events: none;
-            mix-blend-mode: overlay;
-            z-index: 1;
+            z-index: 1000;
         }
 
-        .card-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 1.5px; position: relative; z-index: 2; }
-        .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: auto; text-shadow: 0 4px 8px rgba(0,0,0,0.3); padding-top: 4px; position: relative; z-index: 2; }
-        .card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 5px; position: relative; z-index: 2; }
-        .card-number-box { line-height: 1.4; }
-        .card-number-label { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
-        .card-number { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.95); letter-spacing: 3px; font-family: monospace; }
+        .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; position: relative; z-index: 2; }
+        .card-label { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 2px; }
+        .card-type-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.25); text-transform: lowercase; }
         
-        .mastercard-circles { display: flex; position: relative; width: 44px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+        .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -2px; margin-bottom: 10px; text-shadow: 0 4px 12px rgba(0,0,0,0.2); padding-top: 5px; position: relative; z-index: 2; }
+        
+        .card-footer { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 2; margin-top: auto; }
+        .card-number-box { line-height: 1.4; }
+        .card-number-label { font-size: 8px; font-weight: 800; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
+        .card-number { font-size: 14px; font-weight: 600; color: rgba(255,255,255,1); letter-spacing: 2.5px; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .mastercard-circles { display: flex; position: relative; width: 44px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); opacity: 0.9; }
         .circle { width: 28px; height: 28px; border-radius: 50%; position: absolute; }
-        .circle-1 { background: rgba(255,255,255,0.25); left: 0; backdrop-filter: blur(4px); }
-        .circle-2 { background: rgba(255,255,255,0.2); left: 16px; backdrop-filter: blur(4px); }
+        .circle-1 { background: #eb001b; left: 0; }
+        .circle-2 { background: #f79e1b; left: 16px; mix-blend-mode: lighten; }
 
-        /* INTEGRATED SYNC BAR - Glassmorphic Pill */
-        .card-sync-bar { 
-            background: rgba(255,255,255,0.06); 
-            backdrop-filter: blur(25px) saturate(180%);
-            -webkit-backdrop-filter: blur(25px) saturate(180%);
-            border-radius: 12px; 
-            padding: 10px 14px; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            font-size: 11px; 
-            font-weight: 600; 
-            color: rgba(255,255,255,0.7); 
-            border: 0.5px solid rgba(255,255,255,0.08); 
-            margin-top: 10px; 
-            transition: all 0.3s; 
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            box-shadow: inset 0 0 10px rgba(255,255,255,0.02);
+        /* NEW INTEGRATED SYNC STATUS CHIP */
+        .card-sync-status-chip {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 100px;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 0.5px solid rgba(255,255,255,0.1);
         }
-        .card-sync-bar.active { background: rgba(255,255,255,0.1); }
-        .card-sync-bar .dot { width: 6px; height: 6px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 6px rgba(76, 175, 80, 0.5); }
+        .card-sync-status-chip .dot { width: 5px; height: 5px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 8px rgba(76, 175, 80, 0.6); }
+        .card-sync-status-chip .status-text { font-size: 8px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; }
+
+        .sync-icon-btn {
+            background: rgba(255,255,255,0.1);
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            color: white;
+            transition: all 0.2s;
+        }
+        .sync-icon-btn i { font-size: 12px; }
+        .sync-icon-btn:hover { background: rgba(255,255,255,0.2); }
+        .sync-icon-btn:disabled { opacity: 0.5; }
 
         .integrated-sync-btn {
             background: rgba(255,255,255,0.03);
             border: none;
-            border-radius: 8px;
-            color: rgba(255,255,255,0.4);
-            padding: 4px 8px;
-            font-size: 10px;
-            font-weight: 700;
+            border-radius: 6px;
+            color: rgba(255,255,255,0.7);
+            padding: 3px 8px;
             display: flex;
             align-items: center;
             gap: 4px;
             cursor: pointer;
-            transition: all 0.2s;
+            font-size: 8px;
+            font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -279,7 +334,7 @@
         .integrated-sync-btn:disabled { opacity: 0.5; cursor: default; }
         .spin { animation: spinRotate 1.5s linear infinite; }
         @keyframes spinRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .card-sync-bar.syncing .dot { background: #1d4ed8; box-shadow: 0 0 8px rgba(29, 78, 216, 0.6); animation: pulse 1s infinite; }
+        .card-sync-bar.syncing .dot { background: #000000; box-shadow: 0 0 8px rgba(0, 0, 0, 0.6); animation: pulse 1s infinite; }
         @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } 100% { opacity: 1; transform: scale(1); } }
 
         .mui-container { width: 100%; max-width: 100% !important; margin: 0; padding: 0 24px 100px; }
@@ -331,7 +386,7 @@
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
         .month-header .month-title { font-weight: 700; font-size: 0.8rem; color: #1e293b; }
-        .month-header .month-total { font-weight: 800; color: #1d4ed8; font-size: 0.8rem; }
+        .month-header .month-total { font-weight: 800; color: #2563eb; font-size: 0.8rem; }
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
@@ -424,7 +479,7 @@
         .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
         .cat-option { border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
         .cat-option:hover { border-color: #1d4ed8; background: #eff6ff; }
-        .cat-option.active { border-color: #1d4ed8; background: #eff6ff; box-shadow: 0 0 0 2px #1d4ed8; }
+        .cat-option.active { border-color: #1d4ed8; background: #eff6ff; box-shadow: 0 0 0 2px #000; }
         .cat-option i { font-size: 24px; }
         .cat-option span { font-size: 12px; font-weight: 600; color: #475569; text-align: center; }
         .note-input { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; font-size: 14px; min-height: 60px; resize: none; outline: none; transition: border-color 0.2s; color: #1e293b; }
@@ -448,8 +503,8 @@
         .log-error { color: #f87171; font-weight: bold; }
         
         .loading-overlay { display: none; text-align: center; padding: 60px; color: #64748b; }
-        .btn-sync { background-color: #1d4ed8; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
-        .btn-sync:hover { background-color: #2563eb; }
+        .btn-sync { background-color: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
+        .btn-sync:hover { background-color: #191919; }
         .btn-sync:active { transform: scale(0.98); }
         .btn-sync:disabled { background-color: #94a3b8; cursor: not-allowed; }
 
@@ -503,13 +558,13 @@
         /* BOTTOM NAV */
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
-        .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
-        .nav-item.active { color: #1d4ed8; }
+        .nav-item:hover { text-decoration: none !important; color: #000; }
+        .nav-item.active { color: #000; }
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
         /* FAB */
-        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #1d4ed8; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(29, 78, 216, 0.3); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
+        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
         .fab:active { transform: scale(0.95); }
         .fab i { font-size: 32px; }
         
@@ -521,13 +576,13 @@
         /* TREND CHART */
         .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
         .trend-path { filter: drop-shadow(0 4px 6px rgba(29, 78, 216, 0.2)); }
-        .trend-dot { fill: #fff; stroke: #1d4ed8; stroke-width: 2.5; }
+        .trend-dot { fill: #fff; stroke: #000; stroke-width: 2.5; }
         .trend-label { font-size: 10px; fill: #94a3b8; font-weight: 600; }
         
         /* RECENT ACTIVITIES PREMIUM LIST */
         .recent-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding: 0 4px; }
         .recent-header h3 { margin: 0; font-weight: 700; font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 1.2px; }
-        .recent-header .see-all { color: #1d4ed8; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
+        .recent-header .see-all { color: #000; font-size: 13px; font-weight: 800; text-decoration: none; text-transform: uppercase; }
 
         .premium-txn { padding: 12px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #f1f5f9; background: #fff; }
         .premium-txn:last-child { border-bottom: none; }
@@ -565,6 +620,66 @@
         .premium-txn .txn-actions { opacity: 1; z-index: 100; }
         .premium-txn .dropdown-menu { right: 0; top: 28px; }
         
+        /* PRIVACY LOCK STYLING */
+        .privacy-lock-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #fff; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 10px; }
+        .pin-btn { width: 72px; height: 72px; border-radius: 50%; border: 1.5px solid #f1f5f9; background: #fff; font-size: 26px; font-weight: 700; color: #1e293b; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
+        .pin-btn:active { background: #f8fafc; transform: scale(0.9); }
+        .pin-dots { display: flex; gap: 15px; margin-bottom: 40px; }
+        .pin-dot { width: 14px; height: 14px; border-radius: 50%; background: #f1f5f9; transition: background 0.2s; border: 1px solid #e2e8f0; }
+        .pin-dot.active { background: #000; border-color: #000; }
+        
+        /* ANALYTICS STYLING */
+        .analytics-card {
+            background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9;
+        }
+        .savings-chip { background: #dcfce7; color: #166534; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(0,0,0,0.03); }
+        .bar-chart-wrap { display: flex; justify-content: space-between; align-items: flex-end; height: 100px; margin-top: 20px; }
+        .bar-group { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .bars-pair { display: flex; align-items: flex-end; gap: 4px; height: 80px; }
+        .bar { width: 10px; border-radius: 3px 3px 0 0; transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .bar-income { background: #10b981; }
+        .bar-expense { background: #ef4444; }
+        .bar-label { margin-top: 8px; font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; }
+
+        /* SUBSCRIPTION STYLING (REFINED) */
+        .subscription-item { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; border-bottom: 1px solid #f8fafc; }
+        .subscription-item:last-child { border-bottom: none; }
+        .sub-main-row { display: flex; align-items: center; gap: 10px; }
+        .sub-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #64748b; }
+        .sub-icon i { font-size: 18px; }
+        .sub-info { flex: 1; }
+        .sub-name { font-size: 12px; font-weight: 800; color: #1e293b; }
+        .sub-meta { font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
+        
+        .sub-stats { text-align: right; }
+        .sub-current-vs-avg { font-size: 11px; font-weight: 800; }
+        .sub-avg-label { font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+        
+        .sub-item-progress-bg { height: 4px; background: #f1f5f9; border-radius: 2px; margin-top: 4px; overflow: hidden; width: 100%; }
+        .sub-item-progress-fill { height: 100%; transition: width 0.6s ease; }
+        
+        .sub-limit-bar { height: 6px; background: #f1f5f9; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .sub-limit-fill { height: 100%; background: #3b82f6; transition: width 0.6s ease; }
+
+        /* BUDGET STYLING */
+        .budget-card {
+            background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9;
+        }
+        .budget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .budget-progress-bg { background: #f1f5f9; height: 10px; border-radius: 5px; overflow: hidden; position: relative; }
+        .budget-progress-fill { height: 100%; width: 0%; border-radius: 5px; transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s; }
+        .budget-status { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+
         /* EXCLUDED STATE FOR PREMIUM TRANSACTIONS */
         .premium-txn.txn-excluded { opacity: 0.4; }
         .premium-txn.txn-excluded .txn-merch,
@@ -572,6 +687,60 @@
         .premium-txn.txn-excluded .txn-amount,
         .premium-txn.txn-excluded .txn-note { text-decoration: line-through; }
         .premium-txn.txn-excluded .icon-box { filter: grayscale(1); opacity: 0.5; }
+
+        /* SEARCH STYLING */
+        .search-container {
+            margin: -4px 0px 20px;
+            position: relative;
+        }
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 0 14px;
+            height: 48px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .search-wrapper:focus-within {
+            background: #fff;
+            border-color: #000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            transform: translateY(-1px);
+        }
+        .search-wrapper i {
+            color: #94a3b8;
+            font-size: 18px;
+            margin-right: 12px;
+        }
+        #txn-search {
+            background: none;
+            border: none;
+            outline: none;
+            width: 100%;
+            height: 100%;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        #txn-search::placeholder {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .search-clear {
+            padding: 4px;
+            cursor: pointer;
+            color: #94a3b8;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .search-clear.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
         
         /* iOS-STYLE LONG-PRESS BLUR EFFECT */
         .blur-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; }
@@ -619,14 +788,138 @@
         .ios-action-item.danger i { color: #ef4444; }
         .ios-action-item.warning { color: #f59e0b; }
         .ios-action-item.warning i { color: #f59e0b; }
+
+        /* GUEST GATE OVERLAY */
+        /* GUEST GATE STYLING (MODERN) */
+        
+        /* APP DIALOG MODAL (REPLACES ALERT/PROMPT/CONFIRM) */
+        .dialog-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center; z-index: 99999;
+            opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px;
+        }
+        .dialog-overlay.show { opacity: 1; pointer-events: auto; }
+        .dialog-card {
+            background: #fff; border-radius: 24px; width: 100%; max-width: 320px;
+            padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            transform: scale(0.9); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .dialog-overlay.show .dialog-card { transform: scale(1); }
+        .dialog-title { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 8px; letter-spacing: -0.5px; }
+        .dialog-msg { font-size: 14px; color: #64748b; font-weight: 500; line-height: 1.5; margin-bottom: 20px; }
+        .dialog-input { 
+            width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #f1f5f9; 
+            font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 20px; outline: none; transition: border-color 0.2s;
+        }
+        .dialog-input:focus { border-color: #3b82f6; }
+        .dialog-actions { display: flex; gap: 12px; }
+        .dialog-btn {
+            flex: 1; padding: 12px; border-radius: 14px; border: none; font-size: 14px; font-weight: 800;
+            cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .dialog-btn--cancel { background: #f1f5f9; color: #64748b; }
+        .dialog-btn--primary { background: #000; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .dialog-btn:active { transform: scale(0.96); opacity: 0.8; }
+
+        .guest-gate-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(18, 18, 18, 0.6);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            z-index: 5000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .guest-gate-card {
+            background: #fff;
+            padding: 32px 24px;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 340px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .guest-gate-btn {
+            background: #121212;
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+            justify-content: center;
+        }
+        .guest-gate-btn:active { transform: scale(0.96); }
     </style>
 </head>
 <body>
+    <!-- PRIVACY LOCK OVERLAY (NEW) -->
+    <div id="privacy-lock" class="privacy-lock-overlay" style="display: none;">
+        <div style="font-size: 22px; font-weight: 900; color: #1e293b; margin-bottom: 8px; letter-spacing: -0.5px;">Security Lock</div>
+        <div style="font-size: 13px; color: #94a3b8; font-weight: 700; margin-bottom: 40px; text-transform: uppercase; letter-spacing: 0.5px;">Enter PIN to unlock Wallet</div>
+        <div class="pin-dots" id="pin-dots">
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+            <div class="pin-dot"></div>
+        </div>
+        <div class="pin-grid">
+            <button class="pin-btn" onclick="handlePinInput('1')">1</button>
+            <button class="pin-btn" onclick="handlePinInput('2')">2</button>
+            <button class="pin-btn" onclick="handlePinInput('3')">3</button>
+            <button class="pin-btn" onclick="handlePinInput('4')">4</button>
+            <button class="pin-btn" onclick="handlePinInput('5')">5</button>
+            <button class="pin-btn" onclick="handlePinInput('6')">6</button>
+            <button class="pin-btn" onclick="handlePinInput('7')">7</button>
+            <button class="pin-btn" onclick="handlePinInput('8')">8</button>
+            <button class="pin-btn" onclick="handlePinInput('9')">9</button>
+            <div></div>
+            <button class="pin-btn" onclick="handlePinInput('0')">0</button>
+            <button class="pin-btn" onclick="handlePinInput('back')"><i class="material-icons">backspace</i></button>
+        </div>
+        <button class="mui-btn mui-btn--flat" onclick="tryBiometricUnlock()" id="bio-btn" style="margin-top: 60px; color: #3b82f6; font-size: 11px; font-weight: 800; display: none; text-transform: uppercase;">
+            <i class="material-icons" style="margin-right: 8px; font-size: 20px;">fingerprint</i>
+            Use Biometrics
+        </button>
+    </div>
 
     <!-- CHART TOOLTIP -->
     <div id="chart-tooltip"></div>
 
     <div class="mobile-wrapper">
+        <!-- GUEST LOGIN GATE -->
+        <div id="guestGate" class="guest-gate-overlay">
+            <div class="guest-gate-card">
+                <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                    <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
+                </div>
+                <div>
+                    <h2 style="font-size: 22px; font-weight: 900; color: #121212; margin: 0 0 10px 0;">Sign in Required</h2>
+                    <p style="font-size: 14px; color: #64748b; margin: 0; line-height: 1.6;">To start tracking your expenses and sync across devices, please sign in with Google first.</p>
+                </div>
+                <button class="guest-gate-btn" onclick="handleAuthClick()">
+                    <svg viewBox="0 0 48 48" width="20px" xmlns="http://www.w3.org/2000/svg"><path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" fill="#FFF"/></svg>
+                    Continue with Google
+                </button>
+            </div>
+        </div>
+
         <div id="header">
             <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
                 <!-- Dynamic Card Icon -->
@@ -652,12 +945,16 @@
             <div class="profile-container">
             <div id="profile-badge" onclick="toggleProfileDropdown(event)">
                 <i class="material-icons">person</i>
-                <img id="user-pic" src="" alt="Profile">
+                <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
             </div>
             <div id="profile-dropdown" class="profile-dropdown">
                 <div class="dropdown-item" onclick="handleAuthClick()">
                     <i class="material-icons">sync</i>
                     <span>Google Sync</span>
+                </div>
+                <div class="dropdown-item" onclick="promptSetPin()">
+                    <i class="material-icons">lock</i>
+                    <span>Privacy PIN</span>
                 </div>
                 <div class="dropdown-item logout" onclick="handleSignout()">
                     <i class="material-icons">logout</i>
@@ -670,10 +967,17 @@
         <!-- SWIPEABLE CARD VIEWPORT -->
         <div class="card-viewport" id="cardViewport">
             <div class="card-carousel-scroll" id="cardCarouselScroll">
-                <!-- ATOME CARD -->
                 <div class="balance-card atome-card" data-account="atome" id="atomeCard">
                     <div class="card-brand-logo atome-brand-logo">A</div>
-                    <div class="card-label">ATOME SPENDING BALANCE</div>
+                    
+                    <div class="card-header-row">
+                        <div class="card-label">Atome Spending</div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
+                        </div>
+                    </div>
+                    
                     <div class="balance-amount" id="atome-balance">PHP 0.00</div>
                     
                     <div class="card-footer">
@@ -681,32 +985,48 @@
                             <div class="card-number-label">Account Number</div>
                             <div class="card-number">**** **** 7312</div>
                         </div>
-                        <div class="mastercard-circles">
-                            <div class="circle circle-1"></div>
-                            <div class="circle circle-2"></div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1"></div>
+                                <div class="circle circle-2"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- BPI CARD -->
                 <div class="balance-card bpi-card" data-account="bpi" id="bpiCard">
                     <div class="bpi-rays"></div>
                     
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 2;">
-                        <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7); letter-spacing: 1px; text-transform: uppercase;">BPI CARD BALANCE</div>
-                        <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.5px;">debit</div>
+                    <div class="card-header-row">
+                        <div style="display: flex; align-items: baseline; gap: 6px;">
+                            <div class="card-label">BPI Card</div>
+                            <div class="card-type-label">debit</div>
+                        </div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
+                        </div>
                     </div>
                     
-                    <div class="balance-amount" id="bpi-balance" style="z-index:2; margin-top:20px;">PHP 0.00</div>
+                    <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
+                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -12px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
                     
-                    <div class="card-footer" style="z-index:2;">
+                    <div class="card-footer">
                         <div class="card-number-box">
-                            <div class="card-number-label" style="opacity:0.6;">Account Number</div>
-                            <div class="card-number" style="font-family:'Courier New', monospace; letter-spacing:2px; font-weight:600;">**** **** 6727</div>
+                            <div class="card-number-label">Account Number</div>
+                            <div class="card-number">0099 09 6727</div>
                         </div>
-                        <div class="mastercard-circles">
-                            <div class="circle circle-1" style="background:#ea001b; opacity:0.9;"></div> 
-                            <div class="circle circle-2" style="background:#f79e1b; opacity:0.9;"></div> 
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1" style="background:#ea001b;"></div> 
+                                <div class="circle circle-2" style="background:#f79e1b;"></div> 
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -721,28 +1041,36 @@
             </div>
         </div>
 
-        <!-- SHARED SYNC BAR (FLOATS BELOW) -->
-        <div style="padding: 0 24px; margin-top: -15px; margin-bottom: 20px;">
-            <div class="card-sync-bar" id="cardSyncBar" style="justify-content: space-between; background: rgba(0,0,0,0.03);">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="dot" id="syncDot"></div>
-                    <span id="syncStatusText" style="color: #475569;">Ready</span>
-                </div>
-                <button id="scan-btn" class="integrated-sync-btn" onclick="handleScan(400)" style="color: #1e293b; background: rgba(0,0,0,0.05);">
-                    <i class="material-icons" style="font-size: 14px;">sync</i>
-                    <span>Sync</span>
-                </button>
-            </div>
-        </div>
+        <!-- SHARED SYNC BAR REMOVED AND MOVED INTO CARDS -->
+
 
         <div class="mui-container">
             <!-- Buttons integrated into card sync bar -->
             
+            <!-- BUDGET CARD (NEW) -->
+            <div class="budget-card" id="budget-card-section">
+                <div class="budget-header">
+                    <h3 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Monthly Budget</h3>
+                    <button class="mui-btn mui-btn--flat" onclick="promptSetBudget()" style="padding:0 8px; color:#3b82f6; font-size:11px; font-weight:800; text-transform:uppercase; border: 1px solid #dbeafe; border-radius: 6px; height: 26px;">Set Limit</button>
+                </div>
+                <div class="budget-progress-bg">
+                    <div id="budget-fill" class="budget-progress-fill" style="background:#10b981;"></div>
+                </div>
+                <div class="budget-status">
+                    <span id="budget-spent">₱0.00 spent</span>
+                    <span id="budget-limit">₱0.00 limit</span>
+                </div>
+            </div>
+
+            <!-- RELOCATED ANALYTICS SECTION -->
+
+            <!-- SUBSCRIPTION CARD (MOVED BELOW HISTORY) -->
+
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
             <div id="chart-section" class="chart-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Expenses structure</h3>
-                    <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat" style="font-size: 12px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 8px 0 12px; border-radius: 8px; height: 30px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 110px;">
+                    <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 4px 0 10px; border-radius: 8px; height: 28px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 100px;">
                         <option value="today">Today</option>
                         <option value="this_month">This Month</option>
                         <option value="this_week">This Week</option>
@@ -785,7 +1113,7 @@
             <div class="trend-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">Spending Trends</h3>
-                    <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f1f5f9; padding: 0 8px; border-radius: 6px; height: 26px; text-transform: none; border: none; outline: none; cursor: pointer;">
+                    <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f1f5f9; padding: 0 4px 0 10px; border-radius: 6px; height: 26px; text-transform: none; border: none; outline: none; cursor: pointer; text-align: left; min-width: 90px;">
                         <option value="this_month" selected>This Month</option>
                         <option value="this_week">This Week</option>
                         <option value="last_3_months">Past 3 Months</option>
@@ -822,11 +1150,19 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: #e0f2fe; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                         <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: #0284c7;">visibility</i>
-                       
+                        
                     </div>
                     <select id="txn-cat-filter" onchange="filterTxnList()" style="font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; cursor: pointer;">
                         <option value="all">All Items</option>
                     </select>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <i class="material-icons">search</i>
+                    <input type="text" id="txn-search" placeholder="Search merchant, note, or price..." oninput="handleSearchInput()">
+                    <i class="material-icons search-clear" id="search-clear-btn" onclick="clearSearch()">cancel</i>
                 </div>
             </div>
 
@@ -835,11 +1171,56 @@
             </div>
 
             <div id="history-container"></div>
+
+            <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
+            <div style="margin: 30px 0 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
+
+            <!-- ANALYTICS CARD (MOVED FROM TOP) -->
+            <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="margin:0; font-size: 0.95rem; font-weight: 800; color: #1e293b; letter-spacing: -0.3px;">Cash Flow</h3>
+                    <div class="savings-chip">Savings Rate: <span id="savings-rate-val">0%</span></div>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 15px;">Income vs Expenses (Last 6 Months)</div>
+                <div class="bar-chart-wrap" id="cashflow-bars">
+                    <!-- Bars generated via JS -->
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 15px; border-top: 1px dashed #f1f5f9; padding-top: 10px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 8px; height: 8px; border-radius: 2px; background: #10b981;"></div>
+                        <span style="font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase;">Income</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 8px; height: 8px; border-radius: 2px; background: #ef4444;"></div>
+                        <span style="font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase;">Expense</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RELOCATED SUBSCRIPTION SECTION -->
+            <div class="analytics-card" id="subscription-section" style="display: none; margin: 10px 16px 20px; padding: 15px; border-radius: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h3 style="margin:0; font-size: 0.95rem; font-weight: 800; color: #1e293b; letter-spacing: -0.3px;">Recurring Items</h3>
+                        <span id="sub-count-badge" style="background:#f1f5f9; color:#64748b; font-size:9px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <div id="sub-limit-label" onclick="promptSetSubLimit()" style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; cursor: pointer;">Limit: ₱0</div>
+                        <div id="sub-total-label" style="font-size: 11px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
+                    </div>
+                </div>
+                <div class="sub-limit-bar">
+                    <div id="sub-limit-fill" class="sub-limit-fill" style="width: 0%;"></div>
+                </div>
+                <div id="subscription-list" style="margin-top: 5px;">
+                    <!-- JS injected -->
+                </div>
+            </div>
             
             <!-- DATA MANAGEMENT SECTION (PREMIUM DESIGN) -->
             <div class="data-mgmt-card" style="margin: 30px 16px 20px; padding: 12px 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02);">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; color: #1d4ed8; display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; color: #000; display: flex; align-items: center; justify-content: center;">
                         <i class="material-icons" style="font-size: 16px;">storage</i>
                     </div>
                     <div style="text-align: left;">
@@ -849,7 +1230,7 @@
                 </div>
 
                 <div style="display: flex; gap: 8px;">
-                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #1d4ed8; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);" onclick="exportData()">
+                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #000; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);" onclick="exportData()">
                         <i class="material-icons" style="font-size: 14px;">download</i> Export
                     </button>
                     <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #fff; color: #1e293b; border: 1px solid #e2e8f0; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="document.getElementById('import-file').click()">
@@ -934,7 +1315,48 @@
         const db = getFirestore(app);
 
         window.closeModals = () => {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+        };
+
+        // UNIFIED PROMISE-BASED DIALOG SYSTEM
+        window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, callback = null }) => {
+            return new Promise((resolve) => {
+                const overlay = document.getElementById('app-dialog');
+                const titleEl = document.getElementById('dialog-title');
+                const msgEl = document.getElementById('dialog-msg');
+                const inputCont = document.getElementById('dialog-input-container');
+                const inputEl = document.getElementById('dialog-input');
+                const cancelBtn = document.getElementById('dialog-cancel-btn');
+                const okBtn = document.getElementById('dialog-ok-btn');
+
+                titleEl.innerText = title;
+                msgEl.innerText = message;
+                
+                if (input) {
+                    inputCont.style.display = 'block';
+                    inputEl.value = value;
+                    setTimeout(() => inputEl.focus(), 300);
+                } else {
+                    inputCont.style.display = 'none';
+                }
+
+                cancelBtn.style.display = (confirm || input) ? 'block' : 'none';
+                okBtn.innerText = (confirm || input) ? 'CONFIRM' : 'OK';
+
+                const close = (res) => {
+                    overlay.classList.remove('show');
+                    // Remove listeners to avoid leaks
+                    okBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    if (callback) callback(res);
+                    resolve(res);
+                };
+
+                okBtn.onclick = () => close(input ? inputEl.value : true);
+                cancelBtn.onclick = () => close(false);
+
+                overlay.classList.add('show');
+            });
         };
 
 
@@ -1056,8 +1478,8 @@
                             <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
                          `;
                          banner.className = 'sticky-banner';
-                         const balanceCard = document.querySelector('.balance-card');
-                         if (balanceCard) balanceCard.after(banner);
+                         const viewport = document.getElementById('cardViewport');
+                         if (viewport) viewport.after(banner);
                          else document.body.prepend(banner);
                      }
                      banner.style.display = 'flex';
@@ -1073,11 +1495,22 @@
                      const parts = user.displayName?.split(' ') || [];
                      const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
                      document.getElementById('user-display-name').innerText = firstName;
+                     localStorage.setItem('user_name', firstName);
+                     
                      if (user.photoURL) {
                          const picEl = document.getElementById('user-pic');
-                         picEl.src = user.photoURL;
+                         // Force size for Google photos if needed
+                         let photoUrl = user.photoURL;
+                         if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                             photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                         }
+                         picEl.src = photoUrl;
                          document.getElementById('profile-badge').classList.add('has-pic');
+                         localStorage.setItem('user_pic', photoUrl);
                      }
+                } else {
+                    document.getElementById('user-display-name').innerText = 'Guest';
+                    document.getElementById('profile-badge').classList.remove('has-pic');
                 }
 
                 // Load Data for this UID
@@ -1105,44 +1538,120 @@
                         setTimeout(() => handleScan(25), 1000);
                     }
                 }
+                
+                applyUserView(user);
             });
         });
+
+        function applyUserView(user) {
+            const isAnon = !user || user.isAnonymous;
+            const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
+            
+            // SHOW/HIDE GATE
+            const gate = document.getElementById('guestGate');
+            if (gate) gate.style.display = isAnon ? 'flex' : 'none';
+
+            const bpiCard = document.getElementById('bpiCard');
+            const atomeCard = document.getElementById('atomeCard');
+            const scrollContainer = document.getElementById('cardCarouselScroll');
+            const placeholder = document.querySelector('.add-card-placeholder');
+
+            if (!isAdmin) {
+                // GUEST/USER VIEW: Minimalist Black Card
+                if (bpiCard) bpiCard.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'flex';
+                
+                // Keep carousel functional but simplify padding for 1-card feel
+                if (scrollContainer) {
+                    scrollContainer.style.overflowX = 'auto';
+                    scrollContainer.style.scrollSnapType = 'x mandatory';
+                    scrollContainer.style.padding = '30px 35px 25px 35px';
+                    scrollContainer.style.justifyContent = 'flex-start';
+                }
+
+                if (atomeCard) {
+                    const logo = atomeCard.querySelector('.atome-brand-logo');
+                    if (logo) logo.style.display = 'none';
+                    const label = atomeCard.querySelector('.card-label');
+                    if (label) label.innerText = 'Personal Wallet';
+                    
+                    atomeCard.classList.add('active'); // Force active state
+                    atomeCard.style.maxWidth = '360px';
+                    atomeCard.style.flex = '0 0 calc(100% - 30px)';
+                    
+                    // Snap to center instantly
+                    setTimeout(() => {
+                        atomeCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    }, 50);
+                }
+                
+                // FORCE THEME TO BLACK
+                applyTheme('atome');
+                updateHeaderIcon('atome');
+            } else {
+                // ADMIN VIEW: Restore Atome/BPI Carousel
+                if (bpiCard) bpiCard.style.display = 'flex';
+                if (placeholder) placeholder.style.display = 'flex';
+                if (scrollContainer) {
+                    scrollContainer.style.overflowX = 'auto';
+                    scrollContainer.style.scrollSnapType = 'x mandatory';
+                    scrollContainer.style.padding = '30px 35px 25px 35px';
+                    scrollContainer.style.justifyContent = 'flex-start';
+                }
+                if (atomeCard) {
+                    const logo = atomeCard.querySelector('.atome-brand-logo');
+                    if (logo) logo.style.display = 'block';
+                    const label = atomeCard.querySelector('.card-label');
+                    if (label) label.innerText = 'Atome Spending';
+                    atomeCard.style.maxWidth = '360px';
+                }
+            }
+        }
 
         // ACCOUNT MANAGEMENT & SWIPE LOGIC
         window.currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
         
         // APPLY THEME ON LOAD
         window.addEventListener('DOMContentLoaded', () => {
+            initPrivacyLock(); // Feature 5: Security first
             setTimeout(() => {
+                const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+                if (!isAdmin) window.currentAccount = 'atome';
                 applyTheme(window.currentAccount);
-            }, 100);
+                updateHeaderIcon(window.currentAccount);
+            }, 200);
         });
 
         // DYNAMIC THEME APPLICATOR
         window.applyTheme = (account) => {
             const themes = {
                 'atome': {
-                    primary: '#121212', // Black for FAB
-                    nav: '#121212',     // Black for Nav
-                    trend: '#121212',   // Black for Chart
-                    light: '#334155'    // Slate 700 for lighter elements
+                    primary: '#121212', 
+                    nav: '#121212',     
+                    trend: '#121212',   
+                    light: '#334155'    
                 },
                 'bpi': {
-                    primary: '#7A1616', // Red for FAB (Deep Red)
-                    nav: '#7A1616',     // Red for Nav
-                    trend: '#7A1616',   // Deep Red for Chart
+                    primary: '#7A1616', 
+                    nav: '#7A1616',     
+                    trend: '#7A1616',   
                     light: '#931B1B'    
                 },
                 'default': {
-                    primary: '#1d4ed8', // Blue
-                    nav: '#1d4ed8',
-                    trend: '#3b82f6',
-                    light: '#60a5fa'
+                    primary: '#121212', 
+                    nav: '#121212',
+                    trend: '#121212',
+                    light: '#334155'
                 }
             };
             
-            const theme = themes[account] || themes['default'];
-            window.currentThemeTrend = theme.trend; // Store for redraws
+            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            
+            let targetAccount = account;
+            if (account === 'bpi' && !isAdmin) targetAccount = 'atome'; 
+
+            const theme = themes[targetAccount] || themes['default'];
+            window.currentThemeTrend = theme.trend; 
             
             // 1. Update FAB
             const fab = document.querySelector('.fab');
@@ -1209,16 +1718,29 @@
                 cardDiv.dataset.account = acc.id;
                 cardDiv.style.background = acc.color;
                 cardDiv.innerHTML = `
-                    <div class="card-label">${acc.name.toUpperCase()} BALANCE</div>
+                    <div class="card-header-row">
+                        <div class="card-label">${acc.name}</div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
+                        </div>
+                    </div>
+                    
                     <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                    
                     <div class="card-footer">
                         <div class="card-number-box">
                             <div class="card-number-label">Account Number</div>
                             <div class="card-number">•••• •••• •••• ${acc.last4}</div>
                         </div>
-                        <div class="mastercard-circles">
-                            <div class="circle circle-1"></div>
-                            <div class="circle circle-2"></div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1"></div>
+                                <div class="circle circle-2"></div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -1233,30 +1755,61 @@
             const cards = document.querySelectorAll('.balance-card');
             if (!viewport || cards.length === 0) return;
 
-            // DRAG SCROLL LOGIC
+            // DRAG & SWIPE LOGIC (Both Touch + PC Mouse)
             let isDown = false;
             let startX;
             let scrollLeft;
+            let hasDragged = false;
 
+            // MOUSE EVENTS (PC Swipe)
             viewport.addEventListener('mousedown', (e) => {
                 isDown = true;
-                viewport.classList.add('active'); // Optional class for styling
+                viewport.style.cursor = 'grabbing';
+                viewport.style.scrollSnapType = 'none'; // Disable snapping while dragging
                 startX = e.pageX - viewport.offsetLeft;
                 scrollLeft = viewport.scrollLeft;
+                hasDragged = false;
             });
-            viewport.addEventListener('mouseleave', () => { isDown = false; });
-            viewport.addEventListener('mouseup', () => { isDown = false; });
+
+            viewport.addEventListener('mouseleave', () => {
+                if (!isDown) return;
+                isDown = false;
+                viewport.style.cursor = 'grab';
+                viewport.style.scrollSnapType = 'x mandatory';
+            });
+
+            viewport.addEventListener('mouseup', () => {
+                if (!isDown) return;
+                isDown = false;
+                viewport.style.cursor = 'grab';
+                viewport.style.scrollSnapType = 'x mandatory';
+            });
+
             viewport.addEventListener('mousemove', (e) => {
                 if (!isDown) return;
                 e.preventDefault();
                 const x = e.pageX - viewport.offsetLeft;
-                const walk = (x - startX) * 2; // Scroll speed multiplier
+                const walk = (x - startX) * 1.5; // Drag speed
+                if (Math.abs(walk) > 5) hasDragged = true;
                 viewport.scrollLeft = scrollLeft - walk;
             });
+
+            // TOUCH EVENTS
+            viewport.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].pageX - viewport.offsetLeft;
+                scrollLeft = viewport.scrollLeft;
+                isDown = true;
+                hasDragged = false;
+            }, { passive: true });
+
+            viewport.addEventListener('touchend', () => {
+                isDown = false;
+            }, { passive: true });
 
             // SWIPE OBSERVER
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
+                    // Only trigger if truly intersecting
                     if (entry.isIntersecting) {
                         const account = entry.target.dataset.account;
                         
@@ -1271,6 +1824,9 @@
                             // Apply Dynamic Theme
                             applyTheme(account);
 
+                            // Reset Pagination
+                            window.historyLimit = 6;
+                            
                             // CLEAR CHART DATA TO FIX PERSISTENCE BUGS
                             window.allTxns = []; 
                             const pieSvg = document.getElementById('pie-chart-svg');
@@ -1290,17 +1846,18 @@
                             
                             log(`Active: ${account.toUpperCase()}`);
                             
+                            // Reset UI for new account
+                            window.allTxns = [];
+                            renderHistory([]);
+                            
                             updateHeaderIcon(account); // Update sticky header icon
 
-                            const syncText = document.getElementById('syncStatusText');
-                            if (syncText) syncText.innerText = `Active Account: ${account.toUpperCase()}`;
-                            
                             loadData(); 
                         }
                     }
                 });
             }, { 
-                threshold: 0.8,
+                threshold: 0.7, // Lower threshold for better sensitivity without skipping
                 root: viewport
             });
 
@@ -1318,13 +1875,13 @@
         }
         
         function updateHeaderIcon(account) {
-            // Change card color based on account
             const cardBg = document.getElementById('card-bg');
             if (cardBg) {
-                if (account === 'bpi') {
+                const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+                if (account === 'bpi' && isAdmin) {
                     cardBg.setAttribute('fill', '#8b0000'); // BPI red
                 } else {
-                    cardBg.setAttribute('fill', '#1a1a1a'); // Atome black
+                    cardBg.setAttribute('fill', '#1a1a1a'); // Atome black (Default)
                 }
             }
         }
@@ -1333,21 +1890,25 @@
         window.unsubscribeSnapshot = null; // Store listener to detach later
 
         async function loadData() {
+            window.historyLimit = 6; 
             const container = document.getElementById('history-container');
             const spinner = document.getElementById('loading-spinner');
             
             // If already listening, don't re-attach unless we are forcing a reset (handling logic elsewhere)
-            // Ideally we clear it before calling loadData again if switching users.
             if (window.unsubscribeSnapshot) {
                 window.unsubscribeSnapshot();
                 window.unsubscribeSnapshot = null;
             }
 
+            // SNAPSHOT LOCK: Prevent stale snapshot data from overwriting new account data
+            const currentSyncId = Date.now() + Math.random();
+            window.activeSyncId = currentSyncId;
+
             const uid = auth.currentUser?.uid;
             if (!uid) return;
 
             // INSTANT CACHE LOAD for seamless switching
-            const cacheKey = `wallet_cache_${uid}`;
+            const cacheKey = `wallet_cache_${uid}_${window.currentAccount}`;
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 try {
@@ -1376,7 +1937,12 @@
                 
                 // DATA ISOLATION: Query ONLY the current account's path.
                 // Replaced getDocs with onSnapshot
+                const syncAccount = window.currentAccount; // Capture for closure check
                 window.unsubscribeSnapshot = onSnapshot(q, (snap) => {
+                    // STALE CHECK: If user switched accounts while this listener was active
+                    if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) {
+                        return;
+                    }
                     let txns = [];
                     const batchUpdates = []; 
 
@@ -1427,19 +1993,20 @@
                     
                     // Store globally & Cache with timestamp
                     window.allTxns = txns;
-                    localStorage.setItem(cacheKey, JSON.stringify({
+                    const currentAccCacheKey = `wallet_cache_${uid}_${syncAccount}`;
+                    localStorage.setItem(currentAccCacheKey, JSON.stringify({
                         txns: txns,
                         timestamp: Date.now()
                     }));
                     
-                    updateBalanceToThisMonth(txns); 
+                    updateBalanceToThisMonth(txns, syncAccount); 
 
                     if (txns.length === 0) {
                         // EMPTY STATE
                         document.getElementById('expenses-total-summary').innerText = 'PHP 0.00';
                         document.getElementById('trend-period-total').innerText = 'PHP 0.00';
                         document.getElementById('chart-total-val').innerText = '0';
-                        const balanceEl = document.getElementById(`${window.currentAccount}-balance`);
+                        const balanceEl = document.querySelector(`.balance-card[data-account="${syncAccount}"] .balance-amount`) || document.getElementById(`${syncAccount}-balance`);
                         if (balanceEl) balanceEl.innerText = 'PHP 0.00';
                         
                         if (window.drawPieChart) window.drawPieChart([], 0);
@@ -1492,7 +2059,36 @@
         }
         window.loadData = loadData;
 
-        function updateBalanceToThisMonth(txns) {
+        window.atomeBalanceVal = 0;
+        window.bpiBalanceVal = 0;
+
+        function updateBPIInsight() {
+            const insightEl = document.getElementById('bpi-remaining-insight');
+            if (!insightEl) return;
+
+            // Try to pull from global state first, then fallback to DOM if global is 0
+            let bpi = window.bpiBalanceVal;
+            let atome = window.atomeBalanceVal;
+
+            if (bpi === 0) {
+                const bpiEl = document.getElementById('bpi-balance');
+                if (bpiEl) bpi = parseFloat(bpiEl.innerText.replace(/[^\d.-]/g, '')) || 0;
+            }
+            if (atome === 0) {
+                const atomeEl = document.getElementById('atome-balance');
+                if (atomeEl) atome = parseFloat(atomeEl.innerText.replace(/[^\d.-]/g, '')) || 0;
+            }
+
+            if (bpi === 0 && atome === 0) return;
+
+            const remaining = bpi + atome;
+            const atomeLabel = (atome < 0 ? '-' : '+') + '₱' + Math.abs(atome).toLocaleString(undefined, {minimumFractionDigits:2});
+            
+            insightEl.innerHTML = `₱${remaining.toLocaleString(undefined, {minimumFractionDigits:2})} <span style="opacity: 0.6; font-weight: 600;">(${atomeLabel})</span>`;
+            insightEl.style.opacity = '1';
+        }
+
+        function updateBalanceToThisMonth(txns, targetAccount) {
             const now = new Date();
             const year = now.getFullYear();
             const month = now.getMonth();
@@ -1515,10 +2111,17 @@
                 }
             });
 
-            const balanceEl = document.querySelector('.balance-amount');
+            // Target the specific card's balance element
+            const acc = targetAccount || window.currentAccount;
+            const balanceEl = document.querySelector(`.balance-card[data-account="${acc}"] .balance-amount`) || document.getElementById(`${acc}-balance`);
             if (balanceEl) {
                 const balance = incomeTotal - expenseTotal;
                 balanceEl.innerText = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                
+                // Store globally and update insight
+                if (acc === 'atome') window.atomeBalanceVal = balance;
+                if (acc === 'bpi') window.bpiBalanceVal = balance;
+                updateBPIInsight();
             }
         }
 
@@ -1543,14 +2146,47 @@
                 showToast('No data to export');
                 return;
             }
+
+            const today = new Date().toISOString().split('T')[0];
+            
+            // 1. JSON Export
             const dataStr = JSON.stringify(window.allTxns, null, 2);
             const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const exportFileDefaultName = `wallet_backup_${new Date().toISOString().split('T')[0]}.json`;
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
-            showToast('Backup Created');
+            const jsonName = `wallet_backup_${today}.json`;
+            const jsonLink = document.createElement('a');
+            jsonLink.setAttribute('href', dataUri);
+            jsonLink.setAttribute('download', jsonName);
+            jsonLink.click();
+
+            // 2. CSV Export
+            setTimeout(() => {
+                const headers = ['Date', 'Merchant', 'Amount', 'Category', 'Note', 'Excluded', 'Refund'];
+                const csvRows = [headers.join(',')];
+                
+                window.allTxns.forEach(t => {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const row = [
+                        new Date(t.date).toLocaleDateString(),
+                        `"${(mapped.name || '').replace(/"/g, '""')}"`,
+                        t.amount || (t.manualAmount || 0),
+                        `"${(mapped.category || '').replace(/"/g, '""')}"`,
+                        `"${(t.note || '').replace(/"/g, '""')}"`,
+                        t.excluded ? 'Yes' : 'No',
+                        t.refund ? 'Yes' : 'No'
+                    ];
+                    csvRows.push(row.join(','));
+                });
+
+                const csvStr = csvRows.join('\n');
+                const csvUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvStr);
+                const csvName = `wallet_export_${today}.csv`;
+                const csvLink = document.createElement('a');
+                csvLink.setAttribute('href', csvUri);
+                csvLink.setAttribute('download', csvName);
+                csvLink.click();
+            }, 300);
+
+            showToast('JSON + CSV Export Created');
         };
 
         window.importData = (event) => {
@@ -1561,7 +2197,12 @@
                 try {
                     const importedTxns = JSON.parse(e.target.result);
                     if (!Array.isArray(importedTxns)) throw new Error('Invalid format');
-                    if (!confirm(`Import ${importedTxns.length} transactions? These will be added to your current history.`)) return;
+                    const confirmed = await showAppDialog({
+                        title: 'Import Data',
+                        message: `Import ${importedTxns.length} transactions? These will be merged with your current history.`,
+                        confirm: true
+                    });
+                    if (!confirmed) return;
                     showToast('Importing...');
                     const uid = auth.currentUser.uid;
                     const txnsCol = collection(db, `users/${uid}/transactions`);
@@ -1930,7 +2571,7 @@
             }
 
             // Update Total
-            // totalEl.style.color = '#1d4ed8'; // REMOVED HARDCODE
+            // totalEl.style.color = '#000'; // REMOVED HARDCODE
             totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
 
             const points = dataPoints;
@@ -2227,6 +2868,7 @@
         }
 
         // RENDER ACCORDIONS (OPTIMIZED)
+        window.historyLimit = 6;
         function renderHistory(txns) {
             const container = document.getElementById('history-container');
             const fragment = document.createDocumentFragment();
@@ -2249,7 +2891,12 @@
             });
 
             const entries = Object.entries(groups);
-            entries.forEach(([month, data], index) => {
+            // Ensure chronological order (descending)
+            entries.sort((a, b) => new Date(b[1].items[0].date) - new Date(a[1].items[0].date));
+            
+            const visibleEntries = entries.slice(0, window.historyLimit);
+
+            visibleEntries.forEach(([month, data], index) => {
                 const accordion = document.createElement('div');
                 accordion.className = 'month-accordion';
                 
@@ -2274,7 +2921,7 @@
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const isIncome = mapped.category === 'Income';
                     const isRefund = t.refund || false;
-                    const excludedClass = (t.excluded && !isIncome && !isRefund) ? 'txn-excluded' : '';
+                    const excludedClass = t.excluded ? 'txn-excluded' : '';
                     
                     const d = new Date(t.date);
                     const shortDate = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
@@ -2374,7 +3021,43 @@
             
             container.innerHTML = '';
             container.appendChild(fragment);
+
+            // Load More Button
+            if (entries.length > window.historyLimit) {
+                const loadMoreWrap = document.createElement('div');
+                loadMoreWrap.style.cssText = 'padding: 10px 0 40px; text-align: center;';
+                const btn = document.createElement('button');
+                btn.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: #000; font-weight: 800; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; background: #ebf5ff; border: none; border-radius: 25px; padding: 12px 32px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08);';
+                btn.innerHTML = '<span>Load More</span><i class="material-icons" style="font-size: 20px;">keyboard_arrow_down</i>';
+                
+                btn.onclick = () => {
+                    btn.innerHTML = '<i class="material-icons spin" style="font-size: 20px;">sync</i>';
+                    btn.style.opacity = '0.7';
+                    btn.style.pointerEvents = 'none';
+                    setTimeout(() => {
+                        window.historyLimit += 6;
+                        renderHistory(window.allTxns);
+                    }, 400);
+                };
+                
+                btn.onmouseenter = () => { btn.style.background = '#dbeafe'; btn.style.transform = 'translateY(-1px)'; };
+                btn.onmouseleave = () => { btn.style.background = '#ebf5ff'; btn.style.transform = 'translateY(0)'; };
+                
+                loadMoreWrap.appendChild(btn);
+                container.appendChild(loadMoreWrap);
+            }
+
+            // Re-apply search if it was active
+            if ((document.getElementById('txn-search')?.value || '') !== '' || document.getElementById('txn-cat-filter').value !== 'all') {
+                filterTxnList();
+            }
+
             setTimeout(() => setupLongPressHandlers(), 50);
+
+            // FEATURE UPDATES (NEW)
+            updateBudgetUI();
+            drawCashFlowChart();
+            detectSubscriptions();
         }
 
         // GOOGLE IDENTITY SERVICES
@@ -2471,9 +3154,15 @@
                 if (user.photoURL) {
                     const badge = document.getElementById('profile-badge');
                     const picEl = document.getElementById('user-pic');
-                    picEl.src = user.photoURL;
+                    let photoUrl = user.photoURL;
+                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                    }
+                    picEl.src = photoUrl;
                     badge.classList.add('has-pic');
-                    localStorage.setItem('user_pic', user.photoURL);
+                    localStorage.setItem('user_pic', photoUrl);
+                } else {
+                    document.getElementById('profile-badge').classList.remove('has-pic');
                 }
 
                 /* DISABLED AUTO-MERGE FOR STRICT PRIVACY
@@ -2597,6 +3286,7 @@
 
         // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
         window.handleScan = async (limit) => {
+            const syncAccount = window.currentAccount;
             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
                     handleAuthClick();
@@ -2613,23 +3303,23 @@
                 return; // The callback will trigger handleScan again
             }
             
-            const btn = document.getElementById('scan-btn');
+            const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
+            const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
+            const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+            const originalHTML = btn ? btn.innerHTML : '';
+
             if (btn) {
-                const originalHTML = btn.innerHTML;
                 btn.disabled = true;
-                btn.innerHTML = '<i class="material-icons spin" style="font-size:14px;">sync</i>';
+                btn.innerHTML = '<i class="material-icons spin" style="font-size:12px;">sync</i>';
             }
-            const bar = document.getElementById('cardSyncBar');
-            const statusText = document.getElementById('syncStatusText');
-            if (bar) bar.classList.add('syncing');
-            if (statusText) statusText.innerText = 'Scanning Gmail...';
+            if (statusText) statusText.innerText = 'Syncing';
             
             try {
-                log(`Syncing ${window.currentAccount.toUpperCase()}...`);
+                log(`Syncing ${syncAccount.toUpperCase()}...`);
                 
                 // MULTI-ACCOUNT QUERY
                 let query = '';
-                if (window.currentAccount === 'atome') {
+                if (syncAccount === 'atome') {
                     // Broader Atome Query
                     query = `(subject:"Transaction Confirmation" OR subject:"payment confirmation" OR subject:"Atome Card") (from:Atome OR from:no-reply@atome.ph OR from:noreply@atome.ph)`;
                 } else {
@@ -2637,7 +3327,7 @@
                     query = `(subject:"Funds Transfer" OR subject:"Fund Transfer" OR subject:"Interbank" OR subject:"Pay via QR" OR from:bpi_online@bpi.com.ph OR from:onlinebanking@bpi.com.ph OR from:bpiinstapay@bpi.com.ph OR from:BPI)`;
                 }
                 
-                log(`Scanning ${window.currentAccount} (Target Limit: ${limit})...`);
+                log(`Scanning ${syncAccount} (Target Limit: ${limit})...`);
                 
                 let savedCount = 0;
                 let pageToken = '';
@@ -2669,7 +3359,7 @@
                                 // For parsing, we strip tags to handle HTML templates
                                 const cleanText = stripTags(fullBody) || d.snippet;
 
-                                if (window.currentAccount === 'atome') {
+                                if (syncAccount === 'atome') {
                                     txn = parseAtomeEmail(cleanText, d.internalDate);
                                 } else {
                                     const subjectHeader = d.payload.headers.find(h => h.name.toLowerCase() === 'subject');
@@ -2680,7 +3370,7 @@
                                 if (txn) {
                                     if (!auth.currentUser) await signInAnonymously(auth);
                                     const uid = auth.currentUser.uid;
-                                    const collectionName = window.currentAccount === 'atome' ? "transactions" : "bpi_transactions";
+                                    const collectionName = syncAccount === 'atome' ? "transactions" : "bpi_transactions";
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
                                     const snap = await getDoc(docRef);
@@ -2706,7 +3396,12 @@
                 }
                 
                 if (savedCount > 0) {
-                    if (limit > 100) localStorage.setItem(`last_deep_sync_${window.currentAccount}`, Date.now());
+                    // Final sanity check before reloading data
+                    if (window.currentAccount !== syncAccount) {
+                        log("Sync finished but account changed. Data saved to cloud.");
+                        return;
+                    }
+                    if (limit > 100) localStorage.setItem(`last_deep_sync_${syncAccount}`, Date.now());
                     log(`Sync complete! +${savedCount} processed.`, 'success');
                     await loadData();
                 } else {
@@ -2714,10 +3409,11 @@
                 }
             } catch (e) { log('Scan error: ' + e.message, 'error'); }
             finally {
-              btn.disabled = false;
-              btn.innerHTML = originalHTML;
-              if (bar) bar.classList.remove('syncing');
-              if (statusText) statusText.innerText = 'Gmail Synced';
+              if (btn) {
+                  btn.disabled = false;
+                  btn.innerHTML = originalHTML;
+              }
+              if (statusText) statusText.innerText = 'Synced';
             }
         };
 
@@ -2916,6 +3612,10 @@
             const nav = document.querySelector('.bottom-nav');
             if (nav) nav.classList.add('blur-active');
             
+            // Prevent scrolling
+            document.body.style.overflow = 'hidden';
+            document.querySelector('.mobile-wrapper').style.overflow = 'hidden';
+            
             // 5. Build menu - escape values properly
             const menu = document.getElementById('ios-menu');
             const merchantSafe = merchant.replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -2985,6 +3685,10 @@
             const nav = document.querySelector('.bottom-nav');
             if (fab) fab.classList.remove('blur-active');
             if (nav) nav.classList.remove('blur-active');
+            
+            // Restore scrolling
+            document.body.style.overflow = '';
+            document.querySelector('.mobile-wrapper').style.overflow = 'auto';
             
             if (clonedItem) {
                 clonedItem.remove();
@@ -3195,7 +3899,7 @@
             const modal = document.getElementById('cat-modal');
             const overlay = document.createElement('div');
             overlay.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;border-radius:20px;z-index:9999;';
-            overlay.innerHTML = '<i class="material-icons spin" style="font-size:32px;color:#1d4ed8;">sync</i>';
+            overlay.innerHTML = '<i class="material-icons spin" style="font-size:32px;color:#000;">sync</i>';
             modal.querySelector('.custom-modal').style.position = 'relative';
             modal.querySelector('.custom-modal').appendChild(overlay);
 
@@ -3456,46 +4160,54 @@
             else if (mapping[finalRaw]) display.name = mapping[finalRaw];
 
             // 5. CATEGORY DETECTION
+            const lowerRaw = finalRaw.toLowerCase();
+            const noteLower = (t.note || '').toLowerCase();
+
             if (finalRaw === 'INCOME' || finalRaw.includes('SALARY') || finalRaw.includes('DIVIDEND') || finalRaw.includes('REFUND SOURCE')) {
                 display.category = 'Income';
                 display.icon = 'savings';
                 display.catClass = 'cat-income';
-            } else if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
-                display.category = 'Online shopping';
-                display.icon = 'shopping_bag';
-                display.catClass = 'cat-online';
-            } else if (finalRaw.includes('FUEL') || finalRaw.includes('SHELL') || finalRaw.includes('TECFUEL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL')) {
-                display.category = 'Vehicle';
-                display.icon = 'local_gas_station';
-                display.catClass = 'cat-vehicle';
-            } else if (finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS') || finalRaw.includes('SM STORE') || finalRaw.includes('KKV') || finalRaw.includes('SHOPPING') || finalRaw.includes('MALL') || finalRaw.includes('METRO') || finalRaw.includes('SUPERMARKET') || finalRaw.includes('OCTAGON')) {
-                display.category = 'Shopping';
-                display.icon = 'shopping_cart';
-                display.catClass = 'cat-shopping';
-            } else if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
-                display.category = 'Trade Copier';
-                display.icon = 'hub';
-                display.catClass = 'cat-aqua';
-            } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
-                display.category = 'Trading Expenses';
-                display.icon = 'insights';
-                display.catClass = 'cat-trading';
-            } else if (finalRaw.includes('GLOBE') || finalRaw.includes('GOMO') || finalRaw.includes('BILLSPAY')) {
-                display.category = 'Service';
-                display.icon = 'settings_cell';
-                display.catClass = 'cat-service-magenta';
-            } else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('MCDONALDS') || finalRaw.includes('FOOD') || finalRaw.includes('RESTAURANT') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) {
-                display.category = 'Food & Drinks';
-                display.icon = 'restaurant';
-                display.catClass = 'cat-food';
-            } else if (finalRaw.includes('ICE SKATING') || finalRaw.includes('CINEMA') || finalRaw.includes('ENTERTAINMENT') || finalRaw.includes('SPOTIFY') || finalRaw.includes('NETFLIX')) {
-                display.category = 'Life & Entertainment';
-                display.icon = 'confirmation_number';
-                display.catClass = 'cat-life';
             } else {
-                display.category = 'Financial Expenses';
-                display.icon = 'payments';
-                display.catClass = 'cat-red';
+                // Feature 2: Keyword-based Smart Categorization
+                const keywordMap = [
+                    { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'shopify', 'grabfood', 'foodpanda', 'amazon', 'ebay'] },
+                    { cat: 'Shopping', key: ['mall', 'supermet', 'gaisano', 'mr diy', 'watsons', 'sm store', 'sm superm', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m', 'uniqlo'] },
+                    { cat: 'Vehicle', key: ['tecfuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'fuel', 'gas', 'toyota', 'honda', 'mitsub', 'car wash', 'autoshop'] },
+                    { cat: 'Food & Drinks', key: ['jollibee', 'mcdo', 'mcdonald', 'starbucks', 'chowking', 'kfc', 'mang inasal', 'greenwich', 'ribshack', 'coffee', 'resto', 'cafe', 'tea', 'bakery', 'j.co', 'dunkin', 'boba', 'pizza'] },
+                    { cat: 'Service', key: ['globe', 'smart', 'pldt', 'tm', 'gomo', 'netflix', 'spotify', 'youtube', 'disney', 'prime', 'apple', 'icloud', 'google', 'subscription', 'bill', 'insurance', 'philhealth', 'sss', 'pag-ibig', 'veco', 'mcwd'] },
+                    { cat: 'Transportation', key: ['grab car', 'grab ride', 'taxi', 'move it', 'joyride', 'angkas', 'jeep', 'bus', 'ferry', 'pier', 'airport', 'airline'] },
+                    { cat: 'Education', key: ['school', 'university', 'tuition', 'book', 'udemy', 'coursera', 'skillshare', 'training'] },
+                    { cat: 'Life & Entertainment', key: ['cinema', 'movie', 'game', 'playstation', 'xbox', 'steam', 'valve', 'riot', 'epic', 'skating', 'zoo', 'park', 'concert', 'spotify', 'netflix'] }
+                ];
+
+                for (const map of keywordMap) {
+                    if (map.key.some(k => lowerRaw.includes(k) || noteLower.includes(k))) {
+                        const findCat = CATEGORIES.find(c => c.id === map.cat);
+                        if (findCat) {
+                            display.category = findCat.id;
+                            display.icon = findCat.icon;
+                            display.catClass = findCat.cls || 'cat-financial';
+                            display.autoSuggested = true; 
+                            break;
+                        }
+                    }
+                }
+
+                if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
+                    display.category = 'Trade Copier';
+                    display.icon = 'hub';
+                    display.catClass = 'cat-aqua';
+                } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
+                    display.category = 'Trading Expenses';
+                    display.icon = 'insights';
+                    display.catClass = 'cat-trading';
+                } else {
+                    // Default fallback if no keyword matched
+                    if (display.category === 'Financial expenses' || !display.category) {
+                        display.category = 'Financial expenses';
+                        display.catClass = 'cat-financial';
+                    }
+                }
             }
 
             return display;
@@ -3599,6 +4311,7 @@
 
         window.openEditModal = (txnId, merchant, amount, category, note) => {
             window.editingTxnId = txnId; // Set edit mode
+            window.originalAccount = window.currentAccount || (txnId.startsWith('bpi_') ? 'bpi' : 'atome'); 
             
             // Find the transaction to get all its data
             const txn = window.allTxns.find(t => t.id === txnId);
@@ -3732,7 +4445,7 @@
                     date: dateObj.toISOString().split('T')[0],
                     amount: parseFloat(amtVal),
                     manualAmount: parseFloat(amtVal),
-                    merchant: merchantName || cat.label,
+                    merchant: merchantName || (cat ? cat.label : 'Transaction'),
                     note: note || '',
                     manualCategory: selectedManualCatId,
                     category: selectedManualCatId,
@@ -3743,9 +4456,24 @@
                 const col = selectedAccount === 'atome' ? "transactions" : "bpi_transactions";
 
                 if (window.editingTxnId) {
-                    await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
-                    showToast('Transaction updated');
+                    const origAcc = window.originalAccount || (window.editingTxnId.startsWith('bpi_') ? 'bpi' : 'atome');
+                    const originalCol = origAcc === 'atome' ? "transactions" : "bpi_transactions";
+                    
+                    if (selectedAccount !== origAcc) {
+                        // MOVE TRANSACTION: Delete from old, Add to new (Keep same ID for consistency)
+                        await deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
+                        await setDoc(doc(db, "users", uid, col, window.editingTxnId), {
+                            ...updateData,
+                            createdAt: serverTimestamp()
+                        });
+                        showToast('Transaction moved & updated');
+                    } else {
+                        // Regular UPDATE
+                        await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
+                        showToast('Transaction updated');
+                    }
                 } else {
+                    // NEW TRANSACTION
                     await addDoc(collection(db, "users", uid, col), {
                         ...updateData,
                         createdAt: serverTimestamp()
@@ -3788,6 +4516,9 @@
 
         window.filterTxnList = () => {
             const catSelection = document.getElementById('txn-cat-filter').value;
+            const keyword = (document.getElementById('txn-search')?.value || '').toLowerCase().trim();
+            const cleanKeyword = keyword.replace(/,/g, '');
+            
             const accordions = document.querySelectorAll('.month-accordion');
             
             accordions.forEach(acc => {
@@ -3797,13 +4528,23 @@
                 
                 txns.forEach(t => {
                     const itemCatId = t.dataset.category || '';
-                    const itemCatLabel = displayCategoryName(itemCatId); 
+                    const itemCatLabel = displayCategoryName(itemCatId);
+                    const merchantName = (t.dataset.merchant || '').toLowerCase();
+                    const note = (t.dataset.note || '').toLowerCase();
+                    const amount = (t.dataset.amount || '').toString();
+                    const cleanAmount = amount.replace(/,/g, '');
                     
                     const matchCat = (catSelection === 'all') || 
                                    (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
                                    (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
 
-                    if (matchCat) {
+                    const matchKeyword = !keyword || 
+                                       merchantName.includes(keyword) || 
+                                       note.includes(keyword) || 
+                                       amount.includes(keyword) || 
+                                       (cleanKeyword.length > 0 && cleanAmount.includes(cleanKeyword));
+
+                    if (matchCat && matchKeyword) {
                         t.style.display = 'flex';
                         visibleCount++;
                         
@@ -3834,6 +4575,14 @@
                     totalEl.innerText = `₱${filteredTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 }
 
+                // Auto-expand if search results found
+                const content = acc.querySelector('.month-content');
+                const header = acc.querySelector('.month-header');
+                if (keyword.length > 0 && visibleCount > 0) {
+                    content.classList.remove('collapsed');
+                    header.classList.remove('collapsed');
+                }
+
                 // Hide the whole accordion if no visible items
                 acc.style.display = visibleCount > 0 ? 'block' : 'none';
             });
@@ -3844,13 +4593,469 @@
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const itemCatId = mapped.category || '';
                     const itemCatLabel = displayCategoryName(itemCatId);
+                    const merchantName = (t.merchant || '').toLowerCase();
+                    const note = (t.note || '').toLowerCase();
+                    const amount = (t.amount || (t.manualAmount || 0)).toString();
+                    const cleanAmount = amount.replace(/,/g, '');
+
+                    const matchCat = (catSelection === 'all') || 
+                                   (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
+                                   (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
+
+                    const matchKeyword = !keyword || 
+                                       merchantName.includes(keyword) || 
+                                       note.includes(keyword) || 
+                                       amount.includes(keyword) || 
+                                       (cleanKeyword.length > 0 && cleanAmount.includes(cleanKeyword));
                     
-                    return (catSelection === 'all') || 
-                           (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
-                           (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
+                    return matchCat && matchKeyword;
                 });
                 drawTrendChart(filteredTxns);
             }
+        };
+
+        window.handleSearchInput = () => {
+            const val = document.getElementById('txn-search').value;
+            const clearBtn = document.getElementById('search-clear-btn');
+            if (clearBtn) {
+                if (val.length > 0) clearBtn.classList.add('active');
+                else clearBtn.classList.remove('active');
+            }
+            filterTxnList();
+        };
+
+        window.clearSearch = () => {
+            const input = document.getElementById('txn-search');
+            input.value = '';
+            document.getElementById('search-clear-btn').classList.remove('active');
+            filterTxnList();
+            input.focus();
+        };
+
+        // SMART BUDGETING LOGIC
+        window.promptSetBudget = () => {
+            const currentLimit = localStorage.getItem(`budget_${window.currentAccount}`) || '0';
+            showAppDialog({
+                title: 'Set Monthly Budget',
+                message: 'Enter your maximum monthly spending goal (PHP).',
+                input: true,
+                value: currentLimit,
+                callback: (limit) => {
+                    if (limit !== null && limit !== false && !isNaN(limit)) {
+                        localStorage.setItem(`budget_${window.currentAccount}`, limit);
+                        updateBudgetUI();
+                        showToast('Monthly budget updated!');
+                    }
+                }
+            });
+        };
+
+        window.updateBudgetUI = () => {
+            const limit = parseFloat(localStorage.getItem(`budget_${window.currentAccount}`)) || 0;
+            const limitEl = document.getElementById('budget-limit');
+            const spentEl = document.getElementById('budget-spent');
+            const fillEl = document.getElementById('budget-fill');
+            const card = document.getElementById('budget-card-section');
+
+            if (!limit || limit <= 0) {
+                if (card) card.style.display = 'none';
+                return;
+            }
+            if (card) card.style.display = 'block';
+
+            // Calculate spent this month
+            let totalSpent = 0;
+            if (window.allTxns) {
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                window.allTxns.forEach(t => {
+                    const d = new Date(t.date);
+                    if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                        const mapped = getMerchantDisplay(t.merchant, t);
+                        // Only count non-income, non-refunded, non-excluded expenses
+                        if (!t.excluded && !t.refund && mapped.category !== 'Income') {
+                            const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                            totalSpent += Math.abs(amt);
+                        }
+                    }
+                });
+            }
+
+            const percent = Math.min((totalSpent / limit) * 100, 100);
+            
+            // UI Updates
+            limitEl.innerText = `₱${limit.toLocaleString()} limit`;
+            spentEl.innerText = `₱${totalSpent.toLocaleString(undefined, {minimumFractionDigits:2})} spent`;
+            fillEl.style.width = `${percent}%`;
+
+            // Color logic
+            if (percent >= 100) {
+                fillEl.style.background = '#ef4444'; // Red
+                spentEl.style.color = '#ef4444';
+            } else if (percent >= 80) {
+                fillEl.style.background = '#f59e0b'; // Amber
+                spentEl.style.color = '#f59e0b';
+            } else {
+                fillEl.style.background = '#10b981'; // Green
+                spentEl.style.color = '#64748b';
+            }
+
+            // Alerts (Throttle to prevent spam)
+            const lastAlert = sessionStorage.getItem(`budget_alert_${window.currentAccount}`);
+            if (percent >= 100 && lastAlert !== '100') {
+                showToast('⚠️ Budget limit reached!', 5000);
+                sessionStorage.setItem(`budget_alert_${window.currentAccount}`, '100');
+            } else if (percent >= 80 && lastAlert !== '80' && lastAlert !== '100') {
+                showToast('💡 80% of budget reached.', 4000);
+                sessionStorage.setItem(`budget_alert_${window.currentAccount}`, '80');
+            }
+        };
+
+        // PRIVACY LOCK LOGIC
+        let pinInputBuffer = "";
+        window.handlePinInput = (val) => {
+            if (val === 'back') {
+                pinInputBuffer = pinInputBuffer.slice(0, -1);
+            } else if (pinInputBuffer.length < 4) {
+                pinInputBuffer += val;
+            }
+            updatePinDots();
+            if (pinInputBuffer.length === 4) {
+                setTimeout(checkPin, 200);
+            }
+        };
+
+        const updatePinDots = () => {
+            const dots = document.querySelectorAll('#privacy-lock .pin-dot');
+            dots.forEach((dot, idx) => {
+                if (idx < pinInputBuffer.length) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
+        };
+
+        const checkPin = () => {
+            const storedPin = localStorage.getItem('wallet_privacy_pin');
+            if (pinInputBuffer === storedPin) {
+                document.getElementById('privacy-lock').style.display = 'none';
+                sessionStorage.setItem('wallet_unlocked', 'true');
+                showToast('Wallet Unlocked');
+            } else {
+                showToast('Incorrect PIN', 2000);
+                pinInputBuffer = "";
+                updatePinDots();
+                const dotsWrap = document.getElementById('pin-dots');
+                dotsWrap.style.animation = 'shake 0.3s';
+                setTimeout(() => dotsWrap.style.animation = '', 300);
+            }
+        };
+
+        window.promptSetPin = () => {
+            const currentPin = localStorage.getItem('wallet_privacy_pin');
+            if (currentPin) {
+                showAppDialog({
+                    title: 'Verify Identity',
+                    message: 'Enter current PIN to change security settings.',
+                    input: true,
+                    callback: (oldInput) => {
+                        if (oldInput !== currentPin) return showToast("Wrong PIN. Access denied.");
+                        requestNewPin();
+                    }
+                });
+            } else {
+                requestNewPin();
+            }
+
+            function requestNewPin() {
+                showAppDialog({
+                    title: 'New Privacy PIN',
+                    message: 'Enter new 4-digit PIN (Numbers only) or leave empty to disable.',
+                    input: true,
+                    callback: (newPin) => {
+                        if (newPin && newPin.length === 4 && !isNaN(newPin)) {
+                            localStorage.setItem('wallet_privacy_pin', newPin);
+                            showToast("PIN set successfully!");
+                        } else if (newPin === "" || newPin === null) {
+                            localStorage.removeItem('wallet_privacy_pin');
+                            showToast("PIN Security Disabled");
+                        } else if (newPin !== false) {
+                            showToast("Invalid PIN format.");
+                        }
+                    }
+                });
+            }
+        };
+
+        window.initPrivacyLock = () => {
+            const pin = localStorage.getItem('wallet_privacy_pin');
+            const isUnlocked = sessionStorage.getItem('wallet_unlocked') === 'true';
+            if (pin && !isUnlocked) {
+                document.getElementById('privacy-lock').style.display = 'flex';
+                if (window.PublicKeyCredential) {
+                    document.getElementById('bio-btn').style.display = 'flex';
+                }
+            }
+        };
+
+        window.tryBiometricUnlock = async () => {
+            // Simplified biometric check - in a real app, this would use WebAuthn credentials
+            const confirmed = await showAppDialog({
+                title: 'Biometric Unlock',
+                message: 'Authenticate using FaceID / Fingerprint?',
+                confirm: true
+            });
+            if (confirmed) {
+                document.getElementById('privacy-lock').style.display = 'none';
+                sessionStorage.setItem('wallet_unlocked', 'true');
+                showToast('Authenticated via Biometrics');
+            }
+        };
+
+        // ANALYTICS LOGIC (BAR CHART)
+        window.drawCashFlowChart = () => {
+            const container = document.getElementById('cashflow-bars');
+            if (!container || !window.allTxns) return;
+
+            // Get last 6 months
+            const months = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(1); // Avoid month skipping near end of month
+                d.setMonth(d.getMonth() - i);
+                months.push({
+                    name: d.toLocaleDateString('en-US', { month: 'short' }),
+                    month: d.getMonth(),
+                    year: d.getFullYear(),
+                    income: 0,
+                    expense: 0
+                });
+            }
+
+            // Aggregate data
+            window.allTxns.forEach(t => {
+                const d = new Date(t.date);
+                const mIdx = months.findIndex(m => m.month === d.getMonth() && m.year === d.getFullYear());
+                if (mIdx > -1) {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                    if (!t.excluded && !t.refund) {
+                        if (mapped.category === 'Income') months[mIdx].income += amt;
+                        else months[mIdx].expense += amt;
+                    }
+                }
+            });
+
+            // Find max for scaling
+            const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense)), 1000);
+            
+            // Render Bars
+            let html = '';
+            months.forEach(m => {
+                const incH = (m.income / maxVal) * 80;
+                const expH = (m.expense / maxVal) * 80;
+                html += `
+                    <div class="bar-group">
+                        <div class="bars-pair">
+                            <div class="bar bar-income" style="height: ${incH}px;" title="Income: ₱${m.income.toLocaleString()}"></div>
+                            <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ₱${m.expense.toLocaleString()}"></div>
+                        </div>
+                        <div class="bar-label">${m.name}</div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            // Savings Rate for current month
+            const current = months[months.length - 1];
+            const rate = current.income > 0 ? ((current.income - current.expense) / current.income) * 100 : 0;
+            const rateEl = document.getElementById('savings-rate-val');
+            if (rateEl) {
+                rateEl.innerText = `${Math.max(0, rate).toFixed(1)}%`;
+                const chip = rateEl.closest('.savings-chip');
+                if (chip) chip.style.background = rate > 0 ? '#dcfce7' : '#fee2e2';
+                if (chip) chip.style.color = rate > 0 ? '#166534' : '#991b1b';
+            }
+        };
+
+        // SUBSCRIPTION DETECTION LOGIC
+        // SUBSCRIPTION DETECTION LOGIC (WITH AVERAGES)
+        window.detectSubscriptions = () => {
+            const container = document.getElementById('subscription-list');
+            const section = document.getElementById('subscription-section');
+            if (!container || !window.allTxns) return;
+
+            // Context: Current month for comparison
+            const now = new Date(); 
+            const targetMonth = now.getMonth();
+            const targetYear = now.getFullYear();
+
+            // Group by Merchant + Month
+            const merchantData = {};
+            window.allTxns.forEach(t => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                if (t.excluded || t.refund || mapped.category === 'Income') return;
+                
+                const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                if (amt < 50) return;
+
+                const merchantKey = mapped.name.toLowerCase();
+                const d = new Date(t.date);
+                const monthKey = `${d.getMonth()}-${d.getFullYear()}`;
+
+                if (!merchantData[merchantKey]) {
+                    merchantData[merchantKey] = {
+                        name: mapped.name,
+                        icon: mapped.logo || 'receipt_long',
+                        monthlySpend: {},
+                        countMonths: 0,
+                        currentMonthSpend: 0,
+                        averageSpend: 0
+                    };
+                }
+
+                if (!merchantData[merchantKey].monthlySpend[monthKey]) {
+                    merchantData[merchantKey].monthlySpend[monthKey] = 0;
+                }
+                merchantData[merchantKey].monthlySpend[monthKey] += amt;
+            });
+
+            const subs = [];
+            Object.values(merchantData).forEach(m => {
+                const monthKeys = Object.keys(m.monthlySpend);
+                if (monthKeys.length < 1) return;
+
+                // Sort month keys chronologically: "M-YYYY"
+                const sortedKeys = monthKeys.sort((a,b) => {
+                    const [ma, ya] = a.split('-').map(Number);
+                    const [mb, yb] = b.split('-').map(Number);
+                    return ya === yb ? ma - mb : ya - yb;
+                });
+
+                // Check for 4 consecutive months
+                let maxConsecutive = 0;
+                let currentConsecutive = 0;
+                let lastMonthIndex = -1;
+
+                sortedKeys.forEach(k => {
+                    const [mon, yr] = k.split('-').map(Number);
+                    const monthIndex = yr * 12 + mon;
+                    if (lastMonthIndex === -1 || monthIndex === lastMonthIndex + 1) {
+                        currentConsecutive++;
+                    } else {
+                        currentConsecutive = 1;
+                    }
+                    lastMonthIndex = monthIndex;
+                    if (currentConsecutive > maxConsecutive) maxConsecutive = currentConsecutive;
+                });
+
+                const mName = m.name.toLowerCase();
+                const isWhitelisted = mName.includes('spotify') || mName.includes('traders connect');
+                
+                if (!isWhitelisted && maxConsecutive < 4) return;
+
+                const currentKey = `${targetMonth}-${targetYear}`;
+                m.currentMonthSpend = m.monthlySpend[currentKey] || 0;
+
+                let historicalSum = 0;
+                let historicalCount = 0;
+                monthKeys.forEach(k => {
+                    if (k !== currentKey) {
+                        historicalSum += m.monthlySpend[k];
+                        historicalCount++;
+                    }
+                });
+
+                // If we have history, use average. If only current (whitelisted), use current.
+                m.averageSpend = historicalCount > 0 ? (historicalSum / historicalCount) : m.currentMonthSpend;
+                subs.push(m);
+            });
+
+            if (subs.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = 'block';
+            let totalCurrent = 0;
+            let totalAvg = 0;
+
+            container.innerHTML = subs.sort((a,b) => b.currentMonthSpend - a.currentMonthSpend).map(g => {
+                totalCurrent += g.currentMonthSpend;
+                totalAvg += g.averageSpend;
+                const perc = g.averageSpend > 0 ? (g.currentMonthSpend / g.averageSpend) * 100 : 0;
+                const statusColor = g.currentMonthSpend > g.averageSpend ? '#ef4444' : '#10b981';
+                const barColor = g.currentMonthSpend > g.averageSpend ? '#ef4444' : '#3b82f6';
+
+                return `
+                <div class="subscription-item">
+                    <div class="sub-main-row">
+                        <div class="sub-icon">
+                            ${g.icon.length > 20 ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
+                        </div>
+                        <div class="sub-info">
+                            <div class="sub-name">${g.name}</div>
+                            <div class="sub-meta">Avg: ₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})} / mo</div>
+                        </div>
+                        <div class="sub-stats">
+                            <div class="sub-current-vs-avg" style="font-weight: 800; font-size: 11px;">
+                                <span style="color: ${statusColor};">₱${g.currentMonthSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
+                                <span style="color: #cbd5e1; margin: 0 2px;">/</span>
+                                <span style="color: #94a3b8;">₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sub-item-progress-bg">
+                        <div class="sub-item-progress-fill" style="width: ${Math.min(100, perc)}%; background: ${barColor};"></div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // Update UI Labels for Total
+            const limit = parseFloat(localStorage.getItem('wallet_sub_limit') || totalAvg);
+            document.getElementById('sub-count-badge').innerText = subs.length;
+            document.getElementById('sub-total-label').innerText = `₱${totalCurrent.toLocaleString(undefined, {minimumFractionDigits:2})} spent`;
+            document.getElementById('sub-limit-label').innerText = `Target: ₱${limit.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+            
+            const totalPerc = limit > 0 ? (totalCurrent / limit) * 100 : 0;
+            const fill = document.getElementById('sub-limit-fill');
+            fill.style.width = Math.min(100, totalPerc) + '%';
+            
+            // Premium color for main bar
+            fill.style.background = totalPerc >= 100 ? '#ef4444' : '#000'; // Black theme or Red if over
+
+            // Ensure divider exists after progress bar
+            let divider = document.getElementById('sub-main-divider');
+            if (!divider) {
+                divider = document.createElement('div');
+                divider.id = 'sub-main-divider';
+                divider.style = "height: 1px; background: #f1f5f9; margin: 15px 0 5px; width: 100%;";
+                document.querySelector('.sub-limit-bar').after(divider);
+            }
+        };
+
+        window.updateSubAmount = (name, val) => {
+            const num = parseFloat(val);
+            if (isNaN(num)) return;
+            showToast(`Target updated for ${name}`);
+            detectSubscriptions();
+        };
+
+        window.promptSetSubLimit = () => {
+            showAppDialog({
+                title: 'Set Target Spend',
+                message: 'Adjust the total spend limit for recurring items.',
+                input: true,
+                value: localStorage.getItem('wallet_sub_limit') || '5000',
+                callback: (val) => {
+                    if (val) {
+                        localStorage.setItem('wallet_sub_limit', val);
+                        detectSubscriptions();
+                        showToast('Target updated');
+                    }
+                }
+            });
         };
 
         // NEW: Independent Trend Chart Logic
@@ -3883,7 +5088,8 @@
                 else if (merchantName.includes('TECFUEL') || merchantName.includes('TEC FUEL')) logo = 'logos/tecfuel.png';
                 else if (merchantName.includes('TRADERS')) logo = 'logos/tradersconnect.png';
                 else if (merchantName.includes('AYALA')) logo = 'logos/ayala.png';
-                else if (merchantName.includes('J AND L') || merchantName.includes('JANL')) logo = 'logos/jandlmall.png';
+                else if (merchantName.includes('JNL') || merchantName.includes('JL')) logo = 'logos/jandlmall.png';
+                else if (merchantName.includes('J AND L') || merchantName.includes('JNL')) logo = 'logos/jandlmall.png';
                 else if (merchantName.includes('MR DIY')) logo = 'logos/mrdiy.png';
                 else if (merchantName.includes('WATSONS')) logo = 'logos/watsons.png';
 
@@ -3982,6 +5188,21 @@
             <div class="modal-actions" style="justify-content: center; gap: 16px;">
                 <div class="cancel-link" onclick="closeModals()">CANCEL</div>
                 <button class="mui-btn mui-btn--raised" onclick="confirmDelete()" style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UNIFIED APP DIALOG MODAL -->
+    <div id="app-dialog" class="dialog-overlay">
+        <div class="dialog-card">
+            <div id="dialog-title" class="dialog-title">Alert</div>
+            <div id="dialog-msg" class="dialog-msg">Something happened.</div>
+            <div id="dialog-input-container" style="display: none;">
+                <input type="text" id="dialog-input" class="dialog-input">
+            </div>
+            <div class="dialog-actions">
+                <button id="dialog-cancel-btn" class="dialog-btn dialog-btn--cancel" style="display: none;">Cancel</button>
+                <button id="dialog-ok-btn" class="dialog-btn dialog-btn--primary">OK</button>
             </div>
         </div>
     </div>

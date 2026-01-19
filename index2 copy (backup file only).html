@@ -2900,22 +2900,62 @@
                 circle.style.transition = 'stroke-dasharray 1s cubic-bezier(0.25, 0.8, 0.25, 1)';
                 circle.style.cursor = 'pointer';
                 
-                // Interaction
-                circle.onmouseenter = (e) => {
+                // Tooltip function
+                const showTooltip = (e) => {
                      const tooltip = document.getElementById('chart-tooltip');
                      const pText = (percent * 100).toFixed(1) + '%';
                      tooltip.innerHTML = `${seg.name}<br><span style="color:#d1fae5">₱${Math.round(seg.value).toLocaleString()} (${pText})</span>`;
                      tooltip.style.opacity = '1';
-                     tooltip.style.left = `${e.pageX}px`;
-                     tooltip.style.top = `${e.pageY - 10}px`;
+                     tooltip.style.display = 'block';
+                     const x = e.pageX || e.clientX || (e.touches && e.touches[0].clientX);
+                     const y = e.pageY || e.clientY || (e.touches && e.touches[0].clientY);
+                     tooltip.style.left = `${x}px`;
+                     tooltip.style.top = `${y - 10}px`;
                 };
-                circle.onmouseleave = () => document.getElementById('chart-tooltip').style.opacity = '0';
+                
+                const hideTooltip = () => {
+                    const tooltip = document.getElementById('chart-tooltip');
+                    tooltip.style.opacity = '0';
+                    setTimeout(() => tooltip.style.display = 'none', 200);
+                };
+                
+                // Mouse events
+                circle.onmouseenter = showTooltip;
+                circle.onmousemove = showTooltip;
+                circle.onmouseleave = hideTooltip;
+                
+                // Click event - update center and highlight transactions
                 circle.onclick = (e) => {
                     e.stopPropagation();
+                    showTooltip(e); // Always show tooltip on click
                     document.getElementById('chart-total-label').innerText = seg.name;
-                    document.getElementById('chart-total-val').innerText = `₱${Math.round(seg.value).toLocaleString()}`;
+                    const valFormatted = `₱${Math.round(seg.value).toLocaleString()}`;
+                    const valEl = document.getElementById('chart-total-val');
+                    valEl.dataset.raw = valFormatted;
+                    valEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valFormatted;
                     window.highlightTransactions(seg.name);
                 };
+                
+                // Touch events for mobile
+                let touchTimeout;
+                circle.addEventListener('touchstart', (e) => {
+                    clearTimeout(touchTimeout);
+                    showTooltip(e.touches[0]);
+                }, { passive: true });
+                
+                circle.addEventListener('touchend', (e) => {
+                    e.preventDefault(); // Prevent click event from firing
+                    // Update center label on touch
+                    document.getElementById('chart-total-label').innerText = seg.name;
+                    const valFormatted = `₱${Math.round(seg.value).toLocaleString()}`;
+                    const valEl = document.getElementById('chart-total-val');
+                    valEl.dataset.raw = valFormatted;
+                    valEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valFormatted;
+                    window.highlightTransactions(seg.name);
+                    
+                    // Keep tooltip visible for a moment
+                    touchTimeout = setTimeout(hideTooltip, 2000);
+                });
 
                 svgGroup.appendChild(circle);
                 
@@ -3131,6 +3171,9 @@
             const container = document.getElementById('history-container');
             const fragment = document.createDocumentFragment();
             
+            // Check visibility state ONCE at the start for consistency
+            const isHidden = localStorage.getItem('balance_hidden') === 'true';
+            
             drawTrendChart(txns);
 
             const groups = {};
@@ -3163,7 +3206,6 @@
                 
                 const header = document.createElement('div');
                 header.className = `month-header ${isCollapsed ? 'collapsed' : ''}`;
-                const isHidden = localStorage.getItem('balance_hidden') === 'true';
                 header.innerHTML = `
                     <span class="month-title">${month}</span>
                     <div style="display:flex; align-items:center; gap:12px;">
@@ -3263,7 +3305,7 @@
                             </div>
                             <div class="txn-right">
                                 <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                    ${localStorage.getItem('balance_hidden') === 'true' ? '******' : ((!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                    ${isHidden ? '******' : ((!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                                 </div>
                             </div>
                         </div>`;
@@ -3315,6 +3357,18 @@
             }
 
             setTimeout(() => setupLongPressHandlers(), 50);
+
+            // CRITICAL FIX: Force update all privacy-masked elements after rendering
+            // This ensures that when switching wallets, the privacy state is respected
+            if (isHidden) {
+                setTimeout(() => {
+                    const maskedElements = document.querySelectorAll('.privacy-mask');
+                    maskedElements.forEach(el => {
+                        if (!el.dataset.raw) el.dataset.raw = el.innerText;
+                        el.innerText = '******';
+                    });
+                }, 10);
+            }
 
             // FEATURE UPDATES (NEW)
             updateBudgetUI();

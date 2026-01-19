@@ -1017,7 +1017,7 @@
                     <div class="card-footer">
                         <div class="card-number-box">
                             <div class="card-number-label">Account Number</div>
-                            <div class="card-number">0099 09 6727</div>
+                            <div class="card-number">0099 096727</div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
@@ -1044,11 +1044,15 @@
         <!-- SHARED SYNC BAR REMOVED AND MOVED INTO CARDS -->
 
 
+
+        <!-- CHART TOOLTIP -->
+        <div id="chart-tooltip" style="position: fixed; background: rgba(15, 23, 42, 0.95); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); line-height: 1.4; white-space: nowrap;"></div>
+
         <div class="mui-container">
             <!-- Buttons integrated into card sync bar -->
             
             <!-- BUDGET CARD (NEW) -->
-            <div class="budget-card" id="budget-card-section">
+            <!-- <div class="budget-card" id="budget-card-section">
                 <div class="budget-header">
                     <h3 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Monthly Budget</h3>
                     <button class="mui-btn mui-btn--flat" onclick="promptSetBudget()" style="padding:0 8px; color:#3b82f6; font-size:11px; font-weight:800; text-transform:uppercase; border: 1px solid #dbeafe; border-radius: 6px; height: 26px;">Set Limit</button>
@@ -1060,7 +1064,7 @@
                     <span id="budget-spent">₱0.00 spent</span>
                     <span id="budget-limit">₱0.00 limit</span>
                 </div>
-            </div>
+            </div> -->
 
             <!-- RELOCATED ANALYTICS SECTION -->
 
@@ -1071,8 +1075,9 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Expenses structure</h3>
                     <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 4px 0 10px; border-radius: 8px; height: 28px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 100px;">
+                        
+                        <option value="this_month" selected>This Month</option>
                         <option value="today">Today</option>
-                        <option value="this_month">This Month</option>
                         <option value="this_week">This Week</option>
                         <option value="last_week">Last Week</option>
                         <option value="first_15">First 15 of Month</option>
@@ -1173,7 +1178,7 @@
             <div id="history-container"></div>
 
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
-            <div style="margin: 30px 0 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
+            <div style="margin: 20px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
             <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
@@ -1517,25 +1522,29 @@
                 await loadData();
                 setupAccountSwitcher();
                 
+                // Hydrate others in background after short delay to prioritize current view
+                setTimeout(() => window.hydrateAllCaches(), 3000);
+                
                 // Refresh global token state for handleScan
                 accessToken = localStorage.getItem('g_access_token');
                 expiry = localStorage.getItem('g_token_expiry');
 
                 if (accessToken && expiry && Date.now() < parseInt(expiry)) {
-                    // ADAPTIVE SYNC
+                    // ADAPTIVE SYNC with Cooldown to prevent lag on page switch
                     const lastDeepSync = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
+                    const lastQuickSync = localStorage.getItem(`last_quick_sync_${window.currentAccount}`);
                     const now = Date.now();
                     const dayInMs = 24 * 60 * 60 * 1000;
+                    const quickSyncCooldown = 10 * 60 * 1000; // 10 minutes
                     
                     if (!lastDeepSync || (now - parseInt(lastDeepSync)) > dayInMs) {
-                        log(`First sync for ${window.currentAccount} (400 items)...`);
-                        setTimeout(() => {
-                            handleScan(800); // Trigger deep scan
-                            // Key is now specific to account in handleScan usually, but we set it here too if needed
-                        }, 1000);
-                    } else {
+                        log(`Deep sync scheduled for ${window.currentAccount} (800 items)...`);
+                        setTimeout(() => handleScan(800), 2000);
+                    } else if (!lastQuickSync || (now - parseInt(lastQuickSync)) > quickSyncCooldown) {
                         log(`Routine quick sync for ${window.currentAccount}...`);
-                        setTimeout(() => handleScan(25), 1000);
+                        setTimeout(() => handleScan(25), 1500);
+                    } else {
+                        log(`Sync cooldown active for ${window.currentAccount}. Skipping auto-scan.`, 'info');
                     }
                 }
                 
@@ -1919,6 +1928,16 @@
                         window.allTxns = cache.txns;
                         renderHistory(cache.txns);
                         updateBalanceToThisMonth(cache.txns);
+                        
+                        // Robust Chart Initialization with slight delay to ensure DOM readiness
+                        setTimeout(() => {
+                            const filterEl = document.getElementById('chart-filter');
+                            if (filterEl) {
+                                filterEl.value = 'this_month';
+                                filterChart();
+                            }
+                        }, 100);
+                        
                         spinner.style.display = 'none'; 
                     }
                 } catch(e) { console.warn("Cache error", e); }
@@ -1940,56 +1959,59 @@
                 const syncAccount = window.currentAccount; // Capture for closure check
                 window.unsubscribeSnapshot = onSnapshot(q, (snap) => {
                     // STALE CHECK: If user switched accounts while this listener was active
-                    if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) {
+                if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) {
                         return;
                     }
                     let txns = [];
-                    const batchUpdates = []; 
 
+                    // 1. QUICK COMPARISON (Check if first 5 IDs match and length matches)
+                    const prevTxns = window.allTxns || [];
+                    const snapCount = snap.docs.length;
+                    
                     snap.docs.forEach(d => {
                         const data = d.data();
                         if (data.deleted) return; 
+                        txns.push({ id: d.id, ...data });
+                    });
 
-                        const t = { id: d.id, ...data };
-                        txns.push(t);
-                        
-                        // PERSIST AUTOMATED FUEL NOTES (Only if missing)
-                        if (!t.note) {
-                            const mapped = getMerchantDisplay(t.merchant || '', t);
-                            if (mapped.category === 'Vehicle') {
-                                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                                const autoNote = (amt > 250) ? "Car Refill" : "Motor Refill";
-                                // Update locally for display
-                                t.note = autoNote; 
-                                // Silent background update to DB (doesn't trigger re-render loop if strictly checked)
-                                // Note: Be careful with updateDoc triggering onSnapshot again. 
-                                // Since we check !t.note, and we are setting it, it should stabilise.
-                                updateDoc(doc(db, "users", uid, collectionName, t.id), { note: autoNote }); 
-                            }
-                        }
-                    });
-                    
-                    // Sort locally: Newest to Oldest (Date Desc, then CreatedAt Desc)
-                    txns.sort((a, b) => {
-                        const dateA = new Date(a.date);
-                        const dateB = new Date(b.date);
-                        if (dateB - dateA !== 0) return dateB - dateA;
-                        
-                        const createA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
-                        const createB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
-                        return createB - createA;
-                    });
-                    
-                    // Sort locally: Newest to Oldest (Date Desc, then CreatedAt Desc)
+                    // Sort locally
                     txns.sort((a, b) => {
                         const dateA = new Date(a.date).getTime();
                         const dateB = new Date(b.date).getTime();
                         if (dateB !== dateA) return dateB - dateA;
-                        
                         const createA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
                         const createB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
                         return createB - createA;
                     });
+
+                    const isSame = prevTxns.length === txns.length && 
+                                   txns.slice(0, 10).every((t, i) => 
+                                       prevTxns[i] && 
+                                       prevTxns[i].id === t.id && 
+                                       prevTxns[i].note === t.note && 
+                                       prevTxns[i].manualCategory === t.manualCategory &&
+                                       prevTxns[i].manualAmount === t.manualAmount &&
+                                       prevTxns[i].excluded === t.excluded &&
+                                       prevTxns[i].refund === t.refund
+                                   );
+
+                    if (isSame && document.getElementById('history-container').children.length > 0) {
+                        log(`Snapshot matches cache for ${syncAccount}. Render skipped.`);
+                        
+                        // Ensure chart is still rendered if it's currently empty
+                        const filterEl = document.getElementById('chart-filter');
+                        const chartVal = document.getElementById('chart-total-val');
+                        if (filterEl && (filterEl.value !== 'this_month' || (chartVal && chartVal.innerText === '0'))) {
+                           filterEl.value = 'this_month';
+                           filterChart();
+                        }
+
+                        spinner.style.display = 'none';
+                        return;
+                    }
+
+                    const batchUpdates = []; 
+                    // No need to re-loop or re-sort if we already did it above or can reuse it
                     
                     // Store globally & Cache with timestamp
                     window.allTxns = txns;
@@ -2024,12 +2046,13 @@
                         // Apply active category filter
                         if (window.filterTxnList) filterTxnList();
 
-                        // Persist chart filter
-                        const savedFilter = localStorage.getItem('wallet_chart_filter') || 'this_month';
+                        // Always default chart filter to 'this_month' on fresh data load/page return
+                        const defaultFilter = 'this_month';
                         const filterEl = document.getElementById('chart-filter');
                         if (filterEl) {
-                           filterEl.value = savedFilter;
-                           filterChart();
+                           filterEl.value = defaultFilter;
+                           // Use a small delay if coming from fresh load to ensure components are ready
+                           setTimeout(() => filterChart(), 50);
                         }
                     }
                 }, (error) => {
@@ -2058,6 +2081,36 @@
             }
         }
         window.loadData = loadData;
+
+        // BACKGROUND CACHE HYDRATION (Warm up all accounts)
+        window.hydrateAllCaches = async () => {
+            const uid = auth.currentUser?.uid;
+            if (!uid) return;
+            
+            const savedAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+            const defaultAccounts = ['atome', 'bpi'];
+            const allAccountIds = [...new Set([...defaultAccounts, ...savedAccounts.map(a => a.id)])];
+            
+            log(`Warming up cache for ${allAccountIds.length} accounts...`);
+            
+            for (const accId of allAccountIds) {
+                if (accId === window.currentAccount) continue; // Current already handled
+                
+                try {
+                    const collectionName = accId === 'atome' ? "transactions" : (accId === 'bpi' ? "bpi_transactions" : `txns_${accId}`);
+                    // Use getDocs for one-time fetch to avoid many active listeners
+                    const q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"), limit(100));
+                    const snap = await getDocs(q);
+                    
+                    const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                    const cacheKey = `wallet_cache_${uid}_${accId}`;
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        txns: txns,
+                        timestamp: Date.now()
+                    }));
+                } catch (e) { console.warn(`Silent hydrate failed for ${accId}`, e); }
+            }
+        };
 
         window.atomeBalanceVal = 0;
         window.bpiBalanceVal = 0;
@@ -2227,9 +2280,6 @@
         window.filterChart = () => {
             const filterEl = document.getElementById('chart-filter');
             const filter = filterEl.value;
-            
-            // Persist selection
-            localStorage.setItem('wallet_chart_filter', filter);
 
             const now = new Date();
             const year = now.getFullYear();
@@ -2823,24 +2873,68 @@
                 path.setAttribute('stroke-width', '4'); 
                 path.classList.add('pie-animate'); // Add spin animation
                 path.style.transition = 'all 0.3s';
+                path.style.cursor = 'pointer';
+                path.style.transformOrigin = 'center';
                 
                 // Interaction Events
                 const showTooltip = (e) => {
                     const tooltip = document.getElementById('chart-tooltip');
+                    if (!tooltip) return;
+                    
                     const percentText = percent.toFixed(1) + '%';
-                    tooltip.innerHTML = `${seg.name}<br><span style="color:#d1fae5">₱${Math.round(seg.value).toLocaleString()} (${percentText})</span>`;
+                    tooltip.innerHTML = `<div style="font-weight: 800; margin-bottom: 4px;">${seg.name}</div><div style="color:#d1fae5; font-size: 13px;">₱${Math.round(seg.value).toLocaleString()} <span style="opacity: 0.8;">(${percentText})</span></div>`;
                     tooltip.style.opacity = '1';
-                    tooltip.style.left = `${e.pageX}px`;
-                    tooltip.style.top = `${e.pageY - 10}px`;
+                    tooltip.style.display = 'block';
+                    
+                    // Better positioning - offset from cursor
+                    const x = e.pageX || e.clientX;
+                    const y = e.pageY || e.clientY;
+                    tooltip.style.left = `${x + 15}px`;
+                    tooltip.style.top = `${y - 40}px`;
                 };
 
                 const hideTooltip = () => {
-                    document.getElementById('chart-tooltip').style.opacity = '0';
+                    const tooltip = document.getElementById('chart-tooltip');
+                    if (!tooltip) return;
+                    tooltip.style.opacity = '0';
+                    setTimeout(() => {
+                        tooltip.style.display = 'none';
+                    }, 200);
                 };
 
-                path.onmouseenter = showTooltip;
-                path.onmousemove = showTooltip;
-                path.onmouseleave = hideTooltip;
+                // Hover effect
+                path.addEventListener('mouseenter', (e) => {
+                    path.style.filter = 'brightness(1.1)';
+                    path.style.transform = 'scale(1.02)';
+                    showTooltip(e);
+                });
+                
+                path.addEventListener('mousemove', (e) => {
+                    showTooltip(e);
+                });
+                
+                path.addEventListener('mouseleave', () => {
+                    path.style.filter = 'none';
+                    path.style.transform = 'scale(1)';
+                    hideTooltip();
+                });
+
+                // Touch events for mobile
+                let touchTimeout;
+                path.addEventListener('touchstart', (e) => {
+                    clearTimeout(touchTimeout);
+                    path.style.filter = 'brightness(1.1)';
+                    path.style.transform = 'scale(1.02)';
+                    showTooltip(e.touches[0]);
+                }, { passive: true });
+                
+                path.addEventListener('touchend', () => {
+                    touchTimeout = setTimeout(() => {
+                        path.style.filter = 'none';
+                        path.style.transform = 'scale(1)';
+                        hideTooltip();
+                    }, 1500); // Keep tooltip visible for 1.5s after touch
+                });
 
                 path.onclick = (e) => {
                     // Update Center Label
@@ -3396,6 +3490,13 @@
                 }
                 
                 if (savedCount > 0) {
+                    // Update sync timestamps
+                    const now = Date.now();
+                    localStorage.setItem(`last_quick_sync_${syncAccount}`, now);
+                    if (limit >= 400) {
+                        localStorage.setItem(`last_deep_sync_${syncAccount}`, now);
+                    }
+                    
                     // Final sanity check before reloading data
                     if (window.currentAccount !== syncAccount) {
                         log("Sync finished but account changed. Data saved to cloud.");
@@ -4575,12 +4676,27 @@
                     totalEl.innerText = `₱${filteredTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 }
 
-                // Auto-expand if search results found
+                // Auto-expand if search results found (only for specific searches >= 3 chars)
                 const content = acc.querySelector('.month-content');
                 const header = acc.querySelector('.month-header');
-                if (keyword.length > 0 && visibleCount > 0) {
+                const month = header.querySelector('.month-title').innerText;
+                
+                if (keyword.length >= 3 && visibleCount > 0) {
                     content.classList.remove('collapsed');
                     header.classList.remove('collapsed');
+                } else if (keyword.length === 0) {
+                    // Restore state from localStorage or default when search is cleared
+                    const savedState = localStorage.getItem(`accordion_${month}`);
+                    const index = Array.from(accordions).indexOf(acc);
+                    const shouldBeCollapsed = savedState === 'collapsed' || (savedState === null && index !== 0);
+                    
+                    if (shouldBeCollapsed) {
+                        content.classList.add('collapsed');
+                        header.classList.add('collapsed');
+                    } else {
+                        content.classList.remove('collapsed');
+                        header.classList.remove('collapsed');
+                    }
                 }
 
                 // Hide the whole accordion if no visible items

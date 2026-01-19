@@ -1,0 +1,1991 @@
+[
+  {
+    "id": "TLml0R6O3FB2g0e2SoKe",
+    "manualAmount": 255,
+    "merchant": "7 11 lunch",
+    "type": "expense",
+    "manualCategory": "Food & Drinks",
+    "refund": true,
+    "amount": 255,
+    "excluded": false,
+    "date": "2026-01-17T00:00:00.000Z",
+    "note": "Carbonara",
+    "category": "Food & Drinks"
+  },
+  {
+    "id": "txn_1768559159000",
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "manualCategory": "Vehicle",
+    "manualAmount": 300,
+    "excluded": false,
+    "amount": 300,
+    "date": "2026-01-16",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697103,
+      "nanoseconds": 612000000
+    }
+  },
+  {
+    "id": "NcUJD41RgWnSVMhF3bEX",
+    "manualAmount": 100,
+    "amount": 50,
+    "note": "Kwekwek Ni Bambam",
+    "category": "Food & Drinks",
+    "date": "2026-01-16T00:00:00.000Z",
+    "merchant": "Kwekwek Ni Bambam",
+    "excluded": true,
+    "type": "expense",
+    "manualCategory": "Food & Drinks"
+  },
+  {
+    "id": "txn_1768295489000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2026-01-13",
+    "type": "expense",
+    "category": "Online shopping",
+    "createdAt": {
+      "seconds": 1768697103,
+      "nanoseconds": 676000000
+    },
+    "amount": 374,
+    "note": "Wires",
+    "manualCategory": "Online shopping",
+    "excluded": false,
+    "manualAmount": 374
+  },
+  {
+    "id": "txn_1768215351000",
+    "merchant": "MR DIY ZBOG BOGO PHL",
+    "manualCategory": "Shopping",
+    "manualAmount": 170,
+    "amount": 170,
+    "date": "2026-01-12",
+    "category": "Shopping",
+    "note": "Wires",
+    "type": "expense",
+    "createdAt": {
+      "seconds": 1768697103,
+      "nanoseconds": 957000000
+    }
+  },
+  {
+    "id": "txn_1768220520000",
+    "createdAt": {
+      "seconds": 1768697103,
+      "nanoseconds": 806000000
+    },
+    "date": "2026-01-12",
+    "note": "Cover",
+    "type": "expense",
+    "manualCategory": "Online shopping",
+    "category": "Online shopping",
+    "amount": 368,
+    "merchant": "TikTok Shop Seller Taguig PHL",
+    "manualAmount": 368
+  },
+  {
+    "id": "txn_1768184977000",
+    "note": "Kuya Tepen Dish Rack",
+    "date": "2026-01-12",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 284,
+    "excluded": true,
+    "createdAt": {
+      "seconds": 1768697103,
+      "nanoseconds": 734000000
+    }
+  },
+  {
+    "id": "txn_1768091285000",
+    "amount": 212.25,
+    "createdAt": {
+      "seconds": 1768697113,
+      "nanoseconds": 295000000
+    },
+    "note": "Oxecure",
+    "date": "2026-01-11",
+    "excluded": false,
+    "merchant": "WATSONS HISOLER BLDG B CEBU PHL"
+  },
+  {
+    "id": "txn_1768127276000",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Motor Refill",
+    "amount": 150,
+    "date": "2026-01-11",
+    "createdAt": {
+      "seconds": 1768697111,
+      "nanoseconds": 625000000
+    }
+  },
+  {
+    "id": "txn_1768126561000",
+    "note": "Lani ug Anne",
+    "amount": 117,
+    "merchant": "MR DIY ZBOG BOGO PHL",
+    "createdAt": {
+      "seconds": 1768697110,
+      "nanoseconds": 935000000
+    },
+    "date": "2026-01-11"
+  },
+  {
+    "id": "txn_1768130317000",
+    "excluded": true,
+    "createdAt": {
+      "seconds": 1768697104,
+      "nanoseconds": 374000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 187,
+    "note": "Kuya Tepen Cast Iron Cover",
+    "date": "2026-01-11"
+  },
+  {
+    "id": "txn_1768141976000",
+    "createdAt": {
+      "seconds": 1768697104,
+      "nanoseconds": 178000000
+    },
+    "note": "Phone Case",
+    "manualAmount": 149,
+    "manualCategory": "Online shopping",
+    "date": "2026-01-11",
+    "amount": 149,
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1768141461000",
+    "manualCategory": "Online shopping",
+    "date": "2026-01-11",
+    "note": "Phone Case",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697104,
+      "nanoseconds": 129000000
+    },
+    "amount": 199
+  },
+  {
+    "id": "txn_1768129938000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "excluded": true,
+    "createdAt": {
+      "seconds": 1768697104,
+      "nanoseconds": 67000000
+    },
+    "date": "2026-01-11",
+    "note": "Kuya Tepen Stove",
+    "amount": 2449
+  },
+  {
+    "id": "txn_1768129992000",
+    "date": "2026-01-11",
+    "createdAt": {
+      "seconds": 1768697104,
+      "nanoseconds": 12000000
+    },
+    "excluded": true,
+    "note": "Kuya Tepen Sink",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 3729
+  },
+  {
+    "id": "txn_1768043011000",
+    "manualAmount": 467,
+    "date": "2026-01-10",
+    "type": "expense",
+    "createdAt": {
+      "seconds": 1768697112,
+      "nanoseconds": 645000000
+    },
+    "amount": 1430,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "note": "Headlight Low Beam",
+    "category": "Online shopping",
+    "manualCategory": "Online shopping"
+  },
+  {
+    "id": "txn_1768040139000",
+    "createdAt": {
+      "seconds": 1768697112,
+      "nanoseconds": 115000000
+    },
+    "date": "2026-01-10",
+    "amount": 300,
+    "note": "Car Refill",
+    "merchant": "TEC FUEL SAN REMIGIO PHL"
+  },
+  {
+    "id": "txn_1767944263000",
+    "amount": 52,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "note": "Card Holder Phone Case",
+    "createdAt": {
+      "seconds": 1768697113,
+      "nanoseconds": 782000000
+    },
+    "date": "2026-01-09"
+  },
+  {
+    "id": "txn_1767839755000",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697116,
+      "nanoseconds": 246000000
+    },
+    "date": "2026-01-08",
+    "amount": 1000,
+    "merchant": "SHELL FILLWISE BOGO CEBU PHL"
+  },
+  {
+    "id": "txn_1767884918000",
+    "note": "Aldous Balay",
+    "date": "2026-01-08",
+    "merchant": "GADC 325CLNSOUTHCBU CEBU CITY PHL",
+    "createdAt": {
+      "seconds": 1768697115,
+      "nanoseconds": 44000000
+    },
+    "amount": 242
+  },
+  {
+    "id": "txn_1767504103000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 165,
+    "excluded": false,
+    "createdAt": {
+      "seconds": 1768697126,
+      "nanoseconds": 494000000
+    },
+    "refund": true,
+    "date": "2026-01-04",
+    "note": "Refunded"
+  },
+  {
+    "id": "txn_1767486892000",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "date": "2026-01-04",
+    "note": "Car Refill",
+    "amount": 300,
+    "createdAt": {
+      "seconds": 1768697124,
+      "nanoseconds": 597000000
+    }
+  },
+  {
+    "id": "txn_1767504440000",
+    "amount": 122,
+    "createdAt": {
+      "seconds": 1768697123,
+      "nanoseconds": 320000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2026-01-04"
+  },
+  {
+    "id": "txn_1767505543000",
+    "createdAt": {
+      "seconds": 1768697115,
+      "nanoseconds": 655000000
+    },
+    "note": "Aux Wire",
+    "date": "2026-01-04",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 247
+  },
+  {
+    "id": "txn_1767517443000",
+    "createdAt": {
+      "seconds": 1768697114,
+      "nanoseconds": 434000000
+    },
+    "amount": 479,
+    "note": "Exchange Gift + Hanger",
+    "merchant": "J AND L SHOPPING BOGO PHL",
+    "date": "2026-01-04"
+  },
+  {
+    "id": "txn_1767316768000",
+    "createdAt": {
+      "seconds": 1768697126,
+      "nanoseconds": 173000000
+    },
+    "manualCategory": "Online shopping",
+    "amount": 147,
+    "note": "Paracord",
+    "date": "2026-01-02",
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1767316865000",
+    "date": "2026-01-02",
+    "createdAt": {
+      "seconds": 1768697125,
+      "nanoseconds": 564000000
+    },
+    "note": "Drawstring",
+    "manualAmount": 68,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 168
+  },
+  {
+    "id": "txn_1767319767000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697125,
+      "nanoseconds": 34000000
+    },
+    "amount": 128,
+    "note": "Paracord",
+    "date": "2026-01-02"
+  },
+  {
+    "id": "txn_1767318110000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "note": "Paracord",
+    "createdAt": {
+      "seconds": 1768697124,
+      "nanoseconds": 33000000
+    },
+    "amount": 194,
+    "date": "2026-01-02"
+  },
+  {
+    "id": "Q6k1Ek0DH6kh912V1OP3",
+    "note": "Balancing",
+    "amount": 5276.25,
+    "date": "2026-01-01T00:00:00.000Z",
+    "category": "Income",
+    "manualCategory": "Income",
+    "type": "income",
+    "merchant": "Allowance",
+    "manualAmount": 5276.25
+  },
+  {
+    "id": "txn_1767151759000",
+    "createdAt": {
+      "seconds": 1768697127,
+      "nanoseconds": 245000000
+    },
+    "date": "2025-12-31",
+    "amount": 300,
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Car Refill"
+  },
+  {
+    "id": "txn_1767056573000",
+    "amount": 400,
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697128,
+      "nanoseconds": 495000000
+    },
+    "date": "2025-12-30"
+  },
+  {
+    "id": "txn_1767066048000",
+    "note": "Load 60gb",
+    "category": "Service",
+    "createdAt": {
+      "seconds": 1768697127,
+      "nanoseconds": 855000000
+    },
+    "manualAmount": 749,
+    "merchant": "GLOBE-BILLSPAY PH PHL",
+    "manualCategory": "Service",
+    "date": "2025-12-30",
+    "type": "expense",
+    "amount": 749
+  },
+  {
+    "id": "txn_1766988501000",
+    "amount": 87.64,
+    "createdAt": {
+      "seconds": 1768697134,
+      "nanoseconds": 887000000
+    },
+    "merchant": "Spotify Stockholm SWE",
+    "date": "2025-12-29"
+  },
+  {
+    "id": "txn_1766889453000",
+    "amount": 249,
+    "date": "2025-12-28",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "note": "Tumbler Bag",
+    "createdAt": {
+      "seconds": 1768697138,
+      "nanoseconds": 607000000
+    }
+  },
+  {
+    "id": "txn_1766883667000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-12-28",
+    "createdAt": {
+      "seconds": 1768697138,
+      "nanoseconds": 95000000
+    },
+    "amount": 249
+  },
+  {
+    "id": "txn_1766845389000",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697136,
+      "nanoseconds": 576000000
+    },
+    "date": "2025-12-27",
+    "amount": 300,
+    "merchant": "TEC FUEL SAN REMIGIO PHL"
+  },
+  {
+    "id": "txn_1766763588000",
+    "createdAt": {
+      "seconds": 1768697136,
+      "nanoseconds": 38000000
+    },
+    "amount": 274,
+    "date": "2025-12-26",
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1766711526000",
+    "createdAt": {
+      "seconds": 1768697135,
+      "nanoseconds": 427000000
+    },
+    "date": "2025-12-26",
+    "amount": 555,
+    "merchant": "MR DIY ZBOG BOGO PHL"
+  },
+  {
+    "id": "txn_1766673569000",
+    "createdAt": {
+      "seconds": 1768697139,
+      "nanoseconds": 575000000
+    },
+    "date": "2025-12-25",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 179
+  },
+  {
+    "id": "txn_1766561029000",
+    "createdAt": {
+      "seconds": 1768697139,
+      "nanoseconds": 85000000
+    },
+    "merchant": "TRADERSCONNECT.COM LONDON GBR",
+    "amount": 1215.27,
+    "date": "2025-12-24"
+  },
+  {
+    "id": "txn_1766492071000",
+    "createdAt": {
+      "seconds": 1768697146,
+      "nanoseconds": 442000000
+    },
+    "merchant": "MR DIY ZBOG BOGO PHL",
+    "amount": 669,
+    "date": "2025-12-23"
+  },
+  {
+    "id": "txn_1766493130000",
+    "createdAt": {
+      "seconds": 1768697137,
+      "nanoseconds": 684000000
+    },
+    "note": "Car Refill",
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "date": "2025-12-23",
+    "amount": 300
+  },
+  {
+    "id": "txn_1766531625000",
+    "amount": 300,
+    "date": "2025-12-23",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697137,
+      "nanoseconds": 73000000
+    },
+    "merchant": "TEC FUEL SAN REMIGIO PHL"
+  },
+  {
+    "id": "txn_1766320236000",
+    "createdAt": {
+      "seconds": 1768697145,
+      "nanoseconds": 574000000
+    },
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Car Refill",
+    "date": "2025-12-21",
+    "amount": 300
+  },
+  {
+    "id": "txn_1766210729000",
+    "amount": 199,
+    "merchant": "JOLLIBEE JB0127 SOK CEBU CITY PHL",
+    "date": "2025-12-20",
+    "createdAt": {
+      "seconds": 1768697148,
+      "nanoseconds": 951000000
+    }
+  },
+  {
+    "id": "txn_1766239994000",
+    "amount": 660,
+    "merchant": "KKV SM J Mall Cebu CEBU CITY PHL",
+    "createdAt": {
+      "seconds": 1768697146,
+      "nanoseconds": 956000000
+    },
+    "date": "2025-12-20"
+  },
+  {
+    "id": "txn_1766199034000",
+    "date": "2025-12-20",
+    "createdAt": {
+      "seconds": 1768697145,
+      "nanoseconds": 853000000
+    },
+    "note": "Car Refill",
+    "merchant": "SHELL FILLWISE BOGO CEBU PHL",
+    "amount": 500
+  },
+  {
+    "id": "txn_1766186976000",
+    "createdAt": {
+      "seconds": 1768697150,
+      "nanoseconds": 33000000
+    },
+    "amount": 500,
+    "note": "Car Refill",
+    "date": "2025-12-19",
+    "merchant": "TECFUEL BOGO CEBU PHL"
+  },
+  {
+    "id": "txn_1766139076000",
+    "note": "Car Refill",
+    "amount": 300,
+    "createdAt": {
+      "seconds": 1768697147,
+      "nanoseconds": 415000000
+    },
+    "date": "2025-12-19",
+    "merchant": "TEC FUEL SAN REMIGIO PHL"
+  },
+  {
+    "id": "txn_1765825826000",
+    "amount": 300,
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "date": "2025-12-15",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697147,
+      "nanoseconds": 973000000
+    }
+  },
+  {
+    "id": "txn_1765696401000",
+    "merchant": "SHELL FILLWISE BOGO CEBU PHL",
+    "date": "2025-12-14",
+    "createdAt": {
+      "seconds": 1768697149,
+      "nanoseconds": 433000000
+    },
+    "amount": 300,
+    "note": "Car Refill"
+  },
+  {
+    "id": "txn_1765620175000",
+    "createdAt": {
+      "seconds": 1768697148,
+      "nanoseconds": 465000000
+    },
+    "date": "2025-12-13",
+    "note": "15gb",
+    "category": "Service",
+    "manualAmount": 249,
+    "type": "expense",
+    "manualCategory": "Service",
+    "amount": 249,
+    "merchant": "GLOBE-BILLSPAY PH PHL"
+  },
+  {
+    "id": "txn_1765436910000",
+    "note": "Car Refill",
+    "amount": 300,
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "date": "2025-12-11",
+    "createdAt": {
+      "seconds": 1768697156,
+      "nanoseconds": 453000000
+    }
+  },
+  {
+    "id": "txn_1765378843000",
+    "amount": 1031,
+    "createdAt": {
+      "seconds": 1768697155,
+      "nanoseconds": 813000000
+    },
+    "date": "2025-12-10",
+    "merchant": "MRCRMT London GBR"
+  },
+  {
+    "id": "txn_1765176273000",
+    "date": "2025-12-08",
+    "excluded": true,
+    "merchant": "SM STORE-CEBU CEBU CITY PHL",
+    "amount": 4012,
+    "createdAt": {
+      "seconds": 1768697156,
+      "nanoseconds": 824000000
+    }
+  },
+  {
+    "id": "txn_1764846635000",
+    "merchant": "MR DIY ZBOG BOGO PHL",
+    "date": "2025-12-04",
+    "amount": 204,
+    "createdAt": {
+      "seconds": 1768697158,
+      "nanoseconds": 860000000
+    }
+  },
+  {
+    "id": "txn_1761531502000",
+    "merchant": "GLOBE-BILLSPAY PH PHL",
+    "date": "2025-10-27",
+    "category": "Service",
+    "type": "expense",
+    "createdAt": {
+      "seconds": 1768697160,
+      "nanoseconds": 433000000
+    },
+    "amount": 449,
+    "note": "30gb",
+    "manualCategory": "Service",
+    "manualAmount": 449
+  },
+  {
+    "id": "txn_1761286967000",
+    "amount": 1210.96,
+    "createdAt": {
+      "seconds": 1768697159,
+      "nanoseconds": 818000000
+    },
+    "merchant": "TRADERSCONNECT.COM LONDON GBR",
+    "date": "2025-10-24"
+  },
+  {
+    "id": "txn_1761286815000",
+    "merchant": "xmglobal Limassol CYP",
+    "type": "expense",
+    "manualAmount": 2421.9,
+    "createdAt": {
+      "seconds": 1768697158,
+      "nanoseconds": 421000000
+    },
+    "manualCategory": "Trading Expenses",
+    "note": "",
+    "category": "Trading Expenses",
+    "amount": 2421.9,
+    "date": "2025-10-24"
+  },
+  {
+    "id": "txn_1761029095000",
+    "date": "2025-10-21",
+    "note": "Car Refill",
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "amount": 500,
+    "createdAt": {
+      "seconds": 1768697159,
+      "nanoseconds": 314000000
+    }
+  },
+  {
+    "id": "txn_1761036039000",
+    "createdAt": {
+      "seconds": 1768697157,
+      "nanoseconds": 384000000
+    },
+    "merchant": "JOLLIBEE JB3244 DAANBA DAANBANTAYAN PHL",
+    "amount": 1399,
+    "note": "Birthday Bambam",
+    "date": "2025-10-21"
+  },
+  {
+    "id": "txn_1760939063000",
+    "createdAt": {
+      "seconds": 1768697157,
+      "nanoseconds": 853000000
+    },
+    "date": "2025-10-20",
+    "merchant": "WATSONS HISOLER BLDG B CEBU PHL",
+    "amount": 278
+  },
+  {
+    "id": "txn_1760792209000",
+    "date": "2025-10-18",
+    "amount": 358,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697170,
+      "nanoseconds": 665000000
+    }
+  },
+  {
+    "id": "txn_1760748935000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-10-18",
+    "amount": 366,
+    "createdAt": {
+      "seconds": 1768697169,
+      "nanoseconds": 631000000
+    }
+  },
+  {
+    "id": "txn_1760791120000",
+    "date": "2025-10-18",
+    "createdAt": {
+      "seconds": 1768697169,
+      "nanoseconds": 450000000
+    },
+    "amount": 239,
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1760793993000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-10-18",
+    "amount": 94,
+    "createdAt": {
+      "seconds": 1768697167,
+      "nanoseconds": 404000000
+    }
+  },
+  {
+    "id": "txn_1760793567000",
+    "amount": 69,
+    "createdAt": {
+      "seconds": 1768697167,
+      "nanoseconds": 10000000
+    },
+    "date": "2025-10-18",
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1760610322000",
+    "date": "2025-10-16",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697171,
+      "nanoseconds": 291000000
+    },
+    "amount": 300,
+    "merchant": "TECFUEL BOGO CEBU PHL"
+  },
+  {
+    "id": "txn_1760226049000",
+    "createdAt": {
+      "seconds": 1768697168,
+      "nanoseconds": 53000000
+    },
+    "amount": 500,
+    "note": "Car Refill",
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "date": "2025-10-11"
+  },
+  {
+    "id": "txn_1760100741000",
+    "note": "Car Refill",
+    "date": "2025-10-10",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "amount": 300,
+    "createdAt": {
+      "seconds": 1768697168,
+      "nanoseconds": 497000000
+    }
+  },
+  {
+    "id": "txn_1760015538000",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697170,
+      "nanoseconds": 193000000
+    },
+    "date": "2025-10-09",
+    "amount": 300
+  },
+  {
+    "id": "txn_1759895513000",
+    "date": "2025-10-08",
+    "createdAt": {
+      "seconds": 1768697178,
+      "nanoseconds": 638000000
+    },
+    "amount": 393,
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1759891511000",
+    "amount": 189,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697178,
+      "nanoseconds": 46000000
+    },
+    "date": "2025-10-08"
+  },
+  {
+    "id": "txn_1759895817000",
+    "createdAt": {
+      "seconds": 1768697171,
+      "nanoseconds": 591000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 329,
+    "date": "2025-10-08"
+  },
+  {
+    "id": "txn_1759822287000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697180,
+      "nanoseconds": 744000000
+    },
+    "date": "2025-10-07",
+    "amount": 1030
+  },
+  {
+    "id": "txn_1759726239000",
+    "note": "Car Refill",
+    "amount": 500,
+    "merchant": "SEAOIL BOGO PHL",
+    "date": "2025-10-06",
+    "createdAt": {
+      "seconds": 1768697182,
+      "nanoseconds": 798000000
+    }
+  },
+  {
+    "id": "txn_1759758396000",
+    "amount": 630,
+    "date": "2025-10-06",
+    "createdAt": {
+      "seconds": 1768697181,
+      "nanoseconds": 212000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1759757151000",
+    "amount": 1446,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697180,
+      "nanoseconds": 296000000
+    },
+    "date": "2025-10-06"
+  },
+  {
+    "id": "txn_1759722386000",
+    "note": "Motor Refill",
+    "date": "2025-10-06",
+    "createdAt": {
+      "seconds": 1768697179,
+      "nanoseconds": 616000000
+    },
+    "amount": 135.05,
+    "merchant": "TEC FUEL SAN REMIGIO PHL"
+  },
+  {
+    "id": "txn_1759759747000",
+    "type": "expense",
+    "manualAmount": 358,
+    "createdAt": {
+      "seconds": 1768697179,
+      "nanoseconds": 294000000
+    },
+    "date": "2025-10-06",
+    "amount": 358,
+    "category": "Online shopping",
+    "manualCategory": "Online shopping",
+    "note": "Racket Grip",
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1759570567000",
+    "createdAt": {
+      "seconds": 1768697181,
+      "nanoseconds": 861000000
+    },
+    "amount": 400,
+    "date": "2025-10-04",
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "note": "Car Refill"
+  },
+  {
+    "id": "txn_1759230020000",
+    "createdAt": {
+      "seconds": 1768697190,
+      "nanoseconds": 72000000
+    },
+    "date": "2025-09-30",
+    "merchant": "SUPER METRO S/M-BOGO CEBU PHL",
+    "amount": 784.75
+  },
+  {
+    "id": "txn_1759198807000",
+    "date": "2025-09-30",
+    "amount": 600.99,
+    "createdAt": {
+      "seconds": 1768697189,
+      "nanoseconds": 31000000
+    },
+    "merchant": "Equity Edge Analytics London GBR"
+  },
+  {
+    "id": "txn_1759230662000",
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "amount": 300,
+    "date": "2025-09-30",
+    "note": "Car Refill",
+    "createdAt": {
+      "seconds": 1768697182,
+      "nanoseconds": 131000000
+    }
+  },
+  {
+    "id": "txn_1759078261000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768697192,
+      "nanoseconds": 102000000
+    },
+    "date": "2025-09-28",
+    "amount": 1688
+  },
+  {
+    "id": "txn_1759047326000",
+    "date": "2025-09-28",
+    "createdAt": {
+      "seconds": 1768697191,
+      "nanoseconds": 629000000
+    },
+    "merchant": "SM SUPERMARKET SM SRP CEBU PHL",
+    "amount": 2496.25
+  },
+  {
+    "id": "txn_1758867840000",
+    "amount": 300,
+    "date": "2025-09-26",
+    "createdAt": {
+      "seconds": 1768697191,
+      "nanoseconds": 55000000
+    },
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Car Refill"
+  },
+  {
+    "id": "txn_1758795158000",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "date": "2025-09-25",
+    "note": "Motor Refill",
+    "amount": 200,
+    "createdAt": {
+      "seconds": 1768697193,
+      "nanoseconds": 620000000
+    }
+  },
+  {
+    "id": "txn_1758778336000",
+    "createdAt": {
+      "seconds": 1768697189,
+      "nanoseconds": 503000000
+    },
+    "amount": 156,
+    "merchant": "JOLLIBEE JB3206 CP BOGO CITY PHL",
+    "date": "2025-09-25"
+  },
+  {
+    "id": "txn_1758711293000",
+    "note": "Motor Refill",
+    "amount": 150,
+    "createdAt": {
+      "seconds": 1768697193,
+      "nanoseconds": 110000000
+    },
+    "date": "2025-09-24",
+    "merchant": "TECFUEL BOGO CEBU PHL"
+  },
+  {
+    "id": "txn_1758516868000",
+    "createdAt": {
+      "seconds": 1768697190,
+      "nanoseconds": 575000000
+    },
+    "amount": 595,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-09-22"
+  },
+  {
+    "id": "txn_1758422321000",
+    "date": "2025-09-21",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 330,
+    "createdAt": {
+      "seconds": 1768697192,
+      "nanoseconds": 609000000
+    }
+  },
+  {
+    "id": "txn_1758261042000",
+    "amount": 125,
+    "date": "2025-09-19",
+    "merchant": "JOLLIBEE JB0127 SOK CEBU CITY PHL",
+    "createdAt": {
+      "seconds": 1768697218,
+      "nanoseconds": 395000000
+    }
+  },
+  {
+    "id": "txn_1758256532000",
+    "createdAt": {
+      "seconds": 1768697218,
+      "nanoseconds": 276000000
+    },
+    "date": "2025-09-19",
+    "amount": 301,
+    "merchant": "JOLLIBEE JB 0127 CEBU CITY PHL"
+  },
+  {
+    "id": "txn_1758247871000",
+    "merchant": "GLOBE WEBLOADING EC PH PHL",
+    "type": "expense",
+    "date": "2025-09-19",
+    "category": "Service",
+    "note": "30gb",
+    "createdAt": {
+      "seconds": 1768687053,
+      "nanoseconds": 408000000
+    },
+    "manualAmount": 449,
+    "amount": 449,
+    "manualCategory": "Service"
+  },
+  {
+    "id": "txn_1758090037000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "manualAmount": 538,
+    "category": "Online shopping",
+    "date": "2025-09-17",
+    "createdAt": {
+      "seconds": 1768697218,
+      "nanoseconds": 548000000
+    },
+    "type": "expense",
+    "amount": 538,
+    "manualCategory": "Online shopping",
+    "note": "Sample Jersey"
+  },
+  {
+    "id": "txn_1758005886000",
+    "createdAt": {
+      "seconds": 1768697218,
+      "nanoseconds": 444000000
+    },
+    "date": "2025-09-16",
+    "amount": 350,
+    "merchant": "MR DIY ZBOG BOGO PHL"
+  },
+  {
+    "id": "txn_1758027497000",
+    "date": "2025-09-16",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "note": "Motor Refill",
+    "createdAt": {
+      "seconds": 1768687053,
+      "nanoseconds": 424000000
+    },
+    "amount": 150
+  },
+  {
+    "id": "txn_1757951423000",
+    "amount": 535,
+    "createdAt": {
+      "seconds": 1768697218,
+      "nanoseconds": 463000000
+    },
+    "date": "2025-09-15",
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1757899534000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768687053,
+      "nanoseconds": 375000000
+    },
+    "amount": 254,
+    "date": "2025-09-15"
+  },
+  {
+    "id": "txn_1757671658000",
+    "createdAt": {
+      "seconds": 1768687053,
+      "nanoseconds": 358000000
+    },
+    "note": "Car Refill",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "date": "2025-09-12",
+    "amount": 300
+  },
+  {
+    "id": "txn_1757577582000",
+    "merchant": "SHELL FILLWISE BOGO CEBU PHL",
+    "date": "2025-09-11",
+    "note": "Motor Refill",
+    "createdAt": {
+      "seconds": 1768697218,
+      "nanoseconds": 336000000
+    },
+    "amount": 200
+  },
+  {
+    "id": "txn_1757556333000",
+    "date": "2025-09-11",
+    "merchant": "TAP SURE LEVERAGE FUND Dubai ARE",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 555000000
+    },
+    "amount": 58.98
+  },
+  {
+    "id": "txn_1757556567000",
+    "date": "2025-09-11",
+    "merchant": "TAP SURE LEVERAGE FUND Dubai ARE",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 450000000
+    },
+    "amount": 58.98
+  },
+  {
+    "id": "txn_1757551676000",
+    "amount": 163,
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 422000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-09-11"
+  },
+  {
+    "id": "txn_1757396980000",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 538000000
+    },
+    "date": "2025-09-09",
+    "amount": 651,
+    "merchant": "SUPER METRO S/M-BOGO CEBU PHL"
+  },
+  {
+    "id": "txn_1757385765000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 295,
+    "date": "2025-09-09",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 496000000
+    }
+  },
+  {
+    "id": "txn_1757404619000",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "date": "2025-09-09",
+    "amount": 100,
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 479000000
+    },
+    "note": "Motor Refill"
+  },
+  {
+    "id": "txn_1757164812000",
+    "note": "Car Refill",
+    "amount": 300,
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "date": "2025-09-06",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 521000000
+    }
+  },
+  {
+    "id": "txn_1756728846000",
+    "amount": 348,
+    "date": "2025-09-01",
+    "merchant": "RIBSHACK SM CITY CEBU CEBU CITY PHL",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 601000000
+    }
+  },
+  {
+    "id": "txn_1756651227000",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 616000000
+    },
+    "date": "2025-08-31",
+    "merchant": "JOLLIBEE JB3206 BOGO PHL",
+    "amount": 255
+  },
+  {
+    "id": "txn_1756633026000",
+    "date": "2025-08-31",
+    "createdAt": {
+      "seconds": 1768687072,
+      "nanoseconds": 585000000
+    },
+    "amount": 284,
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1756526611000",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 213000000
+    },
+    "date": "2025-08-30",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 570
+  },
+  {
+    "id": "txn_1756552395000",
+    "amount": 1491,
+    "date": "2025-08-30",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 181000000
+    }
+  },
+  {
+    "id": "txn_1756555260000",
+    "amount": 1691,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 99000000
+    },
+    "date": "2025-08-30"
+  },
+  {
+    "id": "txn_1756566662000",
+    "amount": 176,
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 67000000
+    },
+    "merchant": "GADC 623BOGO CEBU BOGO PHL",
+    "date": "2025-08-30"
+  },
+  {
+    "id": "txn_1756474083000",
+    "amount": 100,
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 280000000
+    },
+    "merchant": "PETRON 1026498 F BOGO PHL",
+    "date": "2025-08-29",
+    "note": "Motor Refill"
+  },
+  {
+    "id": "txn_1756255297000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 293,
+    "date": "2025-08-27",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 297000000
+    }
+  },
+  {
+    "id": "txn_1756270423000",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 264000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 230,
+    "date": "2025-08-27"
+  },
+  {
+    "id": "txn_1756121511000",
+    "amount": 1304,
+    "date": "2025-08-25",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 143000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1755826680000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 1127,
+    "date": "2025-08-22",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 248000000
+    }
+  },
+  {
+    "id": "txn_1755747951000",
+    "date": "2025-08-21",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 841,
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 683000000
+    }
+  },
+  {
+    "id": "txn_1755781306000",
+    "createdAt": {
+      "seconds": 1768687103,
+      "nanoseconds": 313000000
+    },
+    "date": "2025-08-21",
+    "amount": 251,
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1755670072000",
+    "amount": 609,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 828000000
+    },
+    "date": "2025-08-20"
+  },
+  {
+    "id": "txn_1755669066000",
+    "date": "2025-08-20",
+    "amount": 550,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 761000000
+    }
+  },
+  {
+    "id": "txn_1755533996000",
+    "amount": 409,
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 781000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-08-18"
+  },
+  {
+    "id": "txn_1755394761000",
+    "date": "2025-08-17",
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 867000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 273
+  },
+  {
+    "id": "txn_1755320926000",
+    "amount": 287,
+    "date": "2025-08-16",
+    "createdAt": {
+      "seconds": 1768687232,
+      "nanoseconds": 7000000
+    },
+    "merchant": "J AND L SHOPPING BOGO PHL"
+  },
+  {
+    "id": "txn_1755325020000",
+    "date": "2025-08-16",
+    "merchant": "MR DIY BGCC BOGO PHL",
+    "amount": 118,
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 904000000
+    }
+  },
+  {
+    "id": "txn_1755338484000",
+    "amount": 200,
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 883000000
+    },
+    "note": "Motor Refill",
+    "date": "2025-08-16",
+    "merchant": "SHELL FILLWISE BOGO CEBU PHL"
+  },
+  {
+    "id": "txn_1754918855000",
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 986000000
+    },
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "amount": 300,
+    "date": "2025-08-11",
+    "note": "Car Refill"
+  },
+  {
+    "id": "txn_1754873113000",
+    "createdAt": {
+      "seconds": 1768687231,
+      "nanoseconds": 969000000
+    },
+    "date": "2025-08-11",
+    "note": "Car Refill",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "amount": 300
+  },
+  {
+    "id": "txn_1754817086000",
+    "note": "Car Refill",
+    "date": "2025-08-10",
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 366000000
+    },
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "amount": 300
+  },
+  {
+    "id": "txn_1754758966000",
+    "merchant": "TikTok Shop Seller Kowloon City HKG",
+    "amount": 351.94,
+    "date": "2025-08-09",
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 979000000
+    }
+  },
+  {
+    "id": "txn_1754723640000",
+    "note": "Car Refill",
+    "amount": 300,
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 554000000
+    },
+    "date": "2025-08-09",
+    "merchant": "TEC FUEL SAN REMIGIO PHL"
+  },
+  {
+    "id": "txn_1754614228000",
+    "date": "2025-08-08",
+    "amount": 282,
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 749000000
+    },
+    "merchant": "MR DIY BGCC BOGO PHL"
+  },
+  {
+    "id": "txn_1754468955000",
+    "date": "2025-08-06",
+    "amount": 274,
+    "merchant": "GADC 623BOGOCEBU SOK",
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 507000000
+    }
+  },
+  {
+    "id": "txn_1754279376000",
+    "amount": 210,
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 454000000
+    },
+    "date": "2025-08-04"
+  },
+  {
+    "id": "txn_1754189536000",
+    "date": "2025-08-03",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 382,
+    "createdAt": {
+      "seconds": 1768687347,
+      "nanoseconds": 28000000
+    }
+  },
+  {
+    "id": "txn_1754010654000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 185,
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 937000000
+    },
+    "date": "2025-08-01"
+  },
+  {
+    "id": "txn_1754069984000",
+    "date": "2025-08-01",
+    "amount": 763,
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 432000000
+    },
+    "merchant": "GADC 623BOGO FC BOGO PHL"
+  },
+  {
+    "id": "txn_1753939615000",
+    "amount": 240,
+    "createdAt": {
+      "seconds": 1768687346,
+      "nanoseconds": 894000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-07-31"
+  },
+  {
+    "id": "txn_1752992746000",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 736000000
+    },
+    "merchant": "TECFUEL BOGO CEBU PHL",
+    "note": "Car Refill",
+    "date": "2025-07-20",
+    "amount": 300
+  },
+  {
+    "id": "txn_1752834561000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 775000000
+    },
+    "amount": 240,
+    "date": "2025-07-18"
+  },
+  {
+    "id": "txn_1752726152000",
+    "date": "2025-07-17",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 756000000
+    },
+    "amount": 522,
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1752723789000",
+    "amount": 202,
+    "date": "2025-07-17",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 695000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1752723757000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "date": "2025-07-17",
+    "amount": 212,
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 673000000
+    }
+  },
+  {
+    "id": "txn_1752623568000",
+    "date": "2025-07-15",
+    "amount": 783,
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 912000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1752573421000",
+    "merchant": "TEC FUEL SAN REMIGIO PHL",
+    "amount": 500,
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 874000000
+    },
+    "note": "Car Refill",
+    "date": "2025-07-15"
+  },
+  {
+    "id": "txn_1752407922000",
+    "amount": 249,
+    "manualAmount": 249,
+    "type": "expense",
+    "merchant": "GLOBE WEBLOADING EC",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 854000000
+    },
+    "manualCategory": "Service",
+    "note": "15gb",
+    "category": "Service",
+    "date": "2025-07-13T00:00:00.000Z"
+  },
+  {
+    "id": "txn_1752415575000",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 818000000
+    },
+    "date": "2025-07-13",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 376
+  },
+  {
+    "id": "txn_1752335262000",
+    "createdAt": {
+      "seconds": 1768657044,
+      "nanoseconds": 631000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 783,
+    "date": "2025-07-12"
+  },
+  {
+    "id": "txn_1752290184000",
+    "createdAt": {
+      "seconds": 1768650976,
+      "nanoseconds": 834000000
+    },
+    "date": "2025-07-12",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "amount": 186
+  },
+  {
+    "id": "txn_1751427364000",
+    "date": "2025-07-02",
+    "amount": 354,
+    "createdAt": {
+      "seconds": 1768650977,
+      "nanoseconds": 990000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1751090551000",
+    "date": "2025-06-28",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768650978,
+      "nanoseconds": 412000000
+    },
+    "amount": 314
+  },
+  {
+    "id": "txn_1751033821000",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768650978,
+      "nanoseconds": 396000000
+    },
+    "amount": 168,
+    "date": "2025-06-27"
+  },
+  {
+    "id": "txn_1750906238000",
+    "createdAt": {
+      "seconds": 1768650980,
+      "nanoseconds": 521000000
+    },
+    "amount": 202,
+    "date": "2025-06-26",
+    "merchant": "JOLLIBEE JB0127 SOK CEBU CITY PHL"
+  },
+  {
+    "id": "txn_1750740252000",
+    "createdAt": {
+      "seconds": 1768650980,
+      "nanoseconds": 928000000
+    },
+    "date": "2025-06-24",
+    "amount": 301,
+    "merchant": "J AND L SHOPPING BOGO PHL"
+  },
+  {
+    "id": "txn_1750744496000",
+    "amount": 314,
+    "date": "2025-06-24",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768650980,
+      "nanoseconds": 44000000
+    }
+  },
+  {
+    "id": "txn_1750668701000",
+    "createdAt": {
+      "seconds": 1768650978,
+      "nanoseconds": 381000000
+    },
+    "amount": 2082,
+    "date": "2025-06-23",
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1750496759000",
+    "createdAt": {
+      "seconds": 1768650979,
+      "nanoseconds": 588000000
+    },
+    "merchant": "MAVENTRADING.COM LONDON, ENGLA GBR",
+    "amount": 2395.88,
+    "date": "2025-06-21"
+  },
+  {
+    "id": "txn_1750246594000",
+    "amount": 223,
+    "createdAt": {
+      "seconds": 1768650979,
+      "nanoseconds": 253000000
+    },
+    "date": "2025-06-18",
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL"
+  },
+  {
+    "id": "txn_1750130249000",
+    "date": "2025-06-17",
+    "createdAt": {
+      "seconds": 1768650987,
+      "nanoseconds": 661000000
+    },
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "amount": 268
+  },
+  {
+    "id": "txn_1750130049000",
+    "createdAt": {
+      "seconds": 1768650986,
+      "nanoseconds": 286000000
+    },
+    "date": "2025-06-17",
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "amount": 256.62
+  },
+  {
+    "id": "txn_1749645154000",
+    "createdAt": {
+      "seconds": 1768650988,
+      "nanoseconds": 918000000
+    },
+    "merchant": "WATSONS HISOLER BLDG B CEBU PHL",
+    "date": "2025-06-11",
+    "amount": 76.5
+  },
+  {
+    "id": "txn_1749632768000",
+    "merchant": "J AND L SHOPPING BOGO PHL",
+    "date": "2025-06-11",
+    "amount": 122,
+    "createdAt": {
+      "seconds": 1768650986,
+      "nanoseconds": 796000000
+    }
+  },
+  {
+    "id": "txn_1749438360000",
+    "amount": 162,
+    "merchant": "MR DIY BGCC BOGO PHL",
+    "date": "2025-06-09",
+    "createdAt": {
+      "seconds": 1768650988,
+      "nanoseconds": 113000000
+    }
+  },
+  {
+    "id": "txn_1749252066000",
+    "amount": 1624.31,
+    "createdAt": {
+      "seconds": 1768650988,
+      "nanoseconds": 500000000
+    },
+    "merchant": "HIGHTOWER RESTAURANT L Dubai ARE",
+    "date": "2025-06-06"
+  },
+  {
+    "id": "txn_1749101008000",
+    "createdAt": {
+      "seconds": 1768650990,
+      "nanoseconds": 275000000
+    },
+    "date": "2025-06-05",
+    "merchant": "MR DIY ZBOG BOGO PHL",
+    "amount": 99
+  },
+  {
+    "id": "txn_1748753938000",
+    "createdAt": {
+      "seconds": 1768650987,
+      "nanoseconds": 242000000
+    },
+    "merchant": "WATSONS HISOLER BLDG B CEBU PHL",
+    "date": "2025-06-01",
+    "amount": 438
+  },
+  {
+    "id": "txn_1748616853000",
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "createdAt": {
+      "seconds": 1768650995,
+      "nanoseconds": 561000000
+    },
+    "amount": 319.4,
+    "date": "2025-05-30"
+  },
+  {
+    "id": "txn_1748617376000",
+    "createdAt": {
+      "seconds": 1768650989,
+      "nanoseconds": 359000000
+    },
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "amount": 378,
+    "date": "2025-05-30"
+  },
+  {
+    "id": "txn_1748617027000",
+    "date": "2025-05-30",
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "amount": 197.96,
+    "createdAt": {
+      "seconds": 1768650985,
+      "nanoseconds": 808000000
+    }
+  },
+  {
+    "id": "txn_1747796069000",
+    "merchant": "TRADERSCONNECT.COM 442080500118 GBR",
+    "amount": 1150.88,
+    "createdAt": {
+      "seconds": 1768650996,
+      "nanoseconds": 879000000
+    },
+    "date": "2025-05-21"
+  },
+  {
+    "id": "txn_1747732892000",
+    "createdAt": {
+      "seconds": 1768650995,
+      "nanoseconds": 999000000
+    },
+    "amount": 209,
+    "date": "2025-05-20",
+    "merchant": "MR DIY BGCC BOGO PHL"
+  },
+  {
+    "id": "txn_1747543449000",
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "amount": 440.96,
+    "createdAt": {
+      "seconds": 1768650996,
+      "nanoseconds": 473000000
+    },
+    "date": "2025-05-18"
+  },
+  {
+    "id": "txn_1747016205000",
+    "createdAt": {
+      "seconds": 1768650998,
+      "nanoseconds": 979000000
+    },
+    "amount": 826.4,
+    "merchant": "TIKTOK SHOP ONLINE TAGUIG PHL",
+    "date": "2025-05-12"
+  },
+  {
+    "id": "txn_1746785232000",
+    "merchant": "OCTAGON AYALA CENTRAL CEBU PHL",
+    "createdAt": {
+      "seconds": 1768650997,
+      "nanoseconds": 738000000
+    },
+    "amount": 699,
+    "date": "2025-05-09"
+  },
+  {
+    "id": "txn_1746786397000",
+    "merchant": "STARBUCKS 540 CENTRAL CEBU CITY PHL",
+    "amount": 365,
+    "createdAt": {
+      "seconds": 1768650997,
+      "nanoseconds": 318000000
+    },
+    "date": "2025-05-09"
+  },
+  {
+    "id": "txn_1746440154000",
+    "note": "",
+    "amount": 2772.39,
+    "createdAt": {
+      "seconds": 1768650998,
+      "nanoseconds": 165000000
+    },
+    "type": "expense",
+    "merchant": "MY FATOORAH FundedXX",
+    "date": "2025-05-05T00:00:00.000Z",
+    "manualAmount": 2772.39,
+    "manualCategory": "Trading Expenses",
+    "category": "Trading Expenses"
+  },
+  {
+    "id": "txn_1746337153000",
+    "amount": 448,
+    "date": "2025-05-04",
+    "merchant": "SHOPEE PH MANDALUYONG PHL",
+    "createdAt": {
+      "seconds": 1768650999,
+      "nanoseconds": 413000000
+    }
+  },
+  {
+    "id": "txn_1746337074000",
+    "date": "2025-05-04",
+    "amount": 1,
+    "createdAt": {
+      "seconds": 1768650999,
+      "nanoseconds": 396000000
+    },
+    "merchant": "SHOPEE PH MANDALUYONG PHL"
+  },
+  {
+    "id": "txn_1745306748000",
+    "date": "2025-04-22",
+    "createdAt": {
+      "seconds": 1768651005,
+      "nanoseconds": 179000000
+    },
+    "merchant": "ICE SKATING SM SRP CEB CEBU PHL",
+    "amount": 660
+  }
+]

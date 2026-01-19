@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Setup Account - SmartWallet</title>
+    <link rel="icon" type="image/png" href="applogo.png">
+    
+    <!-- Material UI CSS & Premium Fonts -->
+    <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; min-height: 100vh; display: flex; justify-content: center; color: #1e293b; }
+        
+        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        
+        /* HEADER */
+        .setup-header { padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; background: #fff; position: sticky; top: 0; z-index: 100; }
+        .header-title { font-size: 18px; font-weight: 800; color: #1e293b; }
+        .close-btn { color: #64748b; font-size: 24px; cursor: pointer; }
+        
+        .content { padding: 24px; flex: 1; overflow-y: auto; }
+        
+        /* FORM GROUPS */
+        .form-group { margin-bottom: 24px; }
+        .label { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block; }
+        
+        .input-box { width: 100%; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 12px; font-size: 15px; font-weight: 600; color: #1e293b; outline: none; transition: all 0.2s; background: #f8fafc; font-family: inherit; }
+        .input-box:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        
+        /* COLOR PICKER */
+        .color-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+        .color-option { width: 42px; height: 42px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; display: flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .color-option.selected { border-color: #1e293b; transform: scale(1.1); }
+        .color-option i { color: #fff; font-size: 20px; display: none; }
+        .color-option.selected i { display: block; }
+        
+        /* PREVIEW CARD */
+        .card-preview {
+            background: linear-gradient(135deg, #121212 0%, #1a1a1a 100%);
+            border-radius: 20px;
+            padding: 24px;
+            color: #fff;
+            height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* CARD OVERLAY */
+        .card-preview::before { 
+            content: ''; 
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%; 
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+            opacity: 0.4;
+            mix-blend-mode: overlay;
+            pointer-events: none;
+        }
+        
+        .preview-label { font-size: 10px; opacity: 0.7; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+        .preview-amount { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; margin-top: 4px; }
+        .preview-number { font-family: monospace; letter-spacing: 2px; font-size: 14px; opacity: 0.9; }
+        
+        .save-btn {
+            background: #1e293b;
+            color: #fff;
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+            transition: transform 0.1s;
+        }
+        .save-btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <div class="mobile-wrapper">
+        <div class="setup-header">
+            <div class="header-title">Add New Card</div>
+            <i class="material-icons close-btn" onclick="window.location.href='accounts.html'">close</i>
+        </div>
+        
+        <div class="content">
+            <!-- Card Preview -->
+            <div id="preview-card" class="card-preview">
+                <div>
+                    <div class="preview-label" id="preview-type-label">CREDIT CARD</div>
+                    <div class="preview-amount" id="preview-balance">PHP 0.00</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <div class="preview-label" style="font-size: 8px; margin-bottom: 2px;">ACCOUNT NUMBER</div>
+                        <div class="preview-number" id="preview-number">•••• •••• •••• 1234</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="label">Account Name</label>
+                <input type="text" id="acc-name" class="input-box" placeholder="e.g. My Savings" oninput="updatePreview()">
+            </div>
+            
+            <div class="form-group">
+                <label class="label">Balance</label>
+                <input type="number" id="acc-balance" class="input-box" placeholder="0.00" oninput="updatePreview()">
+            </div>
+            
+            <div class="form-group">
+                <label class="label">Last 4 Digits</label>
+                <input type="text" id="acc-last4" class="input-box" placeholder="1234" maxlength="4" oninput="updatePreview()">
+            </div>
+            
+            <div class="form-group">
+                <label class="label">Theme Color</label>
+                <div class="color-grid">
+                    <div class="color-option selected" style="background: #121212;" data-color="#121212" onclick="selectColor(this)">
+                        <i class="material-icons">check</i>
+                    </div>
+                    <div class="color-option" style="background: #ef4444;" data-color="#ef4444" onclick="selectColor(this)">
+                        <i class="material-icons">check</i>
+                    </div>
+                    <div class="color-option" style="background: #3b82f6;" data-color="#3b82f6" onclick="selectColor(this)">
+                        <i class="material-icons">check</i>
+                    </div>
+                    <div class="color-option" style="background: #10b981;" data-color="#10b981" onclick="selectColor(this)">
+                        <i class="material-icons">check</i>
+                    </div>
+                    <div class="color-option" style="background: #8b5cf6;" data-color="#8b5cf6" onclick="selectColor(this)">
+                        <i class="material-icons">check</i>
+                    </div>
+                    <div class="color-option" style="background: #BA2727;" data-color="#BA2727" onclick="selectColor(this)">
+                        <i class="material-icons">check</i>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="save-btn" onclick="saveAccount()">CREATE ACCOUNT</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = '#121212';
+        
+        function selectColor(el) {
+            document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            selectedColor = el.dataset.color;
+            updatePreview();
+        }
+        
+        function updatePreview() {
+            const name = document.getElementById('acc-name').value || 'CREDIT CARD';
+            const balance = parseFloat(document.getElementById('acc-balance').value) || 0;
+            const last4 = document.getElementById('acc-last4').value || '1234';
+            
+            document.getElementById('preview-type-label').innerText = name.toUpperCase();
+            document.getElementById('preview-balance').innerText = 'PHP ' + balance.toLocaleString(undefined, {minimumFractionDigits:2});
+            document.getElementById('preview-number').innerText = '•••• •••• •••• ' + last4;
+            
+            const card = document.getElementById('preview-card');
+            if (selectedColor === '#121212') {
+                card.style.background = 'linear-gradient(135deg, #121212 0%, #1a1a1a 100%)';
+            } else if (selectedColor === '#BA2727') {
+                 // BPI Style special case if wanted, or just simple color
+                 card.style.background = selectedColor;
+            } else {
+                card.style.background = selectedColor;
+            }
+        }
+        
+        function saveAccount() {
+            const name = document.getElementById('acc-name').value;
+            if(!name) { alert('Please enter account name'); return; }
+            
+            const newAccount = {
+                id: name.toLowerCase().replace(/\s/g, '_'),
+                name: name,
+                balance: parseFloat(document.getElementById('acc-balance').value) || 0,
+                last4: document.getElementById('acc-last4').value || '0000',
+                color: selectedColor,
+                type: 'credit' // Default to credit for now
+            };
+            
+            // In a real app, we would save to localStorage saving a list of accounts
+            let accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+            accounts.push(newAccount);
+            localStorage.setItem('wallet_accounts', JSON.stringify(accounts));
+            
+            alert('Account Saved!');
+            window.location.href = 'accounts.html';
+        }
+    </script>
+</body>
+</html>

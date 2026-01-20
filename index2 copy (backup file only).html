@@ -529,7 +529,12 @@
         .chart-center-value { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1; text-align: center; }
         
         /* Highlighted Transaction Styling */
-        .premium-txn.highlight-txn { background-color: #f0fdf4 !important; border-left: 3px solid #4caf50; transition: background-color 0.3s; }
+        .premium-txn.highlight-txn { transition: all 0.3s ease; }
+        
+        .legend-item.active { transform: scale(1.05); }
+        .legend-item.active span { color: #000; font-weight: 800; }
+        .legend-item { transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 4px; border-radius: 8px; }
+        .legend-item:hover { background: #f8fafc; }
         
         /* Floating Chart Tooltip */
         #chart-tooltip {
@@ -1117,7 +1122,7 @@
                         <g id="pieContent"></g>
                     </svg>
                     <div class="chart-center">
-                        <div class="chart-center-label">TOTAL</div>
+                        <div class="chart-center-label" id="chart-total-label">TOTAL</div>
                         <div class="chart-center-value" id="chart-total-val">0</div>
                     </div>
                 </div>
@@ -2117,19 +2122,36 @@
                 // Hide spinner immediately - don't wait for data to load
                 spinner.style.display = 'none';
 
-                window.highlightTransactions = (categoryName) => {
+                window.highlightTransactions = (categoryName, categoryColor = null) => {
                     const items = document.querySelectorAll('.premium-txn');
+                    const normalizedTarget = categoryName ? categoryName.toLowerCase().trim() : null;
+                    
                     items.forEach(item => {
                         item.classList.remove('highlight-txn');
+                        item.style.backgroundColor = '';
+                        item.style.borderLeft = '';
+                        item.style.boxShadow = '';
+                        
+                        if (!normalizedTarget) return;
+
+                        // Only highlight if the item is actually visible (not hidden by month filter or search)
+                        const isVisible = item.offsetParent !== null; 
+                        if (!isVisible) return;
+
                         const catElement = item.querySelector('.txn-sub span:last-child');
-                        if (catElement && catElement.innerText === categoryName) {
-                            item.classList.add('highlight-txn');
+                        if (catElement) {
+                            const itemCat = catElement.innerText.toLowerCase().trim();
+                            if (itemCat === normalizedTarget) {
+                                item.classList.add('highlight-txn');
+                                if (categoryColor) {
+                                    item.style.backgroundColor = categoryColor + '10'; // 10 is ~6% opacity hex
+                                    item.style.borderLeft = `4px solid ${categoryColor}`;
+                                    item.style.boxShadow = `inset 4px 0 0 ${categoryColor}`;
+                                }
+                            }
                         }
                     });
-                    // Scroll to first highlighted
-                    const first = document.querySelector('.highlight-txn');
-                    if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                };    
+                };
             } catch (e) { 
                 log('Failed to load history: ' + e.message, 'error');
                 spinner.style.display = 'none';
@@ -2627,10 +2649,6 @@
             }
             
             drawPieChart(segments, grandTotal);
-            
-            // Update Center Label Default
-            document.getElementById('chart-total-label').innerText = 'TOTAL';
-            document.getElementById('chart-total-val').innerText = `₱${Math.round(grandTotal).toLocaleString()}`;
         }
 
 
@@ -2806,24 +2824,6 @@
             for (let i = 0; i < points.length; i++) {
                 const p = getPoint(i);
                 
-                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                rect.setAttribute('x', p.x - step/2);
-                rect.setAttribute('y', 0);
-                rect.setAttribute('width', step);
-                rect.setAttribute('height', h);
-                rect.setAttribute('fill', 'transparent');
-                rect.style.cursor = 'pointer';
-                
-                rect.onmouseenter = (e) => {
-                    const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.innerHTML = `${labels[i] || 'Period'}<br><span style="color:#d1fae5">₱${Math.round(points[i]).toLocaleString()}</span>`;
-                    tooltip.style.opacity = '1';
-                    tooltip.style.left = `${e.pageX}px`;
-                    tooltip.style.top = `${e.pageY - 10}px`;
-                };
-                rect.onmouseleave = () => document.getElementById('chart-tooltip').style.opacity = '0';
-                dots.appendChild(rect);
-
                 if (i === 0) {
                     d += `M ${p.x} ${p.y}`;
                     areaD += `M ${p.x} ${h} L ${p.x} ${p.y}`;
@@ -2837,26 +2837,75 @@
 
             const lastP = getPoint(points.length - 1);
             areaD += ` L ${lastP.x} ${h} Z`;
-            area.setAttribute('d', areaD);
-            path.setAttribute('d', d);
-            if (window.currentThemeTrend) {
-                path.setAttribute('stroke', window.currentThemeTrend);
-                totalEl.style.color = window.currentThemeTrend;
-            }
-        }
+                area.setAttribute('d', areaD);
+                path.setAttribute('d', d);
+                if (window.currentThemeTrend) {
+                    path.setAttribute('stroke', window.currentThemeTrend);
+                    totalEl.style.color = window.currentThemeTrend;
+                }
 
-        function drawPieChart(segments, total) {
-            const container = document.getElementById('chart-anim-container');
+                // Add Guide Line
+                let guide = document.getElementById('trend-guide');
+                if (!guide) {
+                    guide = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    guide.id = 'trend-guide';
+                    guide.setAttribute('y1', 0);
+                    guide.setAttribute('y2', h);
+                    guide.setAttribute('stroke', '#cbd5e1');
+                    guide.setAttribute('stroke-width', '1');
+                    guide.setAttribute('stroke-dasharray', '4 4');
+                    guide.style.opacity = '0';
+                    guide.style.transition = 'opacity 0.2s';
+                    document.getElementById('trendChart').insertBefore(guide, path);
+                }
+
+                const trendSvg = document.getElementById('trendChart');
+                trendSvg.onmousemove = (e) => {
+                    const rect = trendSvg.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const viewBoxX = (mouseX / rect.width) * 400;
+                    
+                    // Find nearest point
+                    let nearestIdx = 0;
+                    let minDist = Infinity;
+                    for (let i = 0; i < points.length; i++) {
+                        const p = getPoint(i);
+                        const dist = Math.abs(p.x - viewBoxX);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIdx = i;
+                        }
+                    }
+
+                    const p = getPoint(nearestIdx);
+                    guide.setAttribute('x1', p.x);
+                    guide.setAttribute('x2', p.x);
+                    guide.style.opacity = '1';
+
+                    const tooltip = document.getElementById('chart-tooltip');
+                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(points[nearestIdx]).toLocaleString()}</div>`;
+                    tooltip.style.opacity = '1';
+                    tooltip.style.display = 'block';
+                    tooltip.style.left = `${e.pageX + 15}px`;
+                    tooltip.style.top = `${e.pageY - 40}px`;
+                };
+
+                trendSvg.onmouseleave = () => {
+                    guide.style.opacity = '0';
+                    document.getElementById('chart-tooltip').style.opacity = '0';
+                };
+            }
+
+        let selectedCategoryName = null;
+
+        function drawPieChart(segments, total, isUpdate = false) {
             const svgGroup = document.getElementById('pieContent');
             const legend = document.getElementById('chart-legend');
             const totalVal = document.getElementById('chart-total-val');
+            const totalLabel = document.getElementById('chart-total-label');
             
             svgGroup.innerHTML = '';
             legend.innerHTML = '';
-            const totalFormatted = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
-            totalVal.dataset.raw = totalFormatted;
-            totalVal.classList.add('privacy-mask');
-            totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
 
             const centerX = 120; 
             const centerY = 120;
@@ -2864,27 +2913,82 @@
             const strokeWidth = 40; 
             const circumference = 2 * Math.PI * radius;
             
-            // 1. Gray Background Ring (Track)
-            const bgCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            bgCircle.setAttribute('cx', centerX);
-            bgCircle.setAttribute('cy', centerY);
-            bgCircle.setAttribute('r', radius);
-            bgCircle.setAttribute('fill', 'none');
-            bgCircle.setAttribute('stroke', '#f8fafc');
-            bgCircle.setAttribute('stroke-width', strokeWidth); 
-            svgGroup.appendChild(bgCircle);
+            const totalFormatted = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+
+            // State-based Label Logic
+            if (totalLabel && totalVal) {
+                if (!selectedCategoryName) {
+                    totalLabel.innerText = 'TOTAL';
+                    totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
+                    totalVal.dataset.raw = totalFormatted;
+                } else {
+                    const seg = segments.find(s => s.name === selectedCategoryName);
+                    if (seg) {
+                        totalLabel.innerText = seg.name;
+                        const valText = `₱${Math.round(seg.value).toLocaleString()}`;
+                        totalVal.dataset.raw = valText;
+                        totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
+                    } else {
+                        // Reset if category not found in current data
+                        selectedCategoryName = null;
+                        totalLabel.innerText = 'TOTAL';
+                        totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
+                        totalVal.dataset.raw = totalFormatted;
+                    }
+                }
+            }
+
+            // 1. Reset Layer (Background)
+            const bgLayer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            bgLayer.setAttribute('cx', centerX);
+            bgLayer.setAttribute('cy', centerY);
+            bgLayer.setAttribute('r', 120);
+            bgLayer.setAttribute('fill', 'transparent');
+            bgLayer.style.cursor = 'default';
+            bgLayer.onclick = () => resetSelection();
+            svgGroup.appendChild(bgLayer);
+
+            // 2. Track Ring
+            const track = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            track.setAttribute('cx', centerX);
+            track.setAttribute('cy', centerY);
+            track.setAttribute('r', radius);
+            track.setAttribute('fill', 'none');
+            track.setAttribute('stroke', '#f1f5f9');
+            track.setAttribute('stroke-width', strokeWidth);
+            svgGroup.appendChild(track);
+
+            // 3. Center Button (Reset)
+            const centerBtn = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            centerBtn.setAttribute('cx', centerX);
+            centerBtn.setAttribute('cy', centerY);
+            centerBtn.setAttribute('r', radius - strokeWidth/2);
+            centerBtn.setAttribute('fill', 'transparent');
+            centerBtn.style.cursor = 'pointer';
+            centerBtn.onclick = (e) => {
+                e.stopPropagation();
+                resetSelection();
+            };
+            svgGroup.appendChild(centerBtn);
             
-            // Handle Empty
             if (segments.length === 0 || total === 0) {
                 legend.innerHTML = '<div style="font-size:12px; color:#94a3b8; font-weight:600; grid-column: span 2; text-align:center;">No data for this period</div>';
                 return;
             }
 
-            let currentAngle = -90; // Start at 12 o'clock
+            let currentAngle = -90;
+
+            function resetSelection() {
+                selectedCategoryName = null;
+                drawPieChart(segments, total, true); 
+                window.highlightTransactions(null);
+            }
 
             segments.forEach((seg, index) => {
                 const percent = seg.value / total;
                 const arcLength = percent * circumference;
+                const isSelected = selectedCategoryName === seg.name;
+                const dimOpacity = selectedCategoryName && !isSelected ? 0.2 : 1;
                 
                 const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 circle.setAttribute('cx', centerX);
@@ -2892,84 +2996,57 @@
                 circle.setAttribute('r', radius);
                 circle.setAttribute('fill', 'none');
                 circle.setAttribute('stroke', seg.color);
-                circle.setAttribute('stroke-width', strokeWidth);
-                circle.setAttribute('stroke-dasharray', `0 ${circumference}`); // Start invisible
-                circle.setAttribute('transform', `rotate(${currentAngle} ${centerX} ${centerY})`);
+                circle.setAttribute('stroke-width', isSelected ? strokeWidth + 6 : strokeWidth);
                 
-                // CSS transition for the fill effect
-                circle.style.transition = 'stroke-dasharray 1s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                // Opening Animation Logic
+                if (!isUpdate) {
+                    circle.setAttribute('stroke-dasharray', `0 ${circumference}`);
+                    setTimeout(() => {
+                        circle.setAttribute('stroke-dasharray', `${arcLength} ${circumference}`);
+                    }, 100 + (index * 40));
+                } else {
+                    circle.setAttribute('stroke-dasharray', `${arcLength} ${circumference}`);
+                }
+                
+                circle.setAttribute('transform', `rotate(${currentAngle} ${centerX} ${centerY})`);
+                circle.style.opacity = dimOpacity;
+                circle.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
                 circle.style.cursor = 'pointer';
                 
-                // Tooltip function
-                const showTooltip = (e) => {
-                     const tooltip = document.getElementById('chart-tooltip');
-                     const pText = (percent * 100).toFixed(1) + '%';
-                     tooltip.innerHTML = `${seg.name}<br><span style="color:#d1fae5">₱${Math.round(seg.value).toLocaleString()} (${pText})</span>`;
-                     tooltip.style.opacity = '1';
-                     tooltip.style.display = 'block';
-                     const x = e.pageX || e.clientX || (e.touches && e.touches[0].clientX);
-                     const y = e.pageY || e.clientY || (e.touches && e.touches[0].clientY);
-                     tooltip.style.left = `${x}px`;
-                     tooltip.style.top = `${y - 10}px`;
+                const handleInteraction = (e) => {
+                    if(e) e.stopPropagation();
+                    selectedCategoryName = (selectedCategoryName === seg.name) ? null : seg.name;
+                    drawPieChart(segments, total, true);
+                    window.highlightTransactions(selectedCategoryName, seg.color);
                 };
-                
-                const hideTooltip = () => {
+
+                circle.onclick = handleInteraction;
+
+                // Tooltip
+                circle.onmouseenter = (e) => {
                     const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.style.opacity = '0';
-                    setTimeout(() => tooltip.style.display = 'none', 200);
+                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${seg.name}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(seg.value).toLocaleString()} (${(percent*100).toFixed(1)}%)</div>`;
+                    tooltip.style.opacity = '1';
+                    tooltip.style.left = `${e.pageX + 15}px`;
+                    tooltip.style.top = `${e.pageY - 40}px`;
+                    circle.style.filter = 'brightness(1.1)';
                 };
-                
-                // Mouse events
-                circle.onmouseenter = showTooltip;
-                circle.onmousemove = showTooltip;
-                circle.onmouseleave = hideTooltip;
-                
-                // Click event - update center and highlight transactions
-                circle.onclick = (e) => {
-                    e.stopPropagation();
-                    showTooltip(e); // Always show tooltip on click
-                    document.getElementById('chart-total-label').innerText = seg.name;
-                    const valFormatted = `₱${Math.round(seg.value).toLocaleString()}`;
-                    const valEl = document.getElementById('chart-total-val');
-                    valEl.dataset.raw = valFormatted;
-                    valEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valFormatted;
-                    window.highlightTransactions(seg.name);
+                circle.onmouseleave = () => {
+                    document.getElementById('chart-tooltip').style.opacity = '0';
+                    circle.style.filter = 'none';
                 };
-                
-                // Touch events for mobile
-                let touchTimeout;
-                circle.addEventListener('touchstart', (e) => {
-                    clearTimeout(touchTimeout);
-                    showTooltip(e.touches[0]);
-                }, { passive: true });
-                
-                circle.addEventListener('touchend', (e) => {
-                    e.preventDefault(); // Prevent click event from firing
-                    // Update center label on touch
-                    document.getElementById('chart-total-label').innerText = seg.name;
-                    const valFormatted = `₱${Math.round(seg.value).toLocaleString()}`;
-                    const valEl = document.getElementById('chart-total-val');
-                    valEl.dataset.raw = valFormatted;
-                    valEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valFormatted;
-                    window.highlightTransactions(seg.name);
-                    
-                    // Keep tooltip visible for a moment
-                    touchTimeout = setTimeout(hideTooltip, 2000);
-                });
 
                 svgGroup.appendChild(circle);
-                
-                // Trigger Animation with slight stagger
-                setTimeout(() => {
-                    circle.setAttribute('stroke-dasharray', `${arcLength} ${circumference}`);
-                }, 100 + (index * 50)); 
-
                 currentAngle += (percent * 360);
                 
                 // Legend
                 const lItem = document.createElement('div');
-                lItem.className = 'legend-item';
+                lItem.className = `legend-item ${isSelected ? 'active' : ''}`;
+                lItem.style.opacity = dimOpacity;
+                lItem.style.transition = 'all 0.3s';
+                lItem.style.cursor = 'pointer';
                 lItem.innerHTML = `<div class="legend-color" style="background: ${seg.color}"></div><span>${seg.name}</span>`;
+                lItem.onclick = handleInteraction;
                 legend.appendChild(lItem);
             });
         }

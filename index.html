@@ -152,16 +152,38 @@
 
         /* Add Card Placeholder */
         .add-card-placeholder {
-            background: transparent;
+            display: flex;
+            flex-direction: column;
+            background: rgba(255,255,255,0.05); /* Very subtle bg */
             border: 2px dashed #cbd5e1;
             box-shadow: none !important;
             color: #94a3b8;
             align-items: center;
             justify-content: center;
             min-height: 200px;
+            width: 140px;
+            flex: 0 0 140px;
+            scroll-snap-align: center;
+            scroll-snap-stop: always;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
         }
-        .add-card-placeholder i { font-size: 32px; margin-bottom: 8px; color: #cbd5e1; }
-        .add-card-placeholder span { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+        .add-card-placeholder:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .add-card-placeholder i { font-size: 32px; margin-bottom: 12px; color: #cbd5e1; opacity: 0.8; }
+        .add-card-placeholder span { 
+            font-weight: 700; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            letter-spacing: 1.5px; 
+            line-height: 1.5;
+            text-align: center;
+            max-width: 80px;
+        }
         
         /* CARD BACKGROUNDS */
         .atome-card {
@@ -274,9 +296,13 @@
         .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -2px; margin-bottom: 10px; text-shadow: 0 4px 12px rgba(0,0,0,0.2); padding-top: 5px; position: relative; z-index: 2; }
         
         .card-footer { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 2; margin-top: auto; }
+        .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; width: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .chart-center-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .chart-center-value { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; line-height: 1.2; }
+        .chart-center-pct { font-size: 11px; font-weight: 800; color: #10b981; letter-spacing: -0.5px; margin-top: 2px; }
         .card-number-box { line-height: 1.4; }
         .card-number-label { font-size: 8px; font-weight: 800; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
-        .card-number { font-size: 14px; font-weight: 600; color: rgba(255,255,255,1); letter-spacing: 2.5px; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-number { font-size: 13.5px; font-weight: 600; color: rgba(255,255,255,1); letter-spacing: 2px; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
         .mastercard-circles { display: flex; position: relative; width: 44px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); opacity: 0.9; }
         .circle { width: 28px; height: 28px; border-radius: 50%; position: absolute; }
@@ -524,9 +550,9 @@
         .chart-segment:hover {
             transform: scale(1.02);
         }
-        .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: #fff; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 12px rgba(0,0,0,0.03); border: 4px solid #f8fafc; z-index: 10; pointer-events: none; gap: 2px; }
-        .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; line-height: 1; margin: 0; }
-        .chart-center-value { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1; text-align: center; }
+        .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: #fff; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 12px rgba(0,0,0,0.03); border: 4px solid #f8fafc; z-index: 10; pointer-events: none; gap: 2px; padding: 4px; }
+        .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; margin: 0; max-width: 80px; word-wrap: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .chart-center-value { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.1; text-align: center; }
         
         /* Highlighted Transaction Styling */
         .premium-txn.highlight-txn { transition: all 0.3s ease; }
@@ -873,6 +899,36 @@
             justify-content: center;
         }
         .guest-gate-btn:active { transform: scale(0.96); }
+
+        /* THANOS SNAP ANIMATION */
+        .snap-particle {
+            position: fixed;
+            pointer-events: none;
+            background: #475569;
+            border-radius: 50%;
+            z-index: 9999;
+            animation: snap-float forwards cubic-bezier(0.1, 0.5, 0.5, 1);
+        }
+        @keyframes snap-float {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.8; }
+            100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0); opacity: 0; }
+        }
+        .premium-txn {
+            transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
+            overflow: hidden;
+            max-height: 200px; /* Large enough for any txn */
+        }
+        .premium-txn.snapping {
+            opacity: 0 !important;
+            transform: scale(0.9) !important;
+            max-height: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            border: 0 !important;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -974,86 +1030,39 @@
         <!-- SWIPEABLE CARD VIEWPORT -->
         <div class="card-viewport" id="cardViewport">
             <div class="card-carousel-scroll" id="cardCarouselScroll">
-                <div class="balance-card atome-card" data-account="atome" id="atomeCard">
-                    <div class="card-brand-logo atome-brand-logo">A</div>
-                    
-                    <div class="card-header-row">
-                        <div class="card-label">Atome Spending</div>
-                        <div class="card-sync-status-chip">
-                            <div class="dot syncDot"></div>
-                            <span class="status-text syncStatusText">Ready</span>
+                <!-- DYNAMICALLY RENDERED CARDS -->
+                <div id="dynamic-balance-cards" style="display: contents;">
+                    <!-- Default Wallet Card (Static Placeholder) -->
+                    <div class="balance-card active" id="default_walletCard" data-account="default_wallet" style="background: #121212;">
+                        <div class="card-header-row">
+                            <div style="display: flex; align-items: baseline; gap: 6px;">
+                                <div class="card-label" style="text-transform: uppercase;">My Wallet</div>
+                            </div>
+                            <div class="card-sync-status-chip">
+                                <div class="dot" style="background: #10b981;"></div>
+                                <span class="status-text">Ready</span>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                         <div class="balance-amount" id="atome-balance">PHP 0.00</div>
-                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
-                            <i class="material-icons" style="font-size:16px;">visibility</i>
-                         </button>
-                    </div>
-                    
-                    <div class="card-footer">
-                        <div class="card-number-box">
-                            <div class="card-number-label">Account Number</div>
-                            <div class="card-number">**** **** 7312</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                             <div class="balance-amount">PHP 0.00</div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
-                                <i class="material-icons">sync</i>
-                            </button>
-                            <div class="mastercard-circles">
-                                <div class="circle circle-1"></div>
-                                <div class="circle circle-2"></div>
+                        <div class="card-footer" style="margin-top: 20px;">
+                            <div class="card-number-box">
+                                <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
+                                <div class="card-number" style="letter-spacing: 2px;">•••• •••• •••• 0000</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <button class="sync-icon-btn">
+                                    <i class="material-icons">sync</i>
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="balance-card bpi-card" data-account="bpi" id="bpiCard">
-                    <div class="bpi-rays"></div>
-                    
-                    <div class="card-header-row">
-                        <div style="display: flex; align-items: baseline; gap: 6px;">
-                            <div class="card-label">BPI Card</div>
-                            <div class="card-type-label">debit</div>
-                        </div>
-                        <div class="card-sync-status-chip">
-                            <div class="dot syncDot"></div>
-                            <span class="status-text syncStatusText">Ready</span>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                         <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
-                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
-                            <i class="material-icons" style="font-size:16px;">visibility</i>
-                         </button>
-                    </div>
-                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
-                    
-                    <div class="card-footer">
-                        <div class="card-number-box">
-                            <div class="card-number-label">Account Number</div>
-                            <div class="card-number">0099 096727</div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
-                                <i class="material-icons">sync</i>
-                            </button>
-                            <div class="mastercard-circles">
-                                <div class="circle circle-1" style="background:#ea001b;"></div> 
-                                <div class="circle circle-2" style="background:#f79e1b;"></div> 
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ADD CARD PLACEHOLDER -->
-                <div class="balance-card add-card-placeholder" onclick="window.location.href='accounts.html'">
-                    <div style="text-align:center;">
-                        <i class="material-icons">add_circle_outline</i>
-                        <div>Add Another Card</div>
-                    </div>
+                <div class="add-card-placeholder" onclick="window.location.href='account_setup.html'">
+                    <i class="material-icons">add_circle_outline</i>
+                    <span>Add New<br>Card</span>
                 </div>
             </div>
         </div>
@@ -1124,6 +1133,7 @@
                     <div class="chart-center">
                         <div class="chart-center-label" id="chart-total-label">TOTAL</div>
                         <div class="chart-center-value" id="chart-total-val">0</div>
+                        <div class="chart-center-pct" id="chart-total-pct"></div>
                     </div>
                 </div>
                 <div id="chart-legend" class="legend">
@@ -1346,9 +1356,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        window.closeModals = () => {
-            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
-        };
 
         // UNIFIED PROMISE-BASED DIALOG SYSTEM
         window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, callback = null }) => {
@@ -1432,23 +1439,7 @@
             log('4. Ensure your server is running on ' + origin, 'info');
             log('-------------------------', 'warn');
 
-            // 1. Immediate UI population from Cache
-            const cachedName = localStorage.getItem('user_name');
-            const cachedPic = localStorage.getItem('user_pic');
-            if (cachedName) document.getElementById('user-display-name').innerText = cachedName;
-            if (cachedPic) {
-                const badge = document.getElementById('profile-badge');
-                const picEl = document.getElementById('user-pic');
-                picEl.src = cachedPic;
-                badge.classList.add('has-pic');
-            }
-            
-            // Safety: Check if GIS already loaded (async/defer race)
-            if (typeof google !== 'undefined' && google.accounts) {
-                window.gisLoaded();
-            }
-            
-            // 2. Auth State Observer
+            // FETCH ACCOUNTS & SYNC THEME (Master Observer)
             onAuthStateChanged(auth, async (user) => {
                 if (!user) {
                     log('Establishing secure local session...');
@@ -1456,128 +1447,282 @@
                     return;
                 }
 
-                const dbBadge = document.getElementById('mode-status'); // Use mode-status for admin view
+                // UI Mode Status
+                const dbBadge = document.getElementById('mode-status');
                 const emailDisplay = document.getElementById('admin-email-display');
-                
                 if (dbBadge) {
                    dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
                    if (emailDisplay) emailDisplay.innerText = user.isAnonymous ? '(UNSYNCED)' : `(${user.email.toUpperCase()})`;
                 }
                 
                 log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
-                if (!user.isAnonymous) log('Cloud Sync Active!', 'info');
-                
-                // Update Profile Dropdown Content
-                const dropdown = document.getElementById('profile-dropdown');
-                if (user.isAnonymous) {
-                     dropdown.innerHTML = `
-                        <div class="dropdown-header">Guest Session</div>
-                        <div class="dropdown-item" onclick="handleAuthClick()">
-                            <i class="material-icons">cloud_upload</i>
-                            <span>Sign in with Google</span>
-                        </div>
-                     `;
-                } else {
-                     dropdown.innerHTML = `
-                        <div class="dropdown-header">${user.email}</div>
-                        <div class="dropdown-item" onclick="handleAuthClick()">
-                            <i class="material-icons">swap_horiz</i>
-                            <span>Switch Account</span>
-                        </div>
-                        <div class="dropdown-item logout" onclick="handleSignout()">
-                            <i class="material-icons">logout</i>
-                            <span>Log Out</span>
-                        </div>
-                     `;
-                }
 
-                if (user.isAnonymous) {
-                     // Nudge to claim data
-                     const profileBadge = document.getElementById('profile-badge');
-                     profileBadge.style.border = '2px solid #f59e0b';
-                     profileBadge.classList.add('local-nudge');
-                     
-                     // Create/Show Floating Pill
-                     let banner = document.getElementById('local-banner');
-                     if (!banner) {
-                         banner = document.createElement('div');
-                         banner.id = 'local-banner';
-                         banner.innerHTML = `
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <i class="material-icons" style="color:#f59e0b; font-size:20px;">cloud_off</i>
-                                <span style="font-size:12px; font-weight:800; color:#1e293b; letter-spacing:0.2px;">SYNC YOUR DATA</span>
-                            </div>
-                            <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
-                         `;
-                         banner.className = 'sticky-banner';
-                         const viewport = document.getElementById('cardViewport');
-                         if (viewport) viewport.after(banner);
-                         else document.body.prepend(banner);
-                     }
-                     banner.style.display = 'flex';
-                } else {
-                     document.getElementById('profile-badge').style.border = 'none';
-                     document.getElementById('profile-badge').classList.remove('local-nudge');
-                     const banner = document.getElementById('local-banner');
-                     if (banner) banner.style.display = 'none';
-                }
-                
-                // Update Profile if synced
+                // DYNAMIC ACCOUNT HUB
                 if (!user.isAnonymous) {
-                     const parts = user.displayName?.split(' ') || [];
-                     const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
-                     document.getElementById('user-display-name').innerText = firstName;
-                     localStorage.setItem('user_name', firstName);
-                     
-                     if (user.photoURL) {
-                         const picEl = document.getElementById('user-pic');
-                         // Force size for Google photos if needed
-                         let photoUrl = user.photoURL;
-                         if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                             photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                         }
-                         picEl.src = photoUrl;
-                         document.getElementById('profile-badge').classList.add('has-pic');
-                         localStorage.setItem('user_pic', photoUrl);
-                     }
+                    const configRef = doc(db, "users", user.uid, "config", "accounts");
+                    onSnapshot(configRef, (docSnap) => {
+                        const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
+                        const isAdmin = user.email === 'johnpaulinso123@gmail.com';
+                        
+                        // Scenario Check: Admin must have all 3 specific cards
+                        const hasAtome = accounts.find(a => a.id === 'atome');
+                        const hasBPI = accounts.find(a => a.id === 'bpi');
+                        const hasWallet = accounts.find(a => a.id === 'default_wallet');
+                        
+                        if (accounts.length === 0 || (isAdmin && (!hasAtome || !hasBPI || !hasWallet))) {
+                            // INITIALIZE DEFAULT WALLETS
+                            let list = [];
+                            if (isAdmin) {
+                                log('Provisioning Admin Scenario (Atome + BPI + Wallet)...');
+                                list = [
+                                    { id: 'atome', name: 'Atome Card', balance: 0, last4: '7312', color: '#121212', type: 'credit', isDefault: true, isBuiltIn: true, createdAt: 1700000000000 },
+                                    { id: 'bpi', name: 'BPI Card', balance: 0, last4: '6727', color: '#931B1B', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000100 },
+                                    { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: false, isBuiltIn: true, createdAt: 1700000000200 }
+                                ];
+                            } else {
+                                list = [
+                                    { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: true, isBuiltIn: true, createdAt: Date.now() }
+                                ];
+                            }
+                            setDoc(configRef, { list });
+                            return;
+                        }
+
+                        window.walletAccounts = accounts;
+                        // Use the manual order from Firestore
+                        updateAccountSwitcherUI(accounts);
+                        updateBalanceCardsUI(accounts);
+                        
+                        // Default logic
+                        let current = localStorage.getItem('wallet_current_account');
+                        const def = accounts.find(a => a.isDefault);
+                        if (!current || !accounts.find(a => a.id === current)) {
+                            current = def ? def.id : accounts[0].id;
+                            localStorage.setItem('wallet_current_account', current);
+                        }
+                        
+                        window.currentAccount = current;
+                        applyAccountTheme(window.currentAccount, accounts);
+                        loadData(); 
+                        
+                        // Adaptive Sync Trigger
+                        triggerAdaptiveSync();
+                        
+                        // Ensure active card is visible
+                        setTimeout(() => scrollToActiveCard(window.currentAccount), 500);
+                    });
                 } else {
-                    document.getElementById('user-display-name').innerText = 'Guest';
-                    document.getElementById('profile-badge').classList.remove('has-pic');
+                    window.currentAccount = 'default_wallet';
+                    loadData();
                 }
 
-                // Load Data for this UID
-                await loadData();
-                setupAccountSwitcher();
+                // Update Profile UI
+                updateProfileUI(user);
                 
-                // Hydrate others in background after short delay to prioritize current view
-                setTimeout(() => window.hydrateAllCaches(), 3000);
-                
-                // Refresh global token state for handleScan
-                accessToken = localStorage.getItem('g_access_token');
-                expiry = localStorage.getItem('g_token_expiry');
-
-                if (accessToken && expiry && Date.now() < parseInt(expiry)) {
-                    // ADAPTIVE SYNC with Cooldown to prevent lag on page switch
-                    const lastDeepSync = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
-                    const lastQuickSync = localStorage.getItem(`last_quick_sync_${window.currentAccount}`);
-                    const now = Date.now();
-                    const dayInMs = 24 * 60 * 60 * 1000;
-                    const quickSyncCooldown = 10 * 60 * 1000; // 10 minutes
-                    
-                    if (!lastDeepSync || (now - parseInt(lastDeepSync)) > dayInMs) {
-                        log(`Deep sync scheduled for ${window.currentAccount} (800 items)...`);
-                        setTimeout(() => handleScan(800), 2000);
-                    } else if (!lastQuickSync || (now - parseInt(lastQuickSync)) > quickSyncCooldown) {
-                        log(`Routine quick sync for ${window.currentAccount}...`);
-                        setTimeout(() => handleScan(25), 1500);
-                    } else {
-                        log(`Sync cooldown active for ${window.currentAccount}. Skipping auto-scan.`, 'info');
-                    }
-                }
+                // Local Mode Nudge
+                handleLocalModeNudge(user);
                 
                 applyUserView(user);
             });
         });
+
+        function updateProfileUI(user) {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (user.isAnonymous) {
+                 dropdown.innerHTML = `
+                    <div class="dropdown-header">Guest Session</div>
+                    <div class="dropdown-item" onclick="handleAuthClick()">
+                        <i class="material-icons">cloud_upload</i>
+                        <span>Sign in with Google</span>
+                    </div>
+                 `;
+                 document.getElementById('user-display-name').innerText = 'Guest';
+                 document.getElementById('profile-badge').classList.remove('has-pic');
+            } else {
+                 dropdown.innerHTML = `
+                    <div class="dropdown-header">${user.email}</div>
+                    <div class="dropdown-item" onclick="handleAuthClick()">
+                        <i class="material-icons">swap_horiz</i>
+                        <span>Switch Account</span>
+                    </div>
+                    <div class="dropdown-item logout" onclick="handleSignout()">
+                        <i class="material-icons">logout</i>
+                        <span>Log Out</span>
+                    </div>
+                 `;
+                 
+                 const parts = user.displayName?.split(' ') || [];
+                 const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
+                 document.getElementById('user-display-name').innerText = firstName;
+                 localStorage.setItem('user_name', firstName);
+                 
+                 if (user.photoURL) {
+                     const picEl = document.getElementById('user-pic');
+                     let photoUrl = user.photoURL;
+                     if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                         photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                     }
+                     picEl.src = photoUrl;
+                     document.getElementById('profile-badge').classList.add('has-pic');
+                     localStorage.setItem('user_pic', photoUrl);
+                 }
+            }
+        }
+
+        function handleLocalModeNudge(user) {
+            if (user.isAnonymous) {
+                 const profileBadge = document.getElementById('profile-badge');
+                 profileBadge.style.border = '2px solid #f59e0b';
+                 profileBadge.classList.add('local-nudge');
+                 
+                 let banner = document.getElementById('local-banner');
+                 if (!banner) {
+                     banner = document.createElement('div');
+                     banner.id = 'local-banner';
+                     banner.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i class="material-icons" style="color:#f59e0b; font-size:20px;">cloud_off</i>
+                            <span style="font-size:12px; font-weight:800; color:#1e293b; letter-spacing:0.2px;">SYNC YOUR DATA</span>
+                        </div>
+                        <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
+                     `;
+                     banner.className = 'sticky-banner';
+                     const viewport = document.getElementById('cardViewport');
+                     if (viewport) viewport.after(banner);
+                     else document.body.prepend(banner);
+                 }
+                 banner.style.display = 'flex';
+            } else {
+                 document.getElementById('profile-badge').style.border = 'none';
+                 document.getElementById('profile-badge').classList.remove('local-nudge');
+                 const banner = document.getElementById('local-banner');
+                 if (banner) banner.style.display = 'none';
+            }
+        }
+
+        function triggerAdaptiveSync() {
+            const accessToken = localStorage.getItem('g_access_token');
+            const expiry = localStorage.getItem('g_token_expiry');
+
+            if (accessToken && expiry && Date.now() < parseInt(expiry)) {
+                const lastDeepSync = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
+                const lastQuickSync = localStorage.getItem(`last_quick_sync_${window.currentAccount}`);
+                const now = Date.now();
+                const dayInMs = 24 * 60 * 60 * 1000;
+                const quickSyncCooldown = 10 * 60 * 1000;
+                
+                if (!lastDeepSync || (now - parseInt(lastDeepSync)) > dayInMs) {
+                    log(`Deep sync scheduled for ${window.currentAccount}...`);
+                    setTimeout(() => handleScan(800), 2000);
+                } else if (!lastQuickSync || (now - parseInt(lastQuickSync)) > quickSyncCooldown) {
+                    log(`Quick sync for ${window.currentAccount}...`);
+                    setTimeout(() => handleScan(25), 1500);
+                }
+            }
+        }
+
+        function updateAccountSwitcherUI(accounts) {
+            const switcher = document.getElementById('account-switcher');
+            if (!switcher) return;
+            
+            switcher.innerHTML = accounts.map(acc => `
+                <div class="sw-slide" data-id="${acc.id}" onclick="switchAccount('${acc.id}')">
+                    <div class="sw-card" style="background: ${acc.color};">
+                        <div class="sw-card-label">${acc.type.toUpperCase()}</div>
+                        <div class="sw-card-name">${acc.name}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateBalanceCardsUI(accounts) {
+            const container = document.getElementById('dynamic-balance-cards');
+            if (!container) return;
+
+            const isHidden = localStorage.getItem('balance_hidden') === 'true';
+
+            container.innerHTML = accounts.map(acc => {
+                const isAtome = acc.id === 'atome';
+                const isBPI = acc.id === 'bpi';
+                const cardClass = `balance-card ${acc.id === window.currentAccount ? 'active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''}`;
+                
+                return `
+                <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
+                    ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
+                    ${isBPI ? '<div class="bpi-rays"></div>' : ''}
+                    
+                    <div class="card-header-row">
+                        <div style="display: flex; align-items: baseline; gap: 6px;">
+                            <div class="card-label" style="text-transform: uppercase;">${acc.name}</div>
+                            ${isBPI ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
+                        </div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount privacy-mask" data-raw="PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}">${isHidden ? '******' : 'PHP ' + acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
+
+                    ${isBPI ? `<div id="bpi-remaining-insight" class="privacy-mask" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 1; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">${isHidden ? '******' : 'PHP 0.00 (0.00)'}</div>` : ''}
+                    
+                    <div class="card-footer">
+                        <div class="card-number-box">
+                            <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
+                            <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            ${acc.id !== 'default_wallet' ? `
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1" style="${!isBPI && acc.color !== '#121212' ? 'background: #fff; opacity:0.8;' : ''}"></div>
+                                <div class="circle circle-2" style="${!isBPI && acc.color !== '#121212' ? 'background: #fff; opacity:0.4;' : ''}"></div>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            setupAccountSwitcher(); // Re-bind observer to new cards
+        }
+
+        function scrollToActiveCard(accId) {
+            const card = document.querySelector(`.balance-card[data-account="${accId}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        function applyAccountTheme(accId, accounts) {
+            const acc = accounts.find(a => a.id === accId);
+            if (!acc) return;
+            
+            // Sync overall UI theme (FAB, Nav, Charts)
+            applyTheme(accId);
+
+            const cardBg = document.getElementById('card-bg');
+            if (cardBg) cardBg.setAttribute('fill', acc.color);
+            
+            // Update balance display label if exists
+            const label = document.getElementById('wallet-label');
+            if (label) label.innerText = acc.name.toUpperCase();
+        }
+
+        window.switchAccount = (id) => {
+            localStorage.setItem('wallet_current_account', id);
+            window.currentAccount = id;
+            if (window.walletAccounts) applyAccountTheme(id, window.walletAccounts);
+            loadData();
+        };
 
         function applyUserView(user) {
             const isAnon = !user || user.isAnonymous;
@@ -1587,59 +1732,29 @@
             const gate = document.getElementById('guestGate');
             if (gate) gate.style.display = isAnon ? 'flex' : 'none';
 
-            const bpiCard = document.getElementById('bpiCard');
-            const atomeCard = document.getElementById('atomeCard');
             const scrollContainer = document.getElementById('cardCarouselScroll');
             const placeholder = document.querySelector('.add-card-placeholder');
 
             if (!isAdmin) {
-                // GUEST/USER VIEW: Minimalist Black Card
-                if (bpiCard) bpiCard.style.display = 'none';
                 if (placeholder) placeholder.style.display = 'flex';
                 
-                // Keep carousel functional but simplify padding for 1-card feel
                 if (scrollContainer) {
                     scrollContainer.style.overflowX = 'auto';
                     scrollContainer.style.scrollSnapType = 'x mandatory';
                     scrollContainer.style.padding = '30px 35px 25px 35px';
                     scrollContainer.style.justifyContent = 'flex-start';
                 }
-
-                if (atomeCard) {
-                    const logo = atomeCard.querySelector('.atome-brand-logo');
-                    if (logo) logo.style.display = 'none';
-                    const label = atomeCard.querySelector('.card-label');
-                    if (label) label.innerText = 'Personal Wallet';
-                    
-                    atomeCard.classList.add('active'); // Force active state
-                    atomeCard.style.maxWidth = '360px';
-                    atomeCard.style.flex = '0 0 calc(100% - 30px)';
-                    
-                    // Snap to center instantly
-                    setTimeout(() => {
-                        atomeCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-                    }, 50);
-                }
                 
-                // FORCE THEME TO BLACK
+                // FORCE THEME TO DARK
                 applyTheme('atome');
                 updateHeaderIcon('atome');
             } else {
-                // ADMIN VIEW: Restore Atome/BPI Carousel
-                if (bpiCard) bpiCard.style.display = 'flex';
                 if (placeholder) placeholder.style.display = 'flex';
                 if (scrollContainer) {
                     scrollContainer.style.overflowX = 'auto';
                     scrollContainer.style.scrollSnapType = 'x mandatory';
                     scrollContainer.style.padding = '30px 35px 25px 35px';
                     scrollContainer.style.justifyContent = 'flex-start';
-                }
-                if (atomeCard) {
-                    const logo = atomeCard.querySelector('.atome-brand-logo');
-                    if (logo) logo.style.display = 'block';
-                    const label = atomeCard.querySelector('.card-label');
-                    if (label) label.innerText = 'Atome Spending';
-                    atomeCard.style.maxWidth = '360px';
                 }
             }
         }
@@ -1665,34 +1780,24 @@
         });
 
         // DYNAMIC THEME APPLICATOR
-        window.applyTheme = (account) => {
-            const themes = {
-                'atome': {
-                    primary: '#121212', 
-                    nav: '#121212',     
-                    trend: '#121212',   
-                    light: '#334155'    
-                },
-                'bpi': {
-                    primary: '#7A1616', 
-                    nav: '#7A1616',     
-                    trend: '#7A1616',   
-                    light: '#931B1B'    
-                },
-                'default': {
-                    primary: '#121212', 
-                    nav: '#121212',
-                    trend: '#121212',
-                    light: '#334155'
-                }
+        window.applyTheme = (accountOrColor) => {
+            let primaryColor = '#121212'; // Default to a dark theme
+            
+            // Check if it's an account ID or a hex color
+            if (accountOrColor.startsWith('#')) {
+                primaryColor = accountOrColor;
+            } else {
+                const acc = window.walletAccounts?.find(a => a.id === accountOrColor);
+                if (acc) primaryColor = acc.color;
+            }
+
+            const theme = {
+                primary: primaryColor,
+                nav: primaryColor,
+                trend: primaryColor,
+                light: primaryColor + 'cc' // add some transparency
             };
             
-            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-            
-            let targetAccount = account;
-            if (account === 'bpi' && !isAdmin) targetAccount = 'atome'; 
-
-            const theme = themes[targetAccount] || themes['default'];
             window.currentThemeTrend = theme.trend; 
             
             // 1. Update FAB
@@ -1750,54 +1855,11 @@
 
         // DYNAMIC CARDS LOADER
         function loadSavedCardsToIndex() {
-            const scrollContainer = document.getElementById('cardCarouselScroll');
-            const placeholder = document.querySelector('.add-card-placeholder');
-            const savedAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-            
-            savedAccounts.forEach(acc => {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = 'balance-card';
-                cardDiv.dataset.account = acc.id;
-                cardDiv.style.background = acc.color;
-                cardDiv.innerHTML = `
-                    <div class="card-header-row">
-                        <div class="card-label">${acc.name}</div>
-                        <div class="card-sync-status-chip">
-                            <div class="dot syncDot"></div>
-                            <span class="status-text syncStatusText">Ready</span>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                         <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
-                            <i class="material-icons" style="font-size:16px;">visibility</i>
-                         </button>
-                    </div>
-                    
-                    <div class="card-footer">
-                        <div class="card-number-box">
-                            <div class="card-number-label">Account Number</div>
-                            <div class="card-number">•••• •••• •••• ${acc.last4}</div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
-                                <i class="material-icons">sync</i>
-                            </button>
-                            <div class="mastercard-circles">
-                                <div class="circle circle-1"></div>
-                                <div class="circle circle-2"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                // Insert before placeholder
-                scrollContainer.insertBefore(cardDiv, placeholder);
-            });
+            // Deprecated - handled by updateBalanceCardsUI
         }
 
         function setupAccountSwitcher() {
-            loadSavedCardsToIndex();
+            // Removed loadSavedCardsToIndex call as it's now dynamic
             const viewport = document.getElementById('cardCarouselScroll');
             const cards = document.querySelectorAll('.balance-card');
             if (!viewport || cards.length === 0) return;
@@ -2775,23 +2837,45 @@
                 });
 
                 // Labels
-                for(let i=1; i<=weeksCount; i++) {
+                for(let i=0; i<weeksCount; i++) {
+                    let d;
                     if (filter === 'this_month') {
-                         labels.push(`Week ${i}`);
+                        d = new Date(now.getFullYear(), now.getMonth(), i * 7 + 1);
                     } else {
-                        if (i % 4 === 1 || i === weeksCount) labels.push(`W${i}`);
-                        else labels.push('');
+                        d = new Date(limitDate);
+                        d.setDate(d.getDate() + (i * 7));
                     }
+                    
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const monthStr = monthNames[d.getMonth()];
+                    const yearStr = d.getFullYear();
+                    
+                    // Simple week of month calculation for label
+                    const dayOfMonth = d.getDate();
+                    const weekNum = Math.ceil(dayOfMonth / 7);
+                    
+                    const fullLabel = `${monthStr} ${yearStr} W${weekNum}`;
+                    labels.push(fullLabel);
                 }
             }
 
             // Update Labels UI
             if (labelsContainer) {
-                labels.forEach(l => {
+                labelsContainer.innerHTML = '';
+                labels.forEach((l, i) => {
                     const span = document.createElement('span');
                     span.className = 'trend-label';
-                    // Simplify labels for small screens
-                    span.innerText = l;
+                    
+                    // Only show Axis label for 1st week, last week, or if month changes
+                    let showAxis = i === 0 || i === labels.length - 1 || (i % 4 === 0);
+                    
+                    if (showAxis) {
+                        // For axis, just show "MMM W#" or "W#"
+                        const parts = l.split(' '); // ["Jan", "2026", "W1"]
+                        span.innerText = `${parts[0]} ${parts[2]}`;
+                    } else {
+                        span.innerText = '';
+                    }
                     labelsContainer.appendChild(span);
                 });
             }
@@ -2860,12 +2944,35 @@
                 }
 
                 const trendSvg = document.getElementById('trendChart');
-                trendSvg.onmousemove = (e) => {
+                let isTooltipPinned = false;
+
+                const updateTooltip = (nearestIdx, e) => {
+                    const p = getPoint(nearestIdx);
+                    guide.setAttribute('x1', p.x);
+                    guide.setAttribute('x2', p.x);
+                    guide.style.opacity = '1';
+
+                    const tooltip = document.getElementById('chart-tooltip');
+                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(points[nearestIdx]).toLocaleString()}</div>`;
+                    tooltip.style.opacity = '1';
+                    tooltip.style.display = 'block';
+                    
+                    // Center tooltip above the point if possible
+                    const rect = trendSvg.getBoundingClientRect();
+                    const absoluteX = rect.left + (p.x / 400) * rect.width + window.scrollX;
+                    const absoluteY = rect.top + (p.y / 130) * rect.height + window.scrollY;
+                    
+                    tooltip.style.left = `${absoluteX}px`;
+                    tooltip.style.top = `${absoluteY - 10}px`;
+                    tooltip.style.transform = 'translate(-50%, -100%)';
+                };
+
+                trendSvg.onclick = (e) => {
+                    e.stopPropagation();
                     const rect = trendSvg.getBoundingClientRect();
                     const mouseX = e.clientX - rect.left;
                     const viewBoxX = (mouseX / rect.width) * 400;
                     
-                    // Find nearest point
                     let nearestIdx = 0;
                     let minDist = Infinity;
                     for (let i = 0; i < points.length; i++) {
@@ -2877,23 +2984,49 @@
                         }
                     }
 
-                    const p = getPoint(nearestIdx);
-                    guide.setAttribute('x1', p.x);
-                    guide.setAttribute('x2', p.x);
-                    guide.style.opacity = '1';
+                    updateTooltip(nearestIdx, e);
+                    isTooltipPinned = true;
+                };
 
-                    const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(points[nearestIdx]).toLocaleString()}</div>`;
-                    tooltip.style.opacity = '1';
-                    tooltip.style.display = 'block';
-                    tooltip.style.left = `${e.pageX + 15}px`;
-                    tooltip.style.top = `${e.pageY - 40}px`;
+                trendSvg.onmousemove = (e) => {
+                    if (isTooltipPinned) return;
+                    const rect = trendSvg.getBoundingClientRect();
+                    const mouseX = e.clientX - rect.left;
+                    const viewBoxX = (mouseX / rect.width) * 400;
+                    
+                    let nearestIdx = 0;
+                    let minDist = Infinity;
+                    for (let i = 0; i < points.length; i++) {
+                        const p = getPoint(i);
+                        const dist = Math.abs(p.x - viewBoxX);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIdx = i;
+                        }
+                    }
+
+                    updateTooltip(nearestIdx, e);
                 };
 
                 trendSvg.onmouseleave = () => {
-                    guide.style.opacity = '0';
-                    document.getElementById('chart-tooltip').style.opacity = '0';
+                    if (!isTooltipPinned) {
+                        guide.style.opacity = '0';
+                        document.getElementById('chart-tooltip').style.opacity = '0';
+                    }
                 };
+
+                // Click outside to dismiss
+                const dismissPin = (e) => {
+                    if (isTooltipPinned && !trendSvg.contains(e.target)) {
+                        isTooltipPinned = false;
+                        guide.style.opacity = '0';
+                        document.getElementById('chart-tooltip').style.opacity = '0';
+                    }
+                };
+                window.addEventListener('click', dismissPin);
+                // Clean up previous event listener if function is called again
+                if (window._trendPinCleanup) window.removeEventListener('click', window._trendPinCleanup);
+                window._trendPinCleanup = dismissPin;
             }
 
         let selectedCategoryName = null;
@@ -2903,6 +3036,7 @@
             const legend = document.getElementById('chart-legend');
             const totalVal = document.getElementById('chart-total-val');
             const totalLabel = document.getElementById('chart-total-label');
+            const totalPct = document.getElementById('chart-total-pct');
             
             svgGroup.innerHTML = '';
             legend.innerHTML = '';
@@ -2921,6 +3055,7 @@
                     totalLabel.innerText = 'TOTAL';
                     totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
                     totalVal.dataset.raw = totalFormatted;
+                    if (totalPct) totalPct.innerText = '';
                 } else {
                     const seg = segments.find(s => s.name === selectedCategoryName);
                     if (seg) {
@@ -2928,12 +3063,20 @@
                         const valText = `₱${Math.round(seg.value).toLocaleString()}`;
                         totalVal.dataset.raw = valText;
                         totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
+                        
+                        // Calculate percentage
+                        if (totalPct) {
+                            const pct = total > 0 ? ((seg.value / total) * 100).toFixed(2) : "0.00";
+                            totalPct.innerText = parseFloat(pct) > 0 ? `${pct}%` : '';
+                            totalPct.style.color = seg.color || '#10b981';
+                        }
                     } else {
                         // Reset if category not found in current data
                         selectedCategoryName = null;
                         totalLabel.innerText = 'TOTAL';
                         totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
                         totalVal.dataset.raw = totalFormatted;
+                        if (totalPct) totalPct.innerText = '';
                     }
                 }
             }
@@ -3784,14 +3927,13 @@
                                     const collectionName = getCollectionName(syncAccount);
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
-                                    const snap = await getDoc(docRef);
-                                    if (snap.exists()) {
-                                        // PROTECT MANUAL EDITS: Only restore if it was deleted. 
-                                        // Do NOT overwrite existing merchant, notes, or categories.
-                                        await updateDoc(docRef, { deleted: false });
-                                    } else {
-                                        await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
-                                    }
+                                     const snap = await getDoc(docRef);
+                                     if (snap.exists()) {
+                                         // RESPECT DELETIONS & MANUAL EDITS: Skip if already exists
+                                         return false; 
+                                     } else {
+                                         await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                     }
                                     return true;
                                 }
                             } catch (err) { return false; }
@@ -4132,7 +4274,7 @@
                     toggleRefund(txnId, args[0]);
                     break;
                 case 'delete':
-                    openDeleteModal(txnId);
+                    openDeleteModal(txnId, window.currentAccount);
                     break;
             }
         };
@@ -4208,8 +4350,74 @@
         };
 
         // DELETE LOGIC
-        window.openDeleteModal = (id) => {
+        let currentTxnId = null;
+        let currentDeletionAccount = null;
+
+        window.runThanosSnap = (el, callback) => {
+            if (!el) return callback();
+            
+            const rect = el.getBoundingClientRect();
+            const count = 150; // High density for "fading" look
+            // Monochromatic "Ash" palette: Black, White, Grays
+            const colors = ['#000000', '#1a1a1a', '#333333', '#4d4d4d', '#666666', '#808080', '#999999', '#b3b3b3', '#cccccc', '#e6e6e6', '#ffffff'];
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$₱+-*•. ';
+            
+            // Create particles
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'snap-particle';
+                
+                const chosenColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                // More text-based particles for "fading text" feel
+                const isChar = Math.random() > 0.4;
+                if (isChar) {
+                    p.innerText = chars[Math.floor(Math.random() * chars.length)];
+                    p.style.background = 'none';
+                    p.style.fontSize = `${Math.random() * 12 + 4}px`;
+                    p.style.fontWeight = '800';
+                    p.style.color = chosenColor;
+                    p.style.opacity = Math.random() * 0.7 + 0.3;
+                } else {
+                    const size = Math.random() * 3 + 1; // Smaller bits
+                    p.style.width = `${size}px`;
+                    p.style.height = `${size}px`;
+                    p.style.backgroundColor = chosenColor;
+                    p.style.opacity = Math.random() * 0.5 + 0.2;
+                }
+                
+                // Start position (randomly inside the element)
+                p.style.left = `${rect.left + Math.random() * rect.width}px`;
+                p.style.top = `${rect.top + Math.random() * rect.height}px`;
+                
+                // Random destination (floating away)
+                const dx = (Math.random() - 0.5) * 250;
+                const dy = (Math.random() - 1.2) * 200; // Upwards
+                const rot = Math.random() * 1080 - 540;
+                
+                p.style.setProperty('--dx', `${dx}px`);
+                p.style.setProperty('--dy', `${dy}px`);
+                p.style.setProperty('--rot', `${rot}deg`);
+                
+                // Slower duration
+                p.style.animationDuration = `${1.5 + Math.random() * 2}s`;
+                
+                document.body.appendChild(p);
+                
+                // Cleanup particle
+                setTimeout(() => p.remove(), 4000);
+            }
+            
+            // Trigger disintegration and collapse
+            el.classList.add('snapping');
+            
+            // Wait for collapse to finish before callback
+            setTimeout(callback, 1500);
+        };
+
+        window.openDeleteModal = (id, accId) => {
             currentTxnId = id;
+            currentDeletionAccount = accId || window.currentAccount;
             document.getElementById('delete-modal').classList.add('show');
         };
 
@@ -4221,43 +4429,60 @@
                 }
             }
             if (!currentTxnId) return;
+            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
+            const txnId = currentTxnId;
+            const accId = currentDeletionAccount;
+            const col = getCollectionName(accId);
             
-            const btn = document.querySelector('#delete-modal button');
-            if (btn) btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> DELETING...';
+            closeModals(); // Close modal immediately
 
-            // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
-            let deletedItem = null;
-            if (idx > -1) {
-                deletedItem = window.allTxns[idx];
-                window.allTxns.splice(idx, 1); // Remove from array
-                renderHistory(window.allTxns);
-                updateBalanceToThisMonth(window.allTxns);
-            }
-            closeModals(); // Close immediately
-
-            try {
-                 if (!auth.currentUser) return;
-                 const uid = auth.currentUser.uid;
-                 const col = getCollectionName(window.currentAccount);
-                await updateDoc(doc(db, "users", uid, col, currentTxnId), { deleted: true });
-                showToast('Transaction deleted');
-            } catch (error) { 
-                log("Error deleting: " + error.message, "error");
-                showToast('Delete failed');
-                // Revert
-                if (deletedItem) {
-                    window.allTxns.push(deletedItem); // Add back (order might be wrong until refresh but better than nothing)
-                    window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); // Simple re-sort
+            // Locate element for animation
+            const txnEl = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
+            
+            const performDelete = async () => {
+                // OPTIMISTIC UPDATE (Internal State)
+                const idx = window.allTxns.findIndex(t => t.id === txnId);
+                let deletedItem = null;
+                if (idx > -1) {
+                    deletedItem = window.allTxns[idx];
+                    window.allTxns.splice(idx, 1);
                     renderHistory(window.allTxns);
+                    updateBalanceToThisMonth(window.allTxns);
                 }
-            } finally {
-               if(btn) btn.innerHTML = 'DELETE';
+
+                try {
+                     if (!auth.currentUser) return;
+                     const uid = auth.currentUser.uid;
+                     await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
+                     
+                     const cacheKey = `wallet_cache_${uid}_${accId}`;
+                     localStorage.setItem(cacheKey, JSON.stringify({
+                         txns: window.allTxns,
+                         timestamp: Date.now()
+                     }));
+                     
+                     showToast('Transaction deleted');
+                } catch (error) { 
+                    log("Error deleting: " + error.message, "error");
+                    showToast('Delete failed');
+                    // Revert
+                    if (deletedItem) {
+                        window.allTxns.push(deletedItem); 
+                        window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); 
+                        renderHistory(window.allTxns);
+                    }
+                }
+            };
+
+            // Trigger Animation -> then perform deletion logic
+            if (txnEl) {
+                window.runThanosSnap(txnEl, performDelete);
+            } else {
+                performDelete();
             }
         };
 
         // --- CUSTOMIZATION MODALS ---
-        let currentTxnId = null;
         const CATEGORIES = [
             { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
             { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
@@ -4321,12 +4546,14 @@
         populateTxnFilter();
 
         window.closeModals = () => {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
             currentTxnId = null;
             
             // Restore scroll
             const wrapper = document.querySelector('.mobile-wrapper');
-            if (wrapper) wrapper.style.overflow = 'auto';
+            if (wrapper) {
+                wrapper.style.overflow = 'auto';
+            }
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
@@ -4359,9 +4586,11 @@
                 }
             }
             if (!currentTxnId) return;
+            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
+            const txnId = currentTxnId;
 
             // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            const idx = window.allTxns.findIndex(t => t.id === txnId);
             const originalCat = idx > -1 ? window.allTxns[idx].manualCategory : null;
             if (idx > -1) {
                 window.allTxns[idx].manualCategory = catId;
@@ -4376,7 +4605,7 @@
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 const col = getCollectionName(window.currentAccount);
-                await updateDoc(doc(db, "users", uid, col, currentTxnId), { manualCategory: catId });
+                await updateDoc(doc(db, "users", uid, col, txnId), { manualCategory: catId });
                 showToast('Category updated');
             } catch (error) { 
                 log("Error saving category: " + error.message, "error");
@@ -4425,10 +4654,13 @@
                 }
             }
             if (!currentTxnId) return;
+            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
+            const txnId = currentTxnId;
+            const col = getCollectionName(window.currentAccount);
             let note = document.getElementById('note-text').value.trim();
 
              // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            const idx = window.allTxns.findIndex(t => t.id === txnId);
             const originalNote = idx > -1 ? window.allTxns[idx].note : null;
             if (idx > -1) {
                 window.allTxns[idx].note = note;
@@ -4439,8 +4671,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = getCollectionName(window.currentAccount);
-                await updateDoc(doc(db, "users", uid, col, currentTxnId), { note: note });
+                await updateDoc(doc(db, "users", uid, col, txnId), { note: note });
                 showToast('Note saved');
             } catch (error) { 
                 log("Error saving note: " + error.message, "error"); 
@@ -4474,12 +4705,16 @@
                 }
             }
             if (!currentTxnId) return;
+            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
+            const txnId = currentTxnId;
+            const col = getCollectionName(window.currentAccount);
+            
             const val = document.getElementById('price-input').value;
             const amt = parseFloat(val);
             const isValid = !isNaN(amt) && val.trim() !== "";
             
             // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            const idx = window.allTxns.findIndex(t => t.id === txnId);
             const originalAmt = idx > -1 ? window.allTxns[idx].manualAmount : undefined;
             if (idx > -1) {
                 if (isValid) {
@@ -4496,8 +4731,7 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const col = getCollectionName(window.currentAccount);
-                const docRef = doc(db, "users", uid, col, currentTxnId);
+                const docRef = doc(db, "users", uid, col, txnId);
                 if (!isValid) {
                     await updateDoc(docRef, { manualAmount: deleteField() });
                 } else {
@@ -4747,10 +4981,13 @@
         window.updateManualAccountUI = (val) => {
             const iconBox = document.getElementById('manual-account-icon-box');
             if (iconBox) {
-                if (val === 'bpi') {
-                    iconBox.style.background = '#8b0000'; // BPI Red
+                const acc = (window.walletAccounts || []).find(a => a.id === val);
+                if (acc) {
+                    iconBox.style.background = acc.color;
                 } else {
-                    iconBox.style.background = '#1a1a1a'; // Atome Black
+                    // Fallback
+                    if (val === 'bpi') iconBox.style.background = '#8b0000';
+                    else iconBox.style.background = '#1a1a1a';
                 }
             }
         };
@@ -4761,9 +4998,14 @@
             document.getElementById('manual-merchant').value = '';
             document.getElementById('manual-note').value = '';
             
-            // Default Account from switcher
-            const activeAcc = window.currentAccount || 'atome';
-            document.getElementById('manual-account').value = activeAcc;
+            // Dynamic Account Population
+            const select = document.getElementById('manual-account');
+            const accounts = window.walletAccounts || [];
+            select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+
+            // Default Account from current active
+            const activeAcc = window.currentAccount || (accounts.length > 0 ? accounts[0].id : 'atome');
+            select.value = activeAcc;
             updateManualAccountUI(activeAcc);
             
             // Default Category
@@ -4806,9 +5048,14 @@
             document.getElementById('manual-merchant').value = merchant;
             document.getElementById('manual-note').value = note || '';
             
-            // Account (Determine from current active if unknown, but usually we know)
-            const activeAcc = window.currentAccount || 'atome';
-            document.getElementById('manual-account').value = activeAcc;
+            // Dynamic Account Population
+            const select = document.getElementById('manual-account');
+            const accounts = window.walletAccounts || [];
+            select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+
+            // Set to account that holds this txn
+            const activeAcc = window.originalAccount || window.currentAccount || 'atome';
+            select.value = activeAcc;
             updateManualAccountUI(activeAcc);
             
             // Set date
@@ -4941,7 +5188,7 @@
 
                 if (window.editingTxnId) {
                     const origAcc = window.originalAccount || (window.editingTxnId.startsWith('bpi_') ? 'bpi' : 'atome');
-                    const originalCol = origAcc === 'atome' ? "transactions" : "bpi_transactions";
+                    const originalCol = getCollectionName(origAcc);
                     
                     if (selectedAccount !== origAcc) {
                         // MOVE TRANSACTION: Delete from old, Add to new (Keep same ID for consistency)

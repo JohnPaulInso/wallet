@@ -13,18 +13,18 @@
     <link href="https://fonts.cdnfonts.com/css/lemon-milk" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-    <link rel="manifest" href="manifest.json?v=2">
-    <meta name="theme-color" content="#f8fafc">
+    <link rel="manifest" href="manifest.json?v=1">
+    <meta name="theme-color" content="#121212">
 
     <style>
         * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
-        html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; }
+        html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; }
         
         /* Mobile Wrapper with PC Scroll Simulation */
         .mobile-wrapper { 
             width: 100%; 
             max-width: 430px; 
-            background: #f8fafc; 
+            background: #fff; 
             height: 100vh; /* Fixed height for sticky to work on mobile */
             position: relative; 
             box-shadow: 0 0 50px rgba(0,0,0,0.1); 
@@ -37,7 +37,7 @@
             .mobile-wrapper { height: 100vh; overflow-y: scroll; }
         }
 
-        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
@@ -152,38 +152,16 @@
 
         /* Add Card Placeholder */
         .add-card-placeholder {
-            display: flex;
-            flex-direction: column;
-            background: rgba(255,255,255,0.05); /* Very subtle bg */
+            background: transparent;
             border: 2px dashed #cbd5e1;
             box-shadow: none !important;
             color: #94a3b8;
             align-items: center;
             justify-content: center;
             min-height: 200px;
-            width: 140px;
-            flex: 0 0 140px;
-            scroll-snap-align: center;
-            scroll-snap-stop: always;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
         }
-        .add-card-placeholder:hover {
-            border-color: #3b82f6;
-            color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
-        }
-        .add-card-placeholder i { font-size: 32px; margin-bottom: 12px; color: #cbd5e1; opacity: 0.8; }
-        .add-card-placeholder span { 
-            font-weight: 700; 
-            font-size: 11px; 
-            text-transform: uppercase; 
-            letter-spacing: 1.5px; 
-            line-height: 1.5;
-            text-align: center;
-            max-width: 80px;
-        }
+        .add-card-placeholder i { font-size: 32px; margin-bottom: 8px; color: #cbd5e1; }
+        .add-card-placeholder span { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
         
         /* CARD BACKGROUNDS */
         .atome-card {
@@ -296,13 +274,9 @@
         .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -2px; margin-bottom: 10px; text-shadow: 0 4px 12px rgba(0,0,0,0.2); padding-top: 5px; position: relative; z-index: 2; }
         
         .card-footer { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 2; margin-top: auto; }
-        .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; width: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .chart-center-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
-        .chart-center-value { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; line-height: 1.2; }
-        .chart-center-pct { font-size: 11px; font-weight: 800; color: #10b981; letter-spacing: -0.5px; margin-top: 2px; }
         .card-number-box { line-height: 1.4; }
         .card-number-label { font-size: 8px; font-weight: 800; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
-        .card-number { font-size: 13.5px; font-weight: 600; color: rgba(255,255,255,1); letter-spacing: 2px; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card-number { font-size: 14px; font-weight: 600; color: rgba(255,255,255,1); letter-spacing: 2.5px; font-family: 'Courier New', monospace; text-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
         .mastercard-circles { display: flex; position: relative; width: 44px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); opacity: 0.9; }
         .circle { width: 28px; height: 28px; border-radius: 50%; position: absolute; }
@@ -550,9 +524,9 @@
         .chart-segment:hover {
             transform: scale(1.02);
         }
-        .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: #fff; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 12px rgba(0,0,0,0.03); border: 4px solid #f8fafc; z-index: 10; pointer-events: none; gap: 2px; padding: 4px; }
-        .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; margin: 0; max-width: 80px; word-wrap: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-        .chart-center-value { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.1; text-align: center; }
+        .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: #fff; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 12px rgba(0,0,0,0.03); border: 4px solid #f8fafc; z-index: 10; pointer-events: none; gap: 0px; }
+        .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; line-height: 1.2; margin: 0; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chart-center-value { font-size: 15px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.2; text-align: center; margin-top: 2px; }
         
         /* Highlighted Transaction Styling */
         .premium-txn.highlight-txn { transition: all 0.3s ease; }
@@ -583,18 +557,8 @@
 
         /* SIMPLE LEGEND */
         .legend { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; }
-        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #1e293b; font-weight: 600; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #1e293b; font-weight: 600; white-space: nowrap; }
         .legend-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-
-        /* Week Highlight Hint */
-        .premium-txn.week-highlight {
-            background: #f0f9ff !important;
-            border-left: 3px solid #3b82f6;
-        }
-        .dark-mode .premium-txn.week-highlight {
-            background: rgba(59, 130, 246, 0.1) !important;
-            border-left: 3px solid #3b82f6;
-        }
 
         /* BOTTOM NAV */
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
@@ -613,59 +577,6 @@
             .fab { right: 24px; }
             .bottom-nav { left: 0; transform: none; }
         }
-
-        /* DARK MODE STYLES */
-        :root {
-            --bg-primary: #fff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --card-bg: #fff;
-            --header-bg: rgba(255, 255, 255, 0.8);
-            --border-color: #f1f5f9;
-        }
-
-        body.dark-mode {
-            --bg-primary: #0a0a0a;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --card-bg: #1a1a1a;
-            --header-bg: rgba(10, 10, 10, 0.8);
-            --border-color: #262626;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-        }
-
-        body.dark-mode .mobile-wrapper { background: var(--bg-primary); }
-        body.dark-mode #header { background: var(--header-bg); border-color: var(--border-color); }
-        body.dark-mode .greeting-text { color: var(--text-secondary); }
-        body.dark-mode .user-name { color: var(--text-primary); }
-        body.dark-mode .chart-card, 
-        body.dark-mode .trend-card,
-        body.dark-mode .analytics-card,
-        body.dark-mode .budget-card,
-        body.dark-mode .data-mgmt-card { 
-            background: var(--card-bg); 
-            border-color: var(--border-color); 
-        }
-        body.dark-mode .premium-txn { background: var(--card-bg); border-color: var(--border-color); }
-        body.dark-mode .txn-merch { color: var(--text-primary); }
-        body.dark-mode .txn-amount { color: var(--text-primary); }
-        body.dark-mode .bottom-nav { background: var(--card-bg); border-color: var(--border-color); }
-        body.dark-mode .nav-item.active { color: #fff; }
-        body.dark-mode .nav-item { color: #525252; }
-        body.dark-mode .profile-dropdown { background: #1a1a1a; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        body.dark-mode .dropdown-item { color: #d1d5db; }
-        body.dark-mode .dropdown-item:hover { background: #262626; }
-        body.dark-mode #txn-search { color: #fff; }
-        body.dark-mode .search-wrapper { background: #1a1a1a; border-color: #262626; }
-        body.dark-mode .search-wrapper:focus-within { border-color: #fff; }
-        body.dark-mode .mui-btn--flat { background: #262626; color: #fff; border-color: #404040; }
-        body.dark-mode .chart-center { background: #1a1a1a; border-color: #262626; }
-        body.dark-mode .chart-center-value { color: #fff; }
-        body.dark-mode .chart-total-summary { color: #fff; }
-        body.dark-mode #expenses-total-summary { color: #fff; }
-        body.dark-mode .trend-label { color: #525252; }
-        body.dark-mode .data-mgmt-card { background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); }
 
         /* TREND CHART */
         .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
@@ -845,7 +756,31 @@
         .fab.blur-active, .bottom-nav.blur-active { filter: blur(10px) brightness(0.6); -webkit-filter: blur(10px) brightness(0.6); pointer-events: none; }
         
         /* Shadow for the elevated clone */
-        .premium-txn.elevated-clone { position: fixed; z-index: 2001; background: #fff !important; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); transform: scale(1.02); pointer-events: auto; border: 1px solid rgba(0,0,0,0.05); }
+        .premium-txn.elevated-clone { 
+            position: fixed; 
+            z-index: 2001; 
+            background: #fff !important; 
+            border-radius: 16px; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4); 
+            transform: scale(1.02); 
+            pointer-events: auto; 
+            border: none; /* Remove white border */
+            overflow: hidden; /* Round the left color indicator correctly */
+            padding-left: 20px; /* RESTORED PADDING */
+            transition: opacity 0.1s, transform 0.1s;
+        }
+        .premium-txn.elevated-clone::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px; /* Maintain the category color thickness */
+        }
+        .premium-txn.elevated-clone.closing {
+            opacity: 0;
+            transform: scale(0.95);
+        }
         
         /* BRAND LOGO BADGE */
         .brand-badge {
@@ -962,36 +897,6 @@
             justify-content: center;
         }
         .guest-gate-btn:active { transform: scale(0.96); }
-
-        /* THANOS SNAP ANIMATION */
-        .snap-particle {
-            position: fixed;
-            pointer-events: none;
-            background: #475569;
-            border-radius: 50%;
-            z-index: 9999;
-            animation: snap-float forwards cubic-bezier(0.1, 0.5, 0.5, 1);
-        }
-        @keyframes snap-float {
-            0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.8; }
-            100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0); opacity: 0; }
-        }
-        .premium-txn {
-            transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
-            overflow: hidden;
-            max-height: 200px; /* Large enough for any txn */
-        }
-        .premium-txn.snapping {
-            opacity: 0 !important;
-            transform: scale(0.9) !important;
-            max-height: 0 !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-            border: 0 !important;
-            pointer-events: none;
-        }
     </style>
 </head>
 <body>
@@ -1027,12 +932,6 @@
 
     <!-- CHART TOOLTIP -->
     <div id="chart-tooltip"></div>
-
-    <!-- BLUR OVERLAY FOR LONG-PRESS MENU -->
-    <div id="blur-overlay" class="blur-overlay" onclick="closeIOSMenu()"></div>
-    
-    <!-- IOS-STYLE ACTION MENU -->
-    <div id="ios-menu" class="ios-action-menu"></div>
 
     <div class="mobile-wrapper">
         <!-- GUEST LOGIN GATE -->
@@ -1080,13 +979,9 @@
                 <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
             </div>
             <div id="profile-dropdown" class="profile-dropdown">
-                 <div class="dropdown-item" onclick="handleAuthClick()">
+                <div class="dropdown-item" onclick="handleAuthClick()">
                     <i class="material-icons">sync</i>
                     <span>Google Sync</span>
-                </div>
-                <div class="dropdown-item" onclick="toggleDarkMode()">
-                    <i class="material-icons" id="dark-mode-icon">dark_mode</i>
-                    <span id="dark-mode-text">Dark Mode</span>
                 </div>
                 <div class="dropdown-item" onclick="promptSetPin()">
                     <i class="material-icons">lock</i>
@@ -1103,35 +998,86 @@
         <!-- SWIPEABLE CARD VIEWPORT -->
         <div class="card-viewport" id="cardViewport">
             <div class="card-carousel-scroll" id="cardCarouselScroll">
-                <!-- DYNAMICALLY RENDERED CARDS -->
-                <div id="dynamic-balance-cards" style="display: contents;">
-                    <!-- Default Wallet Card (Static Placeholder) -->
-                    <div class="balance-card active" id="default_walletCard" data-account="default_wallet" style="background: #121212;">
-                        <div class="card-header-row">
-                            <div style="display: flex; align-items: baseline; gap: 6px;">
-                                <div class="card-label" style="text-transform: uppercase;">My Wallet</div>
-                            </div>
+                <div class="balance-card atome-card" data-account="atome" id="atomeCard">
+                    <div class="card-brand-logo atome-brand-logo">A</div>
+                    
+                    <div class="card-header-row">
+                        <div class="card-label">Atome Spending</div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                             <div class="balance-amount">PHP 0.00</div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount" id="atome-balance">PHP 0.00</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="card-number-box">
+                            <div class="card-number-label">Account Number</div>
+                            <div class="card-number">**** **** 7312</div>
                         </div>
-                        <div class="card-footer" style="margin-top: 20px;">
-                            <div class="card-number-box">
-                                <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                                <div class="card-number" style="letter-spacing: 2px;">•••• •••• •••• 0000</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <button class="sync-icon-btn">
-                                    <i class="material-icons">sync</i>
-                                </button>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1"></div>
+                                <div class="circle circle-2"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="add-card-placeholder" onclick="window.location.href='account_setup.html'">
-                    <i class="material-icons">add_circle_outline</i>
-                    <span>Add New<br>Card</span>
+                <div class="balance-card bpi-card" data-account="bpi" id="bpiCard">
+                    <div class="bpi-rays"></div>
+                    
+                    <div class="card-header-row">
+                        <div style="display: flex; align-items: baseline; gap: 6px;">
+                            <div class="card-label">BPI Card</div>
+                            <div class="card-type-label">debit</div>
+                        </div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount" id="bpi-balance">PHP 0.00</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
+                    <div id="bpi-remaining-insight" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 0; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">PHP 0.00 (0.00)</div>
+                    
+                    <div class="card-footer">
+                        <div class="card-number-box">
+                            <div class="card-number-label">Account Number</div>
+                            <div class="card-number">0099 096727</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1" style="background:#ea001b;"></div> 
+                                <div class="circle circle-2" style="background:#f79e1b;"></div> 
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ADD CARD PLACEHOLDER -->
+                <div class="balance-card add-card-placeholder" onclick="window.location.href='accounts.html'">
+                    <div style="text-align:center;">
+                        <i class="material-icons">add_circle_outline</i>
+                        <div>Add Another Card</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1202,7 +1148,7 @@
                     <div class="chart-center">
                         <div class="chart-center-label" id="chart-total-label">TOTAL</div>
                         <div class="chart-center-value" id="chart-total-val">0</div>
-                        <div class="chart-center-pct" id="chart-total-pct"></div>
+                        <div id="chart-selection-percent" style="font-size: 10px; font-weight: 800; color: #64748b; opacity: 0; transition: opacity 0.3s;">0%</div>
                     </div>
                 </div>
                 <div id="chart-legend" class="legend">
@@ -1212,7 +1158,7 @@
 
             <!-- TREND SECTION -->
             <div class="trend-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">Spending Trends</h3>
                     <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f1f5f9; padding: 0 4px 0 10px; border-radius: 6px; height: 26px; text-transform: none; border: none; outline: none; cursor: pointer; text-align: left; min-width: 90px;">
                         <option value="this_month" selected>This Month</option>
@@ -1221,7 +1167,6 @@
                         <option value="last_6_months">Past 6 Months</option>
                     </select>
                 </div>
-                <div id="trend-month-label" style="text-align: left; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">January 2026</div>
                 <div style="height: 140px; width: 100%; position: relative; margin-bottom: 20px;">
                     <svg id="trendChart" width="100%" height="140" viewBox="0 0 400 140" preserveAspectRatio="none">
                         <defs>
@@ -1426,6 +1371,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        window.closeModals = () => {
+            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+        };
 
         // UNIFIED PROMISE-BASED DIALOG SYSTEM
         window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, callback = null }) => {
@@ -1509,30 +1457,23 @@
             log('4. Ensure your server is running on ' + origin, 'info');
             log('-------------------------', 'warn');
 
-            // FAST PATH: Early rendering from cache to achieve "instant" load
-            const lastUid = localStorage.getItem('wallet_last_uid');
-            const cachedAccounts = localStorage.getItem('wallet_accounts');
-            const cachedCurrent = localStorage.getItem('wallet_current_account');
-            
-            if (lastUid && cachedAccounts && cachedCurrent) {
-                console.log('⚡ Fast Path: Rendering from cache...');
-                try {
-                    const accounts = JSON.parse(cachedAccounts);
-                    window.walletAccounts = accounts;
-                    window.currentAccount = cachedCurrent;
-                    
-                    // Sync UI from cache
-                    updateAccountSwitcherUI(accounts);
-                    updateBalanceCardsUI(accounts);
-                    applyAccountTheme(cachedCurrent, accounts);
-                    
-                    // Trigger data load using stored UID
-                    // (loadData will use localStorage cache first internally)
-                    loadData(lastUid); 
-                } catch(e) { console.warn('Fast path failed', e); }
+            // 1. Immediate UI population from Cache
+            const cachedName = localStorage.getItem('user_name');
+            const cachedPic = localStorage.getItem('user_pic');
+            if (cachedName) document.getElementById('user-display-name').innerText = cachedName;
+            if (cachedPic) {
+                const badge = document.getElementById('profile-badge');
+                const picEl = document.getElementById('user-pic');
+                picEl.src = cachedPic;
+                badge.classList.add('has-pic');
             }
-
-            // FETCH ACCOUNTS & SYNC THEME (Master Observer)
+            
+            // Safety: Check if GIS already loaded (async/defer race)
+            if (typeof google !== 'undefined' && google.accounts) {
+                window.gisLoaded();
+            }
+            
+            // 2. Auth State Observer
             onAuthStateChanged(auth, async (user) => {
                 if (!user) {
                     log('Establishing secure local session...');
@@ -1540,316 +1481,128 @@
                     return;
                 }
 
-                // Save UID for future instant loads
-                localStorage.setItem('wallet_last_uid', user.uid);
-
-                // UI Mode Status
-                const dbBadge = document.getElementById('mode-status');
+                const dbBadge = document.getElementById('mode-status'); // Use mode-status for admin view
                 const emailDisplay = document.getElementById('admin-email-display');
+                
                 if (dbBadge) {
                    dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
                    if (emailDisplay) emailDisplay.innerText = user.isAnonymous ? '(UNSYNCED)' : `(${user.email.toUpperCase()})`;
                 }
                 
                 log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
-
-                // DYNAMIC ACCOUNT HUB
-                if (!user.isAnonymous) {
-                    const configRef = doc(db, "users", user.uid, "config", "accounts");
-                    onSnapshot(configRef, (docSnap) => {
-                        const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
-                        const isAdmin = user.email === 'johnpaulinso123@gmail.com';
-                        
-                        // Scenario Check: Admin must have all 3 specific cards
-                        const hasAtome = accounts.find(a => a.id === 'atome');
-                        const hasBPI = accounts.find(a => a.id === 'bpi');
-                        const hasWallet = accounts.find(a => a.id === 'default_wallet');
-                        
-                        if (accounts.length === 0 || (isAdmin && (!hasAtome || !hasBPI || !hasWallet))) {
-                            // INITIALIZE DEFAULT WALLETS
-                            let list = [];
-                            if (isAdmin) {
-                                log('Provisioning Admin Scenario (Atome + BPI + Wallet)...');
-                                list = [
-                                    { id: 'atome', name: 'Atome Card', balance: 0, last4: '7312', color: '#121212', type: 'credit', isDefault: true, isBuiltIn: true, createdAt: 1700000000000 },
-                                    { id: 'bpi', name: 'BPI Card', balance: 0, last4: '6727', color: '#931B1B', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000100 },
-                                    { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: false, isBuiltIn: true, createdAt: 1700000000200 }
-                                ];
-                            } else {
-                                list = [
-                                    { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: true, isBuiltIn: true, createdAt: Date.now() }
-                                ];
-                            }
-                            setDoc(configRef, { list });
-                            return;
-                        }
-
-                        window.walletAccounts = accounts;
-                        // Use the manual order from Firestore
-                        updateAccountSwitcherUI(accounts);
-                        updateBalanceCardsUI(accounts);
-                        
-                        // Default logic - ensure persistence
-                        let current = localStorage.getItem('wallet_current_account');
-                        const def = accounts.find(a => a.isDefault);
-                        if (!current || !accounts.find(a => a.id === current)) {
-                            current = def ? def.id : accounts[0].id;
-                        }
-                        
-                        // CRITICAL: Set both window and localStorage BEFORE any other operations
-                        window.currentAccount = current;
-                        localStorage.setItem('wallet_current_account', current);
-                        
-                        applyAccountTheme(window.currentAccount, accounts);
-                        loadData(); 
-                        
-                        // AUTO-LOGIN GMAIL: Automatically request Gmail token for admin users
-                        if (isAdmin) {
-                            const gmailToken = localStorage.getItem('g_access_token');
-                            const gmailExpiry = localStorage.getItem('g_token_expiry');
-                            
-                            // Only request if token doesn't exist or is expired
-                            if (!gmailToken || !gmailExpiry || Date.now() >= parseInt(gmailExpiry)) {
-                                console.log('🔐 Auto-requesting Gmail access for sync...');
-                                // Trigger Gmail auth automatically
-                                setTimeout(() => {
-                                    if (window.tokenClient) {
-                                        window.tokenClient.requestAccessToken();
-                                    } else if (window.initGISModule) {
-                                        window.initGISModule();
-                                        setTimeout(() => {
-                                            if (window.tokenClient) window.tokenClient.requestAccessToken();
-                                        }, 500);
-                                    }
-                                }, 1000);
-                            } else {
-                                console.log('✅ Gmail token already valid, skipping auth');
-                            }
-                        }
-                        
-                        // Adaptive Sync Trigger
-                        triggerAdaptiveSync();
-                        
-                        // Ensure active card is visible with initial loading guard
-                        window.isInitialLoading = true;
-                        setTimeout(() => {
-                            scrollToActiveCard(window.currentAccount);
-                            setTimeout(() => { window.isInitialLoading = false; }, 800);
-                        }, 500);
-                    });
+                if (!user.isAnonymous) log('Cloud Sync Active!', 'info');
+                
+                // Update Profile Dropdown Content
+                const dropdown = document.getElementById('profile-dropdown');
+                if (user.isAnonymous) {
+                     dropdown.innerHTML = `
+                        <div class="dropdown-header">Guest Session</div>
+                        <div class="dropdown-item" onclick="handleAuthClick()">
+                            <i class="material-icons">cloud_upload</i>
+                            <span>Sign in with Google</span>
+                        </div>
+                     `;
                 } else {
-                    window.currentAccount = 'default_wallet';
-                    loadData();
+                     dropdown.innerHTML = `
+                        <div class="dropdown-header">${user.email}</div>
+                        <div class="dropdown-item" onclick="handleAuthClick()">
+                            <i class="material-icons">swap_horiz</i>
+                            <span>Switch Account</span>
+                        </div>
+                        <div class="dropdown-item logout" onclick="handleSignout()">
+                            <i class="material-icons">logout</i>
+                            <span>Log Out</span>
+                        </div>
+                     `;
                 }
 
-                // Update Profile UI
-                updateProfileUI(user);
+                if (user.isAnonymous) {
+                     // Nudge to claim data
+                     const profileBadge = document.getElementById('profile-badge');
+                     profileBadge.style.border = '2px solid #f59e0b';
+                     profileBadge.classList.add('local-nudge');
+                     
+                     // Create/Show Floating Pill
+                     let banner = document.getElementById('local-banner');
+                     if (!banner) {
+                         banner = document.createElement('div');
+                         banner.id = 'local-banner';
+                         banner.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <i class="material-icons" style="color:#f59e0b; font-size:20px;">cloud_off</i>
+                                <span style="font-size:12px; font-weight:800; color:#1e293b; letter-spacing:0.2px;">SYNC YOUR DATA</span>
+                            </div>
+                            <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
+                         `;
+                         banner.className = 'sticky-banner';
+                         const viewport = document.getElementById('cardViewport');
+                         if (viewport) viewport.after(banner);
+                         else document.body.prepend(banner);
+                     }
+                     banner.style.display = 'flex';
+                } else {
+                     document.getElementById('profile-badge').style.border = 'none';
+                     document.getElementById('profile-badge').classList.remove('local-nudge');
+                     const banner = document.getElementById('local-banner');
+                     if (banner) banner.style.display = 'none';
+                }
                 
-                // Local Mode Nudge
-                handleLocalModeNudge(user);
+                // Update Profile if synced
+                if (!user.isAnonymous) {
+                     const parts = user.displayName?.split(' ') || [];
+                     const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
+                     document.getElementById('user-display-name').innerText = firstName;
+                     localStorage.setItem('user_name', firstName);
+                     
+                     if (user.photoURL) {
+                         const picEl = document.getElementById('user-pic');
+                         // Force size for Google photos if needed
+                         let photoUrl = user.photoURL;
+                         if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                             photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                         }
+                         picEl.src = photoUrl;
+                         document.getElementById('profile-badge').classList.add('has-pic');
+                         localStorage.setItem('user_pic', photoUrl);
+                     }
+                } else {
+                    document.getElementById('user-display-name').innerText = 'Guest';
+                    document.getElementById('profile-badge').classList.remove('has-pic');
+                }
+
+                // Load Data for this UID
+                await loadData();
+                setupAccountSwitcher();
+                
+                // Hydrate others in background after short delay to prioritize current view
+                setTimeout(() => window.hydrateAllCaches(), 3000);
+                
+                // Refresh global token state for handleScan
+                accessToken = localStorage.getItem('g_access_token');
+                expiry = localStorage.getItem('g_token_expiry');
+
+                if (accessToken && expiry && Date.now() < parseInt(expiry)) {
+                    // ADAPTIVE SYNC with Cooldown to prevent lag on page switch
+                    const lastDeepSync = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
+                    const lastQuickSync = localStorage.getItem(`last_quick_sync_${window.currentAccount}`);
+                    const now = Date.now();
+                    const dayInMs = 24 * 60 * 60 * 1000;
+                    const quickSyncCooldown = 10 * 60 * 1000; // 10 minutes
+                    
+                    if (!lastDeepSync || (now - parseInt(lastDeepSync)) > dayInMs) {
+                        log(`Deep sync scheduled for ${window.currentAccount} (800 items)...`);
+                        setTimeout(() => handleScan(800), 2000);
+                    } else if (!lastQuickSync || (now - parseInt(lastQuickSync)) > quickSyncCooldown) {
+                        log(`Routine quick sync for ${window.currentAccount}...`);
+                        setTimeout(() => handleScan(25), 1500);
+                    } else {
+                        log(`Sync cooldown active for ${window.currentAccount}. Skipping auto-scan.`, 'info');
+                    }
+                }
                 
                 applyUserView(user);
             });
         });
-
-        function updateProfileUI(user) {
-            const dropdown = document.getElementById('profile-dropdown');
-            if (user.isAnonymous) {
-                 dropdown.innerHTML = `
-                    <div class="dropdown-header">Guest Session</div>
-                    <div class="dropdown-item" onclick="toggleDarkMode()">
-                        <i class="material-icons" id="theme-icon">dark_mode</i>
-                        <span id="theme-text">Dark Mode</span>
-                    </div>
-                    <div class="dropdown-item" onclick="handleAuthClick()">
-                        <i class="material-icons">cloud_upload</i>
-                        <span>Sign in with Google</span>
-                    </div>
-                 `;
-                 document.getElementById('user-display-name').innerText = 'Guest';
-                 document.getElementById('profile-badge').classList.remove('has-pic');
-            } else {
-                 dropdown.innerHTML = `
-                    <div class="dropdown-header">${user.email}</div>
-                    <div class="dropdown-item" onclick="toggleDarkMode()">
-                        <i class="material-icons" id="theme-icon">dark_mode</i>
-                        <span id="theme-text">Dark Mode</span>
-                    </div>
-                    <div class="dropdown-item" onclick="handleAuthClick()">
-                        <i class="material-icons">swap_horiz</i>
-                        <span>Switch Account</span>
-                    </div>
-                    <div class="dropdown-item logout" onclick="handleSignout()">
-                        <i class="material-icons">logout</i>
-                        <span>Log Out</span>
-                    </div>
-                 `;
-                 
-                 const parts = user.displayName?.split(' ') || [];
-                 const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
-                 document.getElementById('user-display-name').innerText = firstName;
-                 localStorage.setItem('user_name', firstName);
-                 
-                 if (user.photoURL) {
-                     const picEl = document.getElementById('user-pic');
-                     let photoUrl = user.photoURL;
-                     if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                         photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                     }
-                     picEl.src = photoUrl;
-                     document.getElementById('profile-badge').classList.add('has-pic');
-                     localStorage.setItem('user_pic', photoUrl);
-                 }
-            }
-        }
-
-        function handleLocalModeNudge(user) {
-            if (user.isAnonymous) {
-                 const profileBadge = document.getElementById('profile-badge');
-                 profileBadge.style.border = '2px solid #f59e0b';
-                 profileBadge.classList.add('local-nudge');
-                 
-                 let banner = document.getElementById('local-banner');
-                 if (!banner) {
-                     banner = document.createElement('div');
-                     banner.id = 'local-banner';
-                     banner.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:10px;">
-                            <i class="material-icons" style="color:#f59e0b; font-size:20px;">cloud_off</i>
-                            <span style="font-size:12px; font-weight:800; color:#1e293b; letter-spacing:0.2px;">SYNC YOUR DATA</span>
-                        </div>
-                        <button onclick="handleAuthClick()" class="banner-pill-btn">SIGN IN</button>
-                     `;
-                     banner.className = 'sticky-banner';
-                     const viewport = document.getElementById('cardViewport');
-                     if (viewport) viewport.after(banner);
-                     else document.body.prepend(banner);
-                 }
-                 banner.style.display = 'flex';
-            } else {
-                 document.getElementById('profile-badge').style.border = 'none';
-                 document.getElementById('profile-badge').classList.remove('local-nudge');
-                 const banner = document.getElementById('local-banner');
-                 if (banner) banner.style.display = 'none';
-            }
-        }
-
-        function triggerAdaptiveSync() {
-            // AUTO-SYNC DISABLED: Sync only via manual button on card
-            console.log('ℹ️ Auto-sync suppressed (Manual only)');
-            return;
-        }
-
-        function updateAccountSwitcherUI(accounts) {
-            const switcher = document.getElementById('account-switcher');
-            if (!switcher) return;
-            
-            switcher.innerHTML = accounts.map(acc => `
-                <div class="sw-slide" data-id="${acc.id}" onclick="switchAccount('${acc.id}')">
-                    <div class="sw-card" style="background: ${acc.color};">
-                        <div class="sw-card-label">${acc.type.toUpperCase()}</div>
-                        <div class="sw-card-name">${acc.name}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function updateBalanceCardsUI(accounts) {
-            const container = document.getElementById('dynamic-balance-cards');
-            if (!container) return;
-
-            const isHidden = localStorage.getItem('balance_hidden') === 'true';
-
-            container.innerHTML = accounts.map(acc => {
-                const isAtome = acc.id === 'atome';
-                const isBPI = acc.id === 'bpi';
-                const cardClass = `balance-card ${acc.id === window.currentAccount ? 'active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''}`;
-                
-                return `
-                <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
-                    ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
-                    ${isBPI ? '<div class="bpi-rays"></div>' : ''}
-                    
-                    <div class="card-header-row">
-                        <div style="display: flex; align-items: baseline; gap: 6px;">
-                            <div class="card-label" style="text-transform: uppercase;">${acc.name}</div>
-                            ${isBPI ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
-                        </div>
-                        ${acc.id !== 'default_wallet' ? `
-                        <div class="card-sync-status-chip">
-                            <div class="dot syncDot"></div>
-                            <span class="status-text syncStatusText">Ready</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                         <div class="balance-amount privacy-mask" data-raw="PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}">${isHidden ? '******' : 'PHP ' + acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
-                            <i class="material-icons" style="font-size:16px;">visibility</i>
-                         </button>
-                    </div>
-
-                    ${isBPI ? `<div id="bpi-remaining-insight" class="privacy-mask" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 1; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">${isHidden ? '******' : 'PHP 0.00 (0.00)'}</div>` : ''}
-                    
-                    <div class="card-footer">
-                        <div class="card-number-box">
-                            <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                            <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            ${(isAtome || isBPI) ? `
-                            <button class="sync-icon-btn scan-btn" onclick="handleScan(100)" title="Sync Account">
-                                <i class="material-icons">sync</i>
-                            </button>
-                            ` : ''}
-                            ${acc.id !== 'default_wallet' ? `
-                            <div class="mastercard-circles">
-                                <div class="circle circle-1" style="${!isBPI && acc.color !== '#121212' ? 'background: #fff; opacity:0.8;' : ''}"></div>
-                                <div class="circle circle-2" style="${!isBPI && acc.color !== '#121212' ? 'background: #fff; opacity:0.4;' : ''}"></div>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-                `;
-            }).join('');
-            
-            setupAccountSwitcher(); // Re-bind observer to new cards
-        }
-
-        function scrollToActiveCard(accId) {
-            const card = document.querySelector(`.balance-card[data-account="${accId}"]`);
-            if (card) {
-                // Proactively set active class to prevent "graying out" before observer settles
-                document.querySelectorAll('.balance-card').forEach(c => c.classList.remove('active'));
-                card.classList.add('active');
-                
-                card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }
-        }
-
-        function applyAccountTheme(accId, accounts) {
-            const acc = accounts.find(a => a.id === accId);
-            if (!acc) return;
-            
-            // Sync overall UI theme (FAB, Nav, Charts)
-            applyTheme(accId);
-
-            const cardBg = document.getElementById('card-bg');
-            if (cardBg) cardBg.setAttribute('fill', acc.color);
-            
-            // Update balance display label if exists
-            const label = document.getElementById('wallet-label');
-            if (label) label.innerText = acc.name.toUpperCase();
-        }
-
-        window.switchAccount = (id) => {
-            localStorage.setItem('wallet_current_account', id);
-            window.currentAccount = id;
-            if (window.walletAccounts) applyAccountTheme(id, window.walletAccounts);
-            loadData();
-        };
 
         function applyUserView(user) {
             const isAnon = !user || user.isAnonymous;
@@ -1859,29 +1612,59 @@
             const gate = document.getElementById('guestGate');
             if (gate) gate.style.display = isAnon ? 'flex' : 'none';
 
+            const bpiCard = document.getElementById('bpiCard');
+            const atomeCard = document.getElementById('atomeCard');
             const scrollContainer = document.getElementById('cardCarouselScroll');
             const placeholder = document.querySelector('.add-card-placeholder');
 
             if (!isAdmin) {
+                // GUEST/USER VIEW: Minimalist Black Card
+                if (bpiCard) bpiCard.style.display = 'none';
                 if (placeholder) placeholder.style.display = 'flex';
                 
+                // Keep carousel functional but simplify padding for 1-card feel
                 if (scrollContainer) {
                     scrollContainer.style.overflowX = 'auto';
                     scrollContainer.style.scrollSnapType = 'x mandatory';
                     scrollContainer.style.padding = '30px 35px 25px 35px';
                     scrollContainer.style.justifyContent = 'flex-start';
                 }
+
+                if (atomeCard) {
+                    const logo = atomeCard.querySelector('.atome-brand-logo');
+                    if (logo) logo.style.display = 'none';
+                    const label = atomeCard.querySelector('.card-label');
+                    if (label) label.innerText = 'Personal Wallet';
+                    
+                    atomeCard.classList.add('active'); // Force active state
+                    atomeCard.style.maxWidth = '360px';
+                    atomeCard.style.flex = '0 0 calc(100% - 30px)';
+                    
+                    // Snap to center instantly
+                    setTimeout(() => {
+                        atomeCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    }, 50);
+                }
                 
-                // FORCE THEME TO DARK
+                // FORCE THEME TO BLACK
                 applyTheme('atome');
                 updateHeaderIcon('atome');
             } else {
+                // ADMIN VIEW: Restore Atome/BPI Carousel
+                if (bpiCard) bpiCard.style.display = 'flex';
                 if (placeholder) placeholder.style.display = 'flex';
                 if (scrollContainer) {
                     scrollContainer.style.overflowX = 'auto';
                     scrollContainer.style.scrollSnapType = 'x mandatory';
                     scrollContainer.style.padding = '30px 35px 25px 35px';
                     scrollContainer.style.justifyContent = 'flex-start';
+                }
+                if (atomeCard) {
+                    const logo = atomeCard.querySelector('.atome-brand-logo');
+                    if (logo) logo.style.display = 'block';
+                    const label = atomeCard.querySelector('.card-label');
+                    if (label) label.innerText = 'Atome Spending';
+                    atomeCard.style.maxWidth = '360px';
                 }
             }
         }
@@ -1907,24 +1690,34 @@
         });
 
         // DYNAMIC THEME APPLICATOR
-        window.applyTheme = (accountOrColor) => {
-            let primaryColor = '#121212'; // Default to a dark theme
-            
-            // Check if it's an account ID or a hex color
-            if (accountOrColor.startsWith('#')) {
-                primaryColor = accountOrColor;
-            } else {
-                const acc = window.walletAccounts?.find(a => a.id === accountOrColor);
-                if (acc) primaryColor = acc.color;
-            }
-
-            const theme = {
-                primary: primaryColor,
-                nav: primaryColor,
-                trend: primaryColor,
-                light: primaryColor + 'cc' // add some transparency
+        window.applyTheme = (account) => {
+            const themes = {
+                'atome': {
+                    primary: '#121212', 
+                    nav: '#121212',     
+                    trend: '#121212',   
+                    light: '#334155'    
+                },
+                'bpi': {
+                    primary: '#7A1616', 
+                    nav: '#7A1616',     
+                    trend: '#7A1616',   
+                    light: '#931B1B'    
+                },
+                'default': {
+                    primary: '#121212', 
+                    nav: '#121212',
+                    trend: '#121212',
+                    light: '#334155'
+                }
             };
             
+            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            
+            let targetAccount = account;
+            if (account === 'bpi' && !isAdmin) targetAccount = 'atome'; 
+
+            const theme = themes[targetAccount] || themes['default'];
             window.currentThemeTrend = theme.trend; 
             
             // 1. Update FAB
@@ -1982,11 +1775,54 @@
 
         // DYNAMIC CARDS LOADER
         function loadSavedCardsToIndex() {
-            // Deprecated - handled by updateBalanceCardsUI
+            const scrollContainer = document.getElementById('cardCarouselScroll');
+            const placeholder = document.querySelector('.add-card-placeholder');
+            const savedAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+            
+            savedAccounts.forEach(acc => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'balance-card';
+                cardDiv.dataset.account = acc.id;
+                cardDiv.style.background = acc.color;
+                cardDiv.innerHTML = `
+                    <div class="card-header-row">
+                        <div class="card-label">${acc.name}</div>
+                        <div class="card-sync-status-chip">
+                            <div class="dot syncDot"></div>
+                            <span class="status-text syncStatusText">Ready</span>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                         <div class="balance-amount">PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                         <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                            <i class="material-icons" style="font-size:16px;">visibility</i>
+                         </button>
+                    </div>
+                    
+                    <div class="card-footer">
+                        <div class="card-number-box">
+                            <div class="card-number-label">Account Number</div>
+                            <div class="card-number">•••• •••• •••• ${acc.last4}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(400)" title="Sync Account">
+                                <i class="material-icons">sync</i>
+                            </button>
+                            <div class="mastercard-circles">
+                                <div class="circle circle-1"></div>
+                                <div class="circle circle-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // Insert before placeholder
+                scrollContainer.insertBefore(cardDiv, placeholder);
+            });
         }
 
         function setupAccountSwitcher() {
-            // Removed loadSavedCardsToIndex call as it's now dynamic
+            loadSavedCardsToIndex();
             const viewport = document.getElementById('cardCarouselScroll');
             const cards = document.querySelectorAll('.balance-card');
             if (!viewport || cards.length === 0) return;
@@ -2049,18 +1885,16 @@
                     if (entry.isIntersecting) {
                         const account = entry.target.dataset.account;
                         
-                        // Update UI Scale/Shadow - ALWAYS DO THIS
+                        // Update UI Scale/Shadow
                         cards.forEach(c => c.classList.remove('active'));
                         entry.target.classList.add('active');
-
-                        if (window.isInitialLoading) return;
 
                         if (window.currentAccount !== account) {
                             window.currentAccount = account;
                             localStorage.setItem('wallet_current_account', account);
                             
                             // Apply Dynamic Theme
-                            if (typeof applyTheme === 'function') applyTheme(account);
+                            applyTheme(account);
 
                             // Reset Pagination
                             window.historyLimit = 6;
@@ -2127,7 +1961,7 @@
         // FETCH TRANSACTIONS FROM FIRESTORE (REAL-TIME LISTENER)
         window.unsubscribeSnapshot = null; // Store listener to detach later
 
-        async function loadData(providedUid = null) {
+        async function loadData() {
             window.historyLimit = 6; 
             const container = document.getElementById('history-container');
             const spinner = document.getElementById('loading-spinner');
@@ -2138,7 +1972,7 @@
                 if (nav && nav.type === 'reload') {
                     // Only clear the current account's cache to be efficient, or all if preferred.
                     // Let's clear current account cache to fix perceived sync issues
-                    const uid = providedUid || auth.currentUser?.uid;
+                    const uid = auth.currentUser?.uid;
                     if (uid) {
                         log('Hard Reload Detected. Busting Cache...', 'warn');
                         localStorage.removeItem(`wallet_cache_${uid}_${window.currentAccount}`);
@@ -2159,7 +1993,7 @@
             const currentSyncId = Date.now() + Math.random();
             window.activeSyncId = currentSyncId;
 
-            const uid = providedUid || auth.currentUser?.uid;
+            const uid = auth.currentUser?.uid;
             if (!uid) return;
 
             // INSTANT CACHE LOAD for seamless switching
@@ -2329,16 +2163,14 @@
                         const isVisible = item.offsetParent !== null; 
                         if (!isVisible) return;
 
-                        const catElement = item.querySelector('.txn-sub span:last-child');
-                        if (catElement) {
-                            const itemCat = catElement.innerText.toLowerCase().trim();
-                            if (itemCat === normalizedTarget) {
-                                item.classList.add('highlight-txn');
-                                if (categoryColor) {
-                                    item.style.backgroundColor = categoryColor + '10'; // 10 is ~6% opacity hex
-                                    item.style.borderLeft = `4px solid ${categoryColor}`;
-                                    item.style.boxShadow = `inset 4px 0 0 ${categoryColor}`;
-                                }
+                        // FIX: Use data-category for matching to include all transaction types sharing the same category
+                        const itemCategory = item.dataset.category ? item.dataset.category.toLowerCase().trim() : '';
+                        if (itemCategory === normalizedTarget) {
+                            item.classList.add('highlight-txn');
+                            if (categoryColor) {
+                                item.style.backgroundColor = categoryColor + '10'; // 10 is ~6% opacity hex
+                                item.style.borderLeft = `4px solid ${categoryColor}`;
+                                // Removed redundant box-shadow (inset) which caused the double line
                             }
                         }
                     });
@@ -2454,33 +2286,8 @@
              updateBPIInsight();
         };
 
-        // DARK MODE TOGGLE
-        window.toggleDarkMode = () => {
-            const currentTheme = localStorage.getItem('theme_preference') || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            
-            // Update body class
-            if (newTheme === 'dark') {
-                document.body.classList.add('dark-mode');
-            } else {
-                document.body.classList.remove('dark-mode');
-            }
-            
-            // Update icon and text in dropdown
-            const icon = document.getElementById('dark-mode-icon');
-            const text = document.getElementById('dark-mode-text');
-            if (icon) icon.innerText = newTheme === 'dark' ? 'light_mode' : 'dark_mode';
-            if (text) text.innerText = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
-            
-            // Save preference
-            localStorage.setItem('theme_preference', newTheme);
-            
-            console.log('🌓 Theme toggled to:', newTheme);
-        };
-
-        // SAFETY: Initialize visibility and theme on load
+        // SAFETY: Initialize visibility on load
         window.addEventListener('DOMContentLoaded', () => {
-             // Initialize privacy mask
              const isHidden = localStorage.getItem('balance_hidden') === 'true';
              if(isHidden) {
                  setTimeout(() => {
@@ -2781,9 +2588,6 @@
             }, 0);
 
             refreshChart(filtered, pastTotal);
-            
-            // Re-render history to apply highlights if needed
-            renderHistory(window.allTxns);
         };
 
         // CHART LOGIC
@@ -2994,45 +2798,23 @@
                 });
 
                 // Labels
-                for(let i=0; i<weeksCount; i++) {
-                    let d;
+                for(let i=1; i<=weeksCount; i++) {
                     if (filter === 'this_month') {
-                        d = new Date(now.getFullYear(), now.getMonth(), i * 7 + 1);
+                         labels.push(`Week ${i}`);
                     } else {
-                        d = new Date(limitDate);
-                        d.setDate(d.getDate() + (i * 7));
+                        if (i % 4 === 1 || i === weeksCount) labels.push(`W${i}`);
+                        else labels.push('');
                     }
-                    
-                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const monthStr = monthNames[d.getMonth()];
-                    const yearStr = d.getFullYear();
-                    
-                    // Simple week of month calculation for label
-                    const dayOfMonth = d.getDate();
-                    const weekNum = Math.ceil(dayOfMonth / 7);
-                    
-                    const fullLabel = `${monthStr} ${yearStr} W${weekNum}`;
-                    labels.push(fullLabel);
                 }
             }
 
             // Update Labels UI
             if (labelsContainer) {
-                labelsContainer.innerHTML = '';
-                labels.forEach((l, i) => {
+                labels.forEach(l => {
                     const span = document.createElement('span');
                     span.className = 'trend-label';
-                    
-                    // Only show Axis label for 1st week, last week, or if month changes
-                    let showAxis = i === 0 || i === labels.length - 1 || (i % 4 === 0);
-                    
-                    if (showAxis) {
-                        // For axis, just show "MMM W#" or "W#"
-                        const parts = l.split(' '); // ["Jan", "2026", "W1"]
-                        span.innerText = `${parts[0]} ${parts[2]}`;
-                    } else {
-                        span.innerText = '';
-                    }
+                    // Simplify labels for small screens
+                    span.innerText = l;
                     labelsContainer.appendChild(span);
                 });
             }
@@ -3043,27 +2825,6 @@
             totalEl.dataset.raw = periodFormatted;
             totalEl.classList.add('privacy-mask');
             totalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : periodFormatted;
-
-            // Update Month Label
-            const monthLabelEl = document.getElementById('trend-month-label');
-            if (monthLabelEl) {
-                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                
-                if (filter === 'this_week') {
-                    const startOfWeek = new Date(now);
-                    startOfWeek.setDate(now.getDate() - now.getDay());
-                    monthLabelEl.innerText = `${monthNames[startOfWeek.getMonth()]} ${startOfWeek.getFullYear()}`;
-                } else if (filter === 'this_month') {
-                    monthLabelEl.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-                } else if (filter === 'last_3_months') {
-                    const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-                    monthLabelEl.innerText = `${shortMonths[start.getMonth()]} ${start.getFullYear()} - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
-                } else if (filter === 'last_6_months') {
-                    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-                    monthLabelEl.innerText = `${shortMonths[start.getMonth()]} ${start.getFullYear()} - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
-                }
-            }
 
             const points = dataPoints;
             const max = Math.max(...points, 500) * 1.2;
@@ -3122,9 +2883,30 @@
                 }
 
                 const trendSvg = document.getElementById('trendChart');
-                let isTooltipPinned = false;
+                
+                // Persistent Tooltip Handle for Mobile
+                let tooltipPinned = false;
 
-                const updateTooltip = (nearestIdx, e) => {
+                const updateTooltip = (e) => {
+                    const rect = trendSvg.getBoundingClientRect();
+                    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                    
+                    const mouseX = clientX - rect.left;
+                    const viewBoxX = (mouseX / rect.width) * 400;
+                    
+                    // Find nearest point
+                    let nearestIdx = 0;
+                    let minDist = Infinity;
+                    for (let i = 0; i < points.length; i++) {
+                        const p = getPoint(i);
+                        const dist = Math.abs(p.x - viewBoxX);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestIdx = i;
+                        }
+                    }
+
                     const p = getPoint(nearestIdx);
                     guide.setAttribute('x1', p.x);
                     guide.setAttribute('x2', p.x);
@@ -3134,77 +2916,35 @@
                     tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(points[nearestIdx]).toLocaleString()}</div>`;
                     tooltip.style.opacity = '1';
                     tooltip.style.display = 'block';
-                    
-                    // Center tooltip above the point if possible
-                    const rect = trendSvg.getBoundingClientRect();
-                    const absoluteX = rect.left + (p.x / 400) * rect.width + window.scrollX;
-                    const absoluteY = rect.top + (p.y / 130) * rect.height + window.scrollY;
-                    
-                    tooltip.style.left = `${absoluteX}px`;
-                    tooltip.style.top = `${absoluteY - 10}px`;
-                    tooltip.style.transform = 'translate(-50%, -100%)';
-                };
-
-                trendSvg.onclick = (e) => {
-                    e.stopPropagation();
-                    const rect = trendSvg.getBoundingClientRect();
-                    const mouseX = e.clientX - rect.left;
-                    const viewBoxX = (mouseX / rect.width) * 400;
-                    
-                    let nearestIdx = 0;
-                    let minDist = Infinity;
-                    for (let i = 0; i < points.length; i++) {
-                        const p = getPoint(i);
-                        const dist = Math.abs(p.x - viewBoxX);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            nearestIdx = i;
-                        }
-                    }
-
-                    updateTooltip(nearestIdx, e);
-                    isTooltipPinned = true;
+                    tooltip.style.left = `${clientX + 15}px`;
+                    tooltip.style.top = `${clientY - 40}px`;
                 };
 
                 trendSvg.onmousemove = (e) => {
-                    if (isTooltipPinned) return;
-                    const rect = trendSvg.getBoundingClientRect();
-                    const mouseX = e.clientX - rect.left;
-                    const viewBoxX = (mouseX / rect.width) * 400;
-                    
-                    let nearestIdx = 0;
-                    let minDist = Infinity;
-                    for (let i = 0; i < points.length; i++) {
-                        const p = getPoint(i);
-                        const dist = Math.abs(p.x - viewBoxX);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            nearestIdx = i;
-                        }
-                    }
+                    if (tooltipPinned) return;
+                    updateTooltip(e);
+                };
 
-                    updateTooltip(nearestIdx, e);
+                trendSvg.ontouchstart = (e) => {
+                    tooltipPinned = true; // Pin on touch
+                    updateTooltip(e);
+                    e.stopPropagation();
                 };
 
                 trendSvg.onmouseleave = () => {
-                    if (!isTooltipPinned) {
-                        guide.style.opacity = '0';
-                        document.getElementById('chart-tooltip').style.opacity = '0';
-                    }
+                    if (tooltipPinned) return;
+                    guide.style.opacity = '0';
+                    document.getElementById('chart-tooltip').style.opacity = '0';
                 };
 
-                // Click outside to dismiss
-                const dismissPin = (e) => {
-                    if (isTooltipPinned && !trendSvg.contains(e.target)) {
-                        isTooltipPinned = false;
+                // Click outside to unpin
+                window.addEventListener('touchstart', (e) => {
+                    if (!trendSvg.contains(e.target)) {
+                        tooltipPinned = false;
                         guide.style.opacity = '0';
                         document.getElementById('chart-tooltip').style.opacity = '0';
                     }
-                };
-                window.addEventListener('click', dismissPin);
-                // Clean up previous event listener if function is called again
-                if (window._trendPinCleanup) window.removeEventListener('click', window._trendPinCleanup);
-                window._trendPinCleanup = dismissPin;
+                }, { passive: true });
             }
 
         let selectedCategoryName = null;
@@ -3214,7 +2954,6 @@
             const legend = document.getElementById('chart-legend');
             const totalVal = document.getElementById('chart-total-val');
             const totalLabel = document.getElementById('chart-total-label');
-            const totalPct = document.getElementById('chart-total-pct');
             
             svgGroup.innerHTML = '';
             legend.innerHTML = '';
@@ -3233,7 +2972,6 @@
                     totalLabel.innerText = 'TOTAL';
                     totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
                     totalVal.dataset.raw = totalFormatted;
-                    if (totalPct) totalPct.innerText = '';
                 } else {
                     const seg = segments.find(s => s.name === selectedCategoryName);
                     if (seg) {
@@ -3241,20 +2979,12 @@
                         const valText = `₱${Math.round(seg.value).toLocaleString()}`;
                         totalVal.dataset.raw = valText;
                         totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
-                        
-                        // Calculate percentage
-                        if (totalPct) {
-                            const pct = total > 0 ? ((seg.value / total) * 100).toFixed(2) : "0.00";
-                            totalPct.innerText = parseFloat(pct) > 0 ? `${pct}%` : '';
-                            totalPct.style.color = seg.color || '#10b981';
-                        }
                     } else {
                         // Reset if category not found in current data
                         selectedCategoryName = null;
                         totalLabel.innerText = 'TOTAL';
                         totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
                         totalVal.dataset.raw = totalFormatted;
-                        if (totalPct) totalPct.innerText = '';
                     }
                 }
             }
@@ -3303,6 +3033,8 @@
                 selectedCategoryName = null;
                 drawPieChart(segments, total, true); 
                 window.highlightTransactions(null);
+                const percentEl = document.getElementById('chart-selection-percent');
+                if (percentEl) percentEl.style.opacity = '0';
             }
 
             segments.forEach((seg, index) => {
@@ -3339,23 +3071,26 @@
                     selectedCategoryName = (selectedCategoryName === seg.name) ? null : seg.name;
                     drawPieChart(segments, total, true);
                     window.highlightTransactions(selectedCategoryName, seg.color);
+
+                    // Update center percentage
+                    const percentEl = document.getElementById('chart-selection-percent');
+                    if (percentEl) {
+                        if (selectedCategoryName) {
+                            percentEl.innerText = `${(percent*100).toFixed(1)}%`;
+                            percentEl.style.opacity = '1';
+                        } else {
+                            percentEl.style.opacity = '0';
+                        }
+                    }
                 };
 
                 circle.onclick = handleInteraction;
 
-                // Tooltip
-                circle.onmouseenter = (e) => {
-                    const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${seg.name}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(seg.value).toLocaleString()} (${(percent*100).toFixed(1)}%)</div>`;
-                    tooltip.style.opacity = '1';
-                    tooltip.style.left = `${e.pageX + 15}px`;
-                    tooltip.style.top = `${e.pageY - 40}px`;
-                    circle.style.filter = 'brightness(1.1)';
-                };
-                circle.onmouseleave = () => {
-                    document.getElementById('chart-tooltip').style.opacity = '0';
-                    circle.style.filter = 'none';
-                };
+                // Tooltip DISABLED per user request
+                /*
+                circle.onmouseenter = (e) => { ... };
+                circle.onmouseleave = () => { ... };
+                */
 
                 svgGroup.appendChild(circle);
                 currentAngle += (percent * 360);
@@ -3689,7 +3424,11 @@
                     else if (mUpper.includes('7/11')) logo = 'logos/711.png';
                     else if (mUpper.includes('WATSONS')) logo = 'logos/watsons.png';
                     else if (mUpper.includes('J AND L')) logo = 'logos/jandlmall.png';
-                    else if (mUpper.includes('TRADERSCONNECT')) logo = 'logos/tradersconnect.png';
+                    else if (mUpper.includes('JNL')) logo = 'logos/jandlmall.png';
+                    else if (mUpper.includes('PETRON')) logo = 'logos/petron.png';
+                    else if (mUpper.includes('AYALA')) logo = 'logos/ayala.png';
+                    else if (mUpper.includes('AYALA')) logo = 'logos/ayala.png';
+                    else if (mUpper.includes('TRADERS CONNECT')) logo = 'logos/tradersconnect.png';
                     
                     const logoHTML = logo ? `<div class="brand-badge" style="display: ${typeof showLogos !== 'undefined' && showLogos ? 'flex' : 'none'}"><img src="${logo}"></div>` : '';
 
@@ -3767,7 +3506,7 @@
                 filterTxnList();
             }
 
-            setTimeout(() => setupLongPressHandlers(), 50);
+            setTimeout(() => setupLongPressHandlers(), 100);
 
             // CRITICAL FIX: Force update all privacy-masked elements after rendering
             // This ensures that when switching wallets, the privacy state is respected
@@ -4110,13 +3849,14 @@
                                     const collectionName = getCollectionName(syncAccount);
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
-                                     const snap = await getDoc(docRef);
-                                     if (snap.exists()) {
-                                         // RESPECT DELETIONS & MANUAL EDITS: Skip if already exists
-                                         return false; 
-                                     } else {
-                                         await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
-                                     }
+                                    const snap = await getDoc(docRef);
+                                    if (snap.exists()) {
+                                        // PROTECT MANUAL EDITS: Only restore if it was deleted. 
+                                        // Do NOT overwrite existing merchant, notes, or categories.
+                                        await updateDoc(docRef, { deleted: false });
+                                    } else {
+                                        await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                    }
                                     return true;
                                 }
                             } catch (err) { return false; }
@@ -4239,6 +3979,10 @@
                 // USER REQUEST: STRICT NOTES "TO [BANK]"
                 if (bank) {
                     note = "TO " + bank.toUpperCase();
+                    // FEATURE: Add 10 PHP transaction fee for non-BPI transfers
+                    if (!bank.toUpperCase().includes("BPI")) {
+                        amount += 10;
+                    }
                 } else {
                     // Internal BPI transfers don't show "Bank Name", so default to BPI
                     note = "TO BPI";
@@ -4274,7 +4018,7 @@
                     
                     longPressTimer = setTimeout(() => {
                         showIOSMenu(newItem, e);
-                    }, 400); // Faster response
+                    }, 500); // Standard but reliable
                 };
                 
                 const cancelLongPress = (e) => {
@@ -4289,13 +4033,17 @@
                     const currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
                     const distance = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
                     
-                    if (distance > 10) {
+                    if (distance > 20) { // Increased threshold
                         cancelLongPress();
                     }
                 };
                 
                 newItem.addEventListener('mousedown', startLongPress);
-                newItem.addEventListener('touchstart', startLongPress, { passive: true });
+                newItem.addEventListener('touchstart', (e) => {
+                    // Start timer but don't preventDefault yet to allow scrolling
+                    startLongPress(e);
+                }, { passive: true });
+                
                 newItem.addEventListener('mouseup', cancelLongPress);
                 newItem.addEventListener('touchend', cancelLongPress);
                 newItem.addEventListener('mousemove', checkMove);
@@ -4345,6 +4093,12 @@
             
             clonedItem.style.visibility = 'visible';
             clonedItem.onclick = closeIOSMenu; 
+            
+            // Ensure any border-left (category color) is visible but other borders are gone
+            clonedItem.style.borderTop = 'none';
+            clonedItem.style.borderRight = 'none';
+            clonedItem.style.borderBottom = 'none';
+            
             document.body.appendChild(clonedItem);
             
             // 4. Show blur and backdrop
@@ -4421,31 +4175,38 @@
         }
         
         window.closeIOSMenu = () => {
-            const blurOverlay = document.getElementById('blur-overlay');
-            const iosMenu = document.getElementById('ios-menu');
-            const mobileWrapper = document.querySelector('.mobile-wrapper');
+            const overlay = document.getElementById('blur-overlay');
+            const menu = document.getElementById('ios-menu');
+            
+            if (overlay) overlay.classList.remove('active');
+            if (menu) menu.classList.remove('show');
+            
+            document.querySelector('.mobile-wrapper').classList.remove('blur-active');
             const fab = document.querySelector('.fab');
             const nav = document.querySelector('.bottom-nav');
-            
-            // Remove all blur effects
-            if (blurOverlay) blurOverlay.classList.remove('active');
-            if (iosMenu) iosMenu.classList.remove('show');
-            if (mobileWrapper) mobileWrapper.classList.remove('blur-active');
             if (fab) fab.classList.remove('blur-active');
             if (nav) nav.classList.remove('blur-active');
             
             // Restore scrolling
             document.body.style.overflow = '';
-            if (mobileWrapper) mobileWrapper.style.overflow = 'auto';
+            document.querySelector('.mobile-wrapper').style.overflow = 'auto';
             
-            // Remove cloned item
+            // Add closing animation state to elevated item
             if (clonedItem) {
-                clonedItem.remove();
-                clonedItem = null;
-            }
-            
-            // Restore original item visibility
-            if (currentElevatedItem) {
+                clonedItem.classList.add('closing');
+                
+                // Wait for animation to finish then clean up
+                setTimeout(() => {
+                    if (clonedItem) {
+                        clonedItem.remove();
+                        clonedItem = null;
+                    }
+                    if (currentElevatedItem) {
+                        currentElevatedItem.style.visibility = 'visible';
+                        currentElevatedItem = null;
+                    }
+                }, 100); // Matches transition duration (0.1s)
+            } else if (currentElevatedItem) {
                 currentElevatedItem.style.visibility = 'visible';
                 currentElevatedItem = null;
             }
@@ -4465,7 +4226,7 @@
                     toggleRefund(txnId, args[0]);
                     break;
                 case 'delete':
-                    openDeleteModal(txnId, window.currentAccount);
+                    openDeleteModal(txnId);
                     break;
             }
         };
@@ -4541,135 +4302,63 @@
         };
 
         // DELETE LOGIC
-        let currentTxnId = null;
-        let currentDeletionAccount = null;
-
-        window.runThanosSnap = (el, callback) => {
-            if (!el) return callback();
-            
-            const rect = el.getBoundingClientRect();
-            const count = 150; // High density for "fading" look
-            // Monochromatic "Ash" palette: Black, White, Grays
-            const colors = ['#000000', '#1a1a1a', '#333333', '#4d4d4d', '#666666', '#808080', '#999999', '#b3b3b3', '#cccccc', '#e6e6e6', '#ffffff'];
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$₱+-*•. ';
-            
-            // Create particles
-            for (let i = 0; i < count; i++) {
-                const p = document.createElement('div');
-                p.className = 'snap-particle';
-                
-                const chosenColor = colors[Math.floor(Math.random() * colors.length)];
-                
-                // More text-based particles for "fading text" feel
-                const isChar = Math.random() > 0.4;
-                if (isChar) {
-                    p.innerText = chars[Math.floor(Math.random() * chars.length)];
-                    p.style.background = 'none';
-                    p.style.fontSize = `${Math.random() * 12 + 4}px`;
-                    p.style.fontWeight = '800';
-                    p.style.color = chosenColor;
-                    p.style.opacity = Math.random() * 0.7 + 0.3;
-                } else {
-                    const size = Math.random() * 3 + 1; // Smaller bits
-                    p.style.width = `${size}px`;
-                    p.style.height = `${size}px`;
-                    p.style.backgroundColor = chosenColor;
-                    p.style.opacity = Math.random() * 0.5 + 0.2;
-                }
-                
-                // Start position (randomly inside the element)
-                p.style.left = `${rect.left + Math.random() * rect.width}px`;
-                p.style.top = `${rect.top + Math.random() * rect.height}px`;
-                
-                // Random destination (floating away)
-                const dx = (Math.random() - 0.5) * 250;
-                const dy = (Math.random() - 1.2) * 200; // Upwards
-                const rot = Math.random() * 1080 - 540;
-                
-                p.style.setProperty('--dx', `${dx}px`);
-                p.style.setProperty('--dy', `${dy}px`);
-                p.style.setProperty('--rot', `${rot}deg`);
-                
-                // Slower duration
-                p.style.animationDuration = `${1.5 + Math.random() * 2}s`;
-                
-                document.body.appendChild(p);
-                
-                // Cleanup particle
-                setTimeout(() => p.remove(), 4000);
-            }
-            
-            // Trigger disintegration and collapse
-            el.classList.add('snapping');
-            
-            // Wait for collapse to finish before callback
-            setTimeout(callback, 1500);
-        };
-
-        window.openDeleteModal = (id, accId) => {
+        let currentTxnId = null; 
+        
+        window.openDeleteModal = (id) => {
             currentTxnId = id;
-            currentDeletionAccount = accId || window.currentAccount;
             document.getElementById('delete-modal').classList.add('show');
         };
 
         window.confirmDelete = async () => {
+             // Nudge Guest users but don't block deletion
              if (auth.currentUser?.isAnonymous) {
-                if (confirm('Your data is in "Local Mode". Sign in with Google to sync deletions to the cloud?')) {
+                const wantsToSync = confirm('You are in "Local Mode". Sign in with Google to sync deletions to the cloud? (Cancel to delete locally only)');
+                if (wantsToSync) {
                     handleAuthClick();
                     return;
                 }
             }
             if (!currentTxnId) return;
-            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
-            const txnId = currentTxnId;
-            const accId = currentDeletionAccount;
-            const col = getCollectionName(accId);
             
-            closeModals(); // Close modal immediately
+            const btn = document.querySelector('#delete-modal button');
+            if (btn) btn.innerHTML = '<i class="material-icons spin" style="font-size:18px;">sync</i> DELETING...';
 
-            // Locate element for animation
-            const txnEl = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
-            
-            const performDelete = async () => {
-                // OPTIMISTIC UPDATE (Internal State)
-                const idx = window.allTxns.findIndex(t => t.id === txnId);
-                let deletedItem = null;
-                if (idx > -1) {
-                    deletedItem = window.allTxns[idx];
-                    window.allTxns.splice(idx, 1);
-                    renderHistory(window.allTxns);
-                    updateBalanceToThisMonth(window.allTxns);
-                }
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
+            let deletedItem = null;
+            if (idx > -1) {
+                deletedItem = window.allTxns[idx];
+                window.allTxns.splice(idx, 1); // Remove from array
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+            }
+            closeModals(); // Close immediately
 
-                try {
-                     if (!auth.currentUser) return;
-                     const uid = auth.currentUser.uid;
-                     await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
-                     
-                     const cacheKey = `wallet_cache_${uid}_${accId}`;
-                     localStorage.setItem(cacheKey, JSON.stringify({
-                         txns: window.allTxns,
-                         timestamp: Date.now()
-                     }));
-                     
+            try {
+                 if (!auth.currentUser) {
                      showToast('Transaction deleted');
-                } catch (error) { 
-                    log("Error deleting: " + error.message, "error");
-                    showToast('Delete failed');
-                    // Revert
-                    if (deletedItem) {
-                        window.allTxns.push(deletedItem); 
-                        window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); 
-                        renderHistory(window.allTxns);
-                    }
+                     return;
+                 }
+                 
+                 // For signed-in users, delete from Firestore
+                 if (!auth.currentUser.isAnonymous) {
+                     const uid = auth.currentUser.uid;
+                     const col = getCollectionName(window.currentAccount);
+                     await deleteDoc(doc(db, "users", uid, col, currentTxnId));
+                 }
+                 
+                 showToast('Transaction deleted');
+            } catch (error) { 
+                log("Error deleting: " + error.message, "error");
+                showToast('Delete failed', 'error');
+                // Revert
+                if (deletedItem) {
+                    window.allTxns.push(deletedItem); // Add back (order might be wrong until refresh but better than nothing)
+                    window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); // Simple re-sort
+                    renderHistory(window.allTxns);
                 }
-            };
-
-            // Trigger Animation -> then perform deletion logic
-            if (txnEl) {
-                window.runThanosSnap(txnEl, performDelete);
-            } else {
-                performDelete();
+            } finally {
+               if(btn) btn.innerHTML = 'DELETE';
             }
         };
 
@@ -4737,14 +4426,12 @@
         populateTxnFilter();
 
         window.closeModals = () => {
-            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
             currentTxnId = null;
             
             // Restore scroll
             const wrapper = document.querySelector('.mobile-wrapper');
-            if (wrapper) {
-                wrapper.style.overflow = 'auto';
-            }
+            if (wrapper) wrapper.style.overflow = 'auto';
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
@@ -4777,11 +4464,9 @@
                 }
             }
             if (!currentTxnId) return;
-            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
-            const txnId = currentTxnId;
 
             // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === txnId);
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
             const originalCat = idx > -1 ? window.allTxns[idx].manualCategory : null;
             if (idx > -1) {
                 window.allTxns[idx].manualCategory = catId;
@@ -4796,7 +4481,7 @@
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
                 const col = getCollectionName(window.currentAccount);
-                await updateDoc(doc(db, "users", uid, col, txnId), { manualCategory: catId });
+                await updateDoc(doc(db, "users", uid, col, currentTxnId), { manualCategory: catId });
                 showToast('Category updated');
             } catch (error) { 
                 log("Error saving category: " + error.message, "error");
@@ -4845,13 +4530,10 @@
                 }
             }
             if (!currentTxnId) return;
-            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
-            const txnId = currentTxnId;
-            const col = getCollectionName(window.currentAccount);
             let note = document.getElementById('note-text').value.trim();
 
              // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === txnId);
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
             const originalNote = idx > -1 ? window.allTxns[idx].note : null;
             if (idx > -1) {
                 window.allTxns[idx].note = note;
@@ -4862,11 +4544,12 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                await updateDoc(doc(db, "users", uid, col, txnId), { note: note });
+                const col = getCollectionName(window.currentAccount);
+                await updateDoc(doc(db, "users", uid, col, currentTxnId), { note: note });
                 showToast('Note saved');
             } catch (error) { 
                 log("Error saving note: " + error.message, "error"); 
-                showToast('Save failed');
+                showToast('Save failed', 'error');
                  // Revert
                  if (idx > -1) {
                     window.allTxns[idx].note = originalNote;
@@ -4896,16 +4579,12 @@
                 }
             }
             if (!currentTxnId) return;
-            // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
-            const txnId = currentTxnId;
-            const col = getCollectionName(window.currentAccount);
-            
             const val = document.getElementById('price-input').value;
             const amt = parseFloat(val);
             const isValid = !isNaN(amt) && val.trim() !== "";
             
             // OPTIMISTIC UPDATE
-            const idx = window.allTxns.findIndex(t => t.id === txnId);
+            const idx = window.allTxns.findIndex(t => t.id === currentTxnId);
             const originalAmt = idx > -1 ? window.allTxns[idx].manualAmount : undefined;
             if (idx > -1) {
                 if (isValid) {
@@ -4922,7 +4601,8 @@
             try {
                 if (!auth.currentUser) return;
                 const uid = auth.currentUser.uid;
-                const docRef = doc(db, "users", uid, col, txnId);
+                const col = getCollectionName(window.currentAccount);
+                const docRef = doc(db, "users", uid, col, currentTxnId);
                 if (!isValid) {
                     await updateDoc(docRef, { manualAmount: deleteField() });
                 } else {
@@ -4931,7 +4611,7 @@
                 showToast('Price updated');
             } catch (error) { 
                 log("Error saving price: " + error.message, "error"); 
-                showToast('Update failed');
+                showToast('Update failed', 'error');
                 // Revert
                  if (idx > -1) {
                     if (originalAmt === undefined) delete window.allTxns[idx].manualAmount;
@@ -4944,9 +4624,21 @@
 
         /* See listener above for save-note-btn, replaced to include title casing */
 
-        function showToast(msg) {
+        function showToast(msg, type = 'success') {
             const toast = document.getElementById('toast-box');
-            document.getElementById('toast-msg').innerText = msg;
+            const msgEl = document.getElementById('toast-msg');
+            const icon = toast.querySelector('i');
+            
+            msgEl.innerText = msg;
+            
+            if (type === 'error') {
+                icon.innerText = 'error';
+                icon.style.color = '#ef4444';
+            } else {
+                icon.innerText = 'check_circle';
+                icon.style.color = '#4ade80';
+            }
+            
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
@@ -5085,7 +4777,7 @@
                     { cat: 'Food & Drinks', key: ['jollibee', 'mcdo', 'mcdonald', 'starbucks', 'chowking', 'kfc', 'mang inasal', 'greenwich', 'ribshack', 'coffee', 'resto', 'cafe', 'tea', 'bakery', 'j.co', 'dunkin', 'boba', 'pizza'] },
                     { cat: 'Service', key: ['globe', 'smart', 'pldt', 'tm', 'gomo', 'netflix', 'spotify', 'youtube', 'disney', 'prime', 'apple', 'icloud', 'google', 'subscription', 'bill', 'insurance', 'philhealth', 'sss', 'pag-ibig', 'veco', 'mcwd'] },
                     { cat: 'Transportation', key: ['grab car', 'grab ride', 'taxi', 'move it', 'joyride', 'angkas', 'jeep', 'bus', 'ferry', 'pier', 'airport', 'airline'] },
-                    { cat: 'Education', key: ['school', 'university', 'tuition', 'book', 'udemy', 'coursera', 'skillshare', 'training'] },
+                    { cat: 'Education', key: ['school', 'university', 'tuition', 'book', 'udemy', 'coursera', 'skillshare', 'training', 'metrobank', 'metro bank'] },
                     { cat: 'Life & Entertainment', key: ['cinema', 'movie', 'game', 'playstation', 'xbox', 'steam', 'valve', 'riot', 'epic', 'skating', 'zoo', 'park', 'concert', 'spotify', 'netflix'] }
                 ];
 
@@ -5172,14 +4864,19 @@
         window.updateManualAccountUI = (val) => {
             const iconBox = document.getElementById('manual-account-icon-box');
             if (iconBox) {
-                const acc = (window.walletAccounts || []).find(a => a.id === val);
-                if (acc) {
-                    iconBox.style.background = acc.color;
-                } else {
-                    // Fallback
-                    if (val === 'bpi') iconBox.style.background = '#8b0000';
-                    else iconBox.style.background = '#1a1a1a';
-                }
+                let color = '#1a1a1a'; // Default Atome Black
+                if (val === 'bpi') color = '#931B1B';
+
+                // Check Custom Accounts
+                const customAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+                const customAcc = customAccounts.find(a => a.id === val);
+                if (customAcc) color = customAcc.color;
+
+                iconBox.style.background = color;
+                
+                // Done button should not change its background based on theme (User Request)
+                const btn = document.getElementById('done-btn');
+                if (btn) btn.style.backgroundColor = 'transparent';
             }
         };
 
@@ -5189,14 +4886,21 @@
             document.getElementById('manual-merchant').value = '';
             document.getElementById('manual-note').value = '';
             
-            // Dynamic Account Population
-            const select = document.getElementById('manual-account');
-            const accounts = window.walletAccounts || [];
-            select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+            // Populate Accounts Dropdown
+            const accountSelect = document.getElementById('manual-account');
+            const customAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+            let optionsHTML = `
+                <option value="atome">Atome Account</option>
+                <option value="bpi">BPI Account</option>
+            `;
+            customAccounts.forEach(acc => {
+                optionsHTML += `<option value="${acc.id}">${acc.name}</option>`;
+            });
+            accountSelect.innerHTML = optionsHTML;
 
-            // Default Account from current active
-            const activeAcc = window.currentAccount || (accounts.length > 0 ? accounts[0].id : 'atome');
-            select.value = activeAcc;
+            // Default Account from switcher
+            const activeAcc = window.currentAccount || 'atome';
+            accountSelect.value = activeAcc;
             updateManualAccountUI(activeAcc);
             
             // Default Category
@@ -5218,11 +4922,6 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // ALLOW scroll (as requested)
-            // const wrapper = document.querySelector('.mobile-wrapper');
-            // if (wrapper) wrapper.style.overflow = 'hidden';
-            // document.body.style.overflow = 'hidden';
-            
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
         };
 
@@ -5239,14 +4938,9 @@
             document.getElementById('manual-merchant').value = merchant;
             document.getElementById('manual-note').value = note || '';
             
-            // Dynamic Account Population
-            const select = document.getElementById('manual-account');
-            const accounts = window.walletAccounts || [];
-            select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
-
-            // Set to account that holds this txn
-            const activeAcc = window.originalAccount || window.currentAccount || 'atome';
-            select.value = activeAcc;
+            // Account (Determine from current active if unknown, but usually we know)
+            const activeAcc = window.currentAccount || 'atome';
+            document.getElementById('manual-account').value = activeAcc;
             updateManualAccountUI(activeAcc);
             
             // Set date
@@ -5379,7 +5073,7 @@
 
                 if (window.editingTxnId) {
                     const origAcc = window.originalAccount || (window.editingTxnId.startsWith('bpi_') ? 'bpi' : 'atome');
-                    const originalCol = getCollectionName(origAcc);
+                    const originalCol = origAcc === 'atome' ? "transactions" : "bpi_transactions";
                     
                     if (selectedAccount !== origAcc) {
                         // MOVE TRANSACTION: Delete from old, Add to new (Keep same ID for consistency)
@@ -5952,7 +5646,7 @@
             }).join('');
 
             // Update UI Labels for Total
-            const limit = parseFloat(localStorage.getItem('wallet_sub_limit') || 5000);
+            const limit = parseFloat(localStorage.getItem('wallet_sub_limit') || totalAvg);
             document.getElementById('sub-count-badge').innerText = subs.length;
             document.getElementById('sub-total-label').innerText = `₱${totalCurrent.toLocaleString(undefined, {minimumFractionDigits:2})} spent`;
             document.getElementById('sub-limit-label').innerText = `Target: ₱${limit.toLocaleString(undefined, {maximumFractionDigits:0})}`;
@@ -6374,22 +6068,6 @@
             scrollContainer.addEventListener('scroll', () => handleScroll(scrollContainer));
         }
         window.addEventListener('scroll', () => handleScroll(window.document.documentElement));
-    </script>
-    
-    <script>
-        // Auto-sync for Atome and BPI wallets on app load (10 emails quick scan)
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
-                if (currentAcc === 'atome' || currentAcc === 'bpi') {
-                    console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
-                    // Trigger quick sync (10 messages)
-                    if (typeof handleScan === 'function') {
-                        handleScan(10);
-                    }
-                }
-            }, 2000); // Wait 2 seconds after page load
-        });
     </script>
 </body>
 </html>

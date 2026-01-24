@@ -992,6 +992,174 @@
             border: 0 !important;
             pointer-events: none;
         }
+        /* SAFE TO SPEND WIDGET (LIGHT MODE) */
+        .safe-spend-card {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px;
+            margin: 0 0 20px;
+            color: #1e293b;
+            position: relative;
+            overflow: hidden;
+            display: none; /* Hidden by default, shown via JS for BPI */
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .safe-spend-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .safe-spend-title {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #94a3b8;
+        }
+        .safe-spend-amount {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            margin-bottom: 2px;
+            color: #0f172a;
+        }
+        .safe-spend-subtitle {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .paycheck-info {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            border: 1px solid #f1f5f9;
+        }
+        .paycheck-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 800;
+            color: #94a3b8;
+            margin-bottom: 2px;
+        }
+        .paycheck-val {
+            font-size: 13px;
+            font-weight: 800;
+            color: #10b981;
+        }
+        .obligation-btn {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .obligation-btn:active { background: #e2e8f0; transform: scale(0.95); }
+        .cash-in-badge {
+            background: #dcfce7;
+            color: #166534;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            margin-left: 6px;
+        }
+
+        /* OBLIGATION LIST ITEMS */
+        .obligations-container {
+            margin-bottom: 10px;
+        }
+        .obligation-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .obligation-item:last-child {
+            border-bottom: none;
+        }
+        .obligation-icon-box {
+            width: 40px;
+            height: 40px;
+            background: #dcfce7;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #16a34a;
+        }
+        .obligation-info {
+            flex: 1;
+        }
+        .obligation-name {
+            font-size: 11px;
+            font-weight: 900;
+            color: #16a34a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .obligation-meta {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+        }
+        .obligation-amt {
+            font-size: 14px;
+            font-weight: 900;
+            color: #16a34a;
+            letter-spacing: -0.5px;
+        }
+
+        /* PREMIUM SAFE SPEND V2 */
+        .safe-spend-header-v2 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .safe-spend-amount-v2 { font-size: 24px; font-weight: 900; color: #10b981; letter-spacing: -1px; margin-bottom: 0px; }
+        .safe-spend-subtitle-v2 { font-size: 8.5px; color: #94a3b8; font-weight: 700; margin-bottom: 12px; }
+        
+        .breakdown-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+        .breakdown-item { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.015); }
+        .breakdown-item:last-child { border-bottom: none; }
+        .breakdown-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .breakdown-info { flex: 1; }
+        .breakdown-name { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0px; }
+        .breakdown-meta { font-size: 8px; color: #94a3b8; font-weight: 600; }
+        .breakdown-val { font-size: 11px; font-weight: 800; letter-spacing: -0.3px; }
+
+        .breakdown-red { background: #fef2f2; color: #ef4444; }
+        .breakdown-red .breakdown-name { color: #ef4444; }
+        .breakdown-red-text { color: #ef4444; }
+
+        .breakdown-yellow { background: #fffbeb; color: #f59e0b; }
+        .breakdown-yellow .breakdown-name { color: #d97706; }
+        .breakdown-yellow-text { color: #d97706; }
+
+        .breakdown-green { background: #f0fdf4; color: #10b981; }
+        .breakdown-green .breakdown-name { color: #10b981; }
+        .breakdown-green-text { color: #10b981; }
+
+        .footer-strip { 
+            background: #f8fafc; 
+            border-radius: 12px; 
+            padding: 10px 14px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        .footer-item { display: flex; flex-direction: column; }
+        .footer-label { font-size: 8px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .footer-val { font-size: 12px; font-weight: 800; color: #10b981; }
+        .footer-val.alt { color: #0f172a; }
+        .footer-badge { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 6px; font-size: 9px; font-weight: 800; margin-left: 6px; }
     </style>
 </head>
 <body>
@@ -1162,8 +1330,72 @@
             </div> -->
 
             <!-- RELOCATED ANALYTICS SECTION -->
+            
+
 
             <!-- SUBSCRIPTION CARD (MOVED BELOW HISTORY) -->
+
+            <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
+            <div id="safe-spend-widget" class="safe-spend-card">
+                <div class="safe-spend-header-v2">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Safe To Spend</h3>
+                    <button class="obligation-btn" onclick="promptSetObligations()" style="background: #f1f5f9; border: none; padding: 4px 10px; border-radius: 8px; color: #64748b; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                        <i class="material-icons" style="font-size: 14px;">add</i> ADD
+                    </button>
+                </div>
+                
+                <div id="safe-spend-val" class="safe-spend-amount-v2 privacy-mask">PHP 0.00</div>
+                <div class="safe-spend-subtitle-v2">Safe budget until <span id="budget-until-date">Jan 30</span> (Wallet + Salary)</div>
+
+                <div class="breakdown-list">
+                    <!-- Maintaining Balance -->
+                    <div class="breakdown-item" id="item-maintaining" onclick="toggleMaintainingBalance()" style="cursor: pointer; transition: all 0.3s ease;">
+                        <div class="breakdown-icon breakdown-red" id="icon-maintaining">
+                            <i class="material-icons" id="maintaining-check">account_balance</i>
+                        </div>
+                        <div class="breakdown-info">
+                            <div class="breakdown-name">MAINTAINING BALANCE</div>
+                            <div class="breakdown-meta" id="maintaining-meta">BPI Required</div>
+                        </div>
+                        <div id="breakdown-maintaining" class="breakdown-val breakdown-red-text privacy-mask">₱3,000.00</div>
+                    </div>
+
+                    <!-- Credit Card Payment -->
+                    <div class="breakdown-item">
+                        <div class="breakdown-icon breakdown-yellow">
+                            <i class="material-icons">credit_card</i>
+                        </div>
+                        <div class="breakdown-info">
+                            <div class="breakdown-name">CREDIT CARD PAYMENT</div>
+                            <div class="breakdown-meta">Atome Wallet Link</div>
+                        </div>
+                        <div id="breakdown-credit" class="breakdown-val breakdown-yellow-text privacy-mask">₱0.00</div>
+                    </div>
+
+                    <!-- Savings -->
+                    <div class="breakdown-item">
+                        <div class="breakdown-icon breakdown-green">
+                            <i class="material-icons">savings</i>
+                        </div>
+                        <div class="breakdown-info">
+                            <div class="breakdown-name">SAVINGS</div>
+                            <div class="breakdown-meta">Monthly • Income</div>
+                        </div>
+                        <div id="breakdown-savings" class="breakdown-val breakdown-green-text privacy-mask">₱3,000.00</div>
+                    </div>
+                </div>
+
+                <div class="footer-strip" onclick="promptSetCashIn()" style="cursor: pointer;">
+                    <div class="footer-item">
+                        <div class="footer-label">NEXT EXPECTED SALARY <span id="footer-cash-in-badge" class="footer-badge privacy-mask">₱8,800</span></div>
+                        <div id="footer-paycheck-date" class="footer-val">Jan 30</div>
+                    </div>
+                    <div class="footer-item" style="text-align: right;">
+                        <div class="footer-label">WAIT TIME</div>
+                        <div id="footer-countdown" class="footer-val alt">0 Days</div>
+                    </div>
+                </div>
+            </div>
 
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
             <div id="chart-section" class="chart-card">
@@ -1275,7 +1507,9 @@
             <div id="history-container"></div>
 
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
-            <div style="margin: 20px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
+            <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
+
+            <div style="margin: 10px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
             <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
@@ -1366,7 +1600,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.2.8</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.0</div>
             </div>
         </div>
 
@@ -1499,7 +1733,7 @@
 
         // INITIALIZE APP
         window.addEventListener('DOMContentLoaded', async () => {
-            log('SmartWallet Sync - v1.2.8 Active');
+            log('SmartWallet Sync - v1.3.0 Active');
             const origin = window.location.origin;
             log('--- 🛡️ FINAL AUTH FIX ---', 'warn');
             log('You see "Requested action is invalid" because your local server address is not authorized.', 'error');
@@ -1608,17 +1842,18 @@
                             const gmailToken = localStorage.getItem('g_access_token');
                             const gmailExpiry = localStorage.getItem('g_token_expiry');
                             
-                            // Only request if token doesn't exist or is expired
+                            // Only request if token doesn't exist or is logically expired
                             if (!gmailToken || !gmailExpiry || Date.now() >= parseInt(gmailExpiry)) {
                                 console.log('🔐 Auto-requesting Gmail access for sync...');
                                 // Trigger Gmail auth automatically
                                 setTimeout(() => {
                                     if (window.tokenClient) {
-                                        window.tokenClient.requestAccessToken();
+                                        // Use prompt: 'none' for silent attempt first to avoid intrusive popups
+                                        window.tokenClient.requestAccessToken({ prompt: 'none' });
                                     } else if (window.initGISModule) {
                                         window.initGISModule();
                                         setTimeout(() => {
-                                            if (window.tokenClient) window.tokenClient.requestAccessToken();
+                                            if (window.tokenClient) window.tokenClient.requestAccessToken({ prompt: 'none' });
                                         }, 500);
                                     }
                                 }, 1000);
@@ -1799,7 +2034,7 @@
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             ${(isAtome || isBPI) ? `
-                            <button class="sync-icon-btn scan-btn" onclick="handleScan(100)" title="Sync Account">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(100, true)" title="Sync Account">
                                 <i class="material-icons">sync</i>
                             </button>
                             ` : ''}
@@ -1848,6 +2083,15 @@
             localStorage.setItem('wallet_current_account', id);
             window.currentAccount = id;
             if (window.walletAccounts) applyAccountTheme(id, window.walletAccounts);
+            
+            // Toggle Safe to Spend Widget Visibility
+            const safeSpendWidget = document.getElementById('safe-spend-widget');
+            if (safeSpendWidget) {
+                const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+                safeSpendWidget.style.display = (id === 'bpi' && isAdmin) ? 'block' : 'none';
+                if (id === 'bpi' && isAdmin) updateSafeSpendUI();
+            }
+
             loadData();
         };
 
@@ -2416,7 +2660,185 @@
                 insightEl.innerHTML = rawHTML;
             }
             insightEl.style.opacity = '1';
+
+            // Trigger Safe to Spend update
+            updateSafeSpendUI();
         }
+
+        window.updateSafeSpendUI = () => {
+             // Only for Admin on BPI account
+             const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+             const isBPI = window.currentAccount === 'bpi';
+             const widget = document.getElementById('safe-spend-widget');
+             
+             if (!widget || !isAdmin || !isBPI) {
+                 if (widget) widget.style.display = 'none';
+                 return;
+             }
+             
+             widget.style.display = 'block';
+
+             // 1. Get Balance
+             let balance = window.bpiBalanceVal;
+             if (balance === 0) {
+                 const bpiEl = document.getElementById('bpi-balance');
+                 if (bpiEl) balance = parseFloat(bpiEl.innerText.replace(/[^\d.-]/g, '')) || 0;
+             }
+
+             // 2. Get Obligations
+             const obligations = parseFloat(localStorage.getItem('bpi_obligations') || '0');
+             const obligationsLabel = document.getElementById('obligations-label');
+             if (obligationsLabel) {
+                const formattedObl = `₱${obligations.toLocaleString()}`;
+                obligationsLabel.dataset.raw = formattedObl;
+                obligationsLabel.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formattedObl;
+             }
+
+             // 3. Calculate Safe to Spend
+             const mainBal = 3000;
+             const savings = 3000;
+             const ccPayment = Math.abs(window.atomeBalanceVal || 0);
+             
+             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
+             const effectiveMainBal = isExcluded ? 0 : mainBal;
+
+             const safeAmount = balance - effectiveMainBal - savings - ccPayment;
+             const safeEl = document.getElementById('safe-spend-val');
+             const formatted = `PHP ${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+             
+             safeEl.dataset.raw = formatted;
+             safeEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
+             
+             // Dynamic color (Health check)
+             if (safeAmount < 1000) safeEl.style.color = '#ef4444'; // Red (High Risk)
+             else if (safeAmount < 5000) safeEl.style.color = '#f59e0b'; // Orange (Risky)
+             else safeEl.style.color = '#10b981'; // Green (Safe)
+
+             // 4. Update Breakdown Items
+             const itemMaintaining = document.getElementById('item-maintaining');
+             const iconMaintaining = document.getElementById('icon-maintaining');
+             const checkMaintaining = document.getElementById('maintaining-check');
+             const metaMaintaining = document.getElementById('maintaining-meta');
+             const maintainingEl = document.getElementById('breakdown-maintaining');
+             
+             if (isExcluded) {
+                 itemMaintaining.style.opacity = '0.4';
+                 itemMaintaining.style.filter = 'grayscale(1)';
+                 checkMaintaining.innerText = 'remove_circle_outline';
+                 metaMaintaining.innerText = 'Excluded from calculation';
+             } else {
+                 itemMaintaining.style.opacity = '1';
+                 itemMaintaining.style.filter = 'none';
+                 checkMaintaining.innerText = 'account_balance';
+                 metaMaintaining.innerText = 'BPI Required';
+             }
+
+             const creditEl = document.getElementById('breakdown-credit');
+             const savingsEl = document.getElementById('breakdown-savings');
+             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+
+             if (maintainingEl) {
+                 const val = `₱${mainBal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                 maintainingEl.dataset.raw = val;
+                 maintainingEl.innerText = isHidden ? '******' : val;
+             }
+             if (creditEl) {
+                 const val = `₱${ccPayment.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                 creditEl.dataset.raw = val;
+                 creditEl.innerText = isHidden ? '******' : val;
+             }
+             if (savingsEl) {
+                 const val = `₱${savings.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                 savingsEl.dataset.raw = val;
+                 savingsEl.innerText = isHidden ? '******' : val;
+             }
+
+             // 5. Update Footer & Salary Info
+             const cashIn = parseFloat(localStorage.getItem('bpi_expected_cashin') || '8800');
+             const footerBadge = document.getElementById('footer-cash-in-badge');
+             if (footerBadge) {
+                const formattedCI = `₱${cashIn.toLocaleString()}`;
+                footerBadge.dataset.raw = formattedCI;
+                footerBadge.innerText = isHidden ? '******' : formattedCI;
+             }
+
+             const paycheck = calculateNextPaycheck();
+             document.getElementById('footer-paycheck-date').innerText = paycheck.date;
+             document.getElementById('footer-countdown').innerText = `${paycheck.days} ${paycheck.days === 1 ? 'Day' : 'Days'}`;
+             document.getElementById('budget-until-date').innerText = paycheck.date;
+        };
+
+        function calculateNextPaycheck() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const day = now.getDate();
+
+            let targetDay;
+            let targetMonth = month;
+            let targetYear = year;
+
+            if (day < 15) {
+                targetDay = 15;
+            } else if (day < 30) {
+                targetDay = 30;
+                // Check if month has 30 days, otherwise end of month
+                const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                if (lastDayOfMonth < 30) targetDay = lastDayOfMonth;
+            } else {
+                targetDay = 15;
+                targetMonth = month + 1;
+                if (targetMonth > 11) {
+                    targetMonth = 0;
+                    targetYear++;
+                }
+            }
+
+            const targetDate = new Date(targetYear, targetMonth, targetDay);
+            const diffTime = targetDate - now;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return {
+                date: `${monthNames[targetMonth]} ${targetDay}`,
+                days: diffDays >= 0 ? diffDays : 0
+            };
+        }
+
+        window.promptSetObligations = () => {
+            const current = localStorage.getItem('bpi_obligations') || '0';
+            showAppDialog({
+                title: 'Upcoming Obligations',
+                message: 'Enter total amount of upcoming fixed payments, bills, or debts (PHP).',
+                input: true,
+                value: current,
+                callback: (val) => {
+                    if (val !== null && val !== false && !isNaN(val)) {
+                        localStorage.setItem('bpi_obligations', val);
+                        updateSafeSpendUI();
+                        showToast('Obligations updated!');
+                    }
+                }
+            });
+        };
+
+        window.promptSetCashIn = () => {
+            const current = localStorage.getItem('bpi_expected_cashin') || '8800';
+            showAppDialog({
+                title: 'Expected Cash In',
+                message: 'Enter your expected paycheck amount (e.g. 8800).',
+                input: true,
+                value: current,
+                callback: (val) => {
+                    if (val !== null && val !== false && !isNaN(val)) {
+                        localStorage.setItem('bpi_expected_cashin', val);
+                        updateSafeSpendUI();
+                        showToast('Expected cash-in updated!');
+                    }
+                }
+            });
+        };
+
 
         window.toggleBalanceVisibility = (e) => {
              if(e) e.stopPropagation();
@@ -2452,6 +2874,13 @@
              
              // Update BPI insight if exists (Special case handling inside function)
              updateBPIInsight();
+        };
+
+        window.toggleMaintainingBalance = () => {
+             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
+             localStorage.setItem('exclude_maintaining', !isExcluded);
+             updateSafeSpendUI();
+             showToast(!isExcluded ? 'Maintaining balance included' : 'Maintaining balance excluded');
         };
 
         // DARK MODE TOGGLE
@@ -3796,9 +4225,12 @@
                     callback: (resp) => {
                         if (resp.error) return log('Login failed: ' + resp.error, 'error');
                         accessToken = resp.access_token;
-                        const expMs = Date.now() + (resp.expires_in * 1000);
+                        // EXTEND PERSISTENCE: Set logical expiry to 1 year (User Request)
+                        // Note: Token still dies in 1hr, but this prevents the 'auto-popup' loop
+                        const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
                         localStorage.setItem('g_access_token', accessToken);
                         localStorage.setItem('g_token_expiry', expMs);
+                        localStorage.setItem('g_token_issued_at', Date.now());
                         fetchUserProfile(accessToken);
                         handleScan(300);
                     },
@@ -3858,9 +4290,11 @@
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 if (credential) {
                     accessToken = credential.accessToken;
-                    const expMs = Date.now() + 3600000; // Default 1 hour
+                    // EXTEND PERSISTENCE: Set logical expiry to 1 year
+                    const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
                     localStorage.setItem('g_access_token', accessToken);
                     localStorage.setItem('g_token_expiry', expMs);
+                    localStorage.setItem('g_token_issued_at', Date.now());
                     log('Google Access Token secured.');
                 } else {
                     log('Warning: Google Credential not returned, Gmail sync might wait.', 'warn');
@@ -4022,7 +4456,7 @@
         };
 
         // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
-        window.handleScan = async (limit) => {
+        window.handleScan = async (limit, manualTrigger = false) => {
             const syncAccount = window.currentAccount;
             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
@@ -4031,13 +4465,27 @@
                 }
             }
 
-            const expiry = localStorage.getItem('g_token_expiry');
-            const isExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
-            
-            if (isExpired) {
-                log('Session expired. Prompting for re-authorization...');
-                tokenClient.requestAccessToken({ prompt: '' }); // Request silent re-auth or prompt
-                return; // The callback will trigger handleScan again
+            const issuedAt = localStorage.getItem('g_token_issued_at');
+            const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
+            const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
+
+            if (isActualExpired || isLogicalExpired) {
+                log('Gmail session stale. Attempting silent refresh...');
+                // Try silent re-auth first
+                try {
+                    tokenClient.requestAccessToken({ prompt: 'none' });
+                    return; // Callback will re-trigger
+                } catch (e) {
+                    log('Silent refresh failed.', 'warn');
+                    if (manualTrigger) { 
+                        log('Prompting for re-authorization (manual sync)...');
+                        tokenClient.requestAccessToken({ prompt: '' });
+                        return;
+                    } else {
+                        log('Background sync suppressed (requires manual sign-in).');
+                        return;
+                    }
+                }
             }
             
             const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
@@ -6385,7 +6833,7 @@
                     console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
                     // Trigger quick sync (10 messages)
                     if (typeof handleScan === 'function') {
-                        handleScan(10);
+                        handleScan(10, false);
                     }
                 }
             }, 2000); // Wait 2 seconds after page load

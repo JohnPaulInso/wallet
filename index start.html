@@ -124,12 +124,12 @@
             max-width: 334px;
             scroll-snap-align: center;
             scroll-snap-stop: always; /* Force 1 card per swipe */
-            padding: 24px 20px 18px;
+            padding: 20px 18px 16px;
             border-radius: 20px;
             color: #fff; 
             position: relative; 
             overflow: hidden; 
-            min-height: 200px;
+            min-height: 180px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -290,10 +290,10 @@
         }
 
         .card-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; position: relative; z-index: 2; }
-        .card-label { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 2px; }
-        .card-type-label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.25); text-transform: lowercase; }
+        .card-label { font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 1.5px; }
+        .card-type-label { font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.25); text-transform: lowercase; }
         
-        .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -2px; margin-bottom: 10px; text-shadow: 0 4px 12px rgba(0,0,0,0.2); padding-top: 5px; position: relative; z-index: 2; }
+        .balance-amount { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 8px; text-shadow: 0 4px 12px rgba(0,0,0,0.2); padding-top: 5px; position: relative; z-index: 2; }
         
         .card-footer { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 2; margin-top: auto; }
         .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; width: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -594,113 +594,6 @@
         .dark-mode .premium-txn.week-highlight {
             background: rgba(59, 130, 246, 0.1) !important;
             border-left: 3px solid #3b82f6;
-        }
-
-        /* CATEGORY BUDGET WIDGET */
-        .cat-budget-card {
-            background: #fff;
-            border-radius: 24px;
-            padding: 20px 24px;
-            margin: 0 16px 24px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-            position: relative;
-            overflow: hidden;
-        }
-        .cat-budget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .cat-budget-title {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #1e293b;
-            letter-spacing: -0.5px;
-            margin: 0;
-        }
-        .cat-budget-add-btn {
-            background: #f8fafc;
-            color: #1e293b;
-            border: 1px solid #e2e8f0;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
-            text-transform: none;
-            letter-spacing: 0;
-        }
-        .cat-budget-add-btn:hover {
-            background: #f1f5f9;
-            transform: none;
-        }
-        .cat-budget-item {
-            margin-bottom: 18px;
-            padding: 0;
-        }
-        .cat-budget-item:last-child {
-            margin-bottom: 0;
-        }
-        .cat-budget-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .cat-budget-name-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .cat-budget-name {
-            color: #1e293b;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: none;
-            letter-spacing: -0.2px;
-        }
-        .cat-budget-values {
-            text-align: right;
-            font-size: 12px;
-            font-weight: 800;
-            color: #1e293b;
-            letter-spacing: -0.5px;
-        }
-        .cat-budget-values .budget-sep {
-            color: #94a3b8;
-            font-weight: 500;
-            margin: 0 2px;
-        }
-        .cat-budget-progress-bg {
-            height: 8px;
-            background: #f1f5f9;
-            border-radius: 100px;
-            overflow: hidden;
-            position: relative;
-        }
-        .cat-budget-progress-fill {
-            height: 100%;
-            border-radius: 10px;
-            background-color: #10b981; /* Default Green */
-            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s;
-        }
-        .cat-budget-progress-fill.low { background-color: #eab308; } /* Yellow 30% */
-        .cat-budget-progress-fill.mid { background-color: #f97316; } /* Orange 60% */
-        .cat-budget-progress-fill.high { background-color: #ef4444; } /* Red 80%+ */
-
-        .cat-budget-item {
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            transition: transform 0.2s;
-        }
-        .cat-budget-item:active {
-            transform: scale(0.98);
         }
 
         /* BOTTOM NAV */
@@ -1099,189 +992,6 @@
             border: 0 !important;
             pointer-events: none;
         }
-        /* SAFE TO SPEND WIDGET (LIGHT MODE) */
-        .safe-spend-card {
-            background: #ffffff;
-            border-radius: 24px;
-            padding: 24px;
-            margin: 0 0 20px;
-            color: #1e293b;
-            position: relative;
-            overflow: hidden;
-            display: none; /* Hidden by default, shown via JS for BPI */
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-        }
-        .safe-spend-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .safe-spend-title {
-            font-size: 10px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #94a3b8;
-        }
-        .safe-spend-amount {
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: -0.5px;
-            margin-bottom: 2px;
-            color: #0f172a;
-        }
-        .safe-spend-subtitle {
-            font-size: 11px;
-            color: #64748b;
-            font-weight: 600;
-        }
-        .paycheck-info {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
-            border: 1px solid #f1f5f9;
-        }
-        .paycheck-label {
-            font-size: 9px;
-            text-transform: uppercase;
-            font-weight: 800;
-            color: #94a3b8;
-            margin-bottom: 2px;
-        }
-        .paycheck-val {
-            font-size: 13px;
-            font-weight: 800;
-            color: #10b981;
-        }
-        .obligation-btn {
-            background: #f1f5f9;
-            border: 1px solid #e2e8f0;
-            color: #64748b;
-            padding: 4px 10px;
-            border-radius: 8px;
-            font-size: 10px;
-            font-weight: 800;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .obligation-btn:active { background: #e2e8f0; transform: scale(0.95); }
-        .cash-in-badge {
-            background: #dcfce7;
-            color: #166534;
-            padding: 2px 6px;
-            border-radius: 6px;
-            font-size: 10px;
-            font-weight: 800;
-            margin-left: 6px;
-        }
-
-        /* OBLIGATION LIST ITEMS */
-        .obligations-container {
-            margin-bottom: 10px;
-        }
-        .obligation-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .obligation-item:last-child {
-            border-bottom: none;
-        }
-        .obligation-icon-box {
-            width: 40px;
-            height: 40px;
-            background: #dcfce7;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #16a34a;
-        }
-        .obligation-info {
-            flex: 1;
-        }
-        .obligation-name {
-            font-size: 11px;
-            font-weight: 900;
-            color: #16a34a;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            margin-bottom: 2px;
-        }
-        .obligation-meta {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-        }
-        .obligation-amt {
-            font-size: 14px;
-            font-weight: 900;
-            color: #16a34a;
-            letter-spacing: -0.5px;
-        }
-
-        /* PREMIUM SAFE SPEND V2 */
-        .safe-spend-header-v2 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .safe-spend-amount-v2 { font-size: 26px; font-weight: 900; color: #10b981; letter-spacing: -1px; margin-bottom: 1px; }
-        .safe-spend-subtitle-v2 { font-size: 9px; color: #94a3b8; font-weight: 700; margin-bottom: 12px; }
-        
-        .breakdown-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-        .breakdown-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            padding: 5px 8px; 
-            border-radius: 12px;
-            background: rgba(0,0,0,0.01);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-        .breakdown-item:hover { background: rgba(0,0,0,0.03); transform: translateX(2px); }
-        .breakdown-item:active { transform: scale(0.98); }
-        
-        .breakdown-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.3s; }
-        .breakdown-info { flex: 1; }
-        .breakdown-name { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 1px; }
-        .breakdown-meta { font-size: 8.5px; color: #94a3b8; font-weight: 650; }
-        .breakdown-val { font-size: 12px; font-weight: 800; letter-spacing: -0.3px; }
-
-        .breakdown-red { background: #fef2f2; color: #ef4444; }
-        .breakdown-red .breakdown-name { color: #ef4444; }
-        .breakdown-red-text { color: #ef4444; }
-
-        .breakdown-yellow { background: #fffbeb; color: #f59e0b; }
-        .breakdown-yellow .breakdown-name { color: #d97706; }
-        .breakdown-yellow-text { color: #d97706; }
-
-        .breakdown-green { background: #f0fdf4; color: #10b981; }
-        .breakdown-green .breakdown-name { color: #10b981; }
-        .breakdown-green-text { color: #10b981; }
-
-        .footer-strip { 
-            background: #f8fafc; 
-            border-radius: 14px; 
-            padding: 10px 14px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-            border: 1px solid #f1f5f9;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .footer-strip:hover { background: #f1f5f9; border-color: #e2e8f0; }
-        .footer-item { display: flex; flex-direction: column; }
-        .footer-label { font-size: 8.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
-        .footer-val { font-size: 13px; font-weight: 800; color: #10b981; }
-        .footer-val.alt { color: #0f172a; }
-        .footer-badge { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; margin-left: 6px; }
     </style>
 </head>
 <body>
@@ -1326,7 +1036,7 @@
 
     <div class="mobile-wrapper">
         <!-- GUEST LOGIN GATE -->
-        <div id="guestGate" class="guest-gate-overlay" style="display: none;">
+        <div id="guestGate" class="guest-gate-overlay">
             <div class="guest-gate-card">
                 <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
                     <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
@@ -1436,109 +1146,24 @@
         <div class="mui-container">
             <!-- Buttons integrated into card sync bar -->
             
-    <!-- CATEGORY BUDGET MODAL -->
-    <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
-        <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
-            <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
-            </div>
-            
-            <div class="modal-body">
-                <div style="margin-bottom: 20px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Select Category</div>
-                    <div class="cat-grid" id="budget-cat-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px;">
-                        <!-- Categories injected via JS -->
-                    </div>
+            <!-- BUDGET CARD (NEW) -->
+            <!-- <div class="budget-card" id="budget-card-section">
+                <div class="budget-header">
+                    <h3 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Monthly Budget</h3>
+                    <button class="mui-btn mui-btn--flat" onclick="promptSetBudget()" style="padding:0 8px; color:#3b82f6; font-size:11px; font-weight:800; text-transform:uppercase; border: 1px solid #dbeafe; border-radius: 6px; height: 26px;">Set Limit</button>
                 </div>
-
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Budget Amount (PHP)</div>
-                    <div style="position: relative;">
-                        <span style="position: absolute; left: 16px; top: 12px; font-weight: 800; color: #0f172a; font-size: 16px;">₱</span>
-                        <input type="number" id="budget-cat-amount" placeholder="0.00" step="100" style="width: 100%; border: 2px solid #f1f5f9; border-radius: 12px; padding: 10px 12px 10px 32px; font-size: 18px; font-weight: 800; color: #0f172a; outline: none; transition: border-color 0.2s;">
-                    </div>
+                <div class="budget-progress-bg">
+                    <div id="budget-fill" class="budget-progress-fill" style="background:#10b981;"></div>
                 </div>
-            </div>
-
-            <div class="modal-actions" style="margin-top: 24px; gap: 12px; display: flex;">
-                <button onclick="closeModals()" class="mui-btn mui-btn--flat" style="flex: 1; border-radius: 8px; height: 44px; font-weight: 700; color: #64748b; text-transform: none; font-size: 13px;">Dismiss</button>
-                <button id="save-cat-budget-btn" class="mui-btn mui-btn--flat" style="flex: 1.5; background: #1e293b; color: #fff; border-radius: 8px; height: 44px; font-weight: 700; text-transform: none; font-size: 13px;">Save Limit</button>
-            </div>
-        </div>
-    </div>
+                <div class="budget-status">
+                    <span id="budget-spent">₱0.00 spent</span>
+                    <span id="budget-limit">₱0.00 limit</span>
+                </div>
+            </div> -->
 
             <!-- RELOCATED ANALYTICS SECTION -->
-            
-
 
             <!-- SUBSCRIPTION CARD (MOVED BELOW HISTORY) -->
-
-            <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
-            <div id="safe-spend-widget" class="safe-spend-card">
-                <div class="safe-spend-header-v2">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Safe To Spend</h3>
-                    <button class="obligation-btn" onclick="promptSetObligations()" style="background: #f1f5f9; border: none; padding: 4px 10px; border-radius: 8px; color: #64748b; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
-                        <i class="material-icons" style="font-size: 14px;">add</i> ADD
-                    </button>
-                </div>
-                
-                <div id="safe-spend-val" class="safe-spend-amount-v2 privacy-mask">PHP 0.00</div>
-                <div class="safe-spend-subtitle-v2">Safe budget until <span id="budget-until-date">Jan 30</span> (Wallet + Salary)</div>
-
-                <div class="breakdown-list" id="safe-spend-breakdown">
-                    <!-- Maintaining Balance -->
-                    <div class="breakdown-item" id="item-maintaining" onclick="toggleMaintainingBalance()" style="cursor: pointer; transition: all 0.3s ease;">
-                        <div class="breakdown-icon breakdown-red" id="icon-maintaining">
-                            <i class="material-icons" id="maintaining-check">account_balance</i>
-                        </div>
-                        <div class="breakdown-info">
-                            <div class="breakdown-name">MAINTAINING BALANCE</div>
-                            <div class="breakdown-meta" id="maintaining-meta">BPI Required</div>
-                        </div>
-                        <div id="breakdown-maintaining" class="breakdown-val breakdown-red-text privacy-mask">₱3,000.00</div>
-                    </div>
-
-                    <!-- Credit Card Payment -->
-                    <div class="breakdown-item">
-                        <div class="breakdown-icon breakdown-yellow">
-                            <i class="material-icons">credit_card</i>
-                        </div>
-                        <div class="breakdown-info">
-                            <div class="breakdown-name">CREDIT CARD PAYMENT</div>
-                            <div class="breakdown-meta">Atome Wallet Link</div>
-                        </div>
-                        <div id="breakdown-credit" class="breakdown-val breakdown-yellow-text privacy-mask">₱0.00</div>
-                    </div>
-
-                    <!-- Savings -->
-                    <div class="breakdown-item" id="item-savings">
-                        <div class="breakdown-left" onclick="toggleSavings()" style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;">
-                            <div class="breakdown-icon breakdown-green" id="icon-savings">
-                                <i class="material-icons" id="savings-check">savings</i>
-                            </div>
-                            <div class="breakdown-info">
-                                <div class="breakdown-name">SAVINGS</div>
-                                <div class="breakdown-meta" id="savings-meta">Monthly Income</div>
-                            </div>
-                        </div>
-                        <div id="breakdown-savings" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSavings()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱3,000.00</div>
-                    </div>
-
-                    <!-- DYNAMIC OBLIGATIONS WILL BE INJECTED HERE -->
-                    <div id="dynamic-obligations-container"></div>
-                </div>
-
-                <div class="footer-strip" onclick="promptSetCashIn()" style="cursor: pointer;">
-                    <div class="footer-item">
-                        <div class="footer-label">NEXT EXPECTED SALARY <span id="footer-cash-in-badge" class="footer-badge privacy-mask" style="display: none;">₱8,800</span></div>
-                        <div id="footer-paycheck-date" class="footer-val">Jan 30</div>
-                    </div>
-                    <div class="footer-item" style="text-align: right;">
-                        <div class="footer-label">WAIT TIME</div>
-                        <div id="footer-countdown" class="footer-val alt">0 Days</div>
-                    </div>
-                </div>
-            </div>
 
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
             <div id="chart-section" class="chart-card">
@@ -1649,25 +1274,8 @@
 
             <div id="history-container"></div>
 
-            <div style="margin: 24px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
-
-            <!-- CATEGORY BUDGET LIMITER WIDGET -->
-            <div id="cat-budget-widget" class="cat-budget-card" style="display: none;">
-                <div class="cat-budget-header">
-                    <h3 class="cat-budget-title">Category Limits</h3>
-                    <button class="cat-budget-add-btn" onclick="promptAddCategoryBudget()">
-                        <i class="material-icons" style="font-size: 16px;">add</i> ADD
-                    </button>
-                </div>
-                <div id="cat-budget-list">
-                    <!-- Dynamic categories will be injected here -->
-                </div>
-            </div>
-
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
-            <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
-
-            <div style="margin: 10px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
+            <div style="margin: 20px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
             <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
@@ -1884,50 +1492,6 @@
         let accessToken = localStorage.getItem('g_access_token');
         let expiry = localStorage.getItem('g_token_expiry');
 
-        // GMAIL TOKEN STORAGE HELPER - Sets 1 year expiry instead of default 1 hour
-        window.storeGmailToken = function(token) {
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000; // 365 days in milliseconds
-            const expiryTimestamp = Date.now() + ONE_YEAR_MS;
-            
-            localStorage.setItem('g_access_token', token);
-            localStorage.setItem('g_token_expiry', expiryTimestamp.toString());
-            
-            // Update global variables
-            accessToken = token;
-            expiry = expiryTimestamp.toString();
-            
-            console.log('✅ Gmail token stored with 1-year expiry:', new Date(expiryTimestamp).toLocaleDateString());
-        };
-
-        // INTERCEPT localStorage.setItem to auto-extend Gmail token expiry
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
-            // If storing Gmail access token, also update expiry to 1 year
-            if (key === 'g_access_token' && value) {
-                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                const expiryTimestamp = Date.now() + ONE_YEAR_MS;
-                originalSetItem.call(localStorage, 'g_token_expiry', expiryTimestamp.toString());
-                console.log('🔒 Auto-extended Gmail token expiry to 1 year');
-            }
-            // Call original setItem
-            originalSetItem.call(localStorage, key, value);
-        };
-
-        // EXTEND EXISTING TOKEN EXPIRY if it's too short
-        if (accessToken && expiry) {
-            const currentExpiry = parseInt(expiry);
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-            const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-            
-            // If token expires in less than 1 day, extend it to 1 year
-            if (currentExpiry - Date.now() < ONE_DAY_MS) {
-                const newExpiry = Date.now() + ONE_YEAR_MS;
-                localStorage.setItem('g_token_expiry', newExpiry.toString());
-                expiry = newExpiry.toString();
-                console.log('🔄 Extended existing Gmail token to 1-year expiry:', new Date(newExpiry).toLocaleDateString());
-            }
-        }
-
         if (window.location.search.includes('logout=true')) {
             // Force a deep reset on the first load after logout
             log('🧹 Session purge complete. User isolated.', 'info');
@@ -1991,29 +1555,6 @@
 
                 // DYNAMIC ACCOUNT HUB
                 if (!user.isAnonymous) {
-                    // Safe to Spend Config Listener
-                    const safeSpendRef = doc(db, "users", user.uid, "config", "safe_to_spend");
-                    onSnapshot(safeSpendRef, (docSnap) => {
-                        let data = docSnap.exists() ? docSnap.data() : {
-                            savingsAmount: 3000,
-                            obligations: []
-                        };
-                        
-                        // Migration path for older single-obligation data
-                        if (data.obligationsAmount !== undefined && !data.obligations) {
-                            data.obligations = [{ 
-                                id: Date.now().toString(),
-                                title: data.obligationsTitle || 'Upcoming Bills',
-                                amount: data.obligationsAmount 
-                            }];
-                        } else if (!data.obligations) {
-                            data.obligations = [];
-                        }
-                        
-                        window.safeToSpendConfig = data;
-                        updateSafeSpendUI();
-                    });
-
                     const configRef = doc(db, "users", user.uid, "config", "accounts");
                     onSnapshot(configRef, (docSnap) => {
                         const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
@@ -2062,20 +1603,28 @@
                         applyAccountTheme(window.currentAccount, accounts);
                         loadData(); 
                         
-                        // AUTO-LOGIN GMAIL: Check token validity for admin users
+                        // AUTO-LOGIN GMAIL: Automatically request Gmail token for admin users
                         if (isAdmin) {
                             const gmailToken = localStorage.getItem('g_access_token');
                             const gmailExpiry = localStorage.getItem('g_token_expiry');
                             
-                            // Extended expiry: 1 year (365 days) instead of default 1 hour
-                            // Only request if token doesn't exist or is logically expired (after 1 year)
+                            // Only request if token doesn't exist or is logically expired
                             if (!gmailToken || !gmailExpiry || Date.now() >= parseInt(gmailExpiry)) {
-                                console.log('⚠️ Gmail token missing or expired. Please use the sync button to authenticate.');
-                                // DO NOT auto-request token on page load to prevent popup flash
-                                // User must manually click sync button to authenticate
+                                console.log('🔐 Auto-requesting Gmail access for sync...');
+                                // Trigger Gmail auth automatically
+                                setTimeout(() => {
+                                    if (window.tokenClient) {
+                                        // Use prompt: 'none' for silent attempt first to avoid intrusive popups
+                                        window.tokenClient.requestAccessToken({ prompt: 'none' });
+                                    } else if (window.initGISModule) {
+                                        window.initGISModule();
+                                        setTimeout(() => {
+                                            if (window.tokenClient) window.tokenClient.requestAccessToken({ prompt: 'none' });
+                                        }, 500);
+                                    }
+                                }, 1000);
                             } else {
-                                const daysUntilExpiry = Math.floor((parseInt(gmailExpiry) - Date.now()) / (1000 * 60 * 60 * 24));
-                                console.log(`✅ Gmail token valid for ${daysUntilExpiry} more days`);
+                                console.log('✅ Gmail token already valid, skipping auth');
                             }
                         }
                         
@@ -2251,7 +1800,7 @@
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             ${(isAtome || isBPI) ? `
-                            <button class="sync-icon-btn scan-btn" onclick="handleScan(100, true)" title="Sync Account">
+                            <button class="sync-icon-btn scan-btn" onclick="handleScan(100)" title="Sync Account">
                                 <i class="material-icons">sync</i>
                             </button>
                             ` : ''}
@@ -2300,15 +1849,6 @@
             localStorage.setItem('wallet_current_account', id);
             window.currentAccount = id;
             if (window.walletAccounts) applyAccountTheme(id, window.walletAccounts);
-            
-            // Toggle Safe to Spend Widget Visibility
-            const safeSpendWidget = document.getElementById('safe-spend-widget');
-            if (safeSpendWidget) {
-                const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-                safeSpendWidget.style.display = (id === 'bpi' && isAdmin) ? 'block' : 'none';
-                if (id === 'bpi' && isAdmin) updateSafeSpendUI();
-            }
-
             loadData();
         };
 
@@ -2681,11 +2221,13 @@
                         txns.push({ id: d.id, ...data });
                     });
 
-                    // Sort locally
+                    // Sort locally - Robust date parsing
                     txns.sort((a, b) => {
-                        const dateA = new Date(a.date).getTime();
-                        const dateB = new Date(b.date).getTime();
-                        if (dateB !== dateA) return dateB - dateA;
+                        let dA = a.date; if (dA && dA.toDate) dA = dA.toDate(); else dA = new Date(dA);
+                        let dB = b.date; if (dB && dB.toDate) dB = dB.toDate(); else dB = new Date(dB);
+                        const timeA = dA.getTime();
+                        const timeB = dB.getTime();
+                        if (timeB !== timeA) return timeB - timeA;
                         const createA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
                         const createB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
                         return createB - createA;
@@ -2877,248 +2419,7 @@
                 insightEl.innerHTML = rawHTML;
             }
             insightEl.style.opacity = '1';
-
-            // Trigger Safe to Spend update
-            updateSafeSpendUI();
         }
-
-        window.updateSafeSpendUI = () => {
-             // Only for Admin on BPI account
-             const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-             const isBPI = window.currentAccount === 'bpi';
-             const widget = document.getElementById('safe-spend-widget');
-             
-             if (!widget || !isAdmin || !isBPI) {
-                 if (widget) widget.style.display = 'none';
-                 return;
-             }
-             
-             widget.style.display = 'block';
-
-             // Config from Firestore (with fallbacks)
-             const config = window.safeToSpendConfig || {
-                savingsAmount: 3000,
-                obligations: []
-             };
-
-             // 1. Get Balance
-             let balance = window.bpiBalanceVal;
-             if (balance === 0) {
-                 const bpiEl = document.getElementById('bpi-balance');
-                 if (bpiEl) balance = parseFloat(bpiEl.innerText.replace(/[^\d.-]/g, '')) || 0;
-             }
-
-             // 2. Savings from Firestore
-             const savingsValue = config.savingsAmount || 3000;
-             const ccPayment = Math.abs(window.atomeBalanceVal || 0);
-
-             // 3. Obligations Sum
-             let obligationsTotal = 0;
-             if (config.obligations) {
-                 config.obligations.forEach(ob => obligationsTotal += (parseFloat(ob.amount) || 0));
-             }
-
-             // 3. Calculate Safe to Spend
-             const mainBalValue = 3000;
-             
-             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
-             const isSavingsExcluded = localStorage.getItem('exclude_savings') === 'true';
-             
-             const effectiveMainBal = isExcluded ? 0 : mainBalValue;
-             const effectiveSavings = isSavingsExcluded ? 0 : savingsValue;
-
-             const safeAmount = balance - effectiveMainBal - effectiveSavings - ccPayment - obligationsTotal;
-             const safeEl = document.getElementById('safe-spend-val');
-             const formatted = `PHP ${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-             
-             safeEl.dataset.raw = formatted;
-             safeEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
-             
-             // Dynamic color (Health check)
-             if (safeAmount < 1000) safeEl.style.color = '#ef4444'; // Red (High Risk)
-             else if (safeAmount < 5000) safeEl.style.color = '#f59e0b'; // Orange (Risky)
-             else safeEl.style.color = '#10b981'; // Green (Safe)
-
-             // 4. Update Breakdown Items
-             const isHidden = localStorage.getItem('balance_hidden') === 'true';
-
-             // Maintaining Balance Update
-             const itemMaintaining = document.getElementById('item-maintaining');
-             const checkMaintaining = document.getElementById('maintaining-check');
-             const metaMaintaining = document.getElementById('maintaining-meta');
-             const maintainingEl = document.getElementById('breakdown-maintaining');
-             
-             if (isExcluded) {
-                 if (itemMaintaining) {
-                    itemMaintaining.style.opacity = '0.4';
-                    itemMaintaining.style.filter = 'grayscale(1)';
-                 }
-                 if (checkMaintaining) checkMaintaining.innerText = 'remove_circle_outline';
-                 if (metaMaintaining) metaMaintaining.innerText = 'Excluded from safe budget';
-             } else {
-                 if (itemMaintaining) {
-                    itemMaintaining.style.opacity = '1';
-                    itemMaintaining.style.filter = 'none';
-                 }
-                 if (checkMaintaining) checkMaintaining.innerText = 'account_balance';
-                 if (metaMaintaining) metaMaintaining.innerText = 'BPI Required';
-             }
-             if (maintainingEl) {
-                 const val = `₱${mainBalValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                 maintainingEl.dataset.raw = val;
-                 maintainingEl.innerText = isHidden ? '******' : val;
-             }
-
-             // Savings Update
-             const itemSavings = document.getElementById('item-savings');
-             const checkSavings = document.getElementById('savings-check');
-             const metaSavings = document.getElementById('savings-meta');
-             const savingsEl = document.getElementById('breakdown-savings');
-
-             if (isSavingsExcluded) {
-                 if (itemSavings) {
-                    itemSavings.style.opacity = '0.4';
-                    itemSavings.style.filter = 'grayscale(1)';
-                 }
-                 if (checkSavings) checkSavings.innerText = 'remove_circle_outline';
-                 if (metaSavings) metaSavings.innerText = 'Excluded from safe budget';
-             } else {
-                 if (itemSavings) {
-                    itemSavings.style.opacity = '1';
-                    itemSavings.style.filter = 'none';
-                 }
-                 if (checkSavings) checkSavings.innerText = 'savings';
-                 if (metaSavings) metaSavings.innerText = 'Monthly Income';
-             }
-             if (savingsEl) {
-                 const val = `₱${savingsValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                 savingsEl.dataset.raw = val;
-                 savingsEl.innerText = isHidden ? '******' : val;
-             }
-
-             // CC Payment Update
-             const creditEl = document.getElementById('breakdown-credit');
-             if (creditEl) {
-                 const val = `₱${ccPayment.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                 creditEl.dataset.raw = val;
-                 creditEl.innerText = isHidden ? '******' : val;
-             }
-
-             // 5. Dynamic Obligations rendering
-             const obContainer = document.getElementById('dynamic-obligations-container');
-             if (obContainer) {
-                 if (config.obligations && config.obligations.length > 0) {
-                     obContainer.innerHTML = config.obligations.map(ob => `
-                        <div class="breakdown-item" style="margin-top: 2px;">
-                            <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: #64748b; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
-                                <i class="material-icons" style="font-size: 18px;">receipt</i>
-                            </div>
-                            <div class="breakdown-info">
-                                <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
-                                <div class="breakdown-meta" style="font-size: 8.5px;">Fixed Obligation</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="breakdown-val privacy-mask" style="color: #64748b; font-size: 12px;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                                <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
-                                    <i class="material-icons" style="font-size: 16px;">delete_outline</i>
-                                </button>
-                            </div>
-                        </div>
-                     `).join('');
-                 } else {
-                     obContainer.innerHTML = '';
-                 }
-             }
-
-
-
-
-             // 5. Update Footer & Salary Info
-             const cashIn = parseFloat(localStorage.getItem('bpi_expected_cashin') || '8800');
-             const footerBadge = document.getElementById('footer-cash-in-badge');
-             if (footerBadge) {
-                const formattedCI = `₱${cashIn.toLocaleString()}`;
-                footerBadge.dataset.raw = formattedCI;
-                footerBadge.innerText = isHidden ? '******' : formattedCI;
-             }
-
-             const paycheck = calculateNextPaycheck();
-             document.getElementById('footer-paycheck-date').innerText = paycheck.date;
-             document.getElementById('footer-countdown').innerText = `${paycheck.days} ${paycheck.days === 1 ? 'Day' : 'Days'}`;
-             document.getElementById('budget-until-date').innerText = paycheck.date;
-        };
-
-        function calculateNextPaycheck() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const day = now.getDate();
-
-            let targetDay;
-            let targetMonth = month;
-            let targetYear = year;
-
-            if (day < 15) {
-                targetDay = 15;
-            } else if (day < 30) {
-                targetDay = 30;
-                // Check if month has 30 days, otherwise end of month
-                const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-                if (lastDayOfMonth < 30) targetDay = lastDayOfMonth;
-            } else {
-                targetDay = 15;
-                targetMonth = month + 1;
-                if (targetMonth > 11) {
-                    targetMonth = 0;
-                    targetYear++;
-                }
-            }
-
-            const targetDate = new Date(targetYear, targetMonth, targetDay);
-            const diffTime = targetDate - now;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            return {
-                date: `${monthNames[targetMonth]} ${targetDay}`,
-                days: diffDays >= 0 ? diffDays : 0
-            };
-        }
-
-        window.promptSetObligations = () => {
-            const current = localStorage.getItem('bpi_obligations') || '0';
-            showAppDialog({
-                title: 'Upcoming Obligations',
-                message: 'Enter total amount of upcoming fixed payments, bills, or debts (PHP).',
-                input: true,
-                value: current,
-                callback: (val) => {
-                    if (val !== null && val !== false && !isNaN(val)) {
-                        localStorage.setItem('bpi_obligations', val);
-                        updateSafeSpendUI();
-                        showToast('Obligations updated!');
-                    }
-                }
-            });
-        };
-
-        window.promptSetCashIn = () => {
-            const current = localStorage.getItem('bpi_expected_cashin') || '8800';
-            showAppDialog({
-                title: 'Expected Cash In',
-                message: 'Enter your expected paycheck amount (e.g. 8800).',
-                input: true,
-                value: current,
-                callback: (val) => {
-                    if (val !== null && val !== false && !isNaN(val)) {
-                        localStorage.setItem('bpi_expected_cashin', val);
-                        updateSafeSpendUI();
-                        showToast('Expected cash-in updated!');
-                    }
-                }
-            });
-        };
-
 
         window.toggleBalanceVisibility = (e) => {
              if(e) e.stopPropagation();
@@ -3154,92 +2455,6 @@
              
              // Update BPI insight if exists (Special case handling inside function)
              updateBPIInsight();
-        };
-
-        window.toggleMaintainingBalance = () => {
-             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
-             localStorage.setItem('exclude_maintaining', !isExcluded);
-             updateSafeSpendUI();
-             showToast(!isExcluded ? 'Maintaining balance excluded' : 'Maintaining balance included');
-        };
-
-        window.toggleSavings = () => {
-             const isExcluded = localStorage.getItem('exclude_savings') === 'true';
-             localStorage.setItem('exclude_savings', !isExcluded);
-             updateSafeSpendUI();
-             showToast(!isExcluded ? 'Savings excluded' : 'Savings included');
-        };
-
-        window.promptSetSavings = async () => {
-            const currentAmount = window.safeToSpendConfig?.savingsAmount || 3000;
-            const res = await showAppDialog({
-                title: 'Monthly Savings Goal',
-                message: 'Enter your monthly savings target (PHP).',
-                input: true,
-                value: currentAmount
-            });
-            if (res !== null && res !== false && !isNaN(res)) {
-                const val = parseFloat(res);
-                const uid = auth.currentUser.uid;
-                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { 
-                    ...window.safeToSpendConfig,
-                    savingsAmount: val 
-                }, { merge: true });
-                showToast('Savings goal updated!');
-            }
-        };
-
-        window.closeObligationModal = () => {
-            const modal = document.getElementById('obligation-modal');
-            modal.classList.remove('show');
-        };
-
-        window.deleteObligation = async (id) => {
-            const config = window.safeToSpendConfig || { obligations: [] };
-            const updatedObligations = (config.obligations || []).filter(ob => ob.id !== id);
-            
-            const uid = auth.currentUser.uid;
-            await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                ...config,
-                obligations: updatedObligations
-            }, { merge: true });
-            
-            showToast('Obligation removed');
-        };
-
-        window.promptSetObligations = () => {
-            const config = window.safeToSpendConfig || { obligations: [] };
-            const titleInput = document.getElementById('ob-input-title');
-            const amountInput = document.getElementById('ob-input-amount');
-            const saveBtn = document.getElementById('ob-save-btn');
-
-            titleInput.value = '';
-            amountInput.value = '';
-
-            const modal = document.getElementById('obligation-modal');
-            modal.classList.add('show');
-
-            saveBtn.onclick = async () => {
-                const title = titleInput.value.trim() || 'Obligation';
-                const amount = parseFloat(amountInput.value) || 0;
-                
-                const uid = auth.currentUser.uid;
-                const newObligation = {
-                    id: Date.now().toString(),
-                    title: title,
-                    amount: amount
-                };
-                
-                const updatedObligations = [...(config.obligations || []), newObligation];
-                
-                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                    ...config,
-                    obligations: updatedObligations
-                }, { merge: true });
-
-                closeObligationModal();
-                showToast('Obligation added!');
-            };
         };
 
         // DARK MODE TOGGLE
@@ -3295,7 +2510,12 @@
 
             txns.forEach(t => {
                 if (t.excluded || t.refund) return;
-                const d = new Date(t.date);
+                // Robust date parsing (Handles Timestamp objects + ISO strings)
+                let d = t.date;
+                if (d && d.toDate) d = d.toDate(); // Firestore Timestamp
+                else d = new Date(d);
+                
+                if (isNaN(d.getTime())) return;
                 if (d.getFullYear() !== year || d.getMonth() !== month) return;
 
                 const mapped = getMerchantDisplay(t.merchant, t);
@@ -3689,7 +2909,8 @@
                 startOfWeek.setHours(0,0,0,0);
 
                 txns.forEach(t => {
-                    const d = new Date(t.date);
+                    let d = t.date;
+                    if (d && d.toDate) d = d.toDate(); else d = new Date(d);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || d < startOfWeek || mappedTrn.category === 'Income') return; 
@@ -3715,7 +2936,8 @@
                 const limitDate = new Date(now.getFullYear(), now.getMonth() - 5, 1); // Start of 6th month back
 
                 txns.forEach(t => {
-                    const d = new Date(t.date);
+                    let d = t.date;
+                    if (d && d.toDate) d = d.toDate(); else d = new Date(d);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
@@ -3754,7 +2976,8 @@
                 }
 
                 txns.forEach(t => {
-                    const d = new Date(t.date);
+                    let d = t.date;
+                    if (d && d.toDate) d = d.toDate(); else d = new Date(d);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
@@ -4372,8 +3595,12 @@
 
             const groups = {};
             txns.forEach(t => {
-                const d = new Date(t.date);
-                if (isNaN(d)) return;
+                // Robust date parsing
+                let d = t.date;
+                if (d && d.toDate) d = d.toDate();
+                else d = new Date(d);
+
+                if (isNaN(d.getTime())) return;
                 const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 if (!groups[key]) groups[key] = { items: [], total: 0 };
                 
@@ -4386,8 +3613,14 @@
             });
 
             const entries = Object.entries(groups);
-            // Ensure chronological order (descending)
-            entries.sort((a, b) => new Date(b[1].items[0].date) - new Date(a[1].items[0].date));
+            // Ensure chronological order (descending) - Robust parsing
+            entries.sort((a, b) => {
+                let dA = a[1].items[0].date;
+                let dB = b[1].items[0].date;
+                if (dA && dA.toDate) dA = dA.toDate(); else dA = new Date(dA);
+                if (dB && dB.toDate) dB = dB.toDate(); else dB = new Date(dB);
+                return dB - dA;
+            });
             
             const visibleEntries = entries.slice(0, window.historyLimit);
 
@@ -4421,7 +3654,10 @@
                     const isRefund = t.refund || false;
                     const excludedClass = t.excluded ? 'txn-excluded' : '';
                     
-                    const d = new Date(t.date);
+                    let d = t.date;
+                    if (d && d.toDate) d = d.toDate();
+                    else d = new Date(d);
+                    
                     const shortDate = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
                     const amount = (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                     
@@ -4573,186 +3809,7 @@
             updateBudgetUI();
             drawCashFlowChart();
             detectSubscriptions();
-            updateCategoryBudgetsUI();
         }
-
-        // CATEGORY BUDGET LIMITER LOGIC
-        let selectedBudgetCatId = null;
-
-        window.updateCategoryBudgetsUI = async () => {
-            const widget = document.getElementById('cat-budget-widget');
-            const listContainer = document.getElementById('cat-budget-list');
-            const account = window.currentAccount;
-            const uid = auth.currentUser?.uid;
-
-            if (!uid || !widget || !listContainer) return;
-
-            // Only show for main wallets and Atome
-            const visibleAccounts = ['atome', 'bpi', 'default_wallet'];
-            if (!visibleAccounts.includes(account)) {
-                widget.style.display = 'none';
-                return;
-            }
-            widget.style.display = 'block';
-
-            // Get limits from Firestore
-            const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-            const docSnap = await getDoc(budgetRef).catch(() => null);
-            let budgets = (docSnap && docSnap.exists()) ? docSnap.data().categories : null;
-
-            // Default Testing Limits for Atome
-            if (!budgets && account === 'atome') {
-                budgets = {
-                    'Shopping': 1000,
-                    'Online shopping': 2000,
-                    'Vehicle': 2000
-                };
-                await setDoc(budgetRef, { categories: budgets }, { merge: true });
-            }
-
-            if (!budgets || Object.keys(budgets).length === 0) {
-                listContainer.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:12px; font-weight:600; border: 1px dashed #e2e8f0; border-radius: 16px;">No category limits set.<br>Click ADD to start budgeting.</div>';
-                return;
-            }
-
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-
-            const itemsHTML = Object.entries(budgets).map(([cat, limit]) => {
-                // Calculate spent for this category this month
-                let spent = 0;
-                if (window.allTxns) {
-                    window.allTxns.forEach(t => {
-                        const d = new Date(t.date);
-                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
-                            const mapped = getMerchantDisplay(t.merchant, t);
-                            const itemCatLabel = displayCategoryName(mapped.category);
-                            if (mapped.category === cat || itemCatLabel === cat) {
-                                spent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                            }
-                        }
-                    });
-                }
-
-                const percent = Math.min((spent / limit) * 100, 100);
-                
-                // Dynamic Font Color Logic
-                let spentColor = ''; // Default
-                if (percent >= 90) spentColor = 'color: #ef4444;'; // Red
-                else if (percent >= 75) spentColor = 'color: #f97316;'; // Orange
-                else if (percent < 50) spentColor = 'color: #10b981;'; // Green
-
-                let statusClass = '';
-                if (percent >= 90) statusClass = 'high';
-                else if (percent >= 75) statusClass = 'mid';
-                else if (percent >= 50) statusClass = 'low';
-
-                const catInfo = CATEGORIES.find(c => c.id === cat) || CATEGORIES.find(c => c.label === cat) || { id: cat, icon: 'category', color: '#64748b' };
-                const displayLabel = catInfo.label || cat;
-
-                return `
-                    <div class="cat-budget-item" oncontextmenu="handleCatLongPress(event, '${cat}')" data-cat="${cat}">
-                        <div class="cat-budget-info">
-                            <div class="cat-budget-name-group">
-                                <div class="cat-budget-icon-box ${catInfo.cls || ''}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
-                                    <i class="material-icons" style="font-size: 18px;">${catInfo.icon}</i>
-                                </div>
-                                <span class="cat-budget-name">${displayLabel}</span>
-                            </div>
-                            <div class="cat-budget-values">
-                                <span class="privacy-mask" style="${spentColor}" data-raw="₱${Math.round(spent).toLocaleString()}">
-                                    ${localStorage.getItem('balance_hidden') === 'true' ? '******' : `₱${Math.round(spent).toLocaleString()}`}
-                                </span>
-                                <span class="budget-sep">/</span>
-                                <span style="color: #64748b;">₱${Math.round(limit).toLocaleString()}</span>
-                            </div>
-                        </div>
-                        <div class="cat-budget-progress-bg">
-                            <div class="cat-budget-progress-fill ${statusClass}" style="width: ${percent}%;"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            listContainer.innerHTML = itemsHTML;
-        };
-
-        window.handleCatLongPress = async (e, category) => {
-            if (e) e.preventDefault();
-            
-            // Show custom dialog instead of basic confirm
-            const confirmed = await showAppDialog({
-                title: 'Remove Limit',
-                message: `Stop tracking monthly budget for ${category}?`,
-                confirm: true
-            });
-            
-            if (confirmed) {
-                const account = window.currentAccount;
-                const uid = auth.currentUser.uid;
-                const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-                const docSnap = await getDoc(budgetRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    delete data.categories[category];
-                    await setDoc(budgetRef, { categories: data.categories });
-                    showToast(`${category} budget removed`);
-                    updateCategoryBudgetsUI();
-                }
-            }
-        };
-
-        window.promptAddCategoryBudget = () => {
-            const grid = document.getElementById('budget-cat-grid');
-            const amountInput = document.getElementById('budget-cat-amount');
-            const saveBtn = document.getElementById('save-cat-budget-btn');
-            
-            amountInput.value = '';
-            selectedBudgetCatId = null;
-            
-            // Populate Category Grid
-            grid.innerHTML = CATEGORIES.filter(c => c.id !== 'Income').map(cat => `
-                <div class="cat-option" id="btn-budget-cat-${cat.id.replace(/\s+/g, '-')}" onclick="selectBudgetCategory('${cat.id}')" style="padding: 12px 4px; gap: 8px; border-radius: 16px;">
-                    <div class="cat-budget-icon-box ${cat.cls || ''}" style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
-                        <i class="material-icons" style="font-size: 20px;">${cat.icon}</i>
-                    </div>
-                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
-                </div>
-            `).join('');
-
-            document.getElementById('cat-budget-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
-            setTimeout(() => amountInput.focus(), 300);
-
-            saveBtn.onclick = async () => {
-                if (!selectedBudgetCatId) return showToast('Please select a category');
-                const limit = parseFloat(amountInput.value);
-                if (isNaN(limit) || limit <= 0) return showToast('Enter a valid amount');
-
-                const account = window.currentAccount;
-                const uid = auth.currentUser.uid;
-                const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-                
-                const docSnap = await getDoc(budgetRef).catch(() => null);
-                let budgets = (docSnap && docSnap.exists()) ? docSnap.data().categories : {};
-                budgets[selectedBudgetCatId] = limit;
-
-                await setDoc(budgetRef, { categories: budgets }, { merge: true });
-                showToast(`Budget set for ${selectedBudgetCatId}`);
-                closeModals();
-                updateCategoryBudgetsUI();
-            };
-        };
-
-        window.selectBudgetCategory = (catId) => {
-            selectedBudgetCatId = catId;
-            document.querySelectorAll('#budget-cat-grid .cat-option').forEach(el => el.classList.remove('active'));
-            const activeEl = document.getElementById(`btn-budget-cat-${catId.replace(/\s+/g, '-')}`);
-            if (activeEl) activeEl.classList.add('active');
-        };
 
         // GOOGLE IDENTITY SERVICES
         function initGIS() {
@@ -4760,46 +3817,22 @@
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID,
                     scope: SCOPES,
-                    callback: async (resp) => {
-                        if (resp.error) {
-                            log('Google Auth failed: ' + resp.error, 'error');
-                            window.isSyncing = false;
-                            
-                            // Reset buttons if they were spinning
-                            const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
-                            const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '<i class="material-icons">sync</i>';
-                            }
-                            return;
-                        }
-
+                    callback: (resp) => {
+                        if (resp.error) return log('Login failed: ' + resp.error, 'error');
                         accessToken = resp.access_token;
-                        // EXTEND PERSISTENCE: Logical expiry only, token still 1hr
+                        // EXTEND PERSISTENCE: Set logical expiry to 1 year (User Request)
+                        // Note: Token still dies in 1hr, but this prevents the 'auto-popup' loop
                         const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
                         localStorage.setItem('g_access_token', accessToken);
                         localStorage.setItem('g_token_expiry', expMs);
                         localStorage.setItem('g_token_issued_at', Date.now());
-                        
-                        log('Google Session Secured (Silent Refresh Success)');
-                        
-                        // Handle pending sync if any
-                        if (window.pendingSyncLimit) {
-                            const limit = window.pendingSyncLimit;
-                            window.pendingSyncLimit = null;
-                            handleScan(limit, true);
-                        } else {
-                            fetchUserProfile(accessToken);
-                            handleScan(300);
-                        }
+                        fetchUserProfile(accessToken);
+                        handleScan(300);
                     },
                 });
                 const gisBadge = document.getElementById('gis-status');
-                if (gisBadge) {
-                    gisBadge.innerText = 'GIS: Ready';
-                    gisBadge.classList.add('status-ready');
-                }
+                gisBadge.innerText = 'GIS: Ready';
+                gisBadge.classList.add('status-ready');
             } catch (e) { log('GIS Init Error: ' + e.message, 'error'); }
         }
 
@@ -5018,7 +4051,7 @@
         };
 
         // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
-        window.handleScan = async (limit, manualTrigger = false) => {
+        window.handleScan = async (limit) => {
             const syncAccount = window.currentAccount;
             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
@@ -5032,34 +4065,17 @@
             const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
 
             if (isActualExpired || isLogicalExpired) {
-                // If we have no token at all, background sync should just die quietly
-                if (!manualTrigger && !accessToken) {
-                    log('No Gmail session found. Background sync suppressed.');
-                    return;
-                }
-
-                log('Gmail session stale. Attempting automated re-auth...');
-                
-                // Track limit for retry
-                window.pendingSyncLimit = limit;
-
+                log('Gmail session stale. Attempting silent refresh...');
+                // Try silent re-auth first
                 try {
-                    // Try SILENT first
-                    tokenClient.requestAccessToken({ 
-                        prompt: 'none',
-                        hint: auth.currentUser?.email
-                    });
-                    return; // Callback will handle the rest
+                    tokenClient.requestAccessToken({ prompt: 'none' });
+                    return; // Callback will re-trigger
                 } catch (e) {
-                    log('Silent refresh setup failed.', 'warn');
-                    if (manualTrigger) {
-                        log('Falling back to interactive sync...');
+                    log('Silent refresh failed. User interaction needed.', 'warn');
+                    if (limit > 50) { // Only prompt if it's a significant sync request
                         tokenClient.requestAccessToken({ prompt: '' });
-                    } else {
-                        log('Background sync cancelled: Interaction required.');
-                        window.pendingSyncLimit = null;
+                        return;
                     }
-                    return;
                 }
             }
             
@@ -5763,11 +4779,6 @@
             document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
             currentTxnId = null;
             
-            // Remove blur effect from background elements
-            document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
-            document.querySelector('.fab')?.classList.remove('blur-active');
-            document.querySelector('.bottom-nav')?.classList.remove('blur-active');
-
             // Restore scroll
             const wrapper = document.querySelector('.mobile-wrapper');
             if (wrapper) {
@@ -5795,9 +4806,6 @@
                 </div>
             `).join('');
             document.getElementById('cat-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
         };
 
         window.saveCategory = async (catId) => {
@@ -5859,9 +4867,6 @@
             };
             
             document.getElementById('note-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
         };
 
         // Enforce Title Case Helper
@@ -5915,9 +4920,6 @@
             const input = document.getElementById('price-input');
             input.value = currentAmt;
             modal.classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
             setTimeout(() => input.focus(), 100);
 
             input.onkeydown = (e) => {
@@ -6255,11 +5257,11 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Blur background
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
-
+            // ALLOW scroll (as requested)
+            // const wrapper = document.querySelector('.mobile-wrapper');
+            // if (wrapper) wrapper.style.overflow = 'hidden';
+            // document.body.style.overflow = 'hidden';
+            
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
         };
 
@@ -7168,27 +6170,6 @@
         </div>
     </div>
 
-    <!-- PREMIUM OBLIGATION MODAL -->
-    <div id="obligation-modal" class="dialog-overlay">
-        <div class="dialog-card">
-            <div id="ob-modal-title" class="dialog-title">New Obligation</div>
-            <div class="dialog-msg">Enter a title and amount for this fixed obligation.</div>
-            
-            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
-                <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: -10px;">Title</div>
-                <input type="text" id="ob-input-title" class="dialog-input" style="margin-bottom: 0;" placeholder="e.g. Rent, Bills">
-                
-                <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: -10px;">Amount (PHP)</div>
-                <input type="number" id="ob-input-amount" class="dialog-input" style="margin-bottom: 0;" placeholder="0.00">
-            </div>
-
-            <div class="dialog-actions">
-                <button onclick="closeObligationModal()" class="dialog-btn dialog-btn--cancel">Cancel</button>
-                <button id="ob-save-btn" class="dialog-btn dialog-btn--primary">SAVE</button>
-            </div>
-        </div>
-    </div>
-
     <!-- UNIFIED APP DIALOG MODAL -->
     <div id="app-dialog" class="dialog-overlay">
         <div class="dialog-card">
@@ -7439,20 +6420,12 @@
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
-                
-                // POPUP PREVETION: Check token validity before background sync
-                const gmailToken = localStorage.getItem('g_access_token');
-                const issuedAt = localStorage.getItem('g_token_issued_at');
-                const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
-                
-                if ((currentAcc === 'atome' || currentAcc === 'bpi') && gmailToken && !isActualExpired) {
+                if (currentAcc === 'atome' || currentAcc === 'bpi') {
                     console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
                     // Trigger quick sync (10 messages)
                     if (typeof handleScan === 'function') {
-                        handleScan(10, false);
+                        handleScan(10);
                     }
-                } else if (gmailToken && isActualExpired) {
-                    console.log('🔇 Auto-sync suppressed: Gmail session expired. User must sync manually.');
                 }
             }, 2000); // Wait 2 seconds after page load
         });

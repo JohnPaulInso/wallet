@@ -596,113 +596,6 @@
             border-left: 3px solid #3b82f6;
         }
 
-        /* CATEGORY BUDGET WIDGET */
-        .cat-budget-card {
-            background: #fff;
-            border-radius: 24px;
-            padding: 20px 24px;
-            margin: 0 16px 24px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-            position: relative;
-            overflow: hidden;
-        }
-        .cat-budget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .cat-budget-title {
-            font-size: 1.1rem;
-            font-weight: 800;
-            color: #1e293b;
-            letter-spacing: -0.5px;
-            margin: 0;
-        }
-        .cat-budget-add-btn {
-            background: #f8fafc;
-            color: #1e293b;
-            border: 1px solid #e2e8f0;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            transition: all 0.2s;
-            text-transform: none;
-            letter-spacing: 0;
-        }
-        .cat-budget-add-btn:hover {
-            background: #f1f5f9;
-            transform: none;
-        }
-        .cat-budget-item {
-            margin-bottom: 18px;
-            padding: 0;
-        }
-        .cat-budget-item:last-child {
-            margin-bottom: 0;
-        }
-        .cat-budget-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .cat-budget-name-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .cat-budget-name {
-            color: #1e293b;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: none;
-            letter-spacing: -0.2px;
-        }
-        .cat-budget-values {
-            text-align: right;
-            font-size: 12px;
-            font-weight: 800;
-            color: #1e293b;
-            letter-spacing: -0.5px;
-        }
-        .cat-budget-values .budget-sep {
-            color: #94a3b8;
-            font-weight: 500;
-            margin: 0 2px;
-        }
-        .cat-budget-progress-bg {
-            height: 8px;
-            background: #f1f5f9;
-            border-radius: 100px;
-            overflow: hidden;
-            position: relative;
-        }
-        .cat-budget-progress-fill {
-            height: 100%;
-            border-radius: 10px;
-            background-color: #10b981; /* Default Green */
-            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s;
-        }
-        .cat-budget-progress-fill.low { background-color: #eab308; } /* Yellow 30% */
-        .cat-budget-progress-fill.mid { background-color: #f97316; } /* Orange 60% */
-        .cat-budget-progress-fill.high { background-color: #ef4444; } /* Red 80%+ */
-
-        .cat-budget-item {
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            transition: transform 0.2s;
-        }
-        .cat-budget-item:active {
-            transform: scale(0.98);
-        }
-
         /* BOTTOM NAV */
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
@@ -1326,7 +1219,7 @@
 
     <div class="mobile-wrapper">
         <!-- GUEST LOGIN GATE -->
-        <div id="guestGate" class="guest-gate-overlay" style="display: none;">
+        <div id="guestGate" class="guest-gate-overlay">
             <div class="guest-gate-card">
                 <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
                     <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
@@ -1436,36 +1329,20 @@
         <div class="mui-container">
             <!-- Buttons integrated into card sync bar -->
             
-    <!-- CATEGORY BUDGET MODAL -->
-    <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
-        <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
-            <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
-            </div>
-            
-            <div class="modal-body">
-                <div style="margin-bottom: 20px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Select Category</div>
-                    <div class="cat-grid" id="budget-cat-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px;">
-                        <!-- Categories injected via JS -->
-                    </div>
+            <!-- BUDGET CARD (NEW) -->
+            <!-- <div class="budget-card" id="budget-card-section">
+                <div class="budget-header">
+                    <h3 style="margin:0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Monthly Budget</h3>
+                    <button class="mui-btn mui-btn--flat" onclick="promptSetBudget()" style="padding:0 8px; color:#3b82f6; font-size:11px; font-weight:800; text-transform:uppercase; border: 1px solid #dbeafe; border-radius: 6px; height: 26px;">Set Limit</button>
                 </div>
-
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Budget Amount (PHP)</div>
-                    <div style="position: relative;">
-                        <span style="position: absolute; left: 16px; top: 12px; font-weight: 800; color: #0f172a; font-size: 16px;">₱</span>
-                        <input type="number" id="budget-cat-amount" placeholder="0.00" step="100" style="width: 100%; border: 2px solid #f1f5f9; border-radius: 12px; padding: 10px 12px 10px 32px; font-size: 18px; font-weight: 800; color: #0f172a; outline: none; transition: border-color 0.2s;">
-                    </div>
+                <div class="budget-progress-bg">
+                    <div id="budget-fill" class="budget-progress-fill" style="background:#10b981;"></div>
                 </div>
-            </div>
-
-            <div class="modal-actions" style="margin-top: 24px; gap: 12px; display: flex;">
-                <button onclick="closeModals()" class="mui-btn mui-btn--flat" style="flex: 1; border-radius: 8px; height: 44px; font-weight: 700; color: #64748b; text-transform: none; font-size: 13px;">Dismiss</button>
-                <button id="save-cat-budget-btn" class="mui-btn mui-btn--flat" style="flex: 1.5; background: #1e293b; color: #fff; border-radius: 8px; height: 44px; font-weight: 700; text-transform: none; font-size: 13px;">Save Limit</button>
-            </div>
-        </div>
-    </div>
+                <div class="budget-status">
+                    <span id="budget-spent">₱0.00 spent</span>
+                    <span id="budget-limit">₱0.00 limit</span>
+                </div>
+            </div> -->
 
             <!-- RELOCATED ANALYTICS SECTION -->
             
@@ -1485,7 +1362,7 @@
                 <div id="safe-spend-val" class="safe-spend-amount-v2 privacy-mask">PHP 0.00</div>
                 <div class="safe-spend-subtitle-v2">Safe budget until <span id="budget-until-date">Jan 30</span> (Wallet + Salary)</div>
 
-                <div class="breakdown-list" id="safe-spend-breakdown">
+                <div class="breakdown-list">
                     <!-- Maintaining Balance -->
                     <div class="breakdown-item" id="item-maintaining" onclick="toggleMaintainingBalance()" style="cursor: pointer; transition: all 0.3s ease;">
                         <div class="breakdown-icon breakdown-red" id="icon-maintaining">
@@ -1511,6 +1388,7 @@
                     </div>
 
                     <!-- Savings -->
+                    <!-- Savings -->
                     <div class="breakdown-item" id="item-savings">
                         <div class="breakdown-left" onclick="toggleSavings()" style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;">
                             <div class="breakdown-icon breakdown-green" id="icon-savings">
@@ -1523,14 +1401,11 @@
                         </div>
                         <div id="breakdown-savings" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSavings()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱3,000.00</div>
                     </div>
-
-                    <!-- DYNAMIC OBLIGATIONS WILL BE INJECTED HERE -->
-                    <div id="dynamic-obligations-container"></div>
                 </div>
 
                 <div class="footer-strip" onclick="promptSetCashIn()" style="cursor: pointer;">
                     <div class="footer-item">
-                        <div class="footer-label">NEXT EXPECTED SALARY <span id="footer-cash-in-badge" class="footer-badge privacy-mask" style="display: none;">₱8,800</span></div>
+                        <div class="footer-label">NEXT EXPECTED SALARY <span id="footer-cash-in-badge" class="footer-badge privacy-mask">₱8,800</span></div>
                         <div id="footer-paycheck-date" class="footer-val">Jan 30</div>
                     </div>
                     <div class="footer-item" style="text-align: right;">
@@ -1648,21 +1523,6 @@
             </div>
 
             <div id="history-container"></div>
-
-            <div style="margin: 24px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
-
-            <!-- CATEGORY BUDGET LIMITER WIDGET -->
-            <div id="cat-budget-widget" class="cat-budget-card" style="display: none;">
-                <div class="cat-budget-header">
-                    <h3 class="cat-budget-title">Category Limits</h3>
-                    <button class="cat-budget-add-btn" onclick="promptAddCategoryBudget()">
-                        <i class="material-icons" style="font-size: 16px;">add</i> ADD
-                    </button>
-                </div>
-                <div id="cat-budget-list">
-                    <!-- Dynamic categories will be injected here -->
-                </div>
-            </div>
 
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
             <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
@@ -1994,23 +1854,11 @@
                     // Safe to Spend Config Listener
                     const safeSpendRef = doc(db, "users", user.uid, "config", "safe_to_spend");
                     onSnapshot(safeSpendRef, (docSnap) => {
-                        let data = docSnap.exists() ? docSnap.data() : {
+                        window.safeToSpendConfig = docSnap.exists() ? docSnap.data() : {
                             savingsAmount: 3000,
-                            obligations: []
+                            obligationsTitle: 'Upcoming Bills',
+                            obligationsAmount: 0
                         };
-                        
-                        // Migration path for older single-obligation data
-                        if (data.obligationsAmount !== undefined && !data.obligations) {
-                            data.obligations = [{ 
-                                id: Date.now().toString(),
-                                title: data.obligationsTitle || 'Upcoming Bills',
-                                amount: data.obligationsAmount 
-                            }];
-                        } else if (!data.obligations) {
-                            data.obligations = [];
-                        }
-                        
-                        window.safeToSpendConfig = data;
                         updateSafeSpendUI();
                     });
 
@@ -2898,7 +2746,7 @@
              // Config from Firestore (with fallbacks)
              const config = window.safeToSpendConfig || {
                 savingsAmount: 3000,
-                obligations: []
+                obligationsAmount: 0
              };
 
              // 1. Get Balance
@@ -2908,15 +2756,10 @@
                  if (bpiEl) balance = parseFloat(bpiEl.innerText.replace(/[^\d.-]/g, '')) || 0;
              }
 
-             // 2. Savings from Firestore
+             // 2. Savings & Obligations from Firestore
              const savingsValue = config.savingsAmount || 3000;
+             const obligationsValue = config.obligationsAmount || 0;
              const ccPayment = Math.abs(window.atomeBalanceVal || 0);
-
-             // 3. Obligations Sum
-             let obligationsTotal = 0;
-             if (config.obligations) {
-                 config.obligations.forEach(ob => obligationsTotal += (parseFloat(ob.amount) || 0));
-             }
 
              // 3. Calculate Safe to Spend
              const mainBalValue = 3000;
@@ -2927,7 +2770,7 @@
              const effectiveMainBal = isExcluded ? 0 : mainBalValue;
              const effectiveSavings = isSavingsExcluded ? 0 : savingsValue;
 
-             const safeAmount = balance - effectiveMainBal - effectiveSavings - ccPayment - obligationsTotal;
+             const safeAmount = balance - effectiveMainBal - effectiveSavings - ccPayment - obligationsValue;
              const safeEl = document.getElementById('safe-spend-val');
              const formatted = `PHP ${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
              
@@ -3003,35 +2846,6 @@
                  creditEl.dataset.raw = val;
                  creditEl.innerText = isHidden ? '******' : val;
              }
-
-             // 5. Dynamic Obligations rendering
-             const obContainer = document.getElementById('dynamic-obligations-container');
-             if (obContainer) {
-                 if (config.obligations && config.obligations.length > 0) {
-                     obContainer.innerHTML = config.obligations.map(ob => `
-                        <div class="breakdown-item" style="margin-top: 2px;">
-                            <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: #64748b; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
-                                <i class="material-icons" style="font-size: 18px;">receipt</i>
-                            </div>
-                            <div class="breakdown-info">
-                                <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
-                                <div class="breakdown-meta" style="font-size: 8.5px;">Fixed Obligation</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="breakdown-val privacy-mask" style="color: #64748b; font-size: 12px;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                                <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
-                                    <i class="material-icons" style="font-size: 16px;">delete_outline</i>
-                                </button>
-                            </div>
-                        </div>
-                     `).join('');
-                 } else {
-                     obContainer.innerHTML = '';
-                 }
-             }
-
-
-
 
              // 5. Update Footer & Salary Info
              const cashIn = parseFloat(localStorage.getItem('bpi_expected_cashin') || '8800');
@@ -3194,27 +3008,14 @@
             modal.classList.remove('show');
         };
 
-        window.deleteObligation = async (id) => {
-            const config = window.safeToSpendConfig || { obligations: [] };
-            const updatedObligations = (config.obligations || []).filter(ob => ob.id !== id);
-            
-            const uid = auth.currentUser.uid;
-            await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                ...config,
-                obligations: updatedObligations
-            }, { merge: true });
-            
-            showToast('Obligation removed');
-        };
-
         window.promptSetObligations = () => {
-            const config = window.safeToSpendConfig || { obligations: [] };
+            const config = window.safeToSpendConfig || {};
             const titleInput = document.getElementById('ob-input-title');
             const amountInput = document.getElementById('ob-input-amount');
             const saveBtn = document.getElementById('ob-save-btn');
 
-            titleInput.value = '';
-            amountInput.value = '';
+            titleInput.value = config.obligationsTitle || '';
+            amountInput.value = config.obligationsAmount || 0;
 
             const modal = document.getElementById('obligation-modal');
             modal.classList.add('show');
@@ -3224,21 +3025,14 @@
                 const amount = parseFloat(amountInput.value) || 0;
                 
                 const uid = auth.currentUser.uid;
-                const newObligation = {
-                    id: Date.now().toString(),
-                    title: title,
-                    amount: amount
-                };
-                
-                const updatedObligations = [...(config.obligations || []), newObligation];
-                
                 await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                    ...config,
-                    obligations: updatedObligations
+                    ...window.safeToSpendConfig,
+                    obligationsTitle: title,
+                    obligationsAmount: amount
                 }, { merge: true });
 
                 closeObligationModal();
-                showToast('Obligation added!');
+                showToast('Obligation saved!');
             };
         };
 
@@ -4573,186 +4367,7 @@
             updateBudgetUI();
             drawCashFlowChart();
             detectSubscriptions();
-            updateCategoryBudgetsUI();
         }
-
-        // CATEGORY BUDGET LIMITER LOGIC
-        let selectedBudgetCatId = null;
-
-        window.updateCategoryBudgetsUI = async () => {
-            const widget = document.getElementById('cat-budget-widget');
-            const listContainer = document.getElementById('cat-budget-list');
-            const account = window.currentAccount;
-            const uid = auth.currentUser?.uid;
-
-            if (!uid || !widget || !listContainer) return;
-
-            // Only show for main wallets and Atome
-            const visibleAccounts = ['atome', 'bpi', 'default_wallet'];
-            if (!visibleAccounts.includes(account)) {
-                widget.style.display = 'none';
-                return;
-            }
-            widget.style.display = 'block';
-
-            // Get limits from Firestore
-            const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-            const docSnap = await getDoc(budgetRef).catch(() => null);
-            let budgets = (docSnap && docSnap.exists()) ? docSnap.data().categories : null;
-
-            // Default Testing Limits for Atome
-            if (!budgets && account === 'atome') {
-                budgets = {
-                    'Shopping': 1000,
-                    'Online shopping': 2000,
-                    'Vehicle': 2000
-                };
-                await setDoc(budgetRef, { categories: budgets }, { merge: true });
-            }
-
-            if (!budgets || Object.keys(budgets).length === 0) {
-                listContainer.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:12px; font-weight:600; border: 1px dashed #e2e8f0; border-radius: 16px;">No category limits set.<br>Click ADD to start budgeting.</div>';
-                return;
-            }
-
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-
-            const itemsHTML = Object.entries(budgets).map(([cat, limit]) => {
-                // Calculate spent for this category this month
-                let spent = 0;
-                if (window.allTxns) {
-                    window.allTxns.forEach(t => {
-                        const d = new Date(t.date);
-                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
-                            const mapped = getMerchantDisplay(t.merchant, t);
-                            const itemCatLabel = displayCategoryName(mapped.category);
-                            if (mapped.category === cat || itemCatLabel === cat) {
-                                spent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                            }
-                        }
-                    });
-                }
-
-                const percent = Math.min((spent / limit) * 100, 100);
-                
-                // Dynamic Font Color Logic
-                let spentColor = ''; // Default
-                if (percent >= 90) spentColor = 'color: #ef4444;'; // Red
-                else if (percent >= 75) spentColor = 'color: #f97316;'; // Orange
-                else if (percent < 50) spentColor = 'color: #10b981;'; // Green
-
-                let statusClass = '';
-                if (percent >= 90) statusClass = 'high';
-                else if (percent >= 75) statusClass = 'mid';
-                else if (percent >= 50) statusClass = 'low';
-
-                const catInfo = CATEGORIES.find(c => c.id === cat) || CATEGORIES.find(c => c.label === cat) || { id: cat, icon: 'category', color: '#64748b' };
-                const displayLabel = catInfo.label || cat;
-
-                return `
-                    <div class="cat-budget-item" oncontextmenu="handleCatLongPress(event, '${cat}')" data-cat="${cat}">
-                        <div class="cat-budget-info">
-                            <div class="cat-budget-name-group">
-                                <div class="cat-budget-icon-box ${catInfo.cls || ''}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
-                                    <i class="material-icons" style="font-size: 18px;">${catInfo.icon}</i>
-                                </div>
-                                <span class="cat-budget-name">${displayLabel}</span>
-                            </div>
-                            <div class="cat-budget-values">
-                                <span class="privacy-mask" style="${spentColor}" data-raw="₱${Math.round(spent).toLocaleString()}">
-                                    ${localStorage.getItem('balance_hidden') === 'true' ? '******' : `₱${Math.round(spent).toLocaleString()}`}
-                                </span>
-                                <span class="budget-sep">/</span>
-                                <span style="color: #64748b;">₱${Math.round(limit).toLocaleString()}</span>
-                            </div>
-                        </div>
-                        <div class="cat-budget-progress-bg">
-                            <div class="cat-budget-progress-fill ${statusClass}" style="width: ${percent}%;"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            listContainer.innerHTML = itemsHTML;
-        };
-
-        window.handleCatLongPress = async (e, category) => {
-            if (e) e.preventDefault();
-            
-            // Show custom dialog instead of basic confirm
-            const confirmed = await showAppDialog({
-                title: 'Remove Limit',
-                message: `Stop tracking monthly budget for ${category}?`,
-                confirm: true
-            });
-            
-            if (confirmed) {
-                const account = window.currentAccount;
-                const uid = auth.currentUser.uid;
-                const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-                const docSnap = await getDoc(budgetRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    delete data.categories[category];
-                    await setDoc(budgetRef, { categories: data.categories });
-                    showToast(`${category} budget removed`);
-                    updateCategoryBudgetsUI();
-                }
-            }
-        };
-
-        window.promptAddCategoryBudget = () => {
-            const grid = document.getElementById('budget-cat-grid');
-            const amountInput = document.getElementById('budget-cat-amount');
-            const saveBtn = document.getElementById('save-cat-budget-btn');
-            
-            amountInput.value = '';
-            selectedBudgetCatId = null;
-            
-            // Populate Category Grid
-            grid.innerHTML = CATEGORIES.filter(c => c.id !== 'Income').map(cat => `
-                <div class="cat-option" id="btn-budget-cat-${cat.id.replace(/\s+/g, '-')}" onclick="selectBudgetCategory('${cat.id}')" style="padding: 12px 4px; gap: 8px; border-radius: 16px;">
-                    <div class="cat-budget-icon-box ${cat.cls || ''}" style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
-                        <i class="material-icons" style="font-size: 20px;">${cat.icon}</i>
-                    </div>
-                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
-                </div>
-            `).join('');
-
-            document.getElementById('cat-budget-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
-            setTimeout(() => amountInput.focus(), 300);
-
-            saveBtn.onclick = async () => {
-                if (!selectedBudgetCatId) return showToast('Please select a category');
-                const limit = parseFloat(amountInput.value);
-                if (isNaN(limit) || limit <= 0) return showToast('Enter a valid amount');
-
-                const account = window.currentAccount;
-                const uid = auth.currentUser.uid;
-                const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-                
-                const docSnap = await getDoc(budgetRef).catch(() => null);
-                let budgets = (docSnap && docSnap.exists()) ? docSnap.data().categories : {};
-                budgets[selectedBudgetCatId] = limit;
-
-                await setDoc(budgetRef, { categories: budgets }, { merge: true });
-                showToast(`Budget set for ${selectedBudgetCatId}`);
-                closeModals();
-                updateCategoryBudgetsUI();
-            };
-        };
-
-        window.selectBudgetCategory = (catId) => {
-            selectedBudgetCatId = catId;
-            document.querySelectorAll('#budget-cat-grid .cat-option').forEach(el => el.classList.remove('active'));
-            const activeEl = document.getElementById(`btn-budget-cat-${catId.replace(/\s+/g, '-')}`);
-            if (activeEl) activeEl.classList.add('active');
-        };
 
         // GOOGLE IDENTITY SERVICES
         function initGIS() {
@@ -4760,46 +4375,22 @@
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID,
                     scope: SCOPES,
-                    callback: async (resp) => {
-                        if (resp.error) {
-                            log('Google Auth failed: ' + resp.error, 'error');
-                            window.isSyncing = false;
-                            
-                            // Reset buttons if they were spinning
-                            const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
-                            const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '<i class="material-icons">sync</i>';
-                            }
-                            return;
-                        }
-
+                    callback: (resp) => {
+                        if (resp.error) return log('Login failed: ' + resp.error, 'error');
                         accessToken = resp.access_token;
-                        // EXTEND PERSISTENCE: Logical expiry only, token still 1hr
+                        // EXTEND PERSISTENCE: Set logical expiry to 1 year (User Request)
+                        // Note: Token still dies in 1hr, but this prevents the 'auto-popup' loop
                         const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
                         localStorage.setItem('g_access_token', accessToken);
                         localStorage.setItem('g_token_expiry', expMs);
                         localStorage.setItem('g_token_issued_at', Date.now());
-                        
-                        log('Google Session Secured (Silent Refresh Success)');
-                        
-                        // Handle pending sync if any
-                        if (window.pendingSyncLimit) {
-                            const limit = window.pendingSyncLimit;
-                            window.pendingSyncLimit = null;
-                            handleScan(limit, true);
-                        } else {
-                            fetchUserProfile(accessToken);
-                            handleScan(300);
-                        }
+                        fetchUserProfile(accessToken);
+                        handleScan(300);
                     },
                 });
                 const gisBadge = document.getElementById('gis-status');
-                if (gisBadge) {
-                    gisBadge.innerText = 'GIS: Ready';
-                    gisBadge.classList.add('status-ready');
-                }
+                gisBadge.innerText = 'GIS: Ready';
+                gisBadge.classList.add('status-ready');
             } catch (e) { log('GIS Init Error: ' + e.message, 'error'); }
         }
 
@@ -5032,34 +4623,21 @@
             const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
 
             if (isActualExpired || isLogicalExpired) {
-                // If we have no token at all, background sync should just die quietly
-                if (!manualTrigger && !accessToken) {
-                    log('No Gmail session found. Background sync suppressed.');
-                    return;
-                }
-
-                log('Gmail session stale. Attempting automated re-auth...');
-                
-                // Track limit for retry
-                window.pendingSyncLimit = limit;
-
+                log('Gmail session stale. Attempting silent refresh...');
+                // Try silent re-auth first
                 try {
-                    // Try SILENT first
-                    tokenClient.requestAccessToken({ 
-                        prompt: 'none',
-                        hint: auth.currentUser?.email
-                    });
-                    return; // Callback will handle the rest
+                    tokenClient.requestAccessToken({ prompt: 'none' });
+                    return; // Callback will re-trigger
                 } catch (e) {
-                    log('Silent refresh setup failed.', 'warn');
-                    if (manualTrigger) {
-                        log('Falling back to interactive sync...');
+                    log('Silent refresh failed.', 'warn');
+                    if (manualTrigger) { 
+                        log('Prompting for re-authorization (manual sync)...');
                         tokenClient.requestAccessToken({ prompt: '' });
+                        return;
                     } else {
-                        log('Background sync cancelled: Interaction required.');
-                        window.pendingSyncLimit = null;
+                        log('Background sync suppressed (requires manual sign-in).');
+                        return;
                     }
-                    return;
                 }
             }
             
@@ -5763,11 +5341,6 @@
             document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
             currentTxnId = null;
             
-            // Remove blur effect from background elements
-            document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
-            document.querySelector('.fab')?.classList.remove('blur-active');
-            document.querySelector('.bottom-nav')?.classList.remove('blur-active');
-
             // Restore scroll
             const wrapper = document.querySelector('.mobile-wrapper');
             if (wrapper) {
@@ -5795,9 +5368,6 @@
                 </div>
             `).join('');
             document.getElementById('cat-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
         };
 
         window.saveCategory = async (catId) => {
@@ -5859,9 +5429,6 @@
             };
             
             document.getElementById('note-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
         };
 
         // Enforce Title Case Helper
@@ -5915,9 +5482,6 @@
             const input = document.getElementById('price-input');
             input.value = currentAmt;
             modal.classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
             setTimeout(() => input.focus(), 100);
 
             input.onkeydown = (e) => {
@@ -6255,11 +5819,11 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Blur background
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
-
+            // ALLOW scroll (as requested)
+            // const wrapper = document.querySelector('.mobile-wrapper');
+            // if (wrapper) wrapper.style.overflow = 'hidden';
+            // document.body.style.overflow = 'hidden';
+            
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
         };
 
@@ -7439,20 +7003,12 @@
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
-                
-                // POPUP PREVETION: Check token validity before background sync
-                const gmailToken = localStorage.getItem('g_access_token');
-                const issuedAt = localStorage.getItem('g_token_issued_at');
-                const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
-                
-                if ((currentAcc === 'atome' || currentAcc === 'bpi') && gmailToken && !isActualExpired) {
+                if (currentAcc === 'atome' || currentAcc === 'bpi') {
                     console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
                     // Trigger quick sync (10 messages)
                     if (typeof handleScan === 'function') {
                         handleScan(10, false);
                     }
-                } else if (gmailToken && isActualExpired) {
-                    console.log('🔇 Auto-sync suppressed: Gmail session expired. User must sync manually.');
                 }
             }, 2000); // Wait 2 seconds after page load
         });

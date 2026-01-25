@@ -15,8 +15,12 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     <link rel="manifest" href="manifest.json?v=2">
     <meta name="theme-color" content="#f8fafc">
+<!-- <link rel="stylesheet" href="index.css"> -->
 
-    <style>
+   
+<style>
+
+    
         * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
         html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; }
         
@@ -731,6 +735,34 @@
             --border-color: #f1f5f9;
         }
 
+        /* DUPLICATE MODAL STYLES */
+        .duplicate-account-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .duplicate-account-option:hover {
+            background: #f8fafc;
+            border-color: #3b82f6;
+        }
+        .duplicate-account-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #2196F3;
+        }
+        .duplicate-account-label {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
         body.dark-mode {
             --bg-primary: #0a0a0a;
             --text-primary: #f8fafc;
@@ -948,7 +980,7 @@
         .blur-overlay.active { display: block; }
         
         /* Global Blur for elements */
-        .mobile-wrapper.blur-active { filter: blur(8px) brightness(0.9); -webkit-filter: blur(8px) brightness(0.9); transition: filter 0.3s; pointer-events: none; }
+        .mobile-wrapper.blur-active { filter: blur(4px) brightness(0.9); -webkit-filter: blur(4px) brightness(0.9); transition: filter 0.3s; pointer-events: none; }
         .fab.blur-active, .bottom-nav.blur-active { filter: blur(10px) brightness(0.6); -webkit-filter: blur(10px) brightness(0.6); pointer-events: none; }
         
         /* Shadow for the elevated clone */
@@ -1282,7 +1314,26 @@
         .footer-val { font-size: 13px; font-weight: 800; color: #10b981; }
         .footer-val.alt { color: #0f172a; }
         .footer-badge { background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 8px; font-size: 9px; font-weight: 800; margin-left: 6px; }
-    </style>
+ 
+
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        /* Hide scrollbar for category list */
+        #manual-cat-list::-webkit-scrollbar { display: none; }
+        #manual-cat-list { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .manual-cat-item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 56px; cursor: pointer; opacity: 0.5; transition: all 0.2s; }
+        .manual-cat-item.selected { opacity: 1; transform: scale(1.05); }
+        .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
+        .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
+        .manual-cat-item span { font-size: 10px !important; }
+   
+   
+</style>
+
+
+
+
+
 </head>
 <body>
     <!-- PRIVACY LOCK OVERLAY (NEW) -->
@@ -1431,42 +1482,11 @@
 
 
         <!-- CHART TOOLTIP -->
-        <div id="chart-tooltip" style="position: fixed; background: rgba(15, 23, 42, 0.95); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); line-height: 1.4; white-space: nowrap;"></div>
+        <div id="chart-tooltip" style="position: fixed; background: rgba(15, 23, 42, 0.95); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.3); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); line-height: 1.4; white-space: nowrap;"></div>
 
         <div class="mui-container">
             <!-- Buttons integrated into card sync bar -->
             
-    <!-- CATEGORY BUDGET MODAL -->
-    <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
-        <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
-            <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
-                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
-            </div>
-            
-            <div class="modal-body">
-                <div style="margin-bottom: 20px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Select Category</div>
-                    <div class="cat-grid" id="budget-cat-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px;">
-                        <!-- Categories injected via JS -->
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Budget Amount (PHP)</div>
-                    <div style="position: relative;">
-                        <span style="position: absolute; left: 16px; top: 12px; font-weight: 800; color: #0f172a; font-size: 16px;">₱</span>
-                        <input type="number" id="budget-cat-amount" placeholder="0.00" step="100" style="width: 100%; border: 2px solid #f1f5f9; border-radius: 12px; padding: 10px 12px 10px 32px; font-size: 18px; font-weight: 800; color: #0f172a; outline: none; transition: border-color 0.2s;">
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-actions" style="margin-top: 24px; gap: 12px; display: flex;">
-                <button onclick="closeModals()" class="mui-btn mui-btn--flat" style="flex: 1; border-radius: 8px; height: 44px; font-weight: 700; color: #64748b; text-transform: none; font-size: 13px;">Dismiss</button>
-                <button id="save-cat-budget-btn" class="mui-btn mui-btn--flat" style="flex: 1.5; background: #1e293b; color: #fff; border-radius: 8px; height: 44px; font-weight: 700; text-transform: none; font-size: 13px;">Save Limit</button>
-            </div>
-        </div>
-    </div>
-
             <!-- RELOCATED ANALYTICS SECTION -->
             
 
@@ -1545,17 +1565,16 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Expenses structure</h3>
                     <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 4px 0 10px; border-radius: 8px; height: 28px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 100px;">
-                        
                         <option value="this_month" selected>This Month</option>
                         <option value="today">Today</option>
                         <option value="this_week">This Week</option>
                         <option value="last_week">Last Week</option>
                         <option value="first_15">First 15 of Month</option>
                         <option value="last_15">Last 15 of Month</option>
-                        <option value="last_month">Last Month</option>
-                        <option value="last_3_months">Last 3 Months</option>
+                        <!-- Dynamic previous 3 months will be inserted here -->
                         <option value="last_6_months">Last 6 Months</option>
                         <option value="this_year">This Year</option>
+                        <option value="all_time">All Time</option>
                     </select>
                 </div>
 
@@ -1691,7 +1710,7 @@
                 </div>
             </div>
 
-            <!-- RELOCATED SUBSCRIPTION SECTION -->
+            <!-- RECURRING ITEMS SUBSCRIPTION SECTION -->
             <div class="analytics-card" id="subscription-section" style="display: none; margin: 10px 16px 20px; padding: 15px; border-radius: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1791,6 +1810,36 @@
     <div class="blur-overlay" id="blurOverlay" onclick="closeIOSMenu()"></div>
     <div class="ios-action-menu" id="iosActionMenu"></div>
 
+    <!-- CATEGORY BUDGET MODAL (TOP LEVEL) -->
+    <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
+        <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
+            <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
+                <h3 id="cat-budget-modal-title" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
+            </div>
+            
+            <div class="modal-body">
+                <div id="cat-budget-selection-area" style="margin-bottom: 20px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Select Category</div>
+                    <div class="cat-grid" id="budget-cat-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px;">
+                        <!-- Categories injected via JS -->
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 10px;">
+                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Budget Amount (PHP)</div>
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 16px; top: 12px; font-weight: 800; color: #0f172a; font-size: 16px;">₱</span>
+                        <input type="number" id="budget-cat-amount" placeholder="0.00" step="100" style="width: 100%; border: 2px solid #f1f5f9; border-radius: 12px; padding: 10px 12px 10px 32px; font-size: 18px; font-weight: 800; color: #0f172a; outline: none; transition: border-color 0.2s;">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="margin-top: 24px;">
+                <button id="save-cat-budget-btn" class="mui-btn mui-btn--raised" style="width: 100%; background: #1e293b; color: #fff; border-radius: 12px; height: 48px; font-weight: 800; text-transform: none; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Save Limit</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Global bridge for GIS callback to avoid module race condition
         window.gisLoaded = function() {
@@ -1803,6 +1852,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // HELPER: Format date to YYYY-MM-DD based on LOCAL time
+        window.formatLocalDate = (date) => {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
 
         // FIREBASE CONFIG
         const firebaseConfig = {
@@ -1820,15 +1878,37 @@
 
 
         // UNIFIED PROMISE-BASED DIALOG SYSTEM
-        window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, callback = null }) => {
+        window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, customActions = null, callback = null }) => {
             return new Promise((resolve) => {
                 const overlay = document.getElementById('app-dialog');
                 const titleEl = document.getElementById('dialog-title');
                 const msgEl = document.getElementById('dialog-msg');
                 const inputCont = document.getElementById('dialog-input-container');
                 const inputEl = document.getElementById('dialog-input');
+                const actionsCont = overlay.querySelector('.dialog-actions');
                 const cancelBtn = document.getElementById('dialog-cancel-btn');
                 const okBtn = document.getElementById('dialog-ok-btn');
+                
+                // Clear and recreate default buttons if needed later? No, let's just show/hide them
+                // But for custom actions, we need a fresh start
+                if (customActions) {
+                    okBtn.style.display = 'none';
+                    cancelBtn.style.display = 'none';
+                    // Remove any old custom buttons
+                    overlay.querySelectorAll('.custom-dialog-btn').forEach(b => b.remove());
+                    
+                    customActions.forEach(action => {
+                        const btn = document.createElement('button');
+                        btn.className = `dialog-btn custom-dialog-btn ${action.class || 'dialog-btn--primary'}`;
+                        btn.innerText = action.label;
+                        btn.onclick = () => close(action.value);
+                        actionsCont.appendChild(btn);
+                    });
+                } else {
+                    okBtn.style.display = 'block';
+                    cancelBtn.style.display = (confirm || input) ? 'block' : 'none';
+                    overlay.querySelectorAll('.custom-dialog-btn').forEach(b => b.remove());
+                }
 
                 titleEl.innerText = title;
                 msgEl.innerText = message;
@@ -1841,20 +1921,27 @@
                     inputCont.style.display = 'none';
                 }
 
-                cancelBtn.style.display = (confirm || input) ? 'block' : 'none';
                 okBtn.innerText = (confirm || input) ? 'CONFIRM' : 'OK';
 
                 const close = (res) => {
                     overlay.classList.remove('show');
-                    // Remove listeners to avoid leaks
+                    // Cleanup
                     okBtn.onclick = null;
                     cancelBtn.onclick = null;
+                    overlay.onclick = null; // Backdrop click
+                    overlay.querySelectorAll('.custom-dialog-btn').forEach(b => b.remove());
+                    
                     if (callback) callback(res);
                     resolve(res);
                 };
 
                 okBtn.onclick = () => close(input ? inputEl.value : true);
                 cancelBtn.onclick = () => close(false);
+                
+                // NEW: Close on backdrop click (outside the card)
+                overlay.onclick = (e) => {
+                    if (e.target === overlay) close(false);
+                };
 
                 overlay.classList.add('show');
             });
@@ -1944,6 +2031,27 @@
             log('3. Current URL: ' + window.location.href);
             log('4. Ensure your server is running on ' + origin, 'info');
             log('-------------------------', 'warn');
+
+            // POPULATE DYNAMIC PREVIOUS 3 MONTHS IN EXPENSES DROPDOWN
+            const chartFilter = document.getElementById('chart-filter');
+            if (chartFilter) {
+                const now = new Date();
+                const last15Option = chartFilter.querySelector('option[value="last_15"]');
+                
+                // Generate previous 3 months (reverse order so they appear chronologically)
+                for (let i = 3; i >= 1; i--) {
+                    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    const monthValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    const option = document.createElement('option');
+                    option.value = monthValue;
+                    option.textContent = monthName;
+                    
+                    // Insert after "Last 15 of Month"
+                    last15Option.insertAdjacentElement('afterend', option);
+                }
+            }
 
             // FAST PATH: Early rendering from cache to achieve "instant" load
             const lastUid = localStorage.getItem('wallet_last_uid');
@@ -3474,12 +3582,30 @@
             };
 
             const checkPeriod = (t, periodType, shift = 0) => {
-                const d = new Date(t.date);
+                const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
+                if (isNaN(d.getTime())) return false;
+                
                 const dYear = d.getFullYear();
                 const dMonth = d.getMonth();
                 const dDate = d.getDate();
                 const dWeek = getWeek(d);
                 const currentWeek = getWeek(now);
+
+                // Handle dynamic month values (YYYY-MM format)
+                if (typeof periodType === 'string' && periodType.match(/^\d{4}-\d{2}$/)) {
+                    const [targetYear, targetMonth] = periodType.split('-').map(Number);
+                    if (shift === 0) {
+                        return dYear === targetYear && dMonth === targetMonth - 1;
+                    } else if (shift === 1) {
+                        const prevDate = new Date(targetYear, targetMonth - 1 - 1, 1);
+                        return dYear === prevDate.getFullYear() && dMonth === prevDate.getMonth();
+                    }
+                }
+
+                // Handle "all_time" filter
+                if (periodType === 'all_time') {
+                    return shift === 0;
+                }
 
                 if (periodType === 'today') {
                     // Current: Today (shift 0), Past: Yesterday (shift 1)
@@ -4458,6 +4584,10 @@
                     // else if (isIncome) displayName = 'INCOME'; // REMOVED to allow database overrides
                     let refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
                     
+                    // Payment chip for duplicated ATOME PAYMENT from BPI to Atome
+                    const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
+                    const paymentChip = isPaymentDuplicate ? '<span class="payment-badge" style="display: inline-block; background: #d1fae5; color: #059669; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">PAYMENT</span>' : '';
+                    
                     // LOGO DETECTION
                     const mUpper = mapped.name.toUpperCase();
                     let logo = null;
@@ -4496,7 +4626,7 @@
                                 ${logoHTML}
                             </div>
                             <div class="txn-details">
-                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}</div>
+                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${paymentChip}</div>
                                 <div class="txn-sub">
                                     <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
                                 </div>
@@ -4651,8 +4781,53 @@
                 const catInfo = CATEGORIES.find(c => c.id === cat) || CATEGORIES.find(c => c.label === cat) || { id: cat, icon: 'category', color: '#64748b' };
                 const displayLabel = catInfo.label || cat;
 
+                const spentDisplay = (() => {
+                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
+                    if (isHidden) return '******';
+                    
+                    const spentStr = Math.round(spent).toLocaleString();
+                    if (spent <= limit) return `₱${spentStr}`;
+
+                    // NEW Rule:
+                    // 1. If OVERSPEND is 1000 or more: Everything turns RED (PHP symbol, Commas, Digits)
+                    if ((spent - limit) >= 1000) {
+                        return `<span style="color: #ef4444;">₱${spentStr}</span>`;
+                    }
+
+                    // 2. Minor Overspend (< 1000): Partial coloring
+                    // PHP symbol and Commas are gray. Matching leading digits are gray.
+                    const limitStr = Math.round(limit).toLocaleString();
+                    const sDigits = spentStr.replace(/[^\d]/g, '');
+                    const lDigits = limitStr.replace(/[^\d]/g, '').padStart(sDigits.length, '0');
+                    
+                    let result = '<span style="color: #94a3b8;">₱</span>';
+                    let mismatchStarted = false;
+                    
+                    for (let i = 0, dIdx = 0; i < spentStr.length; i++) {
+                        const char = spentStr[i];
+                        if (/\d/.test(char)) {
+                            const limitDigit = lDigits[dIdx];
+                            
+                            if (!mismatchStarted && parseInt(char) > parseInt(limitDigit)) {
+                                mismatchStarted = true;
+                            }
+                            
+                            if (mismatchStarted) {
+                                result += `<span style="color: #ef4444;">${char}</span>`;
+                            } else {
+                                result += `<span style="color: #94a3b8;">${char}</span>`;
+                            }
+                            dIdx++;
+                        } else {
+                            // Commas and separators stay gray in minor overspend
+                            result += `<span style="color: #94a3b8;">${char}</span>`;
+                        }
+                    }
+                    return result;
+                })();
+
                 return `
-                    <div class="cat-budget-item" oncontextmenu="handleCatLongPress(event, '${cat}')" data-cat="${cat}">
+                    <div class="cat-budget-item" onclick="handleCatClick(event, '${cat}')" data-cat="${cat}">
                         <div class="cat-budget-info">
                             <div class="cat-budget-name-group">
                                 <div class="cat-budget-icon-box ${catInfo.cls || ''}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
@@ -4662,7 +4837,7 @@
                             </div>
                             <div class="cat-budget-values">
                                 <span class="privacy-mask" style="${spentColor}" data-raw="₱${Math.round(spent).toLocaleString()}">
-                                    ${localStorage.getItem('balance_hidden') === 'true' ? '******' : `₱${Math.round(spent).toLocaleString()}`}
+                                    ${spentDisplay}
                                 </span>
                                 <span class="budget-sep">/</span>
                                 <span style="color: #64748b;">₱${Math.round(limit).toLocaleString()}</span>
@@ -4678,28 +4853,77 @@
             listContainer.innerHTML = itemsHTML;
         };
 
-        window.handleCatLongPress = async (e, category) => {
+        window.handleCatClick = async (e, category) => {
             if (e) e.preventDefault();
             
-            // Show custom dialog instead of basic confirm
-            const confirmed = await showAppDialog({
-                title: 'Remove Limit',
-                message: `Stop tracking monthly budget for ${category}?`,
-                confirm: true
+            const choice = await showAppDialog({
+                title: category,
+                message: 'Manage monthly budget limit.',
+                confirm: false,
+                customActions: [
+                    { label: 'EDIT', value: 'edit' },
+                    { label: 'REMOVE', value: 'remove', class: 'danger' }
+                ]
             });
-            
-            if (confirmed) {
-                const account = window.currentAccount;
-                const uid = auth.currentUser.uid;
-                const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-                const docSnap = await getDoc(budgetRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    delete data.categories[category];
-                    await setDoc(budgetRef, { categories: data.categories });
-                    showToast(`${category} budget removed`);
-                    updateCategoryBudgetsUI();
+
+            if (choice === 'edit') {
+                editCategoryBudget(category);
+            } else if (choice === 'remove') {
+                const confirmed = await showAppDialog({
+                    title: 'Remove Limit',
+                    message: `Stop tracking monthly budget for ${category}?`,
+                    confirm: true
+                });
+                
+                if (confirmed) {
+                    const account = window.currentAccount;
+                    const uid = auth.currentUser.uid;
+                    const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
+                    const docSnap = await getDoc(budgetRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        delete data.categories[category];
+                        await setDoc(budgetRef, { categories: data.categories });
+                        showToast(`${category} budget removed`);
+                        updateCategoryBudgetsUI();
+                    }
                 }
+            }
+        };
+
+        window.editCategoryBudget = async (category) => {
+            const account = window.currentAccount;
+            const uid = auth.currentUser.uid;
+            const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
+            const docSnap = await getDoc(budgetRef);
+            
+            if (docSnap.exists()) {
+                const currentLimit = docSnap.data().categories[category] || 0;
+                
+                const amountInput = document.getElementById('budget-cat-amount');
+                const saveBtn = document.getElementById('save-cat-budget-btn');
+                const title = document.getElementById('cat-budget-modal-title');
+                const selectionArea = document.getElementById('cat-budget-selection-area');
+                
+                title.innerText = `Edit ${category} Limit`;
+                amountInput.value = currentLimit;
+                if (selectionArea) selectionArea.style.display = 'none';
+                
+                document.getElementById('cat-budget-modal').classList.add('show');
+                document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+                
+                saveBtn.onclick = async () => {
+                    const limit = parseFloat(amountInput.value);
+                    if (isNaN(limit) || limit <= 0) return showToast('Enter a valid amount');
+
+                    const budgets = docSnap.data().categories;
+                    budgets[category] = limit;
+
+                    await setDoc(budgetRef, { categories: budgets }, { merge: true });
+                    showToast(`Updated ${category} budget`);
+                    closeModals();
+                    updateCategoryBudgetsUI();
+                };
             }
         };
 
@@ -4720,6 +4944,10 @@
                     <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
                 </div>
             `).join('');
+
+            document.getElementById('cat-budget-modal-title').innerText = 'Category Limit';
+            const selectionArea = document.getElementById('cat-budget-selection-area');
+            if (selectionArea) selectionArea.style.display = 'block';
 
             document.getElementById('cat-budget-modal').classList.add('show');
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
@@ -5194,7 +5422,7 @@
                 id: 'txn_' + ts,
                 amount: parseFloat(amtMatch[1].replace(/,/g, '')),
                 merchant: merchMatch ? merchMatch[1].trim() : "Atome Transaction",
-                date: new Date(parseInt(ts)).toISOString().split('T')[0]
+                date: formatLocalDate(parseInt(ts))
             };
         }
 
@@ -5204,7 +5432,7 @@
             let note = "";
             let isIncome = false;
             let category = "Financial Expenses";
-            let dateVal = new Date(parseInt(ts)).toISOString().split('T')[0];
+            let dateVal = formatLocalDate(parseInt(ts));
 
             const tLower = text.toLowerCase();
             const sLower = subject.toLowerCase();
@@ -5222,7 +5450,7 @@
             const dateMatch = text.match(/Transaction Date and Time\s+([^;\n\r]+)/i) || text.match(/Date and Time\s+([^;\n\r]+)/i);
             if (dateMatch) {
                 const parsedDate = new Date(dateMatch[1].trim());
-                if (!isNaN(parsedDate)) dateVal = parsedDate.toISOString().split('T')[0];
+                if (!isNaN(parsedDate)) dateVal = formatLocalDate(parsedDate);
             }
 
             // 3. SPECIAL DETECTION: ATOME PAYMENTS & AUB
@@ -5393,6 +5621,10 @@
                     <i class="material-icons">edit</i>
                     <span>Edit Transaction</span>
                 </div>
+                <div class="ios-action-item" onclick="handleIOSAction('duplicate', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}')">
+                    <i class="material-icons">content_copy</i>
+                    <span>Duplicate</span>
+                </div>
                 <div class="ios-action-item ${isExcluded ? '' : 'danger'}" onclick="handleIOSAction('exclude', '${txnId}', ${isExcluded}, '${merchantSafe}')">
                     <i class="material-icons">${isExcluded ? 'add_circle' : 'block'}</i>
                     <span>${isExcluded ? 'Include' : 'Exclude'}</span>
@@ -5481,6 +5713,9 @@
                 case 'edit':
                     openEditModal(txnId, args[0], args[1], args[2], args[3]);
                     break;
+                case 'duplicate':
+                    openDuplicateModal(txnId, args[0], args[1], args[2], args[3]);
+                    break;
                 case 'exclude':
                     toggleExclusion(txnId, args[1], args[0]);
                     break;
@@ -5560,6 +5795,133 @@
                     window.allTxns[idx].refund = originalState;
                     renderHistory(window.allTxns);
                 }
+            }
+        };
+
+        // DUPLICATE TRANSACTION LOGIC
+        let currentDuplicateTxn = null;
+
+        window.openDuplicateModal = (txnId, merchant, amount, category, note) => {
+            // Store transaction data
+            currentDuplicateTxn = {
+                id: txnId,
+                merchant: merchant,
+                amount: amount,
+                category: category,
+                note: note
+            };
+            
+            // Get all available accounts (including current one)
+            const accounts = window.walletAccounts || [];
+            
+            if (accounts.length === 0) {
+                showToast('No accounts available');
+                currentDuplicateTxn = null;
+                return;
+            }
+            
+            // Build account list HTML (include all accounts)
+            const listContainer = document.getElementById('duplicate-account-list');
+            listContainer.innerHTML = accounts.map(acc => `
+                <label class="duplicate-account-option">
+                    <input type="checkbox" value="${acc.id}" class="duplicate-account-checkbox">
+                    <span class="duplicate-account-label">${acc.name}${acc.id === window.currentAccount ? ' (Current)' : ''}</span>
+                </label>
+            `).join('');
+            
+            // Show modal
+            document.getElementById('duplicate-modal').classList.add('show');
+            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+        };
+
+        window.confirmDuplicate = async () => {
+            if (!currentDuplicateTxn) return;
+            
+            // Get selected accounts
+            const checkboxes = document.querySelectorAll('.duplicate-account-checkbox:checked');
+            const selectedAccounts = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (selectedAccounts.length === 0) {
+                showToast('Please select at least one account');
+                return;
+            }
+            
+            try {
+                const uid = auth.currentUser?.uid;
+                if (!uid) {
+                    showToast('Please sign in to duplicate transactions');
+                    closeModals();
+                    currentDuplicateTxn = null;
+                    return;
+                }
+                
+                // Get original transaction data
+                const originalTxn = window.allTxns.find(t => t.id === currentDuplicateTxn.id);
+                if (!originalTxn) {
+                    showToast('Transaction not found');
+                    closeModals();
+                    currentDuplicateTxn = null;
+                    return;
+                }
+                
+                // Duplicate to each selected account
+                let successCount = 0;
+                for (const targetAccount of selectedAccounts) {
+                    try {
+                        const collectionName = getCollectionName(targetAccount);
+                        const newId = `dup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                        
+                        // Special case: ATOME PAYMENT from BPI to Atome should be positive (income)
+                        const isAtomePayment = originalTxn.merchant && originalTxn.merchant.toUpperCase().includes('ATOME PAYMENT');
+                        const isFromBPIToAtome = window.currentAccount === 'bpi' && targetAccount === 'atome';
+                        const shouldInvertAmount = isAtomePayment && isFromBPIToAtome;
+                        
+                        let duplicatedAmount = originalTxn.amount;
+                        let duplicatedManualAmount = originalTxn.manualAmount;
+                        
+                        if (shouldInvertAmount) {
+                            // Invert the amount to make it positive (income)
+                            duplicatedAmount = Math.abs(duplicatedAmount);
+                            if (duplicatedManualAmount !== undefined) {
+                                duplicatedManualAmount = Math.abs(duplicatedManualAmount);
+                            }
+                        }
+                        
+                        const duplicatedTxn = {
+                            amount: duplicatedAmount,
+                            merchant: originalTxn.merchant,
+                            date: originalTxn.date,
+                            manualCategory: shouldInvertAmount ? 'Income' : originalTxn.manualCategory,
+                            manualAmount: duplicatedManualAmount,
+                            note: originalTxn.note || '',
+                            excluded: false,
+                            refund: false,
+                            deleted: false,
+                            duplicatedFrom: currentDuplicateTxn.id,
+                            duplicatedFromAccount: window.currentAccount
+                        };
+                        
+                        const docRef = doc(db, "users", uid, collectionName, newId);
+                        await setDoc(docRef, { ...duplicatedTxn, createdAt: serverTimestamp() });
+                        successCount++;
+                    } catch (e) {
+                        console.error(`Failed to duplicate to ${targetAccount}:`, e);
+                    }
+                }
+                
+                if (successCount > 0) {
+                    showToast(`Transaction duplicated to ${successCount} account(s)`);
+                } else {
+                    showToast('Failed to duplicate transaction');
+                }
+                
+                closeModals();
+                currentDuplicateTxn = null;
+            } catch (e) {
+                log('Duplicate failed: ' + e.message, 'error');
+                showToast('Failed to duplicate transaction');
+                closeModals();
+                currentDuplicateTxn = null;
             }
         };
 
@@ -6118,7 +6480,7 @@
                 const keywordMap = [
                     { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'shopify', 'grabfood', 'foodpanda', 'amazon', 'ebay'] },
                     { cat: 'Shopping', key: ['mall', 'supermet', 'gaisano', 'mr diy', 'watsons', 'sm store', 'sm superm', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m', 'uniqlo'] },
-                    { cat: 'Vehicle', key: ['tecfuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'fuel', 'gas', 'toyota', 'honda', 'mitsub', 'car wash', 'autoshop'] },
+                    { cat: 'Vehicle', key: ['tecfuel', 'tec fuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'fuel', 'gas', 'toyota', 'honda', 'mitsub', 'car wash', 'autoshop'] },
                     { cat: 'Food & Drinks', key: ['jollibee', 'mcdo', 'mcdonald', 'starbucks', 'chowking', 'kfc', 'mang inasal', 'greenwich', 'ribshack', 'coffee', 'resto', 'cafe', 'tea', 'bakery', 'j.co', 'dunkin', 'boba', 'pizza'] },
                     { cat: 'Service', key: ['globe', 'smart', 'pldt', 'tm', 'gomo', 'netflix', 'spotify', 'youtube', 'disney', 'prime', 'apple', 'icloud', 'google', 'subscription', 'bill', 'insurance', 'philhealth', 'sss', 'pag-ibig', 'veco', 'mcwd'] },
                     { cat: 'Transportation', key: ['grab car', 'grab ride', 'taxi', 'move it', 'joyride', 'angkas', 'jeep', 'bus', 'ferry', 'pier', 'airport', 'airline'] },
@@ -6241,7 +6603,7 @@
             setTxnType('expense');
             
             // Set Date Input to Today
-            const d = new Date().toISOString().split('T')[0];
+            const d = formatLocalDate(new Date());
             document.getElementById('manual-date').value = d;
             
             // Enable Button
@@ -6287,8 +6649,8 @@
             updateManualAccountUI(activeAcc);
             
             // Set date
-            const d = new Date(txn.date);
-            document.getElementById('manual-date').value = d.toISOString().split('T')[0];
+            const d = formatLocalDate(new Date(txn.date));
+            document.getElementById('manual-date').value = d;
             
             // Set category
             selectedManualCatId = txn.manualCategory || category;
@@ -6401,7 +6763,7 @@
                 btn.innerHTML = '<i class="material-icons spin" style="font-size:16px;">sync</i>';
 
                 const updateData = {
-                    date: dateObj.toISOString().split('T')[0],
+                    date: formatLocalDate(dateObj),
                     amount: parseFloat(amtVal),
                     manualAmount: parseFloat(amtVal),
                     merchant: merchantName || (cat ? cat.label : 'Transaction'),
@@ -6875,14 +7237,24 @@
                 const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                 if (amt < 50) return;
 
-                const merchantKey = mapped.name.toLowerCase();
-                const d = new Date(t.date);
+                let merchantKey = mapped.name.toLowerCase();
+                let displayName = mapped.name;
+
+                // Combine Tecfuel entries (San Remigio, Bogo, etc.)
+                const noteLower = (t.note || '').toLowerCase();
+                if (merchantKey.includes('tecfuel') || merchantKey.includes('tec fuel') || 
+                    noteLower.includes('tecfuel') || noteLower.includes('tec fuel')) {
+                    merchantKey = 'tecfuel';
+                    displayName = 'TECFUEL';
+                }
+
+                const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
                 const monthKey = `${d.getMonth()}-${d.getFullYear()}`;
 
                 if (!merchantData[merchantKey]) {
                     merchantData[merchantKey] = {
-                        name: mapped.name,
-                        icon: mapped.logo || 'receipt_long',
+                        name: displayName,
+                        icon: merchantKey === 'tecfuel' ? 'logos/tecfuel.png' : (mapped.logo || 'receipt_long'),
                         monthlySpend: {},
                         countMonths: 0,
                         currentMonthSpend: 0,
@@ -7090,8 +7462,8 @@
                     <!-- Categories injected here -->
                 </div>
             </div>
-            <div class="modal-actions">
-                <div class="cancel-link" onclick="closeModals()">CANCEL</div>
+            <div class="modal-actions" style="margin-top: 8px; justify-content: center;">
+                <!-- Selection closes modal automatically -->
             </div>
         </div>
     </div>
@@ -7108,8 +7480,7 @@
                 </div>
             </div>
             <div class="modal-actions" style="margin-top: 8px; align-items: center;">
-                <div class="cancel-link" onclick="closeModals()" style="letter-spacing: 0.5px; margin-right: 4px;">CANCEL</div>
-                <button class="mui-btn mui-btn--raised mui-btn--primary" id="save-note-btn" style="border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #2196F3;">SAVE NOTE</button>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" id="save-note-btn" style="width: 100%; border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #2196F3;">SAVE NOTE</button>
             </div>
         </div>
     </div>
@@ -7124,9 +7495,8 @@
                     <input type="number" id="price-input" class="note-input" style="min-height: auto; font-size: 18px; font-weight: 700; text-align: center;" placeholder="0.00" step="0.01">
                 </div>
             </div>
-            <div class="modal-actions" style="margin-top: 8px; align-items: center;">
-                <div class="cancel-link" onclick="closeModals()" style="letter-spacing: 0.5px; margin-right: 4px;">CANCEL</div>
-                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="savePrice()" style="border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #2196F3;">SAVE PRICE</button>
+            <div class="modal-actions" style="margin-top: 12px; align-items: center;">
+                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="savePrice()" style="width: 100%; border-radius: 10px; font-weight: 700; letter-spacing: 0.5px; padding: 0 24px; height: 42px; background-color: #2196F3;">SAVE PRICE</button>
             </div>
         </div>
     </div>
@@ -7223,6 +7593,23 @@
         <div class="ios-action-item danger" id="ios-action-delete">
             <i class="material-icons">delete</i>
             <span>Delete</span>
+        </div>
+    </div>
+
+    <!-- DUPLICATE TRANSACTION MODAL -->
+    <div id="duplicate-modal" class="modal-overlay">
+        <div class="custom-modal">
+            <div class="modal-header">Duplicate Transaction</div>
+            <p style="color: #64748b; font-size: 13px; margin: 8px 0 0;">Select which accounts to duplicate this transaction into.</p>
+            <div class="modal-body">
+                <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                    <!-- Account checkboxes will be injected here -->
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 16px;">
+                <div class="cancel-link" onclick="closeModals()">CANCEL</div>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3;">DUPLICATE</button>
+            </div>
         </div>
     </div>
 

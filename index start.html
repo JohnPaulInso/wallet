@@ -1777,7 +1777,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.0</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.4</div>
             </div>
         </div>
 
@@ -2022,7 +2022,7 @@
 
         // INITIALIZE APP
         window.addEventListener('DOMContentLoaded', async () => {
-            log('SmartWallet Sync - v1.3.0 Active');
+            log('SmartWallet Sync - v1.3.4 Active');
             const origin = window.location.origin;
             log('--- 🛡️ FINAL AUTH FIX ---', 'warn');
             log('You see "Requested action is invalid" because your local server address is not authorized.', 'error');
@@ -2417,6 +2417,19 @@
                 if (id === 'bpi' && isAdmin) updateSafeSpendUI();
             }
 
+            // AUTO-SYNC: Trigger background email sync for Atome/BPI
+            if (id === 'atome' || id === 'bpi') {
+                const token = localStorage.getItem('g_access_token');
+                const issuedAt = localStorage.getItem('g_token_issued_at');
+                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
+                if (isTokenValid) {
+                    log(`🔄 Auto-syncing ${id} wallet on switch (5 emails)...`);
+                    handleScan(5, false);
+                } else {
+                    log(`⏭️ Auto-sync skipped for ${id}: ${!token ? 'No token' : 'Token expired'}`);
+                }
+            }
+
             loadData();
         };
 
@@ -2658,6 +2671,19 @@
                             renderHistory([]);
                             
                             updateHeaderIcon(account); // Update sticky header icon
+
+                            // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe
+                            if (account === 'atome' || account === 'bpi') {
+                                const token = localStorage.getItem('g_access_token');
+                                const issuedAt = localStorage.getItem('g_token_issued_at');
+                                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
+                                if (isTokenValid) {
+                                    log(`🔄 Auto-syncing ${account} wallet on swipe (5 emails)...`);
+                                    handleScan(5, false);
+                                } else {
+                                    log(`⏭️ Auto-sync skipped for ${account}: ${!token ? 'No token' : 'Token expired'}`);
+                                }
+                            }
 
                             loadData(); 
                         }
@@ -5260,9 +5286,9 @@
             const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
 
             if (isActualExpired || isLogicalExpired) {
-                // If we have no token at all, background sync should just die quietly
-                if (!manualTrigger && !accessToken) {
-                    log('No Gmail session found. Background sync suppressed.');
+                // CRITICAL FIX: For background syncs, silently abort to avoid popups
+                if (!manualTrigger) {
+                    log('Background sync skipped: Token expired (no popup).');
                     return;
                 }
 

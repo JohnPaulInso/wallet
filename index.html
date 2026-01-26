@@ -2417,6 +2417,19 @@
                 if (id === 'bpi' && isAdmin) updateSafeSpendUI();
             }
 
+            // AUTO-SYNC: Trigger background email sync for Atome/BPI
+            if (id === 'atome' || id === 'bpi') {
+                const token = localStorage.getItem('g_access_token');
+                const issuedAt = localStorage.getItem('g_token_issued_at');
+                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
+                if (isTokenValid) {
+                    log(`🔄 Auto-syncing ${id} wallet on switch (5 emails)...`);
+                    handleScan(5, false);
+                } else {
+                    log(`⏭️ Auto-sync skipped for ${id}: ${!token ? 'No token' : 'Token expired'}`);
+                }
+            }
+
             loadData();
         };
 
@@ -2658,6 +2671,19 @@
                             renderHistory([]);
                             
                             updateHeaderIcon(account); // Update sticky header icon
+
+                            // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe
+                            if (account === 'atome' || account === 'bpi') {
+                                const token = localStorage.getItem('g_access_token');
+                                const issuedAt = localStorage.getItem('g_token_issued_at');
+                                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
+                                if (isTokenValid) {
+                                    log(`🔄 Auto-syncing ${account} wallet on swipe (5 emails)...`);
+                                    handleScan(5, false);
+                                } else {
+                                    log(`⏭️ Auto-sync skipped for ${account}: ${!token ? 'No token' : 'Token expired'}`);
+                                }
+                            }
 
                             loadData(); 
                         }
@@ -5260,9 +5286,9 @@
             const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
 
             if (isActualExpired || isLogicalExpired) {
-                // If we have no token at all, background sync should just die quietly
-                if (!manualTrigger && !accessToken) {
-                    log('No Gmail session found. Background sync suppressed.');
+                // CRITICAL FIX: For background syncs, silently abort to avoid popups
+                if (!manualTrigger) {
+                    log('Background sync skipped: Token expired (no popup).');
                     return;
                 }
 

@@ -1636,6 +1636,7 @@
                         <option value="today">Today</option>
                         <option value="this_week">This Week</option>
                         <option value="last_week">Last Week</option>
+                        <option value="last_7_days">Last 7 Days</option>
                         <option value="first_15">First 15 of Month</option>
                         <option value="last_15">Last 15 of Month</option>
                         <!-- Dynamic previous 3 months will be inserted here -->
@@ -2368,9 +2369,24 @@
         }
 
         function triggerAdaptiveSync() {
-            // AUTO-SYNC DISABLED: Sync only via manual button on card
-            console.log('ℹ️ Auto-sync suppressed (Manual only)');
-            return;
+            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            if (!isAdmin || window.isSyncing) return;
+
+            const id = window.currentAccount;
+            if (id !== 'atome' && id !== 'bpi') return;
+
+            const token = localStorage.getItem('g_access_token');
+            const issuedAt = localStorage.getItem('g_token_issued_at');
+            const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
+
+            if (isTokenValid) {
+                console.log(`🔄 Auto-syncing ${id} on load (10 emails)...`);
+                setTimeout(() => handleScan(10, false), 1500);
+            } else {
+                console.log(`🔄 Attempting silent refresh for ${id} sync...`);
+                // If token invalid, handleScan will trigger silent refresh attempt
+                setTimeout(() => handleScan(10, false), 1500);
+            }
         }
 
         function updateAccountSwitcherUI(accounts) {
@@ -2486,6 +2502,7 @@
             const safeSpendWidget = document.getElementById('safe-spend-widget');
             if (safeSpendWidget) {
                 const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+                // USER REQUEST: Only visible for BPI wallet
                 safeSpendWidget.style.display = (id === 'bpi' && isAdmin) ? 'block' : 'none';
                 if (id === 'bpi' && isAdmin) updateSafeSpendUI();
             }
@@ -3503,7 +3520,8 @@
             txns.forEach(t => {
                 if (t.excluded || t.refund) return;
                 const d = new Date(t.date);
-                if (d.getFullYear() !== year || d.getMonth() !== month) return;
+                // Removed monthly filter to make balance cumulative
+                // if (d.getFullYear() !== year || d.getMonth() !== month) return;
 
                 const mapped = getMerchantDisplay(t.merchant, t);
                 const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
@@ -3722,6 +3740,19 @@
                     return dMonth === targetD.getMonth() && dYear === targetD.getFullYear();
                 }
                 
+                if (periodType === 'last_7_days') {
+                    // Rolling 7 days from now (Shift 0: 0-6 days ago, Shift 1: 7-13 days ago)
+                    const limit = new Date(now);
+                    limit.setDate(now.getDate() - (7 * (shift + 1)) + 1);
+                    limit.setHours(0,0,0,0);
+                    
+                    const upper = new Date(now);
+                    upper.setDate(now.getDate() - (7 * shift));
+                    upper.setHours(23,59,59,999);
+                    
+                    return d >= limit && d <= upper;
+                }
+
                 if (periodType === 'this_week') {
                      // Current (0): This week, Past (1): Last week
                      // Note: Simple logic assuming same year for simplicity or handling close year boundaries
@@ -4854,7 +4885,8 @@
                 if (window.allTxns) {
                     window.allTxns.forEach(t => {
                         const d = new Date(t.date);
-                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
+                        // Removed monthly filter to make budgets cumulative
+                        if (!t.excluded && !t.refund) {
                             const mapped = getMerchantDisplay(t.merchant, t);
                             const itemCatLabel = displayCategoryName(mapped.category);
                             if (mapped.category === cat || itemCatLabel === cat) {
@@ -5344,8 +5376,15 @@
                        .trim();
         };
 
-        // GMAIL SCAN (OPTIMIZED WITH PARALLELISM)
+        // GMAIL SCAN (OPTIMIZED WITH PARALLELISM + CONCURRENCY GUARD)
+        window.isSyncing = false; // Persistent flag
         window.handleScan = async (limit, manualTrigger = false) => {
+            if (window.isSyncing) {
+                console.log('🔄 Sync already in progress. Skipping...');
+                return;
+            }
+            window.isSyncing = true;
+            
             const syncAccount = window.currentAccount;
             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
@@ -5359,10 +5398,17 @@
             const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
 
             if (isActualExpired || isLogicalExpired) {
-                // CRITICAL FIX: For background syncs, silently abort to avoid popups
+                // USER REQUEST: Attempt silent sync without popups
                 if (!manualTrigger) {
-                    log('Background sync skipped: Token expired (no popup).');
-                    return;
+                    console.log('🔄 Session expired. Attempting silent token refresh...');
+                    window.pendingSyncLimit = limit;
+                    try {
+                        tokenClient.requestAccessToken({ prompt: 'none', hint: auth.currentUser?.email });
+                        return;
+                    } catch(e) {
+                         console.warn('Silent refresh failed. Sync aborted.');
+                         return;
+                    }
                 }
 
                 log('Gmail session stale. Attempting automated re-auth...');
@@ -5386,6 +5432,7 @@
                         log('Background sync cancelled: Interaction required.');
                         window.pendingSyncLimit = null;
                     }
+                    window.isSyncing = false;
                     return;
                 }
             }
@@ -5502,11 +5549,18 @@
                 }
             } catch (e) { log('Scan error: ' + e.message, 'error'); }
             finally {
-              if (btn) {
-                  btn.disabled = false;
-                  btn.innerHTML = originalHTML;
+              window.isSyncing = false;
+              // Re-query in case the DOM was refreshed during the sync
+              const finalCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+              const finalBtn = finalCard ? finalCard.querySelector('.scan-btn') : null;
+              const finalStatusText = finalCard ? finalCard.querySelector('.syncStatusText') : null;
+
+              if (finalBtn) {
+                  finalBtn.disabled = false;
+                  // Try to restore original icon or use a safe default
+                  finalBtn.innerHTML = '<i class="material-icons">sync</i>';
               }
-              if (statusText) statusText.innerText = 'Synced';
+              if (finalStatusText) finalStatusText.innerText = 'Synced';
             }
         };
 

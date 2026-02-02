@@ -3136,17 +3136,19 @@
              const savingsValue = config.savingsAmount || 3000;
              const ccPayment = Math.abs(window.atomeBalanceVal || 0);
 
-             // 3. Obligations Sum
+             // 3. Obligations Sum (only included ones)
              let obligationsTotal = 0;
              if (config.obligations) {
-                 config.obligations.forEach(ob => obligationsTotal += (parseFloat(ob.amount) || 0));
+                 config.obligations.forEach(ob => {
+                     if (ob.included !== false) obligationsTotal += (parseFloat(ob.amount) || 0);
+                 });
              }
 
              // 3. Calculate Safe to Spend
              const mainBalValue = 3000;
              
-             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
-             const isSavingsExcluded = localStorage.getItem('exclude_savings') === 'true';
+             const isExcluded = config.excludeMaintaining === true;
+             const isSavingsExcluded = config.excludeSavings === true;
              
              const effectiveMainBal = isExcluded ? 0 : mainBalValue;
              const effectiveSavings = isSavingsExcluded ? 0 : savingsValue;
@@ -3232,23 +3234,32 @@
              const obContainer = document.getElementById('dynamic-obligations-container');
              if (obContainer) {
                  if (config.obligations && config.obligations.length > 0) {
-                     obContainer.innerHTML = config.obligations.map(ob => `
-                        <div class="breakdown-item" style="margin-top: 2px;">
-                            <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: #64748b; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
-                                <i class="material-icons" style="font-size: 18px;">receipt</i>
-                            </div>
-                            <div class="breakdown-info">
-                                <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
-                                <div class="breakdown-meta" style="font-size: 8.5px;">Fixed Obligation</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="breakdown-val privacy-mask" style="color: #64748b; font-size: 12px;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                                <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
-                                    <i class="material-icons" style="font-size: 16px;">delete_outline</i>
-                                </button>
-                            </div>
-                        </div>
-                     `).join('');
+                     obContainer.innerHTML = config.obligations.map(ob => {
+                         const isIncluded = ob.included !== false; // Default to true
+                         const excludedStyle = isIncluded ? '' : 'opacity: 0.4; filter: grayscale(1);';
+                         const toggleIcon = isIncluded ? 'check_circle' : 'remove_circle_outline';
+                         const toggleColor = isIncluded ? '#64748b' : '#cbd5e1';
+                         
+                         return `
+                         <div class="breakdown-item" style="margin-top: 2px; ${excludedStyle} transition: all 0.3s ease;">
+                             <div onclick="toggleObligation('${ob.id}')" style="cursor: pointer; display: flex; align-items: center; gap: 10px; flex: 1;">
+                                 <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: ${toggleColor}; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
+                                     <i class="material-icons" style="font-size: 18px;">${toggleIcon}</i>
+                                 </div>
+                                 <div class="breakdown-info">
+                                     <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
+                                     <div class="breakdown-meta" style="font-size: 8.5px;">${isIncluded ? 'Fixed Obligation' : 'Excluded'}</div>
+                                 </div>
+                             </div>
+                             <div style="display: flex; align-items: center; gap: 4px;">
+                                 <div class="breakdown-val privacy-mask" onclick="editObligationAmount('${ob.id}')" style="color: #64748b; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                 <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
+                                     <i class="material-icons" style="font-size: 16px;">delete_outline</i>
+                                 </button>
+                             </div>
+                         </div>
+                         `;
+                     }).join('');
                  } else {
                      obContainer.innerHTML = '';
                  }
@@ -3380,18 +3391,44 @@
              updateBPIInsight();
         };
 
-        window.toggleMaintainingBalance = () => {
-             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
-             localStorage.setItem('exclude_maintaining', !isExcluded);
+        window.toggleMaintainingBalance = async () => {
+             const config = window.safeToSpendConfig || {};
+             const isExcluded = config.excludeMaintaining === true;
+             const newState = !isExcluded;
+             
+             // Optimistic update
+             window.safeToSpendConfig = { ...config, excludeMaintaining: newState };
              updateSafeSpendUI();
-             showToast(!isExcluded ? 'Maintaining balance excluded' : 'Maintaining balance included');
+             
+             // Persist to Firestore
+             try {
+                 const uid = auth.currentUser?.uid;
+                 if (uid) {
+                     await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { excludeMaintaining: newState }, { merge: true });
+                 }
+             } catch (e) { console.error('Failed to save maintaining toggle', e); }
+             
+             showToast(newState ? 'Maintaining balance excluded' : 'Maintaining balance included');
         };
 
-        window.toggleSavings = () => {
-             const isExcluded = localStorage.getItem('exclude_savings') === 'true';
-             localStorage.setItem('exclude_savings', !isExcluded);
+        window.toggleSavings = async () => {
+             const config = window.safeToSpendConfig || {};
+             const isExcluded = config.excludeSavings === true;
+             const newState = !isExcluded;
+             
+             // Optimistic update
+             window.safeToSpendConfig = { ...config, excludeSavings: newState };
              updateSafeSpendUI();
-             showToast(!isExcluded ? 'Savings excluded' : 'Savings included');
+             
+             // Persist to Firestore
+             try {
+                 const uid = auth.currentUser?.uid;
+                 if (uid) {
+                     await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { excludeSavings: newState }, { merge: true });
+                 }
+             } catch (e) { console.error('Failed to save savings toggle', e); }
+             
+             showToast(newState ? 'Savings excluded' : 'Savings included');
         };
 
         window.promptSetSavings = async () => {
@@ -3429,6 +3466,62 @@
             }, { merge: true });
             
             showToast('Obligation removed');
+        };
+
+        window.toggleObligation = async (id) => {
+            const config = window.safeToSpendConfig || { obligations: [] };
+            const updatedObligations = (config.obligations || []).map(ob => {
+                if (ob.id === id) {
+                    return { ...ob, included: ob.included === false ? true : false };
+                }
+                return ob;
+            });
+            
+            // Optimistic update
+            window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+            updateSafeSpendUI();
+            
+            const uid = auth.currentUser?.uid;
+            if (uid) {
+                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                    obligations: updatedObligations
+                }, { merge: true });
+            }
+        };
+
+        window.editObligationAmount = async (id) => {
+            const config = window.safeToSpendConfig || { obligations: [] };
+            const obligation = (config.obligations || []).find(ob => ob.id === id);
+            if (!obligation) return;
+            
+            const result = await showAppDialog({
+                title: 'Edit Obligation Amount',
+                message: `Update amount for "${obligation.title}"`,
+                input: true,
+                value: obligation.amount || 0
+            });
+            
+            if (result !== null && result !== false && !isNaN(result)) {
+                const newAmount = parseFloat(result);
+                const updatedObligations = config.obligations.map(ob => {
+                    if (ob.id === id) {
+                        return { ...ob, amount: newAmount };
+                    }
+                    return ob;
+                });
+                
+                // Optimistic update
+                window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+                updateSafeSpendUI();
+                
+                const uid = auth.currentUser?.uid;
+                if (uid) {
+                    await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                        obligations: updatedObligations
+                    }, { merge: true });
+                }
+                showToast('Obligation updated!');
+            }
         };
 
         window.promptSetObligations = () => {
@@ -4747,6 +4840,8 @@
                              data-txn-id="${t.id}" 
                              data-merchant="${mapped.name.replace(/'/g, "\\'")}" 
                              data-amount="${amount}"
+                             data-date="${t.date}"
+                             data-manual-amount="${t.manualAmount !== undefined ? t.manualAmount : ''}"
                              data-category="${mapped.category}"
                              data-note="${noteSafe}"
                              data-excluded="${t.excluded || false}"
@@ -4880,13 +4975,13 @@
             const month = now.getMonth();
 
             const itemsHTML = Object.entries(budgets).map(([cat, limit]) => {
-                // Calculate spent for this category this month
+                // Calculate spent for this category THIS MONTH
                 let spent = 0;
                 if (window.allTxns) {
                     window.allTxns.forEach(t => {
                         const d = new Date(t.date);
-                        // Removed monthly filter to make budgets cumulative
-                        if (!t.excluded && !t.refund) {
+                        // USER REQUEST: Monthly filter - budgets reset each month
+                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
                             const mapped = getMerchantDisplay(t.merchant, t);
                             const itemCatLabel = displayCategoryName(mapped.category);
                             if (mapped.category === cat || itemCatLabel === cat) {
@@ -5513,6 +5608,39 @@
                                          return false; 
                                      } else {
                                          await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                         
+                                         // USER REQUEST 2026: Automatic duplicate BPI "Credit Card Payment" to Atome
+                                         // Check by category OR merchant for robustness
+                                         const isAtomePayment = (txn.manualCategory === 'Credit Card Payment' || txn.merchant?.toUpperCase()?.includes('ATOME'));
+                                         console.log(`🔄 BPI Txn: ${txn.merchant} | Cat: ${txn.manualCategory} | Date: ${txn.date} | IsAtome: ${isAtomePayment}`);
+                                         
+                                         if (syncAccount === 'bpi' && isAtomePayment && txn.date >= '2026-01-01') {
+                                             const atomeCol = getCollectionName('atome');
+                                             const atomeTxnId = 'auto_' + txn.id;
+                                             const atomeDocRef = doc(db, "users", uid, atomeCol, atomeTxnId);
+                                             
+                                             try {
+                                                 const atomeSnap = await getDoc(atomeDocRef);
+                                                 if (!atomeSnap.exists()) {
+                                                     const atomeTxn = {
+                                                         ...txn,
+                                                         id: atomeTxnId,
+                                                         amount: Math.abs(txn.amount), // Invert to positive (Income) for Atome
+                                                         manualAmount: txn.manualAmount !== undefined ? Math.abs(txn.manualAmount) : undefined,
+                                                         manualCategory: 'Income',
+                                                         note: (txn.note || '') + ' (Auto-BPI)',
+                                                         duplicatedFrom: txn.id,
+                                                         duplicatedFromAccount: 'bpi'
+                                                     };
+                                                     await setDoc(atomeDocRef, { ...atomeTxn, deleted: false, createdAt: serverTimestamp() });
+                                                     console.log(`✅ Auto-duplicated ${txn.id} to Atome`);
+                                                 } else {
+                                                     console.log(`⏭️ Skipped auto-dup ${txn.id}: already exists in Atome`);
+                                                 }
+                                             } catch (e) {
+                                                 console.error("Auto-duplicate failed", e);
+                                             }
+                                         }
                                      }
                                     return true;
                                 }
@@ -5721,6 +5849,8 @@
             const category = item.dataset.category || '';
             const note = item.dataset.note || '';
             const isRefund = item.dataset.refund === 'true';
+            const date = item.dataset.date || '';
+            const manualAmount = item.dataset.manualAmount || '';
             
             // 1. Get exact position
             const rect = item.getBoundingClientRect();
@@ -5774,7 +5904,7 @@
                     <i class="material-icons">edit</i>
                     <span>Edit Transaction</span>
                 </div>
-                <div class="ios-action-item" onclick="handleIOSAction('duplicate', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}')">
+                <div class="ios-action-item" onclick="handleIOSAction('duplicate', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}', '${date}', '${manualAmount}')">
                     <i class="material-icons">content_copy</i>
                     <span>Duplicate</span>
                 </div>
@@ -5867,7 +5997,7 @@
                     openEditModal(txnId, args[0], args[1], args[2], args[3]);
                     break;
                 case 'duplicate':
-                    openDuplicateModal(txnId, args[0], args[1], args[2], args[3]);
+                    openDuplicateModal(txnId, args[0], args[1], args[2], args[3], args[4], args[5]);
                     break;
                 case 'exclude':
                     toggleExclusion(txnId, args[1], args[0]);
@@ -5954,15 +6084,21 @@
         // DUPLICATE TRANSACTION LOGIC
         let currentDuplicateTxn = null;
 
-        window.openDuplicateModal = (txnId, merchant, amount, category, note) => {
+        window.openDuplicateModal = (txnId, merchant, amount, category, note, date, manualAmount) => {
+            console.log('📋 openDuplicateModal called with:', { txnId, merchant, amount, category, note, date, manualAmount });
+            
             // Store transaction data
             currentDuplicateTxn = {
                 id: txnId,
                 merchant: merchant,
-                amount: amount,
-                category: category,
-                note: note
+                amount: typeof amount === 'number' ? amount : parseFloat(amount),
+                manualCategory: category,  // Store as manualCategory for consistency with confirmDuplicate
+                note: note,
+                date: date,
+                manualAmount: manualAmount !== '' && manualAmount !== undefined ? parseFloat(manualAmount) : undefined
             };
+            
+            console.log('📋 currentDuplicateTxn:', currentDuplicateTxn);
             
             // Get all available accounts (including current one)
             const accounts = window.walletAccounts || [];
@@ -5988,94 +6124,122 @@
         };
 
         window.confirmDuplicate = async () => {
-            if (!currentDuplicateTxn) return;
+            console.log('📋 confirmDuplicate called, currentDuplicateTxn:', currentDuplicateTxn);
+            
+            if (!currentDuplicateTxn) {
+                console.error('📋 No currentDuplicateTxn!');
+                showToast('No transaction selected');
+                return;
+            }
             
             // Get selected accounts
             const checkboxes = document.querySelectorAll('.duplicate-account-checkbox:checked');
             const selectedAccounts = Array.from(checkboxes).map(cb => cb.value);
+            console.log('📋 Selected accounts:', selectedAccounts);
             
             if (selectedAccounts.length === 0) {
                 showToast('Please select at least one account');
                 return;
             }
             
-            try {
-                const uid = auth.currentUser?.uid;
-                if (!uid) {
-                    showToast('Please sign in to duplicate transactions');
-                    closeModals();
-                    currentDuplicateTxn = null;
-                    return;
-                }
-                
-                // Get original transaction data
-                const originalTxn = window.allTxns.find(t => t.id === currentDuplicateTxn.id);
-                if (!originalTxn) {
-                    showToast('Transaction not found');
-                    closeModals();
-                    currentDuplicateTxn = null;
-                    return;
-                }
-                
-                // Duplicate to each selected account
-                let successCount = 0;
-                for (const targetAccount of selectedAccounts) {
-                    try {
-                        const collectionName = getCollectionName(targetAccount);
-                        const newId = `dup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                        
-                        // Special case: ATOME PAYMENT from BPI to Atome should be positive (income)
-                        const isAtomePayment = originalTxn.merchant && originalTxn.merchant.toUpperCase().includes('ATOME PAYMENT');
-                        const isFromBPIToAtome = window.currentAccount === 'bpi' && targetAccount === 'atome';
-                        const shouldInvertAmount = isAtomePayment && isFromBPIToAtome;
-                        
-                        let duplicatedAmount = originalTxn.amount;
-                        let duplicatedManualAmount = originalTxn.manualAmount;
-                        
-                        if (shouldInvertAmount) {
-                            // Invert the amount to make it positive (income)
-                            duplicatedAmount = Math.abs(duplicatedAmount);
-                            if (duplicatedManualAmount !== undefined) {
-                                duplicatedManualAmount = Math.abs(duplicatedManualAmount);
-                            }
-                        }
-                        
-                        const duplicatedTxn = {
-                            amount: duplicatedAmount,
-                            merchant: originalTxn.merchant,
-                            date: originalTxn.date,
-                            manualCategory: shouldInvertAmount ? 'Income' : originalTxn.manualCategory,
-                            manualAmount: duplicatedManualAmount,
-                            note: originalTxn.note || '',
-                            excluded: false,
-                            refund: false,
-                            deleted: false,
-                            duplicatedFrom: currentDuplicateTxn.id,
-                            duplicatedFromAccount: window.currentAccount
-                        };
-                        
-                        const docRef = doc(db, "users", uid, collectionName, newId);
-                        await setDoc(docRef, { ...duplicatedTxn, createdAt: serverTimestamp() });
-                        successCount++;
-                    } catch (e) {
-                        console.error(`Failed to duplicate to ${targetAccount}:`, e);
-                    }
-                }
-                
-                if (successCount > 0) {
-                    showToast(`Transaction duplicated to ${successCount} account(s)`);
-                } else {
-                    showToast('Failed to duplicate transaction');
-                }
-                
+            const uid = auth.currentUser?.uid;
+            console.log('📋 User UID:', uid);
+            
+            if (!uid) {
+                showToast('Please sign in to duplicate transactions');
                 closeModals();
                 currentDuplicateTxn = null;
-            } catch (e) {
-                log('Duplicate failed: ' + e.message, 'error');
-                showToast('Failed to duplicate transaction');
-                closeModals();
-                currentDuplicateTxn = null;
+                return;
             }
+            
+            // Get original transaction data with fallback
+            let originalTxn = { ...currentDuplicateTxn };
+            
+            // If date is missing, try to find it from allTxns
+            if (!originalTxn.date) {
+                const foundTxn = window.allTxns?.find(t => t.id === originalTxn.id);
+                if (foundTxn) {
+                    originalTxn.date = foundTxn.date;
+                    if (!originalTxn.manualCategory) originalTxn.manualCategory = foundTxn.manualCategory;
+                }
+            }
+            
+            // Still no date? Use today as fallback
+            if (!originalTxn.date) {
+                originalTxn.date = formatLocalDate(new Date());
+                console.warn('📋 No date found, using today as fallback');
+            }
+            
+            console.log('📋 Final originalTxn:', originalTxn);
+            
+            // Duplicate to each selected account
+            let successCount = 0;
+            let errorMessages = [];
+            
+            for (const targetAccount of selectedAccounts) {
+                try {
+                    const collectionName = getCollectionName(targetAccount);
+                    const newId = `dup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    console.log(`📋 Duplicating to ${targetAccount} (${collectionName}) with ID: ${newId}`);
+                    
+                    // Check if this is an ATOME PAYMENT being duplicated TO Atome wallet (from ANY source)
+                    const isAtomePayment = originalTxn.merchant && originalTxn.merchant.toUpperCase().includes('ATOME');
+                    const isToAtome = targetAccount === 'atome';
+                    const shouldMarkAsIncome = isAtomePayment && isToAtome;
+                    
+                    console.log(`📋 isAtomePayment: ${isAtomePayment}, isToAtome: ${isToAtome}, shouldMarkAsIncome: ${shouldMarkAsIncome}`);
+                    
+                    let duplicatedAmount = originalTxn.amount;
+                    let duplicatedManualAmount = originalTxn.manualAmount;
+                    let duplicatedCategory = originalTxn.manualCategory;
+                    
+                    if (shouldMarkAsIncome) {
+                        // Convert to positive amount and mark as Income
+                        duplicatedAmount = Math.abs(duplicatedAmount);
+                        if (duplicatedManualAmount !== undefined) {
+                            duplicatedManualAmount = Math.abs(duplicatedManualAmount);
+                        }
+                        duplicatedCategory = 'Income';
+                    }
+                    
+                    const duplicatedTxn = {
+                        amount: duplicatedAmount,
+                        merchant: originalTxn.merchant,
+                        date: originalTxn.date,
+                        manualCategory: duplicatedCategory,
+                        note: (originalTxn.note || '') + (shouldMarkAsIncome ? ' (Payment)' : ''),
+                        excluded: false,
+                        refund: false,
+                        deleted: false,
+                        duplicatedFrom: currentDuplicateTxn.id,
+                        duplicatedFromAccount: window.currentAccount
+                    };
+                    
+                    // Only add manualAmount if it's defined (Firestore doesn't accept undefined)
+                    if (duplicatedManualAmount !== undefined) {
+                        duplicatedTxn.manualAmount = duplicatedManualAmount;
+                    }
+                    
+                    console.log('📋 Creating duplicatedTxn:', duplicatedTxn);
+                    
+                    const docRef = doc(db, "users", uid, collectionName, newId);
+                    await setDoc(docRef, { ...duplicatedTxn, createdAt: serverTimestamp() });
+                    console.log(`📋 ✅ Successfully duplicated to ${targetAccount}`);
+                    successCount++;
+                } catch (e) {
+                    console.error(`📋 ❌ Failed to duplicate to ${targetAccount}:`, e);
+                    errorMessages.push(`${targetAccount}: ${e.message}`);
+                }
+            }
+            
+            if (successCount > 0) {
+                showToast(`Transaction duplicated to ${successCount} account(s)`);
+            } else {
+                showToast('Failed to duplicate: ' + errorMessages.join(', '));
+            }
+            
+            closeModals();
+            currentDuplicateTxn = null;
         };
 
         // DELETE LOGIC

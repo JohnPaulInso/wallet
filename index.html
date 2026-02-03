@@ -420,8 +420,10 @@
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
-        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; }
+        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; overflow: hidden; border-radius: 0 0 12px 12px; }
         .month-content.collapsed { max-height: 0; overflow: hidden; border-top: none; }
+        /* Round bottom corners of last transaction item */
+        .month-content > div:last-child { border-radius: 0 0 12px 12px; }
 
         /* TRANSACTION ITEM - PREMIUM REDESIGN */
         .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.2s; background: #fff; }
@@ -1845,7 +1847,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.4</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.5</div>
             </div>
         </div>
 
@@ -2125,11 +2127,26 @@
             const lastUid = localStorage.getItem('wallet_last_uid');
             const cachedAccounts = localStorage.getItem('wallet_accounts');
             const cachedCurrent = localStorage.getItem('wallet_current_account');
+            const cachedBalances = localStorage.getItem('wallet_cached_balances');
             
             if (lastUid && cachedAccounts && cachedCurrent) {
                 console.log('⚡ Fast Path: Rendering from cache...');
                 try {
                     const accounts = JSON.parse(cachedAccounts);
+                    
+                    // RESTORE CACHED BALANCES: Apply saved balances to accounts
+                    if (cachedBalances) {
+                        try {
+                            const balances = JSON.parse(cachedBalances);
+                            accounts.forEach(acc => {
+                                if (balances[acc.id] !== undefined) {
+                                    acc.balance = balances[acc.id];
+                                }
+                            });
+                            console.log('💰 Restored cached balances:', balances);
+                        } catch(e) { console.warn('Balance cache error', e); }
+                    }
+                    
                     window.walletAccounts = accounts;
                     window.currentAccount = cachedCurrent;
                     
@@ -3068,6 +3085,24 @@
         window.atomeBalanceVal = 0;
         window.bpiBalanceVal = 0;
 
+        // BALANCE CACHE: Save computed balances to localStorage for instant load on refresh
+        window.saveWalletBalanceCache = () => {
+            const balances = {
+                atome: window.atomeBalanceVal || 0,
+                bpi: window.bpiBalanceVal || 0
+            };
+            // Also capture any other wallet balances from walletAccounts
+            if (window.walletAccounts) {
+                window.walletAccounts.forEach(acc => {
+                    if (acc.id === 'atome') balances.atome = window.atomeBalanceVal || acc.balance || 0;
+                    else if (acc.id === 'bpi') balances.bpi = window.bpiBalanceVal || acc.balance || 0;
+                    else if (acc.balance !== undefined) balances[acc.id] = acc.balance;
+                });
+            }
+            localStorage.setItem('wallet_cached_balances', JSON.stringify(balances));
+            console.log('💰 Saved balance cache:', balances);
+        };
+
         function updateBPIInsight() {
             const insightEl = document.getElementById('bpi-remaining-insight');
             if (!insightEl) return;
@@ -3104,6 +3139,9 @@
 
             // Trigger Safe to Spend update
             updateSafeSpendUI();
+            
+            // PERSIST BALANCES: Save to localStorage for instant load on refresh
+            if (window.saveWalletBalanceCache) window.saveWalletBalanceCache();
         }
 
         window.updateSafeSpendUI = () => {
@@ -5478,59 +5516,31 @@
                 console.log('🔄 Sync already in progress. Skipping...');
                 return;
             }
-            window.isSyncing = true;
             
             const syncAccount = window.currentAccount;
-            if (auth.currentUser?.isAnonymous) {
-                if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
-                    handleAuthClick();
-                    return;
+            
+            // BLOCK EMAIL SYNC FOR REGULAR WALLETS: Only BPI and Atome accounts can sync with Gmail
+            const allowedSyncAccounts = ['bpi', 'atome'];
+            if (!allowedSyncAccounts.includes(syncAccount)) {
+                console.log(`🚫 Email sync blocked for regular wallet: ${syncAccount}`);
+                if (manualTrigger) {
+                    showToast('Email sync is only available for BPI and Atome accounts');
                 }
+                return;
             }
-
             const issuedAt = localStorage.getItem('g_token_issued_at');
             const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
-            const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
-
-            if (isActualExpired || isLogicalExpired) {
-                // USER REQUEST: Attempt silent sync without popups
-                if (!manualTrigger) {
-                    console.log('🔄 Session expired. Attempting silent token refresh...');
-                    window.pendingSyncLimit = limit;
-                    try {
-                        tokenClient.requestAccessToken({ prompt: 'none', hint: auth.currentUser?.email });
-                        return;
-                    } catch(e) {
-                         console.warn('Silent refresh failed. Sync aborted.');
-                         return;
-                    }
-                }
-
-                log('Gmail session stale. Attempting automated re-auth...');
-                
-                // Track limit for retry
-                window.pendingSyncLimit = limit;
-
-                try {
-                    // Try SILENT first
-                    tokenClient.requestAccessToken({ 
-                        prompt: 'none',
-                        hint: auth.currentUser?.email
-                    });
-                    return; // Callback will handle the rest
-                } catch (e) {
-                    log('Silent refresh setup failed.', 'warn');
-                    if (manualTrigger) {
-                        log('Falling back to interactive sync...');
-                        tokenClient.requestAccessToken({ prompt: '' });
-                    } else {
-                        log('Background sync cancelled: Interaction required.');
-                        window.pendingSyncLimit = null;
-                    }
-                    window.isSyncing = false;
-                    return;
-                }
+            
+            // PREVENT POPUP ON BACKGROUND SYNC
+            if (!manualTrigger && isActualExpired) {
+                console.log('🔄 Background sync skipped: Token expired. Interaction required.');
+                const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+                const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                if (statusText) statusText.innerText = 'Log in to sync';
+                return;
             }
+
+            window.isSyncing = true;
             
             const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
             const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
@@ -6457,6 +6467,99 @@
             document.body.style.width = '';
         };
 
+        // =============================================
+        // NAVIGATION HANDLING: Back Button, Modal, & Double-Tap to Exit
+        // =============================================
+        
+        // Track current navigation state
+        window.currentPage = 'home';
+        window.modalOpen = false;
+        window.lastBackPressTime = 0;
+
+        // Helper: Push history state when opening a modal
+        window.pushModalState = (modalName) => {
+            window.modalOpen = true;
+            history.pushState({ modal: modalName }, '', '');
+        };
+
+        window.closeModals = (fromPopState = false) => {
+            const wasModalOpen = window.modalOpen;
+            
+            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+            currentTxnId = null;
+            window.modalOpen = false;
+            
+            // Remove blur effect from background elements
+            document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
+            document.querySelector('.fab')?.classList.remove('blur-active');
+            document.querySelector('.bottom-nav')?.classList.remove('blur-active');
+
+            // Restore scroll
+            const wrapper = document.querySelector('.mobile-wrapper');
+            if (wrapper) {
+                wrapper.style.overflow = 'auto';
+            }
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            
+            // Also close iOS menu if open
+            if (window.closeIOSMenu) closeIOSMenu();
+            
+            // Pop history state if not from popstate event
+            if (wasModalOpen && !fromPopState) {
+                history.back();
+            }
+        };
+
+        // POPSTATE HANDLER: Handle back button press
+        window.addEventListener('popstate', (e) => {
+            // Check if a modal is open
+            const openModal = document.querySelector('.modal-overlay.show, .dialog-overlay.show');
+            const iosMenu = document.getElementById('ios-menu')?.classList.contains('show');
+            
+            if (openModal || iosMenu) {
+                // Close modal/menu instead of navigating back
+                if (iosMenu && window.closeIOSMenu) closeIOSMenu();
+                if (openModal) closeModals(true);
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+                return;
+            }
+            
+            // If on a sub-page (Accounts, Calendar, Profile), return to home
+            if (window.currentPage !== 'home') {
+                // Navigate to home page
+                if (window.showPage) {
+                    showPage('home');
+                }
+                window.currentPage = 'home';
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+                return;
+            }
+            
+            // On home with no modals: Double-tap to exit
+            const now = Date.now();
+            if (now - window.lastBackPressTime < 2000) {
+                // Double-tap: Allow exit (don't prevent default)
+                // For PWA, we need to close the window
+                window.close();
+            } else {
+                // First tap: Show toast and prevent exit
+                window.lastBackPressTime = now;
+                if (window.showToast) showToast('Tap back again to exit');
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+            }
+        });
+
+        // Initialize history state
+        history.replaceState(null, '', '');
+
         // Close on outside click
         window.onclick = (e) => {
             if (e.target.classList.contains('modal-overlay')) {
@@ -6934,12 +7037,32 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
+            // Push history state for back button handling
+            if (window.pushModalState) pushModalState('manual-txn');
+            
             // Blur background
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
 
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+            
+            // Add Enter key to save transaction
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.saveManualTxn) saveManualTxn();
+                }
+            };
+            
+            // Add listeners to form inputs
+            ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('keydown', handleEnterKey);
+                    el.addEventListener('keydown', handleEnterKey);
+                }
+            });
         };
 
         window.openEditModal = (txnId, merchant, amount, category, note) => {
@@ -6991,10 +7114,31 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // ALLOW body scroll
-            // document.body.style.overflow = 'hidden';
+            // Push history state for back button handling
+            if (window.pushModalState) pushModalState('edit-txn');
+            
+            // Blur background
+            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+            document.querySelector('.fab')?.classList.add('blur-active');
+            document.querySelector('.bottom-nav')?.classList.add('blur-active');
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 100);
+            
+            // Add Enter key to save transaction
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.saveManualTxn) saveManualTxn();
+                }
+            };
+            
+            ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('keydown', handleEnterKey);
+                    el.addEventListener('keydown', handleEnterKey);
+                }
+            });
         };
 
         window.renderManualCategories = () => {
@@ -7569,9 +7713,33 @@
                 const monthKey = `${d.getMonth()}-${d.getFullYear()}`;
 
                 if (!merchantData[merchantKey]) {
+                    // LOGO MAPPING: Assign logos based on merchant name
+                    let iconPath = mapped.logo || 'receipt_long';
+                    const mLower = merchantKey.toLowerCase();
+                    
+                    if (mLower.includes('tecfuel') || mLower.includes('tec fuel')) iconPath = 'logos/tecfuel.png';
+                    else if (mLower.includes('spotify')) iconPath = 'logos/spotify.png';
+                    else if (mLower.includes('shopee')) iconPath = 'logos/shopee.png';
+                    else if (mLower.includes('traders') || mLower.includes('tradersconnect')) iconPath = 'logos/tradersconnect.png';
+                    else if (mLower.includes('mr diy') || mLower.includes('mrdiy')) iconPath = 'logos/mrdiy.png';
+                    else if (mLower.includes('jollibee')) iconPath = 'logos/jollibee.png';
+                    else if (mLower.includes('mcdo') || mLower.includes('mcdonald')) iconPath = 'logos/mcdo.png';
+                    else if (mLower.includes('shell')) iconPath = 'logos/shell.png';
+                    else if (mLower.includes('petron')) iconPath = 'logos/petron.png';
+                    else if (mLower.includes('seaoil')) iconPath = 'logos/seaoil.png';
+                    else if (mLower.includes('lazada')) iconPath = 'logos/lazada.jpg';
+                    else if (mLower.includes('globe') || mLower.includes('gomo')) iconPath = 'logos/globe.png';
+                    else if (mLower.includes('tiktok')) iconPath = 'logos/tiktokshop.png';
+                    else if (mLower.includes('watsons')) iconPath = 'logos/watsons.png';
+                    else if (mLower.includes('sm ') || mLower === 'sm' || mLower.includes('sm store')) iconPath = 'logos/sm.png';
+                    else if (mLower.includes('7-11') || mLower.includes('7 11') || mLower.includes('7/11') || mLower.includes('711')) iconPath = 'logos/711.png';
+                    else if (mLower.includes('metro') || mLower.includes('super metro')) iconPath = 'logos/supermetro.png';
+                    else if (mLower.includes('ayala')) iconPath = 'logos/ayala.png';
+                    else if (mLower.includes('j and l') || mLower.includes('j&l')) iconPath = 'logos/jandlmall.png';
+
                     merchantData[merchantKey] = {
                         name: displayName,
-                        icon: merchantKey === 'tecfuel' ? 'logos/tecfuel.png' : (mapped.logo || 'receipt_long'),
+                        icon: iconPath,
                         monthlySpend: {},
                         countMonths: 0,
                         currentMonthSpend: 0,
@@ -7615,9 +7783,29 @@
                 });
 
                 const mName = m.name.toLowerCase();
-                const isWhitelisted = mName.includes('spotify') || mName.includes('traders connect');
                 
-                if (!isWhitelisted && maxConsecutive < 4) return;
+                // WHITELIST: Important recurring merchants that should always appear if present in last 4 months
+                const isWhitelisted = mName.includes('spotify') || 
+                                      mName.includes('traders connect') ||
+                                      mName.includes('mr diy') || mName.includes('mrdiy') ||
+                                      mName.includes('tecfuel') || mName.includes('tec fuel') ||
+                                      mName.includes('jollibee') ||
+                                      mName.includes('shell') ||
+                                      mName.includes('petron') ||
+                                      mName.includes('globe') || mName.includes('gomo');
+                
+                // NEW LOGIC: Check if present in at least 2 of the last 4 months (allows gaps)
+                const last4Months = [];
+                for (let i = 0; i < 4; i++) {
+                    const d = new Date(targetYear, targetMonth - i, 1);
+                    last4Months.push(`${d.getMonth()}-${d.getFullYear()}`);
+                }
+                const presentInLast4 = last4Months.filter(k => m.monthlySpend[k]).length;
+                
+                // Whitelisted merchants need 2+ months in last 4, others need 4 consecutive
+                if (isWhitelisted) {
+                    if (presentInLast4 < 2) return;
+                } else if (maxConsecutive < 4) return;
 
                 const currentKey = `${targetMonth}-${targetYear}`;
                 m.currentMonthSpend = m.monthlySpend[currentKey] || 0;
@@ -7656,7 +7844,7 @@
                 <div class="subscription-item">
                     <div class="sub-main-row">
                         <div class="sub-icon">
-                            ${g.icon.length > 20 ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
+                            ${g.icon.includes('logos/') || /\.(png|jpg|jpeg|svg|gif)$/i.test(g.icon) ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
                         </div>
                         <div class="sub-info">
                             <div class="sub-name">${g.name}</div>

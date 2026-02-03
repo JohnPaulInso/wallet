@@ -420,8 +420,10 @@
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
-        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; }
+        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; overflow: hidden; border-radius: 0 0 12px 12px; }
         .month-content.collapsed { max-height: 0; overflow: hidden; border-top: none; }
+        /* Round bottom corners of last transaction item */
+        .month-content > div:last-child { border-radius: 0 0 12px 12px; }
 
         /* TRANSACTION ITEM - PREMIUM REDESIGN */
         .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.2s; background: #fff; }
@@ -2125,11 +2127,26 @@
             const lastUid = localStorage.getItem('wallet_last_uid');
             const cachedAccounts = localStorage.getItem('wallet_accounts');
             const cachedCurrent = localStorage.getItem('wallet_current_account');
+            const cachedBalances = localStorage.getItem('wallet_cached_balances');
             
             if (lastUid && cachedAccounts && cachedCurrent) {
                 console.log('⚡ Fast Path: Rendering from cache...');
                 try {
                     const accounts = JSON.parse(cachedAccounts);
+                    
+                    // RESTORE CACHED BALANCES: Apply saved balances to accounts
+                    if (cachedBalances) {
+                        try {
+                            const balances = JSON.parse(cachedBalances);
+                            accounts.forEach(acc => {
+                                if (balances[acc.id] !== undefined) {
+                                    acc.balance = balances[acc.id];
+                                }
+                            });
+                            console.log('💰 Restored cached balances:', balances);
+                        } catch(e) { console.warn('Balance cache error', e); }
+                    }
+                    
                     window.walletAccounts = accounts;
                     window.currentAccount = cachedCurrent;
                     
@@ -3068,6 +3085,24 @@
         window.atomeBalanceVal = 0;
         window.bpiBalanceVal = 0;
 
+        // BALANCE CACHE: Save computed balances to localStorage for instant load on refresh
+        window.saveWalletBalanceCache = () => {
+            const balances = {
+                atome: window.atomeBalanceVal || 0,
+                bpi: window.bpiBalanceVal || 0
+            };
+            // Also capture any other wallet balances from walletAccounts
+            if (window.walletAccounts) {
+                window.walletAccounts.forEach(acc => {
+                    if (acc.id === 'atome') balances.atome = window.atomeBalanceVal || acc.balance || 0;
+                    else if (acc.id === 'bpi') balances.bpi = window.bpiBalanceVal || acc.balance || 0;
+                    else if (acc.balance !== undefined) balances[acc.id] = acc.balance;
+                });
+            }
+            localStorage.setItem('wallet_cached_balances', JSON.stringify(balances));
+            console.log('💰 Saved balance cache:', balances);
+        };
+
         function updateBPIInsight() {
             const insightEl = document.getElementById('bpi-remaining-insight');
             if (!insightEl) return;
@@ -3104,6 +3139,9 @@
 
             // Trigger Safe to Spend update
             updateSafeSpendUI();
+            
+            // PERSIST BALANCES: Save to localStorage for instant load on refresh
+            if (window.saveWalletBalanceCache) window.saveWalletBalanceCache();
         }
 
         window.updateSafeSpendUI = () => {
@@ -3136,17 +3174,19 @@
              const savingsValue = config.savingsAmount || 3000;
              const ccPayment = Math.abs(window.atomeBalanceVal || 0);
 
-             // 3. Obligations Sum
+             // 3. Obligations Sum (only included ones)
              let obligationsTotal = 0;
              if (config.obligations) {
-                 config.obligations.forEach(ob => obligationsTotal += (parseFloat(ob.amount) || 0));
+                 config.obligations.forEach(ob => {
+                     if (ob.included !== false) obligationsTotal += (parseFloat(ob.amount) || 0);
+                 });
              }
 
              // 3. Calculate Safe to Spend
              const mainBalValue = 3000;
              
-             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
-             const isSavingsExcluded = localStorage.getItem('exclude_savings') === 'true';
+             const isExcluded = config.excludeMaintaining === true;
+             const isSavingsExcluded = config.excludeSavings === true;
              
              const effectiveMainBal = isExcluded ? 0 : mainBalValue;
              const effectiveSavings = isSavingsExcluded ? 0 : savingsValue;
@@ -3232,23 +3272,32 @@
              const obContainer = document.getElementById('dynamic-obligations-container');
              if (obContainer) {
                  if (config.obligations && config.obligations.length > 0) {
-                     obContainer.innerHTML = config.obligations.map(ob => `
-                        <div class="breakdown-item" style="margin-top: 2px;">
-                            <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: #64748b; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
-                                <i class="material-icons" style="font-size: 18px;">receipt</i>
-                            </div>
-                            <div class="breakdown-info">
-                                <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
-                                <div class="breakdown-meta" style="font-size: 8.5px;">Fixed Obligation</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div class="breakdown-val privacy-mask" style="color: #64748b; font-size: 12px;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                                <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
-                                    <i class="material-icons" style="font-size: 16px;">delete_outline</i>
-                                </button>
-                            </div>
-                        </div>
-                     `).join('');
+                     obContainer.innerHTML = config.obligations.map(ob => {
+                         const isIncluded = ob.included !== false; // Default to true
+                         const excludedStyle = isIncluded ? '' : 'opacity: 0.4; filter: grayscale(1);';
+                         const toggleIcon = isIncluded ? 'check_circle' : 'remove_circle_outline';
+                         const toggleColor = isIncluded ? '#64748b' : '#cbd5e1';
+                         
+                         return `
+                         <div class="breakdown-item" style="margin-top: 2px; ${excludedStyle} transition: all 0.3s ease;">
+                             <div onclick="toggleObligation('${ob.id}')" style="cursor: pointer; display: flex; align-items: center; gap: 10px; flex: 1;">
+                                 <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: ${toggleColor}; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
+                                     <i class="material-icons" style="font-size: 18px;">${toggleIcon}</i>
+                                 </div>
+                                 <div class="breakdown-info">
+                                     <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
+                                     <div class="breakdown-meta" style="font-size: 8.5px;">${isIncluded ? 'Fixed Obligation' : 'Excluded'}</div>
+                                 </div>
+                             </div>
+                             <div style="display: flex; align-items: center; gap: 4px;">
+                                 <div class="breakdown-val privacy-mask" onclick="editObligationAmount('${ob.id}')" style="color: #64748b; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                 <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
+                                     <i class="material-icons" style="font-size: 16px;">delete_outline</i>
+                                 </button>
+                             </div>
+                         </div>
+                         `;
+                     }).join('');
                  } else {
                      obContainer.innerHTML = '';
                  }
@@ -3380,18 +3429,44 @@
              updateBPIInsight();
         };
 
-        window.toggleMaintainingBalance = () => {
-             const isExcluded = localStorage.getItem('exclude_maintaining') === 'true';
-             localStorage.setItem('exclude_maintaining', !isExcluded);
+        window.toggleMaintainingBalance = async () => {
+             const config = window.safeToSpendConfig || {};
+             const isExcluded = config.excludeMaintaining === true;
+             const newState = !isExcluded;
+             
+             // Optimistic update
+             window.safeToSpendConfig = { ...config, excludeMaintaining: newState };
              updateSafeSpendUI();
-             showToast(!isExcluded ? 'Maintaining balance excluded' : 'Maintaining balance included');
+             
+             // Persist to Firestore
+             try {
+                 const uid = auth.currentUser?.uid;
+                 if (uid) {
+                     await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { excludeMaintaining: newState }, { merge: true });
+                 }
+             } catch (e) { console.error('Failed to save maintaining toggle', e); }
+             
+             showToast(newState ? 'Maintaining balance excluded' : 'Maintaining balance included');
         };
 
-        window.toggleSavings = () => {
-             const isExcluded = localStorage.getItem('exclude_savings') === 'true';
-             localStorage.setItem('exclude_savings', !isExcluded);
+        window.toggleSavings = async () => {
+             const config = window.safeToSpendConfig || {};
+             const isExcluded = config.excludeSavings === true;
+             const newState = !isExcluded;
+             
+             // Optimistic update
+             window.safeToSpendConfig = { ...config, excludeSavings: newState };
              updateSafeSpendUI();
-             showToast(!isExcluded ? 'Savings excluded' : 'Savings included');
+             
+             // Persist to Firestore
+             try {
+                 const uid = auth.currentUser?.uid;
+                 if (uid) {
+                     await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { excludeSavings: newState }, { merge: true });
+                 }
+             } catch (e) { console.error('Failed to save savings toggle', e); }
+             
+             showToast(newState ? 'Savings excluded' : 'Savings included');
         };
 
         window.promptSetSavings = async () => {
@@ -3429,6 +3504,62 @@
             }, { merge: true });
             
             showToast('Obligation removed');
+        };
+
+        window.toggleObligation = async (id) => {
+            const config = window.safeToSpendConfig || { obligations: [] };
+            const updatedObligations = (config.obligations || []).map(ob => {
+                if (ob.id === id) {
+                    return { ...ob, included: ob.included === false ? true : false };
+                }
+                return ob;
+            });
+            
+            // Optimistic update
+            window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+            updateSafeSpendUI();
+            
+            const uid = auth.currentUser?.uid;
+            if (uid) {
+                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                    obligations: updatedObligations
+                }, { merge: true });
+            }
+        };
+
+        window.editObligationAmount = async (id) => {
+            const config = window.safeToSpendConfig || { obligations: [] };
+            const obligation = (config.obligations || []).find(ob => ob.id === id);
+            if (!obligation) return;
+            
+            const result = await showAppDialog({
+                title: 'Edit Obligation Amount',
+                message: `Update amount for "${obligation.title}"`,
+                input: true,
+                value: obligation.amount || 0
+            });
+            
+            if (result !== null && result !== false && !isNaN(result)) {
+                const newAmount = parseFloat(result);
+                const updatedObligations = config.obligations.map(ob => {
+                    if (ob.id === id) {
+                        return { ...ob, amount: newAmount };
+                    }
+                    return ob;
+                });
+                
+                // Optimistic update
+                window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+                updateSafeSpendUI();
+                
+                const uid = auth.currentUser?.uid;
+                if (uid) {
+                    await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                        obligations: updatedObligations
+                    }, { merge: true });
+                }
+                showToast('Obligation updated!');
+            }
         };
 
         window.promptSetObligations = () => {
@@ -4747,6 +4878,8 @@
                              data-txn-id="${t.id}" 
                              data-merchant="${mapped.name.replace(/'/g, "\\'")}" 
                              data-amount="${amount}"
+                             data-date="${t.date}"
+                             data-manual-amount="${t.manualAmount !== undefined ? t.manualAmount : ''}"
                              data-category="${mapped.category}"
                              data-note="${noteSafe}"
                              data-excluded="${t.excluded || false}"
@@ -4880,13 +5013,13 @@
             const month = now.getMonth();
 
             const itemsHTML = Object.entries(budgets).map(([cat, limit]) => {
-                // Calculate spent for this category this month
+                // Calculate spent for this category THIS MONTH
                 let spent = 0;
                 if (window.allTxns) {
                     window.allTxns.forEach(t => {
                         const d = new Date(t.date);
-                        // Removed monthly filter to make budgets cumulative
-                        if (!t.excluded && !t.refund) {
+                        // USER REQUEST: Monthly filter - budgets reset each month
+                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
                             const mapped = getMerchantDisplay(t.merchant, t);
                             const itemCatLabel = displayCategoryName(mapped.category);
                             if (mapped.category === cat || itemCatLabel === cat) {
@@ -5383,59 +5516,31 @@
                 console.log('🔄 Sync already in progress. Skipping...');
                 return;
             }
-            window.isSyncing = true;
             
             const syncAccount = window.currentAccount;
-            if (auth.currentUser?.isAnonymous) {
-                if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
-                    handleAuthClick();
-                    return;
+            
+            // BLOCK EMAIL SYNC FOR REGULAR WALLETS: Only BPI and Atome accounts can sync with Gmail
+            const allowedSyncAccounts = ['bpi', 'atome'];
+            if (!allowedSyncAccounts.includes(syncAccount)) {
+                console.log(`🚫 Email sync blocked for regular wallet: ${syncAccount}`);
+                if (manualTrigger) {
+                    showToast('Email sync is only available for BPI and Atome accounts');
                 }
+                return;
             }
-
             const issuedAt = localStorage.getItem('g_token_issued_at');
             const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
-            const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
-
-            if (isActualExpired || isLogicalExpired) {
-                // USER REQUEST: Attempt silent sync without popups
-                if (!manualTrigger) {
-                    console.log('🔄 Session expired. Attempting silent token refresh...');
-                    window.pendingSyncLimit = limit;
-                    try {
-                        tokenClient.requestAccessToken({ prompt: 'none', hint: auth.currentUser?.email });
-                        return;
-                    } catch(e) {
-                         console.warn('Silent refresh failed. Sync aborted.');
-                         return;
-                    }
-                }
-
-                log('Gmail session stale. Attempting automated re-auth...');
-                
-                // Track limit for retry
-                window.pendingSyncLimit = limit;
-
-                try {
-                    // Try SILENT first
-                    tokenClient.requestAccessToken({ 
-                        prompt: 'none',
-                        hint: auth.currentUser?.email
-                    });
-                    return; // Callback will handle the rest
-                } catch (e) {
-                    log('Silent refresh setup failed.', 'warn');
-                    if (manualTrigger) {
-                        log('Falling back to interactive sync...');
-                        tokenClient.requestAccessToken({ prompt: '' });
-                    } else {
-                        log('Background sync cancelled: Interaction required.');
-                        window.pendingSyncLimit = null;
-                    }
-                    window.isSyncing = false;
-                    return;
-                }
+            
+            // PREVENT POPUP ON BACKGROUND SYNC
+            if (!manualTrigger && isActualExpired) {
+                console.log('🔄 Background sync skipped: Token expired. Interaction required.');
+                const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+                const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                if (statusText) statusText.innerText = 'Log in to sync';
+                return;
             }
+
+            window.isSyncing = true;
             
             const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
             const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
@@ -5513,6 +5618,39 @@
                                          return false; 
                                      } else {
                                          await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                         
+                                         // USER REQUEST 2026: Automatic duplicate BPI "Credit Card Payment" to Atome
+                                         // Check by category OR merchant for robustness
+                                         const isAtomePayment = (txn.manualCategory === 'Credit Card Payment' || txn.merchant?.toUpperCase()?.includes('ATOME'));
+                                         console.log(`🔄 BPI Txn: ${txn.merchant} | Cat: ${txn.manualCategory} | Date: ${txn.date} | IsAtome: ${isAtomePayment}`);
+                                         
+                                         if (syncAccount === 'bpi' && isAtomePayment && txn.date >= '2026-01-01') {
+                                             const atomeCol = getCollectionName('atome');
+                                             const atomeTxnId = 'auto_' + txn.id;
+                                             const atomeDocRef = doc(db, "users", uid, atomeCol, atomeTxnId);
+                                             
+                                             try {
+                                                 const atomeSnap = await getDoc(atomeDocRef);
+                                                 if (!atomeSnap.exists()) {
+                                                     const atomeTxn = {
+                                                         ...txn,
+                                                         id: atomeTxnId,
+                                                         amount: Math.abs(txn.amount), // Invert to positive (Income) for Atome
+                                                         manualAmount: txn.manualAmount !== undefined ? Math.abs(txn.manualAmount) : undefined,
+                                                         manualCategory: 'Income',
+                                                         note: (txn.note || '') + ' (Auto-BPI)',
+                                                         duplicatedFrom: txn.id,
+                                                         duplicatedFromAccount: 'bpi'
+                                                     };
+                                                     await setDoc(atomeDocRef, { ...atomeTxn, deleted: false, createdAt: serverTimestamp() });
+                                                     console.log(`✅ Auto-duplicated ${txn.id} to Atome`);
+                                                 } else {
+                                                     console.log(`⏭️ Skipped auto-dup ${txn.id}: already exists in Atome`);
+                                                 }
+                                             } catch (e) {
+                                                 console.error("Auto-duplicate failed", e);
+                                             }
+                                         }
                                      }
                                     return true;
                                 }
@@ -5721,6 +5859,8 @@
             const category = item.dataset.category || '';
             const note = item.dataset.note || '';
             const isRefund = item.dataset.refund === 'true';
+            const date = item.dataset.date || '';
+            const manualAmount = item.dataset.manualAmount || '';
             
             // 1. Get exact position
             const rect = item.getBoundingClientRect();
@@ -5774,7 +5914,7 @@
                     <i class="material-icons">edit</i>
                     <span>Edit Transaction</span>
                 </div>
-                <div class="ios-action-item" onclick="handleIOSAction('duplicate', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}')">
+                <div class="ios-action-item" onclick="handleIOSAction('duplicate', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}', '${date}', '${manualAmount}')">
                     <i class="material-icons">content_copy</i>
                     <span>Duplicate</span>
                 </div>
@@ -5867,7 +6007,7 @@
                     openEditModal(txnId, args[0], args[1], args[2], args[3]);
                     break;
                 case 'duplicate':
-                    openDuplicateModal(txnId, args[0], args[1], args[2], args[3]);
+                    openDuplicateModal(txnId, args[0], args[1], args[2], args[3], args[4], args[5]);
                     break;
                 case 'exclude':
                     toggleExclusion(txnId, args[1], args[0]);
@@ -5954,15 +6094,21 @@
         // DUPLICATE TRANSACTION LOGIC
         let currentDuplicateTxn = null;
 
-        window.openDuplicateModal = (txnId, merchant, amount, category, note) => {
+        window.openDuplicateModal = (txnId, merchant, amount, category, note, date, manualAmount) => {
+            console.log('📋 openDuplicateModal called with:', { txnId, merchant, amount, category, note, date, manualAmount });
+            
             // Store transaction data
             currentDuplicateTxn = {
                 id: txnId,
                 merchant: merchant,
-                amount: amount,
-                category: category,
-                note: note
+                amount: typeof amount === 'number' ? amount : parseFloat(amount),
+                manualCategory: category,  // Store as manualCategory for consistency with confirmDuplicate
+                note: note,
+                date: date,
+                manualAmount: manualAmount !== '' && manualAmount !== undefined ? parseFloat(manualAmount) : undefined
             };
+            
+            console.log('📋 currentDuplicateTxn:', currentDuplicateTxn);
             
             // Get all available accounts (including current one)
             const accounts = window.walletAccounts || [];
@@ -5988,94 +6134,122 @@
         };
 
         window.confirmDuplicate = async () => {
-            if (!currentDuplicateTxn) return;
+            console.log('📋 confirmDuplicate called, currentDuplicateTxn:', currentDuplicateTxn);
+            
+            if (!currentDuplicateTxn) {
+                console.error('📋 No currentDuplicateTxn!');
+                showToast('No transaction selected');
+                return;
+            }
             
             // Get selected accounts
             const checkboxes = document.querySelectorAll('.duplicate-account-checkbox:checked');
             const selectedAccounts = Array.from(checkboxes).map(cb => cb.value);
+            console.log('📋 Selected accounts:', selectedAccounts);
             
             if (selectedAccounts.length === 0) {
                 showToast('Please select at least one account');
                 return;
             }
             
-            try {
-                const uid = auth.currentUser?.uid;
-                if (!uid) {
-                    showToast('Please sign in to duplicate transactions');
-                    closeModals();
-                    currentDuplicateTxn = null;
-                    return;
-                }
-                
-                // Get original transaction data
-                const originalTxn = window.allTxns.find(t => t.id === currentDuplicateTxn.id);
-                if (!originalTxn) {
-                    showToast('Transaction not found');
-                    closeModals();
-                    currentDuplicateTxn = null;
-                    return;
-                }
-                
-                // Duplicate to each selected account
-                let successCount = 0;
-                for (const targetAccount of selectedAccounts) {
-                    try {
-                        const collectionName = getCollectionName(targetAccount);
-                        const newId = `dup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                        
-                        // Special case: ATOME PAYMENT from BPI to Atome should be positive (income)
-                        const isAtomePayment = originalTxn.merchant && originalTxn.merchant.toUpperCase().includes('ATOME PAYMENT');
-                        const isFromBPIToAtome = window.currentAccount === 'bpi' && targetAccount === 'atome';
-                        const shouldInvertAmount = isAtomePayment && isFromBPIToAtome;
-                        
-                        let duplicatedAmount = originalTxn.amount;
-                        let duplicatedManualAmount = originalTxn.manualAmount;
-                        
-                        if (shouldInvertAmount) {
-                            // Invert the amount to make it positive (income)
-                            duplicatedAmount = Math.abs(duplicatedAmount);
-                            if (duplicatedManualAmount !== undefined) {
-                                duplicatedManualAmount = Math.abs(duplicatedManualAmount);
-                            }
-                        }
-                        
-                        const duplicatedTxn = {
-                            amount: duplicatedAmount,
-                            merchant: originalTxn.merchant,
-                            date: originalTxn.date,
-                            manualCategory: shouldInvertAmount ? 'Income' : originalTxn.manualCategory,
-                            manualAmount: duplicatedManualAmount,
-                            note: originalTxn.note || '',
-                            excluded: false,
-                            refund: false,
-                            deleted: false,
-                            duplicatedFrom: currentDuplicateTxn.id,
-                            duplicatedFromAccount: window.currentAccount
-                        };
-                        
-                        const docRef = doc(db, "users", uid, collectionName, newId);
-                        await setDoc(docRef, { ...duplicatedTxn, createdAt: serverTimestamp() });
-                        successCount++;
-                    } catch (e) {
-                        console.error(`Failed to duplicate to ${targetAccount}:`, e);
-                    }
-                }
-                
-                if (successCount > 0) {
-                    showToast(`Transaction duplicated to ${successCount} account(s)`);
-                } else {
-                    showToast('Failed to duplicate transaction');
-                }
-                
+            const uid = auth.currentUser?.uid;
+            console.log('📋 User UID:', uid);
+            
+            if (!uid) {
+                showToast('Please sign in to duplicate transactions');
                 closeModals();
                 currentDuplicateTxn = null;
-            } catch (e) {
-                log('Duplicate failed: ' + e.message, 'error');
-                showToast('Failed to duplicate transaction');
-                closeModals();
-                currentDuplicateTxn = null;
+                return;
             }
+            
+            // Get original transaction data with fallback
+            let originalTxn = { ...currentDuplicateTxn };
+            
+            // If date is missing, try to find it from allTxns
+            if (!originalTxn.date) {
+                const foundTxn = window.allTxns?.find(t => t.id === originalTxn.id);
+                if (foundTxn) {
+                    originalTxn.date = foundTxn.date;
+                    if (!originalTxn.manualCategory) originalTxn.manualCategory = foundTxn.manualCategory;
+                }
+            }
+            
+            // Still no date? Use today as fallback
+            if (!originalTxn.date) {
+                originalTxn.date = formatLocalDate(new Date());
+                console.warn('📋 No date found, using today as fallback');
+            }
+            
+            console.log('📋 Final originalTxn:', originalTxn);
+            
+            // Duplicate to each selected account
+            let successCount = 0;
+            let errorMessages = [];
+            
+            for (const targetAccount of selectedAccounts) {
+                try {
+                    const collectionName = getCollectionName(targetAccount);
+                    const newId = `dup_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    console.log(`📋 Duplicating to ${targetAccount} (${collectionName}) with ID: ${newId}`);
+                    
+                    // Check if this is an ATOME PAYMENT being duplicated TO Atome wallet (from ANY source)
+                    const isAtomePayment = originalTxn.merchant && originalTxn.merchant.toUpperCase().includes('ATOME');
+                    const isToAtome = targetAccount === 'atome';
+                    const shouldMarkAsIncome = isAtomePayment && isToAtome;
+                    
+                    console.log(`📋 isAtomePayment: ${isAtomePayment}, isToAtome: ${isToAtome}, shouldMarkAsIncome: ${shouldMarkAsIncome}`);
+                    
+                    let duplicatedAmount = originalTxn.amount;
+                    let duplicatedManualAmount = originalTxn.manualAmount;
+                    let duplicatedCategory = originalTxn.manualCategory;
+                    
+                    if (shouldMarkAsIncome) {
+                        // Convert to positive amount and mark as Income
+                        duplicatedAmount = Math.abs(duplicatedAmount);
+                        if (duplicatedManualAmount !== undefined) {
+                            duplicatedManualAmount = Math.abs(duplicatedManualAmount);
+                        }
+                        duplicatedCategory = 'Income';
+                    }
+                    
+                    const duplicatedTxn = {
+                        amount: duplicatedAmount,
+                        merchant: originalTxn.merchant,
+                        date: originalTxn.date,
+                        manualCategory: duplicatedCategory,
+                        note: (originalTxn.note || '') + (shouldMarkAsIncome ? ' (Payment)' : ''),
+                        excluded: false,
+                        refund: false,
+                        deleted: false,
+                        duplicatedFrom: currentDuplicateTxn.id,
+                        duplicatedFromAccount: window.currentAccount
+                    };
+                    
+                    // Only add manualAmount if it's defined (Firestore doesn't accept undefined)
+                    if (duplicatedManualAmount !== undefined) {
+                        duplicatedTxn.manualAmount = duplicatedManualAmount;
+                    }
+                    
+                    console.log('📋 Creating duplicatedTxn:', duplicatedTxn);
+                    
+                    const docRef = doc(db, "users", uid, collectionName, newId);
+                    await setDoc(docRef, { ...duplicatedTxn, createdAt: serverTimestamp() });
+                    console.log(`📋 ✅ Successfully duplicated to ${targetAccount}`);
+                    successCount++;
+                } catch (e) {
+                    console.error(`📋 ❌ Failed to duplicate to ${targetAccount}:`, e);
+                    errorMessages.push(`${targetAccount}: ${e.message}`);
+                }
+            }
+            
+            if (successCount > 0) {
+                showToast(`Transaction duplicated to ${successCount} account(s)`);
+            } else {
+                showToast('Failed to duplicate: ' + errorMessages.join(', '));
+            }
+            
+            closeModals();
+            currentDuplicateTxn = null;
         };
 
         // DELETE LOGIC
@@ -6292,6 +6466,99 @@
             document.body.style.position = '';
             document.body.style.width = '';
         };
+
+        // =============================================
+        // NAVIGATION HANDLING: Back Button, Modal, & Double-Tap to Exit
+        // =============================================
+        
+        // Track current navigation state
+        window.currentPage = 'home';
+        window.modalOpen = false;
+        window.lastBackPressTime = 0;
+
+        // Helper: Push history state when opening a modal
+        window.pushModalState = (modalName) => {
+            window.modalOpen = true;
+            history.pushState({ modal: modalName }, '', '');
+        };
+
+        window.closeModals = (fromPopState = false) => {
+            const wasModalOpen = window.modalOpen;
+            
+            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+            currentTxnId = null;
+            window.modalOpen = false;
+            
+            // Remove blur effect from background elements
+            document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
+            document.querySelector('.fab')?.classList.remove('blur-active');
+            document.querySelector('.bottom-nav')?.classList.remove('blur-active');
+
+            // Restore scroll
+            const wrapper = document.querySelector('.mobile-wrapper');
+            if (wrapper) {
+                wrapper.style.overflow = 'auto';
+            }
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+            
+            // Also close iOS menu if open
+            if (window.closeIOSMenu) closeIOSMenu();
+            
+            // Pop history state if not from popstate event
+            if (wasModalOpen && !fromPopState) {
+                history.back();
+            }
+        };
+
+        // POPSTATE HANDLER: Handle back button press
+        window.addEventListener('popstate', (e) => {
+            // Check if a modal is open
+            const openModal = document.querySelector('.modal-overlay.show, .dialog-overlay.show');
+            const iosMenu = document.getElementById('ios-menu')?.classList.contains('show');
+            
+            if (openModal || iosMenu) {
+                // Close modal/menu instead of navigating back
+                if (iosMenu && window.closeIOSMenu) closeIOSMenu();
+                if (openModal) closeModals(true);
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+                return;
+            }
+            
+            // If on a sub-page (Accounts, Calendar, Profile), return to home
+            if (window.currentPage !== 'home') {
+                // Navigate to home page
+                if (window.showPage) {
+                    showPage('home');
+                }
+                window.currentPage = 'home';
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+                return;
+            }
+            
+            // On home with no modals: Double-tap to exit
+            const now = Date.now();
+            if (now - window.lastBackPressTime < 2000) {
+                // Double-tap: Allow exit (don't prevent default)
+                // For PWA, we need to close the window
+                window.close();
+            } else {
+                // First tap: Show toast and prevent exit
+                window.lastBackPressTime = now;
+                if (window.showToast) showToast('Tap back again to exit');
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+            }
+        });
+
+        // Initialize history state
+        history.replaceState(null, '', '');
 
         // Close on outside click
         window.onclick = (e) => {
@@ -6770,12 +7037,32 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
+            // Push history state for back button handling
+            if (window.pushModalState) pushModalState('manual-txn');
+            
             // Blur background
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
 
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+            
+            // Add Enter key to save transaction
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.saveManualTxn) saveManualTxn();
+                }
+            };
+            
+            // Add listeners to form inputs
+            ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('keydown', handleEnterKey);
+                    el.addEventListener('keydown', handleEnterKey);
+                }
+            });
         };
 
         window.openEditModal = (txnId, merchant, amount, category, note) => {
@@ -6827,10 +7114,31 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // ALLOW body scroll
-            // document.body.style.overflow = 'hidden';
+            // Push history state for back button handling
+            if (window.pushModalState) pushModalState('edit-txn');
+            
+            // Blur background
+            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+            document.querySelector('.fab')?.classList.add('blur-active');
+            document.querySelector('.bottom-nav')?.classList.add('blur-active');
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 100);
+            
+            // Add Enter key to save transaction
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.saveManualTxn) saveManualTxn();
+                }
+            };
+            
+            ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('keydown', handleEnterKey);
+                    el.addEventListener('keydown', handleEnterKey);
+                }
+            });
         };
 
         window.renderManualCategories = () => {
@@ -7405,9 +7713,33 @@
                 const monthKey = `${d.getMonth()}-${d.getFullYear()}`;
 
                 if (!merchantData[merchantKey]) {
+                    // LOGO MAPPING: Assign logos based on merchant name
+                    let iconPath = mapped.logo || 'receipt_long';
+                    const mLower = merchantKey.toLowerCase();
+                    
+                    if (mLower.includes('tecfuel') || mLower.includes('tec fuel')) iconPath = 'logos/tecfuel.png';
+                    else if (mLower.includes('spotify')) iconPath = 'logos/spotify.png';
+                    else if (mLower.includes('shopee')) iconPath = 'logos/shopee.png';
+                    else if (mLower.includes('traders') || mLower.includes('tradersconnect')) iconPath = 'logos/tradersconnect.png';
+                    else if (mLower.includes('mr diy') || mLower.includes('mrdiy')) iconPath = 'logos/mrdiy.png';
+                    else if (mLower.includes('jollibee')) iconPath = 'logos/jollibee.png';
+                    else if (mLower.includes('mcdo') || mLower.includes('mcdonald')) iconPath = 'logos/mcdo.png';
+                    else if (mLower.includes('shell')) iconPath = 'logos/shell.png';
+                    else if (mLower.includes('petron')) iconPath = 'logos/petron.png';
+                    else if (mLower.includes('seaoil')) iconPath = 'logos/seaoil.png';
+                    else if (mLower.includes('lazada')) iconPath = 'logos/lazada.jpg';
+                    else if (mLower.includes('globe') || mLower.includes('gomo')) iconPath = 'logos/globe.png';
+                    else if (mLower.includes('tiktok')) iconPath = 'logos/tiktokshop.png';
+                    else if (mLower.includes('watsons')) iconPath = 'logos/watsons.png';
+                    else if (mLower.includes('sm ') || mLower === 'sm' || mLower.includes('sm store')) iconPath = 'logos/sm.png';
+                    else if (mLower.includes('7-11') || mLower.includes('7 11') || mLower.includes('7/11') || mLower.includes('711')) iconPath = 'logos/711.png';
+                    else if (mLower.includes('metro') || mLower.includes('super metro')) iconPath = 'logos/supermetro.png';
+                    else if (mLower.includes('ayala')) iconPath = 'logos/ayala.png';
+                    else if (mLower.includes('j and l') || mLower.includes('j&l')) iconPath = 'logos/jandlmall.png';
+
                     merchantData[merchantKey] = {
                         name: displayName,
-                        icon: merchantKey === 'tecfuel' ? 'logos/tecfuel.png' : (mapped.logo || 'receipt_long'),
+                        icon: iconPath,
                         monthlySpend: {},
                         countMonths: 0,
                         currentMonthSpend: 0,
@@ -7451,9 +7783,29 @@
                 });
 
                 const mName = m.name.toLowerCase();
-                const isWhitelisted = mName.includes('spotify') || mName.includes('traders connect');
                 
-                if (!isWhitelisted && maxConsecutive < 4) return;
+                // WHITELIST: Important recurring merchants that should always appear if present in last 4 months
+                const isWhitelisted = mName.includes('spotify') || 
+                                      mName.includes('traders connect') ||
+                                      mName.includes('mr diy') || mName.includes('mrdiy') ||
+                                      mName.includes('tecfuel') || mName.includes('tec fuel') ||
+                                      mName.includes('jollibee') ||
+                                      mName.includes('shell') ||
+                                      mName.includes('petron') ||
+                                      mName.includes('globe') || mName.includes('gomo');
+                
+                // NEW LOGIC: Check if present in at least 2 of the last 4 months (allows gaps)
+                const last4Months = [];
+                for (let i = 0; i < 4; i++) {
+                    const d = new Date(targetYear, targetMonth - i, 1);
+                    last4Months.push(`${d.getMonth()}-${d.getFullYear()}`);
+                }
+                const presentInLast4 = last4Months.filter(k => m.monthlySpend[k]).length;
+                
+                // Whitelisted merchants need 2+ months in last 4, others need 4 consecutive
+                if (isWhitelisted) {
+                    if (presentInLast4 < 2) return;
+                } else if (maxConsecutive < 4) return;
 
                 const currentKey = `${targetMonth}-${targetYear}`;
                 m.currentMonthSpend = m.monthlySpend[currentKey] || 0;
@@ -7492,7 +7844,7 @@
                 <div class="subscription-item">
                     <div class="sub-main-row">
                         <div class="sub-icon">
-                            ${g.icon.length > 20 ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
+                            ${g.icon.includes('logos/') || /\.(png|jpg|jpeg|svg|gif)$/i.test(g.icon) ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
                         </div>
                         <div class="sub-info">
                             <div class="sub-name">${g.name}</div>

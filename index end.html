@@ -506,6 +506,16 @@
         .modal-overlay.show { display: flex; }
         .custom-modal { background: #fff; width: 92%; max-width: 380px; border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes modalOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
+        @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        .modal-overlay.closing { animation: fadeOut 0.3s forwards; }
+        .modal-overlay.closing .custom-modal { animation: modalOut 0.25s forwards; }
+        .modal-overlay.closing .custom-modal[id="manual-modal-content"],
+        .modal-overlay.closing .custom-modal[id="duplicate-modal-content"] { 
+            animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important; 
+        }
         .modal-header { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
         .modal-body { margin-bottom: 12px; }
         .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
@@ -1847,7 +1857,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.4</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.5</div>
             </div>
         </div>
 
@@ -2526,15 +2536,8 @@
 
             // AUTO-SYNC: Trigger background email sync for Atome/BPI
             if (id === 'atome' || id === 'bpi') {
-                const token = localStorage.getItem('g_access_token');
-                const issuedAt = localStorage.getItem('g_token_issued_at');
-                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
-                if (isTokenValid) {
-                    log(`🔄 Auto-syncing ${id} wallet on switch (5 emails)...`);
-                    handleScan(5, false);
-                } else {
-                    log(`⏭️ Auto-sync skipped for ${id}: ${!token ? 'No token' : 'Token expired'}`);
-                }
+                log(`🔄 Auto-sync check for ${id} wallet on switch...`);
+                handleScan(5, false);
             }
 
             loadData();
@@ -2781,15 +2784,8 @@
 
                             // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe
                             if (account === 'atome' || account === 'bpi') {
-                                const token = localStorage.getItem('g_access_token');
-                                const issuedAt = localStorage.getItem('g_token_issued_at');
-                                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
-                                if (isTokenValid) {
-                                    log(`🔄 Auto-syncing ${account} wallet on swipe (5 emails)...`);
-                                    handleScan(5, false);
-                                } else {
-                                    log(`⏭️ Auto-sync skipped for ${account}: ${!token ? 'No token' : 'Token expired'}`);
-                                }
+                                log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
+                                handleScan(5, false);
                             }
 
                             loadData(); 
@@ -5253,16 +5249,28 @@
                     client_id: CLIENT_ID,
                     scope: SCOPES,
                     callback: async (resp) => {
+                        window.isSyncing = false;
                         if (resp.error) {
-                            log('Google Auth failed: ' + resp.error, 'error');
-                            window.isSyncing = false;
-                            
-                            // Reset buttons if they were spinning
-                            const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
-                            const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '<i class="material-icons">sync</i>';
+                            if (resp.error === 'immediate_failed') {
+                                console.log('🔒 Silent refresh failed. User interaction needed.');
+                                const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
+                                const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                                if (statusText) statusText.innerText = 'Log in to sync';
+                                
+                                const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="material-icons">sync</i>';
+                                }
+                            } else {
+                                log('Google Auth failed: ' + resp.error, 'error');
+                                // Reset buttons if they were spinning
+                                const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
+                                const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="material-icons">sync</i>';
+                                }
                             }
                             return;
                         }
@@ -5528,16 +5536,26 @@
                 }
                 return;
             }
+
             const issuedAt = localStorage.getItem('g_token_issued_at');
-            const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
+            // Token is expired after ~58 mins (3500 seconds)
+            const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); 
             
-            // PREVENT POPUP ON BACKGROUND SYNC
-            if (!manualTrigger && isActualExpired) {
-                console.log('🔄 Background sync skipped: Token expired. Interaction required.');
-                const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
-                const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
-                if (statusText) statusText.innerText = 'Log in to sync';
-                return;
+            if (isActualExpired) {
+                if (tokenClient) {
+                    console.log('🔄 Gmail token expired. Attempting silent refresh...');
+                    window.pendingSyncLimit = limit;
+                    // Use prompt: 'none' for background silent refresh (no popup)
+                    // If it fails, GIS callback will handle it
+                    tokenClient.requestAccessToken({ prompt: manualTrigger ? '' : 'none' });
+                    return;
+                } else if (!manualTrigger) {
+                    console.log('🔄 Background sync skipped: GIS not ready.');
+                    const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+                    const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                    if (statusText) statusText.innerText = 'Log in to sync';
+                    return;
+                }
             }
 
             window.isSyncing = true;
@@ -5731,23 +5749,47 @@
             // EXCLUSION: Skip marketing
             if (tLower.includes("never ask for your bank details") && !tLower.includes("confirmation number")) return null;
 
-            // 1. Detect Amount
-            const amtMatch = text.match(/(?:Transfer Amount|Total Amount|Amount)\s*PHP\s*([\d,]+\.\d{2})/i) || 
-                             text.match(/(?:PHP|PHP\s|P)\s?([\d,]+\.\d{2})/i);
-            if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+            // 1. Detect Amount & Fees
+            let fee = 0;
+            const feeMatch = text.match(/(?:Service Fee|Fee)\s*\|\s*PHP\s*([\d,]+\.\d{2})/i) || 
+                             text.match(/(?:Service Fee|Fee):\s*₱?([\d,]+\.\d{2})/i);
+            if (feeMatch) {
+                fee = parseFloat(feeMatch[1].replace(/,/g, ''));
+                console.log(`BPI Fee detected: ${fee}`);
+            }
+
+            const totalAmtMatch = text.match(/Total Amount\s*\|\s*PHP\s*([\d,]+\.\d{2})/i) ||
+                                  text.match(/Total Amount:\s*₱?([\d,]+\.\d{2})/i);
+            
+            const baseAmtMatch = text.match(/(?:Transfer Amount|Amount)\s*\|\s*PHP\s*([\d,]+\.\d{2})/i) ||
+                                 text.match(/(?:Transfer Amount|Amount):\s*₱?([\d,]+\.\d{2})/i) ||
+                                 text.match(/(?:PHP|PHP\s|P|₱)\s?([\d,]+\.\d{2})/i);
+
+            if (totalAmtMatch) {
+                amount = parseFloat(totalAmtMatch[1].replace(/,/g, ''));
+                console.log(`BPI Total Amount used: ${amount}`);
+            } else if (baseAmtMatch) {
+                amount = parseFloat(baseAmtMatch[1].replace(/,/g, ''));
+                // If fee is found separately and "Total Amount" isn't present, add it
+                if (fee > 0 && !text.includes("Total Amount")) {
+                    console.log(`BPI Adding fee ${fee} to base amount ${amount}`);
+                    amount += fee;
+                }
+            }
+
             if (amount === 0) return null;
 
             // 2. Detect Date from Body
-            const dateMatch = text.match(/Transaction Date and Time\s+([^;\n\r]+)/i) || text.match(/Date and Time\s+([^;\n\r]+)/i);
+            const dateMatch = text.match(/Transaction Date and Time\s+(?:\|\s*)?([^;\n\r|]+)/i) || 
+                              text.match(/Date and Time\s+(?:\|\s*)?([^;\n\r|]+)/i);
             if (dateMatch) {
                 const parsedDate = new Date(dateMatch[1].trim());
                 if (!isNaN(parsedDate)) dateVal = formatLocalDate(parsedDate);
             }
 
             // 3. SPECIAL DETECTION: ATOME PAYMENTS & AUB
-            // Regex tailored for pipe-separated table structure from stripTags
-            const payToMatch = text.match(/Pay To\s*\|\s*([^|\n\r]+)/i);
-            const bankNameMatch = text.match(/Bank Name\s*\|\s*([^|\n\r]+)/i);
+            const payToMatch = text.match(/Pay To\s*\|\s*([^|\n\r]+)/i) || text.match(/To\s*\|\s*([^|\n\r]+)/i);
+            const bankNameMatch = text.match(/Bank Name\s*\|\s*([^|\n\r]+)/i) || text.match(/Bank\s*\|\s*([^|\n\r]+)/i);
             const refNoMatch = text.match(/Transaction Ref No\.\s*\|\s*([A-Z0-9]+)/i);
 
             const isAtome = (payToMatch && payToMatch[1].toLowerCase().includes("atome")) || 
@@ -5762,13 +5804,13 @@
                 merchant = "ATOME PAYMENT";
                 category = "Credit Card Payment";
                 if (refNoMatch) note = "Ref No: " + refNoMatch[1].trim();
-                else if (bankNameMatch) note = "Ref No: " + bankNameMatch[1].trim(); // Fallback if no ref no
+                else if (bankNameMatch) note = "Ref No: " + bankNameMatch[1].trim(); 
             } else if (sLower.includes("incoming") || tLower.includes("incoming") || tLower.includes("you have an incoming") || text.includes("Incoming Funds") || text.includes("received a transfer")) {
                 // 4. INCOME
                 isIncome = true;
                 merchant = "INCOME"; 
                 category = "Income";
-                const bankMatch = bankNameMatch || text.match(/Transfer From\s*\|\s*([^|\n\r]+)/i);
+                const bankMatch = bankNameMatch || text.match(/Transfer From\s*(?:\|\s*)?([^|\n\r]+)/i);
                 if (bankMatch) note = "FROM " + bankMatch[1].trim().toUpperCase();
             } else if (tLower.includes("transfer money") || sLower.includes("interbank") || sLower.includes("funds transfer") || sLower.includes("fund transfer") || payToMatch || text.includes("successfully submitted your")) {
                 // 5. OUTGOING PAYMENTS
@@ -5934,6 +5976,7 @@
             
             // 6. Position menu
             menu.classList.add('show');
+            if (window.pushModalState) pushModalState('ios-menu');
             const menuHeight = menu.offsetHeight || 180;
             const menuWidth = menu.offsetWidth || 200;
             
@@ -5968,9 +6011,10 @@
             menu.style.transform = 'none';
         }
         
-        window.closeIOSMenu = () => {
+        window.closeIOSMenu = (fromPopState = false) => {
             const blurOverlay = document.getElementById('blur-overlay');
             const iosMenu = document.getElementById('ios-menu');
+            const wasMenuOpen = iosMenu && iosMenu.classList.contains('show');
             const mobileWrapper = document.querySelector('.mobile-wrapper');
             const fab = document.querySelector('.fab');
             const nav = document.querySelector('.bottom-nav');
@@ -5997,16 +6041,31 @@
                 currentElevatedItem.style.visibility = 'visible';
                 currentElevatedItem = null;
             }
+
+            // Sync history
+            if (wasMenuOpen && !fromPopState) {
+                history.back();
+            }
         };
         
         window.handleIOSAction = (action, txnId, ...args) => {
-            closeIOSMenu();
+            // Close menu UI without calling history.back()
+            closeIOSMenu(true);
             
+            // Helper to open modal with replaceState instead of pushState
+            // This converts [home -> menu] history into [home -> modal]
+            const openWithReplace = (modalType) => {
+                window.modalOpen = true;
+                window.replaceModalState(modalType);
+            };
+
             switch(action) {
                 case 'edit':
+                    openWithReplace('edit-txn');
                     openEditModal(txnId, args[0], args[1], args[2], args[3]);
                     break;
                 case 'duplicate':
+                    openWithReplace('duplicate-txn');
                     openDuplicateModal(txnId, args[0], args[1], args[2], args[3], args[4], args[5]);
                     break;
                 case 'exclude':
@@ -6131,6 +6190,11 @@
             // Show modal
             document.getElementById('duplicate-modal').classList.add('show');
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+            if (window.modalOpen) {
+                // Handled by replaceModalState in handleIOSAction
+            } else {
+                if (window.pushModalState) pushModalState('duplicate-txn');
+            }
         };
 
         window.confirmDuplicate = async () => {
@@ -6322,6 +6386,7 @@
             currentTxnId = id;
             currentDeletionAccount = accId || window.currentAccount;
             document.getElementById('delete-modal').classList.add('show');
+            if (window.pushModalState) pushModalState('delete-txn');
         };
 
         window.confirmDelete = async () => {
@@ -6448,25 +6513,6 @@
         };
         populateTxnFilter();
 
-        window.closeModals = () => {
-            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
-            currentTxnId = null;
-            
-            // Remove blur effect from background elements
-            document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
-            document.querySelector('.fab')?.classList.remove('blur-active');
-            document.querySelector('.bottom-nav')?.classList.remove('blur-active');
-
-            // Restore scroll
-            const wrapper = document.querySelector('.mobile-wrapper');
-            if (wrapper) {
-                wrapper.style.overflow = 'auto';
-            }
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.width = '';
-        };
-
         // =============================================
         // NAVIGATION HANDLING: Back Button, Modal, & Double-Tap to Exit
         // =============================================
@@ -6482,10 +6528,32 @@
             history.pushState({ modal: modalName }, '', '');
         };
 
+        window.replaceModalState = (modalName) => {
+            window.modalOpen = true;
+            history.replaceState({ modal: modalName }, '', '');
+        };
+
         window.closeModals = (fromPopState = false) => {
             const wasModalOpen = window.modalOpen;
+            const overlays = document.querySelectorAll('.modal-overlay.show, .dialog-overlay.show');
             
-            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+            if (overlays.length > 0) {
+                overlays.forEach(m => m.classList.add('closing'));
+                
+                // Allow animation to finish before removing show and cleaning up
+                setTimeout(() => {
+                    overlays.forEach(m => {
+                        m.classList.remove('show');
+                        m.classList.remove('closing');
+                    });
+                    cleanupModalState(wasModalOpen, fromPopState);
+                }, 300); // Sync with 0.3s CSS animations
+            } else {
+                cleanupModalState(wasModalOpen, fromPopState);
+            }
+        };
+
+        function cleanupModalState(wasModalOpen, fromPopState) {
             currentTxnId = null;
             window.modalOpen = false;
             
@@ -6510,7 +6578,7 @@
             if (wasModalOpen && !fromPopState) {
                 history.back();
             }
-        };
+        }
 
         // POPSTATE HANDLER: Handle back button press
         window.addEventListener('popstate', (e) => {
@@ -6520,11 +6588,9 @@
             
             if (openModal || iosMenu) {
                 // Close modal/menu instead of navigating back
-                if (iosMenu && window.closeIOSMenu) closeIOSMenu();
+                // Since popstate already removed the pushed state, we just handle the UI
+                if (iosMenu && window.closeIOSMenu) closeIOSMenu(true);
                 if (openModal) closeModals(true);
-                
-                // Push state back to prevent actual navigation
-                history.pushState(null, '', '');
                 return;
             }
             
@@ -6580,6 +6646,7 @@
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            if (window.pushModalState) pushModalState('change-cat');
         };
 
         window.saveCategory = async (catId) => {
@@ -6700,6 +6767,7 @@
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            if (window.pushModalState) pushModalState('edit-price');
             setTimeout(() => input.focus(), 100);
 
             input.onkeydown = (e) => {
@@ -7114,8 +7182,13 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Push history state for back button handling
-            if (window.pushModalState) pushModalState('edit-txn');
+            // Push history state if not already handled by replaceModalState
+            if (window.modalOpen) {
+                // If modalOpen is already true, it means handleIOSAction 
+                // already called replaceModalState.
+            } else {
+                if (window.pushModalState) pushModalState('edit-txn');
+            }
             
             // Blur background
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
@@ -8102,18 +8175,18 @@
     </div>
 
     <!-- DUPLICATE TRANSACTION MODAL -->
-    <div id="duplicate-modal" class="modal-overlay">
-        <div class="custom-modal">
-            <div class="modal-header">Duplicate Transaction</div>
-            <p style="color: #64748b; font-size: 13px; margin: 8px 0 0;">Select which accounts to duplicate this transaction into.</p>
+    <div id="duplicate-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
+        <div class="custom-modal" id="duplicate-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div class="modal-header" style="font-weight: 800; font-size: 18px; color: #1e293b;">Duplicate Transaction</div>
+            <p style="color: #64748b; font-size: 13px; margin: 8px 0 16px;">Select which accounts to duplicate this transaction into.</p>
             <div class="modal-body">
-                <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Account checkboxes will be injected here -->
                 </div>
             </div>
-            <div class="modal-actions" style="margin-top: 16px;">
-                <div class="cancel-link" onclick="closeModals()">CANCEL</div>
-                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3;">DUPLICATE</button>
+            <div class="modal-actions" style="margin-top: 24px; justify-content: space-between; align-items: center;">
+                <div class="cancel-link" onclick="closeModals()" style="padding-left: 0;">CANCEL</div>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3; height: 44px; padding: 0 32px;">DUPLICATE</button>
             </div>
         </div>
     </div>

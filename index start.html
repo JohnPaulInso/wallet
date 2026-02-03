@@ -420,8 +420,10 @@
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
         .month-header.collapsed .expand-icon { transform: rotate(-90deg); }
         
-        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; }
+        .month-content { border-top: 1px solid #f1f5f9; max-height: 5000px; transition: max-height 0.4s ease; position: relative; z-index: 10; overflow: hidden; border-radius: 0 0 12px 12px; }
         .month-content.collapsed { max-height: 0; overflow: hidden; border-top: none; }
+        /* Round bottom corners of last transaction item */
+        .month-content > div:last-child { border-radius: 0 0 12px 12px; }
 
         /* TRANSACTION ITEM - PREMIUM REDESIGN */
         .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.2s; background: #fff; }
@@ -443,7 +445,7 @@
         .cat-financial { background-color: #fef2f2; color: #ef4444; } /* Red */
         .cat-trading { background-color: #fff1f2; color: #ef4444; } /* Red - Trading */
         .cat-aqua { background-color: #ecfeff; color: #0891b2; } /* Dark Aqua/Cyan - Trade Copier */
-        .cat-investments { background-color: #f0fdfa; color: #0d9488; } /* Teal/Dark Green */
+        .cat-investments { background-color: #dcfce7; color: #15803d; } /* Saturated Green */
         .cat-school { background-color: #eff6ff; color: #1d4ed8; } /* Blue */
         .cat-red { background-color: #fef2f2; color: #ef4444 !important; } /* Force Red for Financial */
         
@@ -496,6 +498,7 @@
         .cat-trading { background: #fee2e2; color: #ef4444; }
         .cat-financial { background: #fee2e2; color: #ef4444; }
         .cat-credit-card { background: #fff7ed; color: #eaaf0c; }
+        .cat-investments { background-color: #f0fdfa; color: #0d9488; }
         .cat-education { background: #eff6ff; color: #1d4ed8; }
         .cat-income { background: #dcfce7; color: #16a34a; }
 
@@ -504,6 +507,16 @@
         .modal-overlay.show { display: flex; }
         .custom-modal { background: #fff; width: 92%; max-width: 380px; border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes modalOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
+        @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        .modal-overlay.closing { animation: fadeOut 0.3s forwards; }
+        .modal-overlay.closing .custom-modal { animation: modalOut 0.25s forwards; }
+        .modal-overlay.closing .custom-modal[id="manual-modal-content"],
+        .modal-overlay.closing .custom-modal[id="duplicate-modal-content"] { 
+            animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important; 
+        }
         .modal-header { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
         .modal-body { margin-bottom: 12px; }
         .cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
@@ -986,6 +999,20 @@
         .premium-txn.txn-excluded .txn-sub,
         .premium-txn.txn-excluded .txn-amount,
         .premium-txn.txn-excluded .txn-note { text-decoration: line-through; }
+
+        .reimbursed-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #d97706;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            letter-spacing: 0.3px;
+            vertical-align: middle;
+            text-transform: uppercase;
+        }
         .premium-txn.txn-excluded .icon-box { filter: grayscale(1); opacity: 0.5; }
 
         /* SEARCH STYLING */
@@ -1845,7 +1872,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.4</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.5</div>
             </div>
         </div>
 
@@ -2125,11 +2152,26 @@
             const lastUid = localStorage.getItem('wallet_last_uid');
             const cachedAccounts = localStorage.getItem('wallet_accounts');
             const cachedCurrent = localStorage.getItem('wallet_current_account');
+            const cachedBalances = localStorage.getItem('wallet_cached_balances');
             
             if (lastUid && cachedAccounts && cachedCurrent) {
                 console.log('⚡ Fast Path: Rendering from cache...');
                 try {
                     const accounts = JSON.parse(cachedAccounts);
+                    
+                    // RESTORE CACHED BALANCES: Apply saved balances to accounts
+                    if (cachedBalances) {
+                        try {
+                            const balances = JSON.parse(cachedBalances);
+                            accounts.forEach(acc => {
+                                if (balances[acc.id] !== undefined) {
+                                    acc.balance = balances[acc.id];
+                                }
+                            });
+                            console.log('💰 Restored cached balances:', balances);
+                        } catch(e) { console.warn('Balance cache error', e); }
+                    }
+                    
                     window.walletAccounts = accounts;
                     window.currentAccount = cachedCurrent;
                     
@@ -2509,15 +2551,8 @@
 
             // AUTO-SYNC: Trigger background email sync for Atome/BPI
             if (id === 'atome' || id === 'bpi') {
-                const token = localStorage.getItem('g_access_token');
-                const issuedAt = localStorage.getItem('g_token_issued_at');
-                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
-                if (isTokenValid) {
-                    log(`🔄 Auto-syncing ${id} wallet on switch (5 emails)...`);
-                    handleScan(5, false);
-                } else {
-                    log(`⏭️ Auto-sync skipped for ${id}: ${!token ? 'No token' : 'Token expired'}`);
-                }
+                log(`🔄 Auto-sync check for ${id} wallet on switch...`);
+                handleScan(5, false);
             }
 
             loadData();
@@ -2764,15 +2799,8 @@
 
                             // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe
                             if (account === 'atome' || account === 'bpi') {
-                                const token = localStorage.getItem('g_access_token');
-                                const issuedAt = localStorage.getItem('g_token_issued_at');
-                                const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
-                                if (isTokenValid) {
-                                    log(`🔄 Auto-syncing ${account} wallet on swipe (5 emails)...`);
-                                    handleScan(5, false);
-                                } else {
-                                    log(`⏭️ Auto-sync skipped for ${account}: ${!token ? 'No token' : 'Token expired'}`);
-                                }
+                                log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
+                                handleScan(5, false);
                             }
 
                             loadData(); 
@@ -3068,6 +3096,24 @@
         window.atomeBalanceVal = 0;
         window.bpiBalanceVal = 0;
 
+        // BALANCE CACHE: Save computed balances to localStorage for instant load on refresh
+        window.saveWalletBalanceCache = () => {
+            const balances = {
+                atome: window.atomeBalanceVal || 0,
+                bpi: window.bpiBalanceVal || 0
+            };
+            // Also capture any other wallet balances from walletAccounts
+            if (window.walletAccounts) {
+                window.walletAccounts.forEach(acc => {
+                    if (acc.id === 'atome') balances.atome = window.atomeBalanceVal || acc.balance || 0;
+                    else if (acc.id === 'bpi') balances.bpi = window.bpiBalanceVal || acc.balance || 0;
+                    else if (acc.balance !== undefined) balances[acc.id] = acc.balance;
+                });
+            }
+            localStorage.setItem('wallet_cached_balances', JSON.stringify(balances));
+            console.log('💰 Saved balance cache:', balances);
+        };
+
         function updateBPIInsight() {
             const insightEl = document.getElementById('bpi-remaining-insight');
             if (!insightEl) return;
@@ -3104,6 +3150,9 @@
 
             // Trigger Safe to Spend update
             updateSafeSpendUI();
+            
+            // PERSIST BALANCES: Save to localStorage for instant load on refresh
+            if (window.saveWalletBalanceCache) window.saveWalletBalanceCache();
         }
 
         window.updateSafeSpendUI = () => {
@@ -3911,7 +3960,7 @@
             const past = window.allTxns.filter(t => checkPeriod(t, filter, 1));
             
             const pastTotal = past.reduce((sum, t) => {
-                 if (t.excluded || t.refund) return sum;
+                 if (t.excluded || t.refund || t.reimbursed) return sum;
                  const mapped = getMerchantDisplay(t.merchant, t);
                  if (mapped.category === 'Income') return sum;
                  return sum + (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
@@ -3937,9 +3986,11 @@
             'Credit Card Payment': { color: '#f59e0b', darkColor: '#d97706', class: 'cat-credit-card' },
             'Transportation': { color: '#8b5cf6', darkColor: '#7c3aed', class: 'cat-vehicle' },
             'Travel': { color: '#06b6d4', darkColor: '#0891b2', class: 'cat-aqua' },
-            'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' }, /* Dark Blue */
+            'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' },
             'Sport': { color: '#10b981', darkColor: '#059669', class: 'cat-life' },
-            'Income': { color: '#16a34a', darkColor: '#15803d', class: 'cat-income' } /* Green */
+            'Savings': { color: '#15803d', darkColor: '#14532d', class: 'cat-investments' },
+            'Income': { color: '#15803d', darkColor: '#14532d', class: 'cat-income' },
+            'Other': { color: '#64748b', darkColor: '#475569', class: 'cat-financial' }
         };
 
         function refreshChart(txns, pastTotal = 0) {
@@ -3951,7 +4002,7 @@
             let expenseTotal = 0;
 
             txns.forEach(t => {
-                if (t.excluded || t.refund) return;
+                if (t.excluded || t.refund || t.reimbursed) return;
                 const mapped = getMerchantDisplay(t.merchant, t);
                 const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                 let cat = mapped.category || 'Other';
@@ -4041,7 +4092,7 @@
                     const d = new Date(t.date);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || d < startOfWeek || mappedTrn.category === 'Income') return; 
+                    if (t.excluded || t.refund || t.reimbursed || d < startOfWeek || mappedTrn.category === 'Income') return; 
 
                     const diff = Math.floor((d - startOfWeek) / 86400000);
                     if (diff >= 0 && diff < 7) {
@@ -4067,7 +4118,7 @@
                     const d = new Date(t.date);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
 
                     // Calculate month difference
                     const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
@@ -4106,7 +4157,7 @@
                     const d = new Date(t.date);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
                     
                     let idx;
                     if (filter === 'this_month') {
@@ -4728,7 +4779,7 @@
                 
                 groups[key].items.push(t);
                 const mappedSumCheck = getMerchantDisplay(t.merchant, t);
-                if (!t.excluded && !t.refund && mappedSumCheck.category !== 'Income') {
+                if (!t.excluded && !t.refund && !t.reimbursed && mappedSumCheck.category !== 'Income') {
                     const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                     groups[key].total += amt;
                 }
@@ -4768,6 +4819,7 @@
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const isIncome = mapped.category === 'Income';
                     const isRefund = t.refund || false;
+                    const isReimbursed = t.reimbursed || false;
                     const excludedClass = t.excluded ? 'txn-excluded' : '';
                     
                     const d = new Date(t.date);
@@ -4785,7 +4837,7 @@
                     if (isIncome) {
                         displayAmtColor = 'color: #16a34a;';
                         displayTitleColor = 'color: #16a34a;';
-                    } else if (isRefund) {
+                    } else if (isRefund || isReimbursed) {
                         displayAmtColor = 'color: #f59e0b;';
                         displayTitleColor = 'color: #f59e0b;';
                     } else if (mapped.category === 'Credit Card Payment') {
@@ -4794,7 +4846,9 @@
                         displayTitleColor = 'color: #f59e0b;'; // Orange Gold
                     } else {
                         // Expense Logic
-                        if (Math.abs(amount) >= 1000) {
+                        if (mapped.category === 'Savings') {
+                            displayTitleColor = 'color: #15803d;'; // Saturated Green for Title
+                        } else if (Math.abs(amount) >= 1000) {
                             displayAmtColor = 'color: #ef4444;'; // Red Red
                         } else if (window.currentAccount === 'bpi') {
                             displayAmtColor = 'color: #991b1b;'; // Dark Red
@@ -4806,6 +4860,7 @@
                     if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
                     // else if (isIncome) displayName = 'INCOME'; // REMOVED to allow database overrides
                     let refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
+                    let reimbursedChip = isReimbursed ? '<span class="reimbursed-badge">REIMBURSED</span>' : '';
                     
                     // Payment chip for duplicated ATOME PAYMENT from BPI to Atome
                     const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
@@ -4845,21 +4900,22 @@
                              data-category="${mapped.category}"
                              data-note="${noteSafe}"
                              data-excluded="${t.excluded || false}"
-                             data-refund="${t.refund || false}">
+                             data-refund="${t.refund || false}"
+                             data-reimbursed="${t.reimbursed || false}">
                             <div class="icon-box ${mapped.catClass}">
                                 <i class="material-icons">${mapped.icon}</i>
                                 ${logoHTML}
                             </div>
                             <div class="txn-details">
-                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${paymentChip}</div>
+                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
                                 <div class="txn-sub">
                                     <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
                                 </div>
-                                ${displayNote ? `<div class="txn-note" style="color: ${isRefund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                                ${displayNote ? `<div class="txn-note" style="color: ${isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                             </div>
                             <div class="txn-right">
-                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                    ${isHidden ? '******' : ((!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                    ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                                 </div>
                             </div>
                         </div>`;
@@ -4981,7 +5037,7 @@
                     window.allTxns.forEach(t => {
                         const d = new Date(t.date);
                         // USER REQUEST: Monthly filter - budgets reset each month
-                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
+                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
                             const mapped = getMerchantDisplay(t.merchant, t);
                             const itemCatLabel = displayCategoryName(mapped.category);
                             if (mapped.category === cat || itemCatLabel === cat) {
@@ -5162,14 +5218,20 @@
             selectedBudgetCatId = null;
             
             // Populate Category Grid
-            grid.innerHTML = CATEGORIES.filter(c => c.id !== 'Income').map(cat => `
+            grid.innerHTML = CATEGORIES.filter(c => c.id !== 'Income').map(cat => {
+                // Force Green for Savings
+                const isSavings = cat.id === 'Savings';
+                const labelColor = isSavings ? '#15803d' : '#64748b';
+                
+                return `
                 <div class="cat-option" id="btn-budget-cat-${cat.id.replace(/\s+/g, '-')}" onclick="selectBudgetCategory('${cat.id}')" style="padding: 12px 4px; gap: 8px; border-radius: 16px;">
                     <div class="cat-budget-icon-box ${cat.cls || ''}" style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
                         <i class="material-icons" style="font-size: 20px;">${cat.icon}</i>
                     </div>
-                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
+                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: ${labelColor}; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById('cat-budget-modal-title').innerText = 'Category Limit';
             const selectionArea = document.getElementById('cat-budget-selection-area');
@@ -5215,16 +5277,28 @@
                     client_id: CLIENT_ID,
                     scope: SCOPES,
                     callback: async (resp) => {
+                        window.isSyncing = false;
                         if (resp.error) {
-                            log('Google Auth failed: ' + resp.error, 'error');
-                            window.isSyncing = false;
-                            
-                            // Reset buttons if they were spinning
-                            const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
-                            const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
-                            if (btn) {
-                                btn.disabled = false;
-                                btn.innerHTML = '<i class="material-icons">sync</i>';
+                            if (resp.error === 'immediate_failed') {
+                                console.log('🔒 Silent refresh failed. User interaction needed.');
+                                const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
+                                const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                                if (statusText) statusText.innerText = 'Log in to sync';
+                                
+                                const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="material-icons">sync</i>';
+                                }
+                            } else {
+                                log('Google Auth failed: ' + resp.error, 'error');
+                                // Reset buttons if they were spinning
+                                const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
+                                const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
+                                if (btn) {
+                                    btn.disabled = false;
+                                    btn.innerHTML = '<i class="material-icons">sync</i>';
+                                }
                             }
                             return;
                         }
@@ -5478,59 +5552,41 @@
                 console.log('🔄 Sync already in progress. Skipping...');
                 return;
             }
-            window.isSyncing = true;
             
             const syncAccount = window.currentAccount;
-            if (auth.currentUser?.isAnonymous) {
-                if (confirm('Your data is currently in "Local Mode". Sign in with Google to sync notes and exclusions to the cloud?')) {
-                    handleAuthClick();
-                    return;
+            
+            // BLOCK EMAIL SYNC FOR REGULAR WALLETS: Only BPI and Atome accounts can sync with Gmail
+            const allowedSyncAccounts = ['bpi', 'atome'];
+            if (!allowedSyncAccounts.includes(syncAccount)) {
+                console.log(`🚫 Email sync blocked for regular wallet: ${syncAccount}`);
+                if (manualTrigger) {
+                    showToast('Email sync is only available for BPI and Atome accounts');
                 }
+                return;
             }
 
             const issuedAt = localStorage.getItem('g_token_issued_at');
-            const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); // ~58 mins
-            const isLogicalExpired = !accessToken || !expiry || Date.now() > parseInt(expiry);
-
-            if (isActualExpired || isLogicalExpired) {
-                // USER REQUEST: Attempt silent sync without popups
-                if (!manualTrigger) {
-                    console.log('🔄 Session expired. Attempting silent token refresh...');
+            // Token is expired after ~58 mins (3500 seconds)
+            const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); 
+            
+            if (isActualExpired) {
+                if (tokenClient) {
+                    console.log('🔄 Gmail token expired. Attempting silent refresh...');
                     window.pendingSyncLimit = limit;
-                    try {
-                        tokenClient.requestAccessToken({ prompt: 'none', hint: auth.currentUser?.email });
-                        return;
-                    } catch(e) {
-                         console.warn('Silent refresh failed. Sync aborted.');
-                         return;
-                    }
-                }
-
-                log('Gmail session stale. Attempting automated re-auth...');
-                
-                // Track limit for retry
-                window.pendingSyncLimit = limit;
-
-                try {
-                    // Try SILENT first
-                    tokenClient.requestAccessToken({ 
-                        prompt: 'none',
-                        hint: auth.currentUser?.email
-                    });
-                    return; // Callback will handle the rest
-                } catch (e) {
-                    log('Silent refresh setup failed.', 'warn');
-                    if (manualTrigger) {
-                        log('Falling back to interactive sync...');
-                        tokenClient.requestAccessToken({ prompt: '' });
-                    } else {
-                        log('Background sync cancelled: Interaction required.');
-                        window.pendingSyncLimit = null;
-                    }
-                    window.isSyncing = false;
+                    // Use prompt: 'none' for background silent refresh (no popup)
+                    // If it fails, GIS callback will handle it
+                    tokenClient.requestAccessToken({ prompt: manualTrigger ? '' : 'none' });
+                    return;
+                } else if (!manualTrigger) {
+                    console.log('🔄 Background sync skipped: GIS not ready.');
+                    const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+                    const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                    if (statusText) statusText.innerText = 'Log in to sync';
                     return;
                 }
             }
+
+            window.isSyncing = true;
             
             const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
             const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
@@ -5721,23 +5777,47 @@
             // EXCLUSION: Skip marketing
             if (tLower.includes("never ask for your bank details") && !tLower.includes("confirmation number")) return null;
 
-            // 1. Detect Amount
-            const amtMatch = text.match(/(?:Transfer Amount|Total Amount|Amount)\s*PHP\s*([\d,]+\.\d{2})/i) || 
-                             text.match(/(?:PHP|PHP\s|P)\s?([\d,]+\.\d{2})/i);
-            if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+            // 1. Detect Amount & Fees
+            let fee = 0;
+            const feeMatch = text.match(/(?:Service Fee|Fee)\s*\|\s*PHP\s*([\d,]+\.\d{2})/i) || 
+                             text.match(/(?:Service Fee|Fee):\s*₱?([\d,]+\.\d{2})/i);
+            if (feeMatch) {
+                fee = parseFloat(feeMatch[1].replace(/,/g, ''));
+                console.log(`BPI Fee detected: ${fee}`);
+            }
+
+            const totalAmtMatch = text.match(/Total Amount\s*\|\s*PHP\s*([\d,]+\.\d{2})/i) ||
+                                  text.match(/Total Amount:\s*₱?([\d,]+\.\d{2})/i);
+            
+            const baseAmtMatch = text.match(/(?:Transfer Amount|Amount)\s*\|\s*PHP\s*([\d,]+\.\d{2})/i) ||
+                                 text.match(/(?:Transfer Amount|Amount):\s*₱?([\d,]+\.\d{2})/i) ||
+                                 text.match(/(?:PHP|PHP\s|P|₱)\s?([\d,]+\.\d{2})/i);
+
+            if (totalAmtMatch) {
+                amount = parseFloat(totalAmtMatch[1].replace(/,/g, ''));
+                console.log(`BPI Total Amount used: ${amount}`);
+            } else if (baseAmtMatch) {
+                amount = parseFloat(baseAmtMatch[1].replace(/,/g, ''));
+                // If fee is found separately and "Total Amount" isn't present, add it
+                if (fee > 0 && !text.includes("Total Amount")) {
+                    console.log(`BPI Adding fee ${fee} to base amount ${amount}`);
+                    amount += fee;
+                }
+            }
+
             if (amount === 0) return null;
 
             // 2. Detect Date from Body
-            const dateMatch = text.match(/Transaction Date and Time\s+([^;\n\r]+)/i) || text.match(/Date and Time\s+([^;\n\r]+)/i);
+            const dateMatch = text.match(/Transaction Date and Time\s+(?:\|\s*)?([^;\n\r|]+)/i) || 
+                              text.match(/Date and Time\s+(?:\|\s*)?([^;\n\r|]+)/i);
             if (dateMatch) {
                 const parsedDate = new Date(dateMatch[1].trim());
                 if (!isNaN(parsedDate)) dateVal = formatLocalDate(parsedDate);
             }
 
             // 3. SPECIAL DETECTION: ATOME PAYMENTS & AUB
-            // Regex tailored for pipe-separated table structure from stripTags
-            const payToMatch = text.match(/Pay To\s*\|\s*([^|\n\r]+)/i);
-            const bankNameMatch = text.match(/Bank Name\s*\|\s*([^|\n\r]+)/i);
+            const payToMatch = text.match(/Pay To\s*\|\s*([^|\n\r]+)/i) || text.match(/To\s*\|\s*([^|\n\r]+)/i);
+            const bankNameMatch = text.match(/Bank Name\s*\|\s*([^|\n\r]+)/i) || text.match(/Bank\s*\|\s*([^|\n\r]+)/i);
             const refNoMatch = text.match(/Transaction Ref No\.\s*\|\s*([A-Z0-9]+)/i);
 
             const isAtome = (payToMatch && payToMatch[1].toLowerCase().includes("atome")) || 
@@ -5752,13 +5832,13 @@
                 merchant = "ATOME PAYMENT";
                 category = "Credit Card Payment";
                 if (refNoMatch) note = "Ref No: " + refNoMatch[1].trim();
-                else if (bankNameMatch) note = "Ref No: " + bankNameMatch[1].trim(); // Fallback if no ref no
+                else if (bankNameMatch) note = "Ref No: " + bankNameMatch[1].trim(); 
             } else if (sLower.includes("incoming") || tLower.includes("incoming") || tLower.includes("you have an incoming") || text.includes("Incoming Funds") || text.includes("received a transfer")) {
                 // 4. INCOME
                 isIncome = true;
                 merchant = "INCOME"; 
                 category = "Income";
-                const bankMatch = bankNameMatch || text.match(/Transfer From\s*\|\s*([^|\n\r]+)/i);
+                const bankMatch = bankNameMatch || text.match(/Transfer From\s*(?:\|\s*)?([^|\n\r]+)/i);
                 if (bankMatch) note = "FROM " + bankMatch[1].trim().toUpperCase();
             } else if (tLower.includes("transfer money") || sLower.includes("interbank") || sLower.includes("funds transfer") || sLower.includes("fund transfer") || payToMatch || text.includes("successfully submitted your")) {
                 // 5. OUTGOING PAYMENTS
@@ -5849,6 +5929,7 @@
             const category = item.dataset.category || '';
             const note = item.dataset.note || '';
             const isRefund = item.dataset.refund === 'true';
+            const isReimbursed = item.dataset.reimbursed === 'true';
             const date = item.dataset.date || '';
             const manualAmount = item.dataset.manualAmount || '';
             
@@ -5916,6 +5997,10 @@
                     <i class="material-icons">${isRefund ? 'undo' : 'sync_alt'}</i>
                     <span>${isRefund ? 'Unmark Refund' : 'Mark as Refund'}</span>
                 </div>
+                <div class="ios-action-item warning" onclick="handleIOSAction('reimbursed', '${txnId}', ${isReimbursed})">
+                    <i class="material-icons">${isReimbursed ? 'undo' : 'account_balance_wallet'}</i>
+                    <span>${isReimbursed ? 'Unmark Reimbursed' : 'Mark as Reimbursed'}</span>
+                </div>
                 <div class="ios-action-item danger" onclick="handleIOSAction('delete', '${txnId}')">
                     <i class="material-icons">delete</i>
                     <span>Delete</span>
@@ -5924,6 +6009,7 @@
             
             // 6. Position menu
             menu.classList.add('show');
+            if (window.pushModalState) pushModalState('ios-menu');
             const menuHeight = menu.offsetHeight || 180;
             const menuWidth = menu.offsetWidth || 200;
             
@@ -5958,9 +6044,10 @@
             menu.style.transform = 'none';
         }
         
-        window.closeIOSMenu = () => {
+        window.closeIOSMenu = (fromPopState = false) => {
             const blurOverlay = document.getElementById('blur-overlay');
             const iosMenu = document.getElementById('ios-menu');
+            const wasMenuOpen = iosMenu && iosMenu.classList.contains('show');
             const mobileWrapper = document.querySelector('.mobile-wrapper');
             const fab = document.querySelector('.fab');
             const nav = document.querySelector('.bottom-nav');
@@ -5987,16 +6074,31 @@
                 currentElevatedItem.style.visibility = 'visible';
                 currentElevatedItem = null;
             }
+
+            // Sync history
+            if (wasMenuOpen && !fromPopState) {
+                history.back();
+            }
         };
         
         window.handleIOSAction = (action, txnId, ...args) => {
-            closeIOSMenu();
+            // Close menu UI without calling history.back()
+            closeIOSMenu(true);
             
+            // Helper to open modal with replaceState instead of pushState
+            // This converts [home -> menu] history into [home -> modal]
+            const openWithReplace = (modalType) => {
+                window.modalOpen = true;
+                window.replaceModalState(modalType);
+            };
+
             switch(action) {
                 case 'edit':
+                    openWithReplace('edit-txn');
                     openEditModal(txnId, args[0], args[1], args[2], args[3]);
                     break;
                 case 'duplicate':
+                    openWithReplace('duplicate-txn');
                     openDuplicateModal(txnId, args[0], args[1], args[2], args[3], args[4], args[5]);
                     break;
                 case 'exclude':
@@ -6004,6 +6106,9 @@
                     break;
                 case 'refund':
                     toggleRefund(txnId, args[0]);
+                    break;
+                case 'reimbursed':
+                    toggleReimbursed(txnId, args[0]);
                     break;
                 case 'delete':
                     openDeleteModal(txnId, window.currentAccount);
@@ -6081,6 +6186,40 @@
             }
         };
 
+        window.toggleReimbursed = async (id, isCurrentlyReimbursed) => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync changes to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
+            
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === id);
+            const originalState = isCurrentlyReimbursed;
+            if (idx > -1) {
+                window.allTxns[idx].reimbursed = !isCurrentlyReimbursed;
+                renderHistory(window.allTxns);
+                // No updateBalanceToThisMonth call - reimbursed txns stay in balance
+                if (window.detectSubscriptions) detectSubscriptions();
+                if (window.drawCashFlowChart) drawCashFlowChart();
+            }
+
+            try {
+                if (!auth.currentUser) return;
+                const uid = auth.currentUser.uid;
+                const col = getCollectionName(window.currentAccount);
+                await updateDoc(doc(db, "users", uid, col, id), { reimbursed: !isCurrentlyReimbursed });
+                showToast(isCurrentlyReimbursed ? 'Reimbursed status removed' : 'Marked as Reimbursed');
+            } catch (e) { 
+                console.error('Toggle reimbursed failed', e);
+                if (idx > -1) {
+                    window.allTxns[idx].reimbursed = originalState;
+                    renderHistory(window.allTxns);
+                }
+            }
+        };
+
         // DUPLICATE TRANSACTION LOGIC
         let currentDuplicateTxn = null;
 
@@ -6121,6 +6260,11 @@
             // Show modal
             document.getElementById('duplicate-modal').classList.add('show');
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+            if (window.modalOpen) {
+                // Handled by replaceModalState in handleIOSAction
+            } else {
+                if (window.pushModalState) pushModalState('duplicate-txn');
+            }
         };
 
         window.confirmDuplicate = async () => {
@@ -6312,6 +6456,7 @@
             currentTxnId = id;
             currentDeletionAccount = accId || window.currentAccount;
             document.getElementById('delete-modal').classList.add('show');
+            if (window.pushModalState) pushModalState('delete-txn');
         };
 
         window.confirmDelete = async () => {
@@ -6391,6 +6536,7 @@
             { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
             { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
             { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
+            { id: 'Savings', icon: 'account_balance', label: 'Savings', cls: 'cat-investments' },
             { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
         ];
 
@@ -6438,9 +6584,49 @@
         };
         populateTxnFilter();
 
-        window.closeModals = () => {
-            document.querySelectorAll('.modal-overlay, .dialog-overlay').forEach(m => m.classList.remove('show'));
+        // =============================================
+        // NAVIGATION HANDLING: Back Button, Modal, & Double-Tap to Exit
+        // =============================================
+        
+        // Track current navigation state
+        window.currentPage = 'home';
+        window.modalOpen = false;
+        window.lastBackPressTime = 0;
+
+        // Helper: Push history state when opening a modal
+        window.pushModalState = (modalName) => {
+            window.modalOpen = true;
+            history.pushState({ modal: modalName }, '', '');
+        };
+
+        window.replaceModalState = (modalName) => {
+            window.modalOpen = true;
+            history.replaceState({ modal: modalName }, '', '');
+        };
+
+        window.closeModals = (fromPopState = false) => {
+            const wasModalOpen = window.modalOpen;
+            const overlays = document.querySelectorAll('.modal-overlay.show, .dialog-overlay.show');
+            
+            if (overlays.length > 0) {
+                overlays.forEach(m => m.classList.add('closing'));
+                
+                // Allow animation to finish before removing show and cleaning up
+                setTimeout(() => {
+                    overlays.forEach(m => {
+                        m.classList.remove('show');
+                        m.classList.remove('closing');
+                    });
+                    cleanupModalState(wasModalOpen, fromPopState);
+                }, 300); // Sync with 0.3s CSS animations
+            } else {
+                cleanupModalState(wasModalOpen, fromPopState);
+            }
+        };
+
+        function cleanupModalState(wasModalOpen, fromPopState) {
             currentTxnId = null;
+            window.modalOpen = false;
             
             // Remove blur effect from background elements
             document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
@@ -6455,7 +6641,61 @@
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
-        };
+            
+            // Also close iOS menu if open
+            if (window.closeIOSMenu) closeIOSMenu();
+            
+            // Pop history state if not from popstate event
+            if (wasModalOpen && !fromPopState) {
+                history.back();
+            }
+        }
+
+        // POPSTATE HANDLER: Handle back button press
+        window.addEventListener('popstate', (e) => {
+            // Check if a modal is open
+            const openModal = document.querySelector('.modal-overlay.show, .dialog-overlay.show');
+            const iosMenu = document.getElementById('ios-menu')?.classList.contains('show');
+            
+            if (openModal || iosMenu) {
+                // Close modal/menu instead of navigating back
+                // Since popstate already removed the pushed state, we just handle the UI
+                if (iosMenu && window.closeIOSMenu) closeIOSMenu(true);
+                if (openModal) closeModals(true);
+                return;
+            }
+            
+            // If on a sub-page (Accounts, Calendar, Profile), return to home
+            if (window.currentPage !== 'home') {
+                // Navigate to home page
+                if (window.showPage) {
+                    showPage('home');
+                }
+                window.currentPage = 'home';
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+                return;
+            }
+            
+            // On home with no modals: Double-tap to exit
+            const now = Date.now();
+            if (now - window.lastBackPressTime < 2000) {
+                // Double-tap: Allow exit (don't prevent default)
+                // For PWA, we need to close the window
+                window.close();
+            } else {
+                // First tap: Show toast and prevent exit
+                window.lastBackPressTime = now;
+                if (window.showToast) showToast('Tap back again to exit');
+                
+                // Push state back to prevent actual navigation
+                history.pushState(null, '', '');
+            }
+        });
+
+        // Initialize history state
+        history.replaceState(null, '', '');
 
         // Close on outside click
         window.onclick = (e) => {
@@ -6477,6 +6717,7 @@
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            if (window.pushModalState) pushModalState('change-cat');
         };
 
         window.saveCategory = async (catId) => {
@@ -6597,6 +6838,7 @@
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            if (window.pushModalState) pushModalState('edit-price');
             setTimeout(() => input.focus(), 100);
 
             input.onkeydown = (e) => {
@@ -6934,12 +7176,32 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
+            // Push history state for back button handling
+            if (window.pushModalState) pushModalState('manual-txn');
+            
             // Blur background
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
 
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+            
+            // Add Enter key to save transaction
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.saveManualTxn) saveManualTxn();
+                }
+            };
+            
+            // Add listeners to form inputs
+            ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('keydown', handleEnterKey);
+                    el.addEventListener('keydown', handleEnterKey);
+                }
+            });
         };
 
         window.openEditModal = (txnId, merchant, amount, category, note) => {
@@ -6991,10 +7253,36 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // ALLOW body scroll
-            // document.body.style.overflow = 'hidden';
+            // Push history state if not already handled by replaceModalState
+            if (window.modalOpen) {
+                // If modalOpen is already true, it means handleIOSAction 
+                // already called replaceModalState.
+            } else {
+                if (window.pushModalState) pushModalState('edit-txn');
+            }
+            
+            // Blur background
+            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+            document.querySelector('.fab')?.classList.add('blur-active');
+            document.querySelector('.bottom-nav')?.classList.add('blur-active');
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 100);
+            
+            // Add Enter key to save transaction
+            const handleEnterKey = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (window.saveManualTxn) saveManualTxn();
+                }
+            };
+            
+            ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.removeEventListener('keydown', handleEnterKey);
+                    el.addEventListener('keydown', handleEnterKey);
+                }
+            });
         };
 
         window.renderManualCategories = () => {
@@ -7017,6 +7305,7 @@
                      else if (cat.cls.includes('cat-aqua')) { bgStyle = '#ecfeff'; colorStyle = '#0891b2'; } // Dark Aqua
                      else if (cat.cls.includes('Service') || cat.cls.includes('magenta')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
                      else if (cat.cls.includes('cat-education')) { bgStyle = '#eff6ff'; colorStyle = '#1d4ed8'; } // Dark Blue
+                     else if (cat.cls.includes('cat-investments')) { bgStyle = '#dcfce7'; colorStyle = '#15803d'; } // Saturated Green
                      else if (cat.label.includes('Financial') || cat.label.includes('Trading')) { bgStyle = '#fef2f2'; colorStyle = '#ef4444'; } // Red
                      else { bgStyle = '#f0fdf4'; colorStyle = '#10b981'; } 
                 }
@@ -7189,8 +7478,9 @@
                         // Calculate total for header
                         const isExcluded = t.classList.contains('txn-excluded') || t.dataset.excluded === 'true';
                         const isRefund = t.dataset.refund === 'true';
+                        const isReimbursed = t.dataset.reimbursed === 'true';
                         
-                        if (!isExcluded && !isRefund) {
+                        if (!isExcluded && !isRefund && !isReimbursed) {
                              const amt = parseFloat(t.dataset.amount) || 0;
                              const isIncome = (itemCatId === 'Income' || itemCatLabel === 'Income');
                              
@@ -7494,7 +7784,7 @@
                 if (mIdx > -1) {
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                    if (!t.excluded && !t.refund) {
+                    if (!t.excluded && !t.refund && !t.reimbursed) {
                         if (mapped.category === 'Income') months[mIdx].income += amt;
                         else months[mIdx].expense += amt;
                     }
@@ -7549,7 +7839,7 @@
             const merchantData = {};
             window.allTxns.forEach(t => {
                 const mapped = getMerchantDisplay(t.merchant, t);
-                if (t.excluded || t.refund || mapped.category === 'Income') return;
+                if (t.excluded || t.refund || t.reimbursed || mapped.category === 'Income') return;
                 
                 const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                 if (amt < 50) return;
@@ -7569,9 +7859,33 @@
                 const monthKey = `${d.getMonth()}-${d.getFullYear()}`;
 
                 if (!merchantData[merchantKey]) {
+                    // LOGO MAPPING: Assign logos based on merchant name
+                    let iconPath = mapped.logo || 'receipt_long';
+                    const mLower = merchantKey.toLowerCase();
+                    
+                    if (mLower.includes('tecfuel') || mLower.includes('tec fuel')) iconPath = 'logos/tecfuel.png';
+                    else if (mLower.includes('spotify')) iconPath = 'logos/spotify.png';
+                    else if (mLower.includes('shopee')) iconPath = 'logos/shopee.png';
+                    else if (mLower.includes('traders') || mLower.includes('tradersconnect')) iconPath = 'logos/tradersconnect.png';
+                    else if (mLower.includes('mr diy') || mLower.includes('mrdiy')) iconPath = 'logos/mrdiy.png';
+                    else if (mLower.includes('jollibee')) iconPath = 'logos/jollibee.png';
+                    else if (mLower.includes('mcdo') || mLower.includes('mcdonald')) iconPath = 'logos/mcdo.png';
+                    else if (mLower.includes('shell')) iconPath = 'logos/shell.png';
+                    else if (mLower.includes('petron')) iconPath = 'logos/petron.png';
+                    else if (mLower.includes('seaoil')) iconPath = 'logos/seaoil.png';
+                    else if (mLower.includes('lazada')) iconPath = 'logos/lazada.jpg';
+                    else if (mLower.includes('globe') || mLower.includes('gomo')) iconPath = 'logos/globe.png';
+                    else if (mLower.includes('tiktok')) iconPath = 'logos/tiktokshop.png';
+                    else if (mLower.includes('watsons')) iconPath = 'logos/watsons.png';
+                    else if (mLower.includes('sm ') || mLower === 'sm' || mLower.includes('sm store')) iconPath = 'logos/sm.png';
+                    else if (mLower.includes('7-11') || mLower.includes('7 11') || mLower.includes('7/11') || mLower.includes('711')) iconPath = 'logos/711.png';
+                    else if (mLower.includes('metro') || mLower.includes('super metro')) iconPath = 'logos/supermetro.png';
+                    else if (mLower.includes('ayala')) iconPath = 'logos/ayala.png';
+                    else if (mLower.includes('j and l') || mLower.includes('j&l')) iconPath = 'logos/jandlmall.png';
+
                     merchantData[merchantKey] = {
                         name: displayName,
-                        icon: merchantKey === 'tecfuel' ? 'logos/tecfuel.png' : (mapped.logo || 'receipt_long'),
+                        icon: iconPath,
                         monthlySpend: {},
                         countMonths: 0,
                         currentMonthSpend: 0,
@@ -7615,9 +7929,29 @@
                 });
 
                 const mName = m.name.toLowerCase();
-                const isWhitelisted = mName.includes('spotify') || mName.includes('traders connect');
                 
-                if (!isWhitelisted && maxConsecutive < 4) return;
+                // WHITELIST: Important recurring merchants that should always appear if present in last 4 months
+                const isWhitelisted = mName.includes('spotify') || 
+                                      mName.includes('traders connect') ||
+                                      mName.includes('mr diy') || mName.includes('mrdiy') ||
+                                      mName.includes('tecfuel') || mName.includes('tec fuel') ||
+                                      mName.includes('jollibee') ||
+                                      mName.includes('shell') ||
+                                      mName.includes('petron') ||
+                                      mName.includes('globe') || mName.includes('gomo');
+                
+                // NEW LOGIC: Check if present in at least 2 of the last 4 months (allows gaps)
+                const last4Months = [];
+                for (let i = 0; i < 4; i++) {
+                    const d = new Date(targetYear, targetMonth - i, 1);
+                    last4Months.push(`${d.getMonth()}-${d.getFullYear()}`);
+                }
+                const presentInLast4 = last4Months.filter(k => m.monthlySpend[k]).length;
+                
+                // Whitelisted merchants need 2+ months in last 4, others need 4 consecutive
+                if (isWhitelisted) {
+                    if (presentInLast4 < 2) return;
+                } else if (maxConsecutive < 4) return;
 
                 const currentKey = `${targetMonth}-${targetYear}`;
                 m.currentMonthSpend = m.monthlySpend[currentKey] || 0;
@@ -7656,7 +7990,7 @@
                 <div class="subscription-item">
                     <div class="sub-main-row">
                         <div class="sub-icon">
-                            ${g.icon.length > 20 ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
+                            ${g.icon.includes('logos/') || /\.(png|jpg|jpeg|svg|gif)$/i.test(g.icon) ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
                         </div>
                         <div class="sub-info">
                             <div class="sub-name">${g.name}</div>
@@ -7914,18 +8248,18 @@
     </div>
 
     <!-- DUPLICATE TRANSACTION MODAL -->
-    <div id="duplicate-modal" class="modal-overlay">
-        <div class="custom-modal">
-            <div class="modal-header">Duplicate Transaction</div>
-            <p style="color: #64748b; font-size: 13px; margin: 8px 0 0;">Select which accounts to duplicate this transaction into.</p>
+    <div id="duplicate-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
+        <div class="custom-modal" id="duplicate-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div class="modal-header" style="font-weight: 800; font-size: 18px; color: #1e293b;">Duplicate Transaction</div>
+            <p style="color: #64748b; font-size: 13px; margin: 8px 0 16px;">Select which accounts to duplicate this transaction into.</p>
             <div class="modal-body">
-                <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Account checkboxes will be injected here -->
                 </div>
             </div>
-            <div class="modal-actions" style="margin-top: 16px;">
-                <div class="cancel-link" onclick="closeModals()">CANCEL</div>
-                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3;">DUPLICATE</button>
+            <div class="modal-actions" style="margin-top: 24px; justify-content: space-between; align-items: center;">
+                <div class="cancel-link" onclick="closeModals()" style="padding-left: 0;">CANCEL</div>
+                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3; height: 44px; padding: 0 32px;">DUPLICATE</button>
             </div>
         </div>
     </div>

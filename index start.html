@@ -41,7 +41,7 @@
             .mobile-wrapper { height: 100vh; overflow-y: scroll; }
         }
 
-        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
@@ -411,7 +411,7 @@
         @keyframes amberPulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
         /* ACCORDION */
-        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: box-shadow 0.2s; position: relative; }
+        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: box-shadow 0.2s; position: relative; overflow: hidden; }
         .month-accordion:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
@@ -498,7 +498,7 @@
         .cat-trading { background: #fee2e2; color: #ef4444; }
         .cat-financial { background: #fee2e2; color: #ef4444; }
         .cat-credit-card { background: #fff7ed; color: #eaaf0c; }
-        .cat-investments { background-color: #f0fdfa; color: #0d9488; }
+        .cat-investments { background-color: #dcfce7; color: #16a34a; }
         .cat-education { background: #eff6ff; color: #1d4ed8; }
         .cat-income { background: #dcfce7; color: #16a34a; }
 
@@ -1387,9 +1387,9 @@
         .breakdown-yellow .breakdown-name { color: #d97706; }
         .breakdown-yellow-text { color: #d97706; }
 
-        .breakdown-green { background: #f0fdf4; color: #10b981; }
-        .breakdown-green .breakdown-name { color: #10b981; }
-        .breakdown-green-text { color: #10b981; }
+        .breakdown-green { background: #dcfce7; color: #16a34a; }
+        .breakdown-green .breakdown-name { color: #16a34a; }
+        .breakdown-green-text { color: #16a34a; }
 
         .footer-strip { 
             background: #f8fafc; 
@@ -3988,8 +3988,8 @@
             'Travel': { color: '#06b6d4', darkColor: '#0891b2', class: 'cat-aqua' },
             'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' },
             'Sport': { color: '#10b981', darkColor: '#059669', class: 'cat-life' },
-            'Savings': { color: '#15803d', darkColor: '#14532d', class: 'cat-investments' },
-            'Income': { color: '#15803d', darkColor: '#14532d', class: 'cat-income' },
+            'Savings': { color: '#16a34a', darkColor: '#16a34a', class: 'cat-investments' },
+            'Income': { color: '#16a34a', darkColor: '#16a34a', class: 'cat-income' },
             'Other': { color: '#64748b', darkColor: '#475569', class: 'cat-financial' }
         };
 
@@ -4847,7 +4847,7 @@
                     } else {
                         // Expense Logic
                         if (mapped.category === 'Savings') {
-                            displayTitleColor = 'color: #15803d;'; // Saturated Green for Title
+                            displayTitleColor = 'color: #16a34a;'; // Bright Green for Title
                         } else if (Math.abs(amount) >= 1000) {
                             displayAmtColor = 'color: #ef4444;'; // Red Red
                         } else if (window.currentAccount === 'bpi') {
@@ -4911,7 +4911,7 @@
                                 <div class="txn-sub">
                                     <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
                                 </div>
-                                ${displayNote ? `<div class="txn-note" style="color: ${isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                                ${displayNote ? `<div class="txn-note" style="color: ${(mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'))}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                             </div>
                             <div class="txn-right">
                                 <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">

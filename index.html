@@ -445,7 +445,7 @@
         .cat-financial { background-color: #fef2f2; color: #ef4444; } /* Red */
         .cat-trading { background-color: #fff1f2; color: #ef4444; } /* Red - Trading */
         .cat-aqua { background-color: #ecfeff; color: #0891b2; } /* Dark Aqua/Cyan - Trade Copier */
-        .cat-investments { background-color: #f0fdfa; color: #0d9488; } /* Teal/Dark Green */
+        .cat-investments { background-color: #dcfce7; color: #15803d; } /* Saturated Green */
         .cat-school { background-color: #eff6ff; color: #1d4ed8; } /* Blue */
         .cat-red { background-color: #fef2f2; color: #ef4444 !important; } /* Force Red for Financial */
         
@@ -498,6 +498,7 @@
         .cat-trading { background: #fee2e2; color: #ef4444; }
         .cat-financial { background: #fee2e2; color: #ef4444; }
         .cat-credit-card { background: #fff7ed; color: #eaaf0c; }
+        .cat-investments { background-color: #dcfce7; color: #16a34a; }
         .cat-education { background: #eff6ff; color: #1d4ed8; }
         .cat-income { background: #dcfce7; color: #16a34a; }
 
@@ -998,6 +999,20 @@
         .premium-txn.txn-excluded .txn-sub,
         .premium-txn.txn-excluded .txn-amount,
         .premium-txn.txn-excluded .txn-note { text-decoration: line-through; }
+
+        .reimbursed-badge {
+            display: inline-block;
+            background: #fef3c7;
+            color: #d97706;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            letter-spacing: 0.3px;
+            vertical-align: middle;
+            text-transform: uppercase;
+        }
         .premium-txn.txn-excluded .icon-box { filter: grayscale(1); opacity: 0.5; }
 
         /* SEARCH STYLING */
@@ -1372,9 +1387,9 @@
         .breakdown-yellow .breakdown-name { color: #d97706; }
         .breakdown-yellow-text { color: #d97706; }
 
-        .breakdown-green { background: #f0fdf4; color: #10b981; }
-        .breakdown-green .breakdown-name { color: #10b981; }
-        .breakdown-green-text { color: #10b981; }
+        .breakdown-green { background: #dcfce7; color: #16a34a; }
+        .breakdown-green .breakdown-name { color: #16a34a; }
+        .breakdown-green-text { color: #16a34a; }
 
         .footer-strip { 
             background: #f8fafc; 
@@ -3945,7 +3960,7 @@
             const past = window.allTxns.filter(t => checkPeriod(t, filter, 1));
             
             const pastTotal = past.reduce((sum, t) => {
-                 if (t.excluded || t.refund) return sum;
+                 if (t.excluded || t.refund || t.reimbursed) return sum;
                  const mapped = getMerchantDisplay(t.merchant, t);
                  if (mapped.category === 'Income') return sum;
                  return sum + (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
@@ -3971,9 +3986,11 @@
             'Credit Card Payment': { color: '#f59e0b', darkColor: '#d97706', class: 'cat-credit-card' },
             'Transportation': { color: '#8b5cf6', darkColor: '#7c3aed', class: 'cat-vehicle' },
             'Travel': { color: '#06b6d4', darkColor: '#0891b2', class: 'cat-aqua' },
-            'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' }, /* Dark Blue */
+            'Education': { color: '#1e40af', darkColor: '#1e3a8a', class: 'cat-shopping' },
             'Sport': { color: '#10b981', darkColor: '#059669', class: 'cat-life' },
-            'Income': { color: '#16a34a', darkColor: '#15803d', class: 'cat-income' } /* Green */
+            'Savings': { color: '#16a34a', darkColor: '#16a34a', class: 'cat-investments' },
+            'Income': { color: '#16a34a', darkColor: '#16a34a', class: 'cat-income' },
+            'Other': { color: '#64748b', darkColor: '#475569', class: 'cat-financial' }
         };
 
         function refreshChart(txns, pastTotal = 0) {
@@ -3985,7 +4002,7 @@
             let expenseTotal = 0;
 
             txns.forEach(t => {
-                if (t.excluded || t.refund) return;
+                if (t.excluded || t.refund || t.reimbursed) return;
                 const mapped = getMerchantDisplay(t.merchant, t);
                 const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                 let cat = mapped.category || 'Other';
@@ -4075,7 +4092,7 @@
                     const d = new Date(t.date);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || d < startOfWeek || mappedTrn.category === 'Income') return; 
+                    if (t.excluded || t.refund || t.reimbursed || d < startOfWeek || mappedTrn.category === 'Income') return; 
 
                     const diff = Math.floor((d - startOfWeek) / 86400000);
                     if (diff >= 0 && diff < 7) {
@@ -4101,7 +4118,7 @@
                     const d = new Date(t.date);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
 
                     // Calculate month difference
                     const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
@@ -4140,7 +4157,7 @@
                     const d = new Date(t.date);
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
                     
                     let idx;
                     if (filter === 'this_month') {
@@ -4762,7 +4779,7 @@
                 
                 groups[key].items.push(t);
                 const mappedSumCheck = getMerchantDisplay(t.merchant, t);
-                if (!t.excluded && !t.refund && mappedSumCheck.category !== 'Income') {
+                if (!t.excluded && !t.refund && !t.reimbursed && mappedSumCheck.category !== 'Income') {
                     const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                     groups[key].total += amt;
                 }
@@ -4802,6 +4819,7 @@
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const isIncome = mapped.category === 'Income';
                     const isRefund = t.refund || false;
+                    const isReimbursed = t.reimbursed || false;
                     const excludedClass = t.excluded ? 'txn-excluded' : '';
                     
                     const d = new Date(t.date);
@@ -4819,7 +4837,7 @@
                     if (isIncome) {
                         displayAmtColor = 'color: #16a34a;';
                         displayTitleColor = 'color: #16a34a;';
-                    } else if (isRefund) {
+                    } else if (isRefund || isReimbursed) {
                         displayAmtColor = 'color: #f59e0b;';
                         displayTitleColor = 'color: #f59e0b;';
                     } else if (mapped.category === 'Credit Card Payment') {
@@ -4828,7 +4846,9 @@
                         displayTitleColor = 'color: #f59e0b;'; // Orange Gold
                     } else {
                         // Expense Logic
-                        if (Math.abs(amount) >= 1000) {
+                        if (mapped.category === 'Savings') {
+                            displayTitleColor = 'color: #16a34a;'; // Bright Green for Title
+                        } else if (Math.abs(amount) >= 1000) {
                             displayAmtColor = 'color: #ef4444;'; // Red Red
                         } else if (window.currentAccount === 'bpi') {
                             displayAmtColor = 'color: #991b1b;'; // Dark Red
@@ -4840,6 +4860,7 @@
                     if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
                     // else if (isIncome) displayName = 'INCOME'; // REMOVED to allow database overrides
                     let refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
+                    let reimbursedChip = isReimbursed ? '<span class="reimbursed-badge">REIMBURSED</span>' : '';
                     
                     // Payment chip for duplicated ATOME PAYMENT from BPI to Atome
                     const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
@@ -4879,21 +4900,22 @@
                              data-category="${mapped.category}"
                              data-note="${noteSafe}"
                              data-excluded="${t.excluded || false}"
-                             data-refund="${t.refund || false}">
+                             data-refund="${t.refund || false}"
+                             data-reimbursed="${t.reimbursed || false}">
                             <div class="icon-box ${mapped.catClass}">
                                 <i class="material-icons">${mapped.icon}</i>
                                 ${logoHTML}
                             </div>
                             <div class="txn-details">
-                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${paymentChip}</div>
+                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
                                 <div class="txn-sub">
                                     <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
                                 </div>
-                                ${displayNote ? `<div class="txn-note" style="color: ${isRefund ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569')}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                                ${displayNote ? `<div class="txn-note" style="color: ${(mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'))}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                             </div>
                             <div class="txn-right">
-                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                    ${isHidden ? '******' : ((!isIncome && !isRefund && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                    ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                                 </div>
                             </div>
                         </div>`;
@@ -5015,7 +5037,7 @@
                     window.allTxns.forEach(t => {
                         const d = new Date(t.date);
                         // USER REQUEST: Monthly filter - budgets reset each month
-                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund) {
+                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
                             const mapped = getMerchantDisplay(t.merchant, t);
                             const itemCatLabel = displayCategoryName(mapped.category);
                             if (mapped.category === cat || itemCatLabel === cat) {
@@ -5196,14 +5218,20 @@
             selectedBudgetCatId = null;
             
             // Populate Category Grid
-            grid.innerHTML = CATEGORIES.filter(c => c.id !== 'Income').map(cat => `
+            grid.innerHTML = CATEGORIES.filter(c => c.id !== 'Income').map(cat => {
+                // Force Green for Savings
+                const isSavings = cat.id === 'Savings';
+                const labelColor = isSavings ? '#15803d' : '#64748b';
+                
+                return `
                 <div class="cat-option" id="btn-budget-cat-${cat.id.replace(/\s+/g, '-')}" onclick="selectBudgetCategory('${cat.id}')" style="padding: 12px 4px; gap: 8px; border-radius: 16px;">
                     <div class="cat-budget-icon-box ${cat.cls || ''}" style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
                         <i class="material-icons" style="font-size: 20px;">${cat.icon}</i>
                     </div>
-                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
+                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: ${labelColor}; letter-spacing: 0.2px; text-align: center;">${cat.label}</span>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById('cat-budget-modal-title').innerText = 'Category Limit';
             const selectionArea = document.getElementById('cat-budget-selection-area');
@@ -5901,6 +5929,7 @@
             const category = item.dataset.category || '';
             const note = item.dataset.note || '';
             const isRefund = item.dataset.refund === 'true';
+            const isReimbursed = item.dataset.reimbursed === 'true';
             const date = item.dataset.date || '';
             const manualAmount = item.dataset.manualAmount || '';
             
@@ -5967,6 +5996,10 @@
                 <div class="ios-action-item warning" onclick="handleIOSAction('refund', '${txnId}', ${isRefund})">
                     <i class="material-icons">${isRefund ? 'undo' : 'sync_alt'}</i>
                     <span>${isRefund ? 'Unmark Refund' : 'Mark as Refund'}</span>
+                </div>
+                <div class="ios-action-item warning" onclick="handleIOSAction('reimbursed', '${txnId}', ${isReimbursed})">
+                    <i class="material-icons">${isReimbursed ? 'undo' : 'account_balance_wallet'}</i>
+                    <span>${isReimbursed ? 'Unmark Reimbursed' : 'Mark as Reimbursed'}</span>
                 </div>
                 <div class="ios-action-item danger" onclick="handleIOSAction('delete', '${txnId}')">
                     <i class="material-icons">delete</i>
@@ -6074,6 +6107,9 @@
                 case 'refund':
                     toggleRefund(txnId, args[0]);
                     break;
+                case 'reimbursed':
+                    toggleReimbursed(txnId, args[0]);
+                    break;
                 case 'delete':
                     openDeleteModal(txnId, window.currentAccount);
                     break;
@@ -6145,6 +6181,40 @@
                  // Revert
                  if (idx > -1) {
                     window.allTxns[idx].refund = originalState;
+                    renderHistory(window.allTxns);
+                }
+            }
+        };
+
+        window.toggleReimbursed = async (id, isCurrentlyReimbursed) => {
+            if (auth.currentUser?.isAnonymous) {
+                if (confirm('Your data is in "Local Mode". Sign in with Google to sync changes to the cloud?')) {
+                    handleAuthClick();
+                    return;
+                }
+            }
+            
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === id);
+            const originalState = isCurrentlyReimbursed;
+            if (idx > -1) {
+                window.allTxns[idx].reimbursed = !isCurrentlyReimbursed;
+                renderHistory(window.allTxns);
+                // No updateBalanceToThisMonth call - reimbursed txns stay in balance
+                if (window.detectSubscriptions) detectSubscriptions();
+                if (window.drawCashFlowChart) drawCashFlowChart();
+            }
+
+            try {
+                if (!auth.currentUser) return;
+                const uid = auth.currentUser.uid;
+                const col = getCollectionName(window.currentAccount);
+                await updateDoc(doc(db, "users", uid, col, id), { reimbursed: !isCurrentlyReimbursed });
+                showToast(isCurrentlyReimbursed ? 'Reimbursed status removed' : 'Marked as Reimbursed');
+            } catch (e) { 
+                console.error('Toggle reimbursed failed', e);
+                if (idx > -1) {
+                    window.allTxns[idx].reimbursed = originalState;
                     renderHistory(window.allTxns);
                 }
             }
@@ -6466,6 +6536,7 @@
             { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
             { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
             { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
+            { id: 'Savings', icon: 'account_balance', label: 'Savings', cls: 'cat-investments' },
             { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
         ];
 
@@ -7234,6 +7305,7 @@
                      else if (cat.cls.includes('cat-aqua')) { bgStyle = '#ecfeff'; colorStyle = '#0891b2'; } // Dark Aqua
                      else if (cat.cls.includes('Service') || cat.cls.includes('magenta')) { bgStyle = '#fdf4ff'; colorStyle = '#d946ef'; } // Magenta
                      else if (cat.cls.includes('cat-education')) { bgStyle = '#eff6ff'; colorStyle = '#1d4ed8'; } // Dark Blue
+                     else if (cat.cls.includes('cat-investments')) { bgStyle = '#dcfce7'; colorStyle = '#15803d'; } // Saturated Green
                      else if (cat.label.includes('Financial') || cat.label.includes('Trading')) { bgStyle = '#fef2f2'; colorStyle = '#ef4444'; } // Red
                      else { bgStyle = '#f0fdf4'; colorStyle = '#10b981'; } 
                 }
@@ -7406,8 +7478,9 @@
                         // Calculate total for header
                         const isExcluded = t.classList.contains('txn-excluded') || t.dataset.excluded === 'true';
                         const isRefund = t.dataset.refund === 'true';
+                        const isReimbursed = t.dataset.reimbursed === 'true';
                         
-                        if (!isExcluded && !isRefund) {
+                        if (!isExcluded && !isRefund && !isReimbursed) {
                              const amt = parseFloat(t.dataset.amount) || 0;
                              const isIncome = (itemCatId === 'Income' || itemCatLabel === 'Income');
                              
@@ -7711,7 +7784,7 @@
                 if (mIdx > -1) {
                     const mapped = getMerchantDisplay(t.merchant, t);
                     const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                    if (!t.excluded && !t.refund) {
+                    if (!t.excluded && !t.refund && !t.reimbursed) {
                         if (mapped.category === 'Income') months[mIdx].income += amt;
                         else months[mIdx].expense += amt;
                     }
@@ -7766,7 +7839,7 @@
             const merchantData = {};
             window.allTxns.forEach(t => {
                 const mapped = getMerchantDisplay(t.merchant, t);
-                if (t.excluded || t.refund || mapped.category === 'Income') return;
+                if (t.excluded || t.refund || t.reimbursed || mapped.category === 'Income') return;
                 
                 const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                 if (amt < 50) return;

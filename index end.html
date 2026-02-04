@@ -8880,7 +8880,7 @@
         };
         
         // Show biometric overlay
-        const showBiometricOverlay = (mode) => {
+        const showBiometricOverlay = (mode = 'verify') => {
             const disableBtn = document.getElementById('biometricDisable');
             if (mode === 'setup') {
                 biometricTitle.innerText = 'Secure Your Wallet';
@@ -8896,7 +8896,7 @@
                 if (disableBtn) disableBtn.style.display = 'block';
             }
             biometricError.classList.remove('show');
-            biometricOverlay.classList.remove('hiding');
+            biometricOverlay.classList.remove('hiding'); // Ensure doors are closed
             biometricOverlay.classList.add('show');
         };
         
@@ -8908,7 +8908,7 @@
             icon.classList.add('success');
             if (navigator.vibrate) navigator.vibrate(15);
             
-            // Step 2: Push Down Reveal
+            // Step 2: Vault Door Reveal
             setTimeout(() => {
                 biometricOverlay.classList.add('hiding');
                 
@@ -8920,12 +8920,14 @@
             }, 500);
         };
         
-        // Disable biometric from overlay
+        // Disable biometric from the lock screen
         window.disableBiometricFromOverlay = () => {
-            if (confirm('Are you sure you want to disable biometric login?')) {
+            if (confirm('Are you sure you want to disable biometric login? You will need to setup again from settings if you change your mind.')) {
                 localStorage.removeItem('biometric_credential_id');
                 if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus();
                 showToast('Biometric login disabled');
+                
+                // Immediately reveal wallet
                 biometricOverlay.classList.add('hiding');
                 setTimeout(() => {
                     biometricOverlay.classList.remove('show', 'hiding');

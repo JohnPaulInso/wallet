@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Edit Goal - SmartWallet</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #fff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-color: #00851F;
+            --accent-soft: rgba(0, 133, 31, 0.08);
+            --border-color: #f1f5f9;
+            --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+        }
+
+        /* Native App Feel - Disable all link behaviors */
+        a, a:visited, a:hover, a:active, a:focus {
+            text-decoration: none !important;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            user-drag: none;
+        }
+        /* Disable text selection highlighting */
+        ::selection { background: transparent; }
+        ::-moz-selection { background: transparent; }
+
+        body { 
+            margin: 0; 
+            background: #ffffff; 
+            display: flex; 
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .mobile-wrapper { 
+            width: 100%; 
+            max-width: 430px; 
+            background: var(--bg-secondary);
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            padding-bottom: 120px; /* Increased for fixed footer */
+            min-height: 100vh;
+            height: 100vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* HEADER */
+        .page-header {
+            background: #fff;
+            padding: 15px 24px 10px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            width: 100%;
+            z-index: 500;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        .header-spacer { height: 75px; }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #1e293b;
+            border: none;
+            transition: all 0.2s;
+        }
+        .back-btn:active { transform: scale(0.95); }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        /* CONTENT */
+        .content {
+            padding: 16px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* CENTERED GOAL PREVIEW */
+        .goal-preview-card {
+            background: transparent;
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .icon-container-wrap {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        .icon-box.centered-large {
+            width: 108px; /* Downscaled 20% from 135px */
+            height: 100px; /* Downscaled 20% from 125px */
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #effef3;
+            color: var(--accent-color);
+            box-shadow: 0 10px 25px -10px rgba(0, 133, 31, 0.12);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .icon-box.centered-large i { font-size: 68px !important; }
+        .icon-box.centered-large:hover { transform: scale(1.02); }
+
+        .verified-badge {
+            position: absolute;
+            bottom: -5px;
+            right: -5px;
+            width: 32px;
+            height: 32px;
+            background: var(--accent-color);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+        }
+        .verified-badge i { font-size: 18px; }
+
+        .preview-title {
+            font-size: 21px; /* Downscaled */
+            font-weight: 900;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            letter-spacing: -0.4px;
+        }
+
+        .preview-amount-big {
+            font-size: 26px; /* Downscaled */
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 2px;
+            letter-spacing: -0.8px;
+        }
+
+        .preview-target-small {
+            font-size: 12px; /* Downscaled */
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar-bg {
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 100px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-color);
+            border-radius: 100px;
+            transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--accent-color);
+            margin-top: 6px;
+        }
+        .progress-labels .remaining { color: #94a3b8; }
+
+        /* CHART CARD */
+        .chart-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            margin: 12px 0;
+            box-shadow: var(--shadow-soft);
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .chart-title { font-size: 15px; font-weight: 800; color: var(--text-primary); }
+        .chart-subtitle { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+        
+        .chart-legend {
+            display: flex;
+            gap: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .legend-color { width: 10px; height: 10px; border-radius: 3px; }
+        .legend-color.actual { background: var(--accent-color); }
+        .legend-color.target { background: #e2e8f0; }
+
+        .chart-container {
+            width: 100%;
+            height: 120px; /* Shortened height */
+            min-height: 120px;
+            position: relative;
+        }
+
+        /* SECTION LABELS */
+        .section-group-label {
+            font-size: 11px;
+            font-weight: 900;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 16px 0 10px 4px;
+        }
+
+        /* ANALYTICS ITEMS */
+        .velocity-model {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .v-card {
+            background: #fff;
+            padding: 20px 16px; /* Optimized padding */
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-soft);
+        }
+        .v-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+        .v-value {
+            font-size: 19px; /* Slightly bigger */
+            font-weight: 900;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+        .v-sub { font-size: 11px; font-weight: 700; margin-top: 6px; }
+        .v-sub.green { color: #10b981; }
+        .v-sub.blue { color: #3b82f6; }
+
+        .forecast-card {
+            background: #f0fdf4;
+            padding: 16px 20px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            border: 1px solid var(--accent-soft);
+            box-shadow: var(--shadow-soft);
+        }
+        .forecast-icon {
+            width: 40px; height: 40px;
+            background: #fff;
+            color: var(--accent-color);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 8px rgba(0, 133, 31, 0.05);
+        }
+        .forecast-text { font-size: 12.5px; font-weight: 600; color: #166534; line-height: 1.5; }
+
+        /* MILESTONE SECTION */
+        .milestone-section {
+            background: #fff;
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-soft);
+        }
+        .timeline { position: relative; padding-left: 12px; }
+        .t-item { 
+            display: flex; gap: 16px; margin-bottom: 24px; position: relative; z-index: 1; 
+        }
+        .t-item:last-child { margin-bottom: 0; } 
+        
+        /* New Item-based timeline logic */
+        .t-item::before {
+            content: '';
+            position: absolute;
+            top: 24px; bottom: -24px; left: 9px;
+            width: 2px; background: #f1f5f9;
+            z-index: -1;
+        }
+        .t-item:last-child::before { display: none; }
+        .t-item.completed::before { background: var(--accent-color); opacity: 0.3; }
+        .t-check {
+            width: 20px; height: 20px;
+            border-radius: 50%; background: #fff;
+            border: 2px solid #cbd5e1;
+            display: flex; align-items: center; justify-content: center;
+            margin-top: 4px;
+        }
+        .t-item.completed .t-check { background: var(--accent-color); border-color: var(--accent-color); color: #fff; }
+        .t-check i { font-size: 12px; }
+        .t-content { flex: 1; }
+        .t-name { font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 2px; }
+        .t-date { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+
+        /* FORMS */
+        .settings-group {
+            background: #fff;
+            border-radius: 24px;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-soft);
+        }
+        .setting-item {
+            padding: 16px;
+            display: flex; flex-direction: column; gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-label {
+            font-size: 11px; font-weight: 800; color: var(--text-secondary);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .setting-input {
+            width: 100%; border: none; font-size: 16px;
+            font-weight: 700; color: var(--text-primary);
+            outline: none; padding: 4px 0; background: transparent;
+        }
+
+        /* FIXED FOOTER ACTION */
+        .action-footer {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            padding: 40px 24px 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+            background: linear-gradient(0deg, rgba(255,255,255,1) 30%, rgba(255,255,255,0.8) 60%, rgba(255,255,255,0) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            /* Gradient mask for smooth blur transition */
+            mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+        }
+
+        .save-btn {
+            width: 100%; background: #121212;
+            color: #fff; padding: 20px; border-radius: 24px;
+            font-size: 16px; font-weight: 900; border: none;
+            cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .save-btn:active { transform: scale(0.98); }
+
+        /* HISTORY SECTION */
+        .history-section {
+            display: flex;
+            flex-direction: column;
+            gap:4px;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .section-title {
+             font-size: 18px; 
+             font-weight: 900; 
+             color: #000;
+             letter-spacing: -0.5px;
+        }
+        .history-placeholder {
+            background: #fff;
+            border: 2px dashed #e2e8f0;
+            padding: 40px 24px;
+            border-radius: 24px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .history-item {
+            background: #fff; padding: 16px 20px;
+            border-radius: 20px; display: flex; align-items: center; gap: 16px;
+            border: 1px solid var(--border-color); margin-bottom: 4px;
+            cursor: pointer; transition: all 0.2s;
+            box-shadow: var(--shadow-soft);
+        }
+        .history-item:active { transform: scale(0.98); background: #f8fafc; }
+        .history-icon {
+            width: 44px; height: 44px; border-radius: 14px;
+            background: #ecfdf5; color: var(--accent-color);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .history-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .history-name { font-size: 15px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; }
+        .history-time { font-size: 11.5px; font-weight: 600; color: var(--text-secondary); opacity: 0.8; }
+        .history-amt { font-size: 16px; font-weight: 900; color: var(--text-primary); letter-spacing: -0.5px; }
+
+        .load-more-container {
+            display: flex;
+            justify-content: center;
+            margin: 16px 0 32px;
+        }
+        .load-more-btn {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 12.5px;
+            font-weight: 800;
+            padding: 10px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: var(--shadow-soft);
+        }
+        .load-more-btn:active {
+            transform: scale(0.95);
+            background: #f8fafc;
+        }
+        .load-more-btn.hidden { display: none; }
+
+        
+        /* NEW DEPOSIT DOTTED BUTTON */
+        .dotted-add-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 20px;
+            border: 2px dashed #e2e8f0;
+            background: rgba(248, 250, 252, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+            margin-bottom: 24px;
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 14px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .dotted-add-btn:active {
+            transform: scale(0.98);
+            background: rgba(226, 232, 240, 0.3);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+        .dotted-add-btn i {
+            font-size: 20px;
+        }
+
+
+        /* MODALS */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none; align-items: center; justify-content: center; padding: 24px;
+        }
+        .modal-card {
+            background: #fff; width: 100%; max-width: 400px; /* Slightly wider */
+            border-radius: 32px; padding: 24px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-title { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
+        .modal-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4; }
+        .modal-btn {
+            width: 100%; padding: 14px; border-radius: 14px; border: none;
+            font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary { background: var(--text-primary); color: #fff; margin-bottom: 8px; }
+        .btn-danger { background: #fee2e2; color: #ef4444; margin-bottom: 8px; }
+        .btn-ghost { background: transparent; color: var(--text-secondary); }
+        .modal-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+        /* INPUTS */
+        .modal-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 2px solid #f1f5f9;
+            font-size: 16px;
+            font-weight: 700;
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        /* ICON PICKER */
+        .icon-grid {
+            display: flex;
+            flex-direction: row;
+            gap: 12px;
+            margin-top: 12px;
+            overflow-x: auto;
+            padding: 10px 4px;
+            /* Premium Scrollbar */
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) #f1f5f9;
+        }
+        .icon-grid::-webkit-scrollbar { height: 6px; }
+        .icon-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .icon-grid::-webkit-scrollbar-thumb { background: var(--accent-color); border-radius: 4px; }
+        
+        .icon-item {
+            flex-shrink: 0;
+            width: 85px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            padding: 16px 10px; border-radius: 20px; border: 2px solid var(--border-color);
+            cursor: pointer; transition: all 0.2s; background: #fff;
+        }
+        .icon-item:hover { border-color: var(--accent-color); background: #f8fafc; }
+        .icon-item.active { border-color: var(--accent-color); background: #f0fdf4; border-width: 2.5px; }
+        .icon-item-box {
+            width: 40px; height: 40px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .icon-item:active .icon-item-box { transform: scale(0.9); }
+        .icon-item-box i { font-size: 20px; }
+        .icon-item-label { font-size: 9px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; text-align: center; }
+        .icon-item.active .icon-item-label { color: var(--accent-color); }
+
+        .upload-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+        .upload-btn {
+            width: 100%; padding: 14px; border-radius: 14px;
+            border: 2px dashed #e2e8f0; background: #fafafa;
+            font-size: 13px; font-weight: 700; color: var(--text-secondary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: all 0.2s;
+        }
+        .upload-btn:hover { border-color: var(--accent-color); background: #eff6ff; color: var(--accent-color); }
+        
+        .custom-image-preview {
+            width: 100%;
+            height: 80px;
+            border-radius: 12px;
+            object-fit: cover;
+            margin-bottom: 12px;
+            display: none;
+            border: 2px solid var(--accent-color);
+        }
+        .custom-image-preview.show { display: block; }
+        .goal-custom-image { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
+        
+        /* SKELETON LOADERS */
+        .skeleton {
+            background: #f1f5f9;
+            background: linear-gradient(110deg, #f1f5f9 8%, #f8fafc 18%, #f1f5f9 33%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s linear infinite;
+        }
+        @keyframes shimmer {
+            to { background-position-x: -200%; }
+        }
+
+        .skeleton-circle { border-radius: 50%; }
+        .skeleton-rect { border-radius: 12px; }
+        .skeleton-text { border-radius: 4px; height: 12px; margin-bottom: 8px; }
+
+        .loading-only { display: block; }
+        .loaded-only { display: none; }
+        
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Hide Streak */
+        #streakCard { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="mobile-wrapper" id="pageWrapper">
+        <!-- ACTION OVERLAY (For Save/Delete) -->
+        <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); align-items: center; justify-content: center; z-index: 3000;">
+            <div style="font-weight: 800; color: var(--accent-color);">Processing...</div>
+        </div>
+
+        <!-- GLOBAL SKELETON (Replaces overlay) -->
+        <div id="loadingSkeletons" class="loading-only">
+            <header class="page-header">
+                <button class="back-btn"><i class="material-icons">arrow_back</i></button>
+                <div class="skeleton-text skeleton" style="width: 150px; margin: 0;"></div>
+            </header>
+            <!-- <div class="header-spacer"></div> -->
+            <div class="content">
+                <!-- Preview Skeleton -->
+                <div class="goal-preview-card">
+                    <div class="skeleton-circle skeleton" style="width: 108px; height: 100px; border-radius: 40px; margin-bottom: 24px;"></div>
+                    <div class="skeleton-text skeleton" style="width: 120px; height: 18px; margin-bottom: 12px;"></div>
+                    <div class="skeleton-text skeleton" style="width: 100px; height: 24px; margin-bottom: 8px;"></div>
+                    <div class="skeleton-text skeleton" style="width: 80px; height: 12px; margin-bottom: 24px;"></div>
+                    <div class="skeleton-rect skeleton" style="width: 100%; height: 12px; border-radius: 100px;"></div>
+                </div>
+
+                <!-- Chart Skeleton -->
+                <div class="chart-card">
+                    <div class="skeleton-rect skeleton" style="width: 100%; height: 150px;"></div>
+                </div>
+
+                <!-- Analysis Skeleton -->
+                <div class="velocity-model">
+                    <div class="v-card skeleton-rect skeleton" style="height: 100px; border: none;"></div>
+                    <div class="v-card skeleton-rect skeleton" style="height: 100px; border: none;"></div>
+                </div>
+
+                <!-- Milestone Skeleton -->
+                <div class="milestone-section">
+                    <div class="skeleton-text skeleton" style="width: 40%; margin-bottom: 24px;"></div>
+                    <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                        <div class="skeleton-circle skeleton" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+                        <div style="flex: 1;">
+                            <div class="skeleton-text skeleton" style="width: 60%; height: 14px;"></div>
+                            <div class="skeleton-text skeleton" style="width: 40%; height: 10px;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 16px;">
+                        <div class="skeleton-circle skeleton" style="width: 20px; height: 20px; flex-shrink: 0;"></div>
+                        <div style="flex: 1;">
+                            <div class="skeleton-text skeleton" style="width: 50%; height: 14px;"></div>
+                            <div class="skeleton-text skeleton" style="width: 30%; height: 10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Skeleton -->
+                <div class="section-group-label" style="margin-top: 24px;">History</div>
+                <div class="history-item" style="border: none; box-shadow: none; background: transparent; padding-left: 0;">
+                    <div class="skeleton-rect skeleton" style="width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0;"></div>
+                    <div style="flex: 1; margin-left: 16px;">
+                        <div class="skeleton-text skeleton" style="width: 40%; height: 14px;"></div>
+                        <div class="skeleton-text skeleton" style="width: 60%; height: 10px;"></div>
+                    </div>
+                    <div class="skeleton-text skeleton" style="width: 60px; height: 18px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadedContent" class="loaded-only fade-in">
+            <header class="page-header">
+                <button class="back-btn" onclick="window.goBack()">
+                    <i class="material-icons">arrow_back</i>
+                </button>
+                <h1 class="page-title" id="pageTitleMain">Edit Goal</h1>
+            </header>
+            <!-- <div class="header-spacer"></div> -->
+            <div class="content">
+            <!-- GOAL PREVIEW (CENTERED) -->
+            <div class="goal-preview-card" id="goalPreview">
+                <div class="icon-container-wrap">
+                    <div id="previewIcon" class="icon-box centered-large" onclick="window.openIconPicker()">
+                        <i class="material-icons">savings</i>
+                    </div>
+                </div>
+                
+                <div class="preview-title" id="previewTitle">My Goal</div>
+                <div class="preview-amount-big" id="previewAmountPrimary">₱0</div>
+                <div class="preview-target-small" id="previewTargetSecondary">of ₱0 target</div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar-bg">
+                        <div id="previewProgressBar" class="progress-bar-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-labels">
+                        <span id="labelReached">0% Reached</span>
+                        <span id="labelRemaining" class="remaining">100% Remaining</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANALYTICS: MONTHLY CONTRIBUTIONS -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div class="chart-info">
+                        <div class="chart-title">Monthly Contributions</div>
+                        <div class="chart-subtitle">Actual vs Target Pace</div>
+                    </div>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <div class="legend-color actual"></div>
+                            Actual
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color target"></div>
+                            Target
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- ANALYTICS: VELOCITY -->
+            <div class="section-group-label">Analysis</div>
+            <div class="velocity-model">
+                <div class="v-card">
+                    <div class="v-label">Monthly Pace</div>
+                    <div class="v-value" id="actualMonthlyPace">₱0</div>
+                    <div class="v-sub green" id="paceComparison">per month</div>
+                </div>
+                <div class="v-card">
+                    <div class="v-label">Time to Goal</div>
+                    <div class="v-value" id="estimatedTime">--</div>
+                    <div class="v-sub blue" id="estimatedTimeSub">at current pace</div>
+                </div>
+            </div>
+
+            <div id="goalForecast" class="forecast-card" style="display: none;">
+                <div class="forecast-icon">
+                    <i class="material-icons">auto_awesome</i>
+                </div>
+                <div class="forecast-text" id="forecastText">
+                    You're on track to reach this goal by December 2025.
+                </div>
+            </div>
+
+            <!-- MILESTONES -->
+            <div class="section-group-label">Milestones</div>
+            <div class="milestone-section">
+                <div class="timeline" id="milestoneTimeline">
+                    <!-- Dynamic Milestones -->
+                </div>
+            </div>
+
+            <!-- SETTINGS -->
+            <div class="section-group-label" style="margin-top: 24px;">General Settings</div>
+            <div class="settings-group">
+                <div class="setting-item">
+                    <div class="setting-label">Goal Name</div>
+                    <input type="text" id="goalTitle" class="setting-input" placeholder="What are you saving for?">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Target Amount</div>
+                    <input type="text" id="targetAmt" class="setting-input" placeholder="0" oninput="window.formatCurrencyInput(this)">
+                </div>
+                <div class="setting-item">
+                    <div class="setting-label">Category</div>
+                    <select id="goalCategory" class="setting-input">
+                        <option value="Savings">Savings</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Health">Health</option>
+                        <option value="Education">Education</option>
+                        <option value="Investment">Investment</option>
+                        <option value="Others">Others</option>
+                    </select>
+                </div>
+                <!-- Adding hidden field for current amount to keep JS working -->
+                <input type="hidden" id="goalCurrent"> 
+            </div>
+
+                <!-- HISTORY SECTION -->
+                <div class="section-group-label" style="margin-top: 24px;">History</div>
+                
+                <button class="dotted-add-btn" onclick="window.openDepositModal()">
+                    <i class="material-icons">add_circle_outline</i>
+                    <span>Add a new deposit</span>
+                </button>
+
+                <div class="history-section" id="historyList">
+                    <!-- History injected via JS -->
+                </div>
+
+                <div class="load-more-container" id="loadMoreContainer">
+                    <button class="load-more-btn hidden" id="loadMoreBtn" onclick="window.loadMoreHistory()">Load more</button>
+                </div>
+
+
+                <div class="section-group-label" style="margin-top: 24px;">Danger Zone</div>
+                <div class="settings-group" style="border: 1px solid #fee2e2;">
+                    <button class="setting-item" onclick="window.confirmDeleteGoal()" style="width: 100%; text-align: left; background: transparent; border: none; cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 12px; color: #ef4444;">
+                            <i class="material-icons">delete_outline</i>
+                            <div style="font-size: 14px; font-weight: 800;">Delete this goal permanently</div>
+                        </div>
+                    </button>
+                </div>
+            </div> <!-- End content -->
+        </div> <!-- End loaded-only -->
+
+        <!-- FIXED FOOTER ACTION -->
+        <div class="action-footer loaded-only" id="actionFooter">
+            <button class="save-btn" id="saveBtn">Save Changes</button>
+        </div>
+    </div> <!-- End mobile-wrapper -->
+
+    <!-- MODALS CONTINUE... -->
+
+        <!-- TRANSACTION OPTIONS MODAL -->
+        <div class="modal-overlay" id="optionsModal" onclick="closeOptionsModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+                <div class="modal-title">Transaction Options</div>
+                <div class="modal-subtitle">What would you like to do with this deposit?</div>
+                <button class="modal-btn btn-primary" onclick="openEditModal()">
+                    <i class="material-icons">edit</i> Edit Amount
+                </button>
+                <button class="modal-btn btn-danger" onclick="openDeleteConfirmModal()">
+                    <i class="material-icons">delete</i> Delete Transaction
+                </button>
+                <button class="modal-btn btn-ghost" onclick="closeOptionsModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- EDIT AMOUNT MODAL -->
+        <div class="modal-overlay" id="editAmountModal" onclick="closeEditModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+                <div class="modal-title">Edit Deposit</div>
+                <div class="modal-subtitle">Update the amount for this transaction.</div>
+                <input type="text" id="newAmountInput" class="modal-input" placeholder="Enter amount" oninput="window.formatCurrencyInput(this)">
+                <button class="modal-btn btn-primary" onclick="saveNewAmount()">Save Changes</button>
+                <button class="modal-btn btn-ghost" onclick="closeEditModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- DELETE CONFIRMATION MODAL -->
+        <div class="modal-overlay" id="deleteConfirmModal" onclick="closeDeleteConfirmModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+                <div class="modal-title" style="color: #ef4444;">Delete Deposit?</div>
+                <div class="modal-subtitle">This will permanently remove this record and decrease your goal total. Are you sure?</div>
+                <button class="modal-btn btn-danger" style="background: #ef4444; color: #fff;" onclick="confirmDeleteTransaction()">
+                    Confirm Delete
+                </button>
+                <button class="modal-btn btn-ghost" onclick="closeDeleteConfirmModal()">Cancel</button>
+            </div>
+        </div>
+
+        <!-- DELETE GOAL MODAL -->
+        <div class="modal-overlay" id="deleteGoalModal" onclick="window.closeDeleteGoalModal()">
+            <div class="modal-card" onclick="event.stopPropagation()">
+                <div class="modal-title" style="color: #ef4444;">Delete Goal?</div>
+                <div class="modal-subtitle">This will permanently remove your goal and all deposit records. This action cannot be reversed.</div>
+                <button class="modal-btn btn-danger" style="background: #ef4444; color: #fff;" onclick="window.executeDeleteGoal()">
+                    Confirm Permanent Delete
+                </button>
+                <button class="modal-btn btn-ghost" onclick="window.closeDeleteGoalModal()">Keep My Goal</button>
+            </div>
+        </div>
+
+        <!-- ICON PICKER MODAL -->
+        <div class="modal-overlay" id="iconPickerModal" onclick="window.closeIconPicker()">
+            <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 360px;">
+                <div class="modal-title">Choose Icon</div>
+                <div class="modal-subtitle">Select an icon or upload a custom image for your goal.</div>
+                
+                <!-- Custom Image Preview -->
+                <img id="customImagePreview" class="custom-image-preview" src="" alt="Custom icon">
+                
+                <div class="icon-grid" id="iconPickerGrid">
+                    <!-- Icons will be injected via JS -->
+                </div>
+                
+                <div class="upload-section">
+                    <input type="file" id="customImageInput" accept="image/*" hidden onchange="window.handleImageUpload(event)">
+                    <button class="upload-btn" onclick="document.getElementById('customImageInput').click()">
+                        <i class="material-icons">add_photo_alternate</i>
+                        Upload Custom Image
+                    </button>
+                </div>
+                
+                <button class="modal-btn btn-ghost" onclick="window.closeIconPicker()" style="margin-top: 16px;">Cancel</button>
+            </div>
+        </div>
+
+        <!-- DEPOSIT MODAL -->
+        <div class="modal-overlay" id="depositModal" onclick="window.closeDepositModal()">
+            <div class="modal-card" onclick="event.stopPropagation()" style="max-width: 340px; padding: 32px;">
+                <div class="modal-title" style="font-size: 22px; font-weight: 900; margin-bottom: 24px;">Deposit to Goal</div>
+                <div class="form-group" style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Amount (PHP)</label>
+                    <input type="text" id="depositAmountInput" class="modal-input" placeholder="1,000" 
+                           style="border: 1.5px solid #00851F; border-radius: 14px; padding: 16px; margin-bottom: 0;"
+                           oninput="window.formatCurrencyInput(this)">
+                </div>
+                <button class="modal-btn" onclick="window.confirmDepositActual()" 
+                        style="background: #121212; color: #fff; padding: 18px; border-radius: 18px; text-transform: uppercase; letter-spacing: 1px; height: 60px; margin-bottom: 16px;">
+                    Confirm Deposit
+                </button>
+                <div onclick="window.closeDepositModal()" 
+                     style="text-align: center; color: #475569; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; padding: 8px;">
+                    Cancel
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE MODULE -->
+    <script type="module">
+        import { 
+            auth, db, onAuthStateChanged, 
+            doc, getDoc, updateDoc, serverTimestamp,
+            collection, getDocs, query, orderBy, deleteDoc,
+            addDoc
+        } from "./firebase-config.js";
+
+        // Navigation & State
+        window.goBack = function() {
+            if (document.referrer.includes('goals.html')) {
+                history.back();
+            } else {
+                window.location.href = 'goals.html';
+            }
+        };
+
+        // Handle hardware back button
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            window.location.href = 'goals.html';
+        };
+
+        let currentUser = null;
+        let goalId = new URLSearchParams(window.location.search).get('id');
+        let currentGoalData = null;
+        let dynamicMonthlySavings = 5000;
+        let selectedIcon = 'savings';
+
+        // EXPANDED ICON LIBRARY
+        const AVAILABLE_ICONS = [
+            { id: 'savings', label: 'Savings', icon: 'savings', bg: '#f0fdf4', color: '#00851F' },
+            { id: 'shield', label: 'Shield', icon: 'verified_user', bg: '#f0fdf4', color: '#00851F' },
+            { id: 'travel', label: 'Travel', icon: 'flight', bg: '#f0f9ff', color: '#0284c7' },
+            { id: 'directions_car', label: 'Vehicle', icon: 'directions_car', bg: '#f5f3ff', color: '#8b5cf6' },
+            { id: 'home', label: 'Home', icon: 'home', bg: '#f0fdf4', color: '#22c55e' },
+            { id: 'shopping', label: 'Shopping', icon: 'shopping_bag', bg: '#fff7ed', color: '#ea580c' },
+            { id: 'favorite', label: 'Health', icon: 'favorite', bg: '#fff1f2', color: '#ef4444' },
+            { id: 'education', label: 'School', icon: 'school', bg: '#eff6ff', color: '#1d4ed8' },
+            { id: 'trading', label: 'Trading', icon: 'trending_up', bg: '#ecfeff', color: '#0891b2' },
+            { id: 'investment', label: 'Invest', icon: 'diamond', bg: '#fdf4ff', color: '#a855f7' },
+            { id: 'wedding', label: 'Wedding', icon: 'favorite_border', bg: '#fdf2f8', color: '#ec4899' },
+            { id: 'medical', label: 'Medical', icon: 'local_hospital', bg: '#fef2f2', color: '#dc2626' },
+            { id: 'gaming', label: 'Gaming', icon: 'sports_esports', bg: '#f5f3ff', color: '#7c3aed' },
+            { id: 'tech', label: 'Tech', icon: 'phone_iphone', bg: '#f8fafc', color: '#475569' },
+            { id: 'fitness', label: 'Fitness', icon: 'fitness_center', bg: '#fef3c7', color: '#d97706' },
+            { id: 'emergency', label: 'Emergency', icon: 'emergency', bg: '#fee2e2', color: '#ef4444' }
+        ];
+
+        if (!goalId) window.location.href = 'goals.html';
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUser = user;
+                loadSafeSpendConfig();
+                loadGoalData();
+                loadTransactionHistory();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // DEPOSIT MODAL LOGIC
+        window.openDepositModal = function() {
+            const modal = document.getElementById('depositModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const input = document.getElementById('depositAmountInput');
+                if (input) input.focus();
+            }
+        };
+
+        window.closeDepositModal = function() {
+            const modal = document.getElementById('depositModal');
+            if (modal) modal.style.display = 'none';
+            const input = document.getElementById('depositAmountInput');
+            if (input) input.value = '';
+        };
+
+        window.confirmDepositActual = async function() {
+            const amountStr = document.getElementById('depositAmountInput').value.replace(/,/g, '');
+            const amount = parseFloat(amountStr);
+            
+            if (!amount || amount <= 0) {
+                alert("Please enter a valid amount");
+                return;
+            }
+
+            if (!currentUser || !goalId) return;
+
+            try {
+                // Disable button to prevent double-click
+                const btn = event.target;
+                btn.disabled = true;
+                btn.innerText = "Processing...";
+
+                // 1. Add to transactions sub-collection
+                const txnRef = collection(db, `users/${currentUser.uid}/goals/${goalId}/transactions`);
+                await addDoc(txnRef, {
+                    amount: amount,
+                    type: 'deposit',
+                    timestamp: serverTimestamp()
+                });
+
+                // 2. Update goal's currentAmount
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                const newTotal = (currentGoalData.currentAmount || 0) + amount;
+                await updateDoc(goalRef, {
+                    currentAmount: newTotal
+                });
+
+                window.closeDepositModal();
+                window.showToast(`₱${amount.toLocaleString()} deposited!`);
+                
+                // Refresh data
+                await loadGoalData();
+                await loadTransactionHistory();
+
+            } catch (error) {
+                console.error("Error confirming deposit:", error);
+                alert("Error saving deposit. Please try again.");
+            } finally {
+                const btn = document.querySelector('#depositModal button.modal-btn');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = "Confirm Deposit";
+                }
+            }
+        };
+
+        window.showToast = function(msg) {
+            let toast = document.getElementById('toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast';
+                toast.className = 'toast-container';
+                document.body.appendChild(toast);
+                
+                // Add basic toast CSS if missing
+                if (!document.querySelector('style#toastStyle')) {
+                    const style = document.createElement('style');
+                    style.id = 'toastStyle';
+                    style.innerHTML = `
+                        .toast-container {
+                            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                            background: #1e293b; color: #fff; padding: 12px 24px; border-radius: 50px;
+                            font-size: 14px; font-weight: 700; box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+                            z-index: 3000; opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                        }
+                        .toast-container.show { opacity: 1; bottom: 30px; pointer-events: auto; }
+                    `;
+                    document.head.appendChild(style);
+                }
+            }
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        };
+
+        async function loadGoalData() {
+            try {
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                const goalSnap = await getDoc(goalRef);
+
+                if (goalSnap.exists()) {
+                    currentGoalData = goalSnap.data();
+                    updateUI();
+                } else {
+                    alert("Goal not found");
+                    window.location.href = 'goals.html';
+                }
+            } catch (error) {
+                console.error("Error loading goal:", error);
+            } finally {
+                // If both loaded, hide overlay
+                hideLoading();
+            }
+        }
+
+        // VELOCITY & MILESTONE LOGIC
+        function updateVelocityAnalytics(transactions) {
+            if (!currentGoalData) return; // Wait for primary data
+            
+            // 1. Calculate Average Velocity
+            if (!transactions || transactions.length === 0) {
+                document.getElementById('actualMonthlyPace').innerText = "₱0";
+                document.getElementById('estimatedTime').innerText = "---";
+                document.getElementById('paceComparison').innerText = "No data yet";
+                renderMilestones([], 0, currentGoalData.targetAmount);
+                return;
+            }
+
+            // Sort ascending for milestone calculation
+            const sortedTxns = [...transactions].sort((a, b) => a.date - b.date);
+            const firstDate = sortedTxns[0].date;
+            const now = new Date();
+            
+            // Months active (min 1 to avoid infinity)
+            const monthsDiff = (now.getFullYear() - firstDate.getFullYear()) * 12 + (now.getMonth() - firstDate.getMonth());
+            const monthsActive = Math.max(1, monthsDiff + (now.getDate() < firstDate.getDate() ? 0 : 1));
+            
+            const totalSaved = currentGoalData.currentAmount || 0;
+            const avgVelocity = totalSaved / monthsActive;
+            
+            // UI: Velocity
+            document.getElementById('actualMonthlyPace').innerText = `₱${Math.round(avgVelocity).toLocaleString()}`;
+            document.getElementById('paceComparison').innerText = "per month";
+            
+            // UI: Est Completion (Velocity Based)
+            if (avgVelocity > 0 && totalSaved < currentGoalData.targetAmount) {
+                const remaining = currentGoalData.targetAmount - totalSaved;
+                const monthsToGo = Math.ceil(remaining / avgVelocity);
+                const finishDate = new Date();
+                finishDate.setMonth(finishDate.getMonth() + monthsToGo);
+                
+                document.getElementById('estimatedTime').innerText = finishDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+                
+                // Days/Months wording
+                if (monthsToGo <= 1) {
+                     document.getElementById('estimatedTimeSub').innerText = "Almost there!";
+                } else {
+                     document.getElementById('estimatedTimeSub').innerText = `${monthsToGo} months left`;
+                }
+            } else if (totalSaved >= currentGoalData.targetAmount) {
+                document.getElementById('estimatedTime').innerText = "Achieved!";
+                document.getElementById('estimatedTimeSub').innerText = "Congratulations";
+            } else {
+                 document.getElementById('estimatedTime').innerText = "---";
+                 document.getElementById('estimatedTimeSub').innerText = "Save more to see estimate";
+            }
+
+            // 2. Render Milestones
+            renderMilestones(sortedTxns, totalSaved, currentGoalData.targetAmount);
+            
+            // 3. Render Monthly Chart
+            renderMonthlyChart(transactions);
+        }
+
+        function renderMilestones(sortedTxns, currentAmount, targetAmount) {
+            const list = document.getElementById('milestoneTimeline');
+            let msHTML = '';
+
+            // Helper to find date when amount was crossed
+            function getDateForAmount(txns, threshold) {
+                let runningTotal = 0;
+                for (const t of txns) {
+                    runningTotal += t.amount;
+                    if (runningTotal >= threshold) return t.date;
+                }
+                return null;
+            }
+
+            // Define Milestones
+            const milestones = [
+                { name: "Started Goal", threshold: 1, date: sortedTxns[0]?.date },
+                { name: "First ₱1,000", threshold: 1000, date: getDateForAmount(sortedTxns, 1000) },
+                { name: "Halfway Point", threshold: targetAmount * 0.5, date: getDateForAmount(sortedTxns, targetAmount * 0.5) },
+                { name: "Almost There", threshold: targetAmount * 0.75, date: getDateForAmount(sortedTxns, targetAmount * 0.75) },
+                { name: "Goal Reached", threshold: targetAmount, date: getDateForAmount(sortedTxns, targetAmount) }
+            ];
+
+            // Filter out invalid milestones (e.g. if target < 1000, don't show First 1k)
+            const validMilestones = milestones.filter(m => m.threshold <= targetAmount);
+
+            validMilestones.forEach(m => {
+                const isCompleted = currentAmount >= m.threshold;
+                const isActive = !isCompleted && currentAmount > 0 && m === validMilestones.find(vm => !vm.date); // Rough active logic
+                
+                let dateStr = "---";
+                if (m.date) {
+                    dateStr = m.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                }
+
+                msHTML += `
+                    <div class="t-item ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}">
+                        <div class="t-check"><i class="material-icons">check</i></div>
+                        <div class="t-content">
+                            <div class="t-name">
+                                ${m.name} 
+                                ${isCompleted ? '<span class="t-status-pill">DONE</span>' : ''}
+                            </div>
+                            <div class="t-date">${dateStr}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = msHTML;
+        }
+
+        let loadingOps = 0;
+        const totalLoadingOps = 2;
+        let lastTransactions = []; 
+        let historyLimit = 5;
+
+        async function loadTransactionHistory() {
+            try {
+                const historyRef = collection(db, `users/${currentUser.uid}/goals/${goalId}/transactions`);
+                const q = query(historyRef, orderBy('timestamp', 'desc'));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    const container = document.getElementById('historyList');
+                    container.innerHTML = `
+                        <div class="history-placeholder">
+                            No transactions yet for this goal.<br>
+                            <span style="font-size: 12px; opacity: 0.7;">History will appear as you make deposits.</span>
+                        </div>
+                    `;
+                    document.getElementById('loadMoreBtn').classList.add('hidden');
+                    updateVelocityAnalytics([]); 
+                    return;
+                }
+
+                // Prepare Data for Analytics
+                lastTransactions = snap.docs.map(doc => {
+                    const d = doc.data();
+                    const dateObj = d.timestamp && d.timestamp.toDate ? d.timestamp.toDate() : new Date(); 
+                    return { id: doc.id, ...d, date: dateObj };
+                });
+
+                // Update Dashboard
+                updateVelocityAnalytics(lastTransactions);
+                
+                // Initial Render
+                renderHistory();
+
+            } catch (error) {
+                console.error("Error loading history:", error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            
+            const visibleTxns = lastTransactions.slice(0, historyLimit);
+            
+            container.innerHTML = visibleTxns.map(data => {
+                const dateStr = data.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+                const timeStr = data.date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+
+                return `
+                    <div class="history-item" 
+                         style="margin-bottom: 4px;" 
+                         onmousedown="window.startTxnPress(event, '${data.id}', ${data.amount})"
+                         ontouchstart="window.startTxnPress(event, '${data.id}', ${data.amount})"
+                         onmouseup="window.cancelTxnPress()"
+                         ontouchend="window.cancelTxnPress()"
+                         onmouseleave="window.cancelTxnPress()">
+                        <div class="history-icon" style="background: #f0fdf4; color: #22c55e;"><i class="material-icons">add</i></div>
+                        <div class="history-info">
+                            <div class="history-name">Deposit</div>
+                            <div class="history-time">${dateStr} • ${timeStr}</div>
+                        </div>
+                        <div class="history-amt">+₱${data.amount.toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+
+            // Toggle Load More button
+            if (lastTransactions.length > historyLimit) {
+                loadMoreBtn.classList.remove('hidden');
+            } else {
+                loadMoreBtn.classList.add('hidden');
+            }
+        }
+
+        window.loadMoreHistory = function() {
+            historyLimit += 5;
+            renderHistory();
+        };
+
+        function hideLoading() {
+            loadingOps++;
+            if (loadingOps >= totalLoadingOps) {
+                // Hide skeletons and show content
+                document.querySelectorAll('.loading-only').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.loaded-only').forEach(el => {
+                    if (el.id === 'actionFooter') el.style.display = 'flex';
+                    else if (el.id === 'loadedContent') el.style.display = 'block';
+                });
+                
+                // Re-render analytics now that container is visible
+                if (lastTransactions.length > 0) {
+                    updateVelocityAnalytics(lastTransactions);
+                }
+            }
+        }
+
+        window.deleteTransaction = async function(txnId, amount) {
+            if (!confirm("Delete this deposit? This will also reduce your goal total.")) return;
+            if (!currentUser) return;
+            
+            try {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                
+                // 1. Delete the transaction record
+                await deleteDoc(doc(db, `users/${currentUser.uid}/goals/${goalId}/transactions`, txnId));
+                
+                // 2. Decrement goal's currentAmount
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                const newTotal = (currentGoalData.currentAmount || 0) - amount;
+                await updateDoc(goalRef, { currentAmount: Math.max(0, newTotal) });
+                
+                // 3. Refresh local data and UI
+                currentGoalData.currentAmount = Math.max(0, newTotal);
+                updateUI();
+                await loadTransactionHistory();
+                
+            } catch (error) {
+                console.error("Deletion error:", error);
+                alert("Failed to delete transaction");
+            } finally {
+                // Overlay loading is only for async ops after initial load
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        }
+
+        function updateUI() {
+            if (!currentGoalData) return;
+            
+            // DYNAMIC HEADER
+            const pageTitle = `Edit ${currentGoalData.title}`;
+            document.title = `${pageTitle} - SmartWallet`;
+            const titleEl = document.querySelector('.page-title');
+            if (titleEl) titleEl.innerText = pageTitle;
+
+            document.getElementById('goalTitle').value = currentGoalData.title;
+            document.getElementById('goalCurrent').value = (currentGoalData.currentAmount || 0);
+            
+            const targetEl = document.getElementById('targetAmt');
+            if (targetEl) targetEl.value = (currentGoalData.targetAmount || 0).toLocaleString();
+            
+            const catEl = document.getElementById('goalCategory');
+            if (catEl) catEl.value = currentGoalData.category || 'Savings';
+            
+            // PREVIEW CARD UPDATES
+            document.getElementById('previewTitle').innerText = currentGoalData.title;
+            document.getElementById('previewAmountPrimary').innerText = `₱${(currentGoalData.currentAmount || 0).toLocaleString()}`;
+            document.getElementById('previewTargetSecondary').innerText = `of ₱${(currentGoalData.targetAmount || 0).toLocaleString()} target`;
+
+            const percent = Math.min(100, Math.round((currentGoalData.currentAmount / currentGoalData.targetAmount) * 100)) || 0;
+            document.getElementById('labelReached').innerText = `${percent}% Reached`;
+            document.getElementById('labelRemaining').innerText = `${100 - percent}% Remaining`;
+            
+            const progressBar = document.getElementById('previewProgressBar');
+            if (progressBar) {
+                progressBar.style.width = '0%'; // Reset to 0 for animation
+                setTimeout(() => {
+                    progressBar.style.width = `${percent}%`;
+                }, 300); // Slight delay to allow fade-in to start first
+            }
+
+            // Set selectedIcon for the picker
+            selectedIcon = currentGoalData.icon || 'savings';
+            
+            const iconConfig = getIconConfig(currentGoalData.icon || 'savings');
+            const iconBox = document.getElementById('previewIcon');
+            
+            // Reset background for centered-large
+            iconBox.style.background = iconConfig.bg || '#effef3';
+            iconBox.style.color = iconConfig.color || '#00851F';
+            
+            // Handle custom image vs icon
+            if (iconConfig.customImage) {
+                iconBox.innerHTML = `<img src="${iconConfig.customImage}" class="goal-custom-image" alt="Goal icon">`;
+            } else {
+                iconBox.innerHTML = `<i class="material-icons">${iconConfig.icon}</i>`;
+            }
+
+            updateGoalForecast();
+        }
+
+        async function loadSafeSpendConfig() {
+            if (!currentUser) return;
+            try {
+                const configRef = doc(db, "users", currentUser.uid, "config", "safe_to_spend");
+                const configSnap = await getDoc(configRef);
+                if (configSnap.exists()) {
+                    const data = configSnap.data();
+                    if (data.savingsAmount) {
+                        dynamicMonthlySavings = parseFloat(data.savingsAmount);
+                        console.log("💰 Dynamic savings loaded:", dynamicMonthlySavings);
+                        if (currentGoalData) updateGoalForecast();
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading config:", e);
+            }
+        }
+
+        function updateGoalForecast() {
+            const card = document.getElementById('goalForecast');
+            const text = document.getElementById('forecastText');
+            if (!currentGoalData || currentGoalData.isExcluded) {
+                if (card) card.style.display = 'none';
+                return;
+            }
+
+            const current = currentGoalData.currentAmount || 0;
+            const target = currentGoalData.targetAmount || 0;
+            const remaining = Math.max(0, target - current);
+
+            if (remaining === 0) {
+                card.style.display = 'none';
+                return;
+            }
+
+            if (dynamicMonthlySavings <= 0) {
+                text.innerHTML = `Set a <b>Monthly Savings</b> goal in your dashboard to see your estimated completion date.`;
+                card.style.display = 'flex';
+                return;
+            }
+
+            const monthsRemaining = Math.ceil(remaining / dynamicMonthlySavings);
+            
+            const completionDate = new Date();
+            completionDate.setMonth(completionDate.getMonth() + monthsRemaining);
+            
+            const dateStr = completionDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            card.style.display = 'flex';
+            text.innerHTML = `Based on your ₱${dynamicMonthlySavings.toLocaleString()}/mo savings, estimated completion is <span style="font-weight: 800; color: #000;">${dateStr}</span>.`;
+        }
+
+        function getIconConfig(type) {
+            // Check if it's a custom image (base64 or URL)
+            if (type && (type.startsWith('data:') || type.startsWith('http'))) {
+                return { icon: null, bg: '#f8fafc', color: '#64748b', customImage: type };
+            }
+            
+            // Find in available icons
+            const found = AVAILABLE_ICONS.find(i => i.id === type);
+            if (found) {
+                return { icon: found.icon, bg: found.bg, color: found.color };
+            }
+            
+            // Fallback
+            return { icon: 'savings', bg: '#f0fdf4', color: '#00851F' };
+        }
+
+        window.saveAllChanges = async function() {
+            const title = document.getElementById('goalTitle').value;
+            const targetStr = document.getElementById('targetAmt').value.replace(/,/g, '');
+            const target = parseFloat(targetStr);
+            const category = document.getElementById('goalCategory').value;
+
+            if (!title || isNaN(target)) return alert("Please fill all fields");
+
+            try {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'flex';
+
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                await updateDoc(goalRef, {
+                    title: title,
+                    targetAmount: target,
+                    category: category,
+                    icon: selectedIcon,
+                    updatedAt: serverTimestamp()
+                });
+                window.location.href = 'goals.html?msg=updated';
+            } catch (error) {
+                console.error("Error updating goal:", error);
+                alert("Error saving changes");
+            } finally {
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        };
+
+        // Bind the button ID to the same function for both HTML and old JS consistency
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) saveBtn.onclick = window.saveAllChanges;
+
+        window.confirmDeleteGoal = function() {
+            document.getElementById('deleteGoalModal').style.display = 'flex';
+        };
+
+        window.closeDeleteGoalModal = function() {
+            document.getElementById('deleteGoalModal').style.display = 'none';
+        };
+
+        window.executeDeleteGoal = async function() {
+            try {
+                window.closeDeleteGoalModal();
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                await deleteDoc(doc(db, `users/${currentUser.uid}/goals`, goalId));
+                window.location.href = 'goals.html?msg=deleted';
+            } catch (e) {
+                console.error(e);
+                alert("Error deleting goal");
+            } finally {
+                // Overlay loading is only for async ops after initial load
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        };
+
+        // LONG PRESS & MODAL LOGIC
+        let pressTimer;
+        let selectedTxn = null;
+
+        window.formatCurrencyInput = function(input) {
+            let selectionStart = input.selectionStart;
+            let originalLength = input.value.length;
+            let val = input.value.replace(/\D/g, '');
+            if (val === '') {
+                input.value = '';
+                return;
+            }
+            let formatted = parseInt(val).toLocaleString();
+            input.value = formatted;
+            let diff = formatted.length - originalLength;
+            input.setSelectionRange(selectionStart + diff, selectionStart + diff);
+        }
+
+        window.startTxnPress = function(e, id, amount) {
+            selectedTxn = { id, amount };
+            const item = e.currentTarget;
+            item.classList.add('popped');
+            pressTimer = setTimeout(() => {
+                window.openOptionsModal();
+                item.classList.remove('popped');
+            }, 600);
+        };
+
+        window.cancelTxnPress = function() {
+            clearTimeout(pressTimer);
+            document.querySelectorAll('.history-item').forEach(el => el.classList.remove('popped'));
+        };
+
+        window.openOptionsModal = function() {
+            document.getElementById('optionsModal').style.display = 'flex';
+        };
+
+        window.closeOptionsModal = function() {
+            document.getElementById('optionsModal').style.display = 'none';
+        };
+
+        window.openEditModal = function() {
+            window.closeOptionsModal();
+            const input = document.getElementById('newAmountInput');
+            input.value = (selectedTxn.amount || 0).toLocaleString();
+            document.getElementById('editAmountModal').style.display = 'flex';
+        };
+
+        window.closeEditModal = function() {
+            document.getElementById('editAmountModal').style.display = 'none';
+        };
+
+        window.openDeleteConfirmModal = function() {
+            window.closeOptionsModal();
+            document.getElementById('deleteConfirmModal').style.display = 'flex';
+        };
+
+        window.closeDeleteConfirmModal = function() {
+            document.getElementById('deleteConfirmModal').style.display = 'none';
+        };
+
+        window.saveNewAmount = async function() {
+            const newAmount = parseFloat(document.getElementById('newAmountInput').value.replace(/,/g, ''));
+            if (isNaN(newAmount) || newAmount < 0) return alert("Invalid amount");
+            
+            try {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                const diff = newAmount - selectedTxn.amount;
+                
+                // Update Transaction
+                await updateDoc(doc(db, `users/${currentUser.uid}/goals/${goalId}/transactions`, selectedTxn.id), {
+                    amount: newAmount,
+                    updatedAt: serverTimestamp()
+                });
+
+                // Update Goal Total
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                const newTotal = (currentGoalData.currentAmount || 0) + diff;
+                await updateDoc(goalRef, { currentAmount: Math.max(0, newTotal) });
+
+                currentGoalData.currentAmount = Math.max(0, newTotal);
+                updateUI();
+                await loadTransactionHistory();
+                window.closeEditModal();
+            } catch (e) {
+                console.error(e);
+            } finally {
+                // Overlay loading is only for async ops after initial load
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        };
+
+        window.confirmDeleteTransaction = async function() {
+            try {
+                document.getElementById('loadingOverlay').style.display = 'flex';
+                await deleteDoc(doc(db, `users/${currentUser.uid}/goals/${goalId}/transactions`, selectedTxn.id));
+                
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                const newTotal = (currentGoalData.currentAmount || 0) - selectedTxn.amount;
+                await updateDoc(goalRef, { currentAmount: Math.max(0, newTotal) });
+
+                currentGoalData.currentAmount = Math.max(0, newTotal);
+                updateUI();
+                await loadTransactionHistory();
+                window.closeDeleteConfirmModal();
+            } catch (e) {
+                console.error(e);
+            } finally {
+                // Overlay loading is only for async ops after initial load
+                const overlay = document.getElementById('loadingOverlay');
+                if (overlay) overlay.style.display = 'none';
+            }
+        };
+
+        // ============ ICON PICKER FUNCTIONS ============
+        
+        window.openIconPicker = function() {
+            renderIconGrid();
+            updateCustomImagePreview();
+            document.getElementById('iconPickerModal').style.display = 'flex';
+        };
+
+        window.closeIconPicker = function() {
+            document.getElementById('iconPickerModal').style.display = 'none';
+        };
+
+        function renderIconGrid() {
+            const container = document.getElementById('iconPickerGrid');
+            if (!container) return;
+            
+            container.innerHTML = AVAILABLE_ICONS.map(icon => {
+                const isActive = selectedIcon === icon.id;
+                return `
+                    <div class="icon-item ${isActive ? 'active' : ''}" onclick="window.selectIcon('${icon.id}')">
+                        <div class="icon-item-box" style="background: ${icon.bg}; color: ${icon.color}">
+                            <i class="material-icons">${icon.icon}</i>
+                        </div>
+                        <div class="icon-item-label">${icon.label}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateCustomImagePreview() {
+            const preview = document.getElementById('customImagePreview');
+            if (selectedIcon && (selectedIcon.startsWith('data:') || selectedIcon.startsWith('http'))) {
+                preview.src = selectedIcon;
+                preview.classList.add('show');
+            } else {
+                preview.classList.remove('show');
+            }
+        }
+
+        window.selectIcon = function(iconId) {
+            selectedIcon = iconId;
+            renderIconGrid();
+            updateCustomImagePreview();
+            
+            // Update the preview immediately
+            const iconConfig = getIconConfig(iconId);
+            const iconBox = document.getElementById('previewIcon');
+            iconBox.style.background = iconConfig.bg;
+            iconBox.style.color = iconConfig.color;
+            
+            if (iconConfig.customImage) {
+                iconBox.innerHTML = `<img src="${iconConfig.customImage}" class="goal-custom-image" alt="Goal icon">`;
+            } else {
+                iconBox.innerHTML = `<i class="material-icons">${iconConfig.icon}</i>`;
+            }
+            
+            // Close the modal after selection
+            window.closeIconPicker();
+        };
+
+        window.handleImageUpload = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                return;
+            }
+            
+            // Validate file size (max 500KB for base64 storage)
+            if (file.size > 500 * 1024) {
+                alert('Image too large. Please select an image under 500KB.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64 = e.target.result;
+                selectedIcon = base64;
+                updateCustomImagePreview();
+                renderIconGrid();
+                
+                // Update preview immediately
+                const iconBox = document.getElementById('previewIcon');
+                iconBox.style.background = '#f8fafc';
+                iconBox.innerHTML = `<img src="${base64}" class="goal-custom-image" alt="Goal icon">`;
+                
+                // Close the modal
+                window.closeIconPicker();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // ============ CHART RENDERING ============
+        let myChart = null;
+        function renderMonthlyChart(transactions) {
+            const canvas = document.getElementById('monthlyChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            // Aggregate by month (last 6 months)
+            const now = new Date();
+            const months = [];
+            const actualData = [];
+            const targetData = [];
+            
+            // Monthly target pace (Dynamic or fallback)
+            const monthlyTarget = dynamicMonthlySavings > 0 ? dynamicMonthlySavings : 5000;
+
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const monthLabel = d.toLocaleString('default', { month: 'short' }).toUpperCase();
+                months.push(monthLabel);
+                
+                // Sum transactions for this month
+                const monthTotal = transactions
+                    .filter(t => t.date.getMonth() === d.getMonth() && t.date.getFullYear() === d.getFullYear())
+                    .reduce((sum, t) => sum + t.amount, 0);
+                    
+                actualData.push(monthTotal);
+                targetData.push(monthlyTarget);
+            }
+
+            if (myChart) myChart.destroy();
+            
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'ACTUAL',
+                            data: actualData,
+                            backgroundColor: '#00851F',
+                            borderRadius: 8,
+                            barThickness: 16
+                        },
+                        {
+                            label: 'TARGET',
+                            data: targetData,
+                            backgroundColor: '#e2e8f0',
+                            borderRadius: 8,
+                            barThickness: 16
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `₱${context.parsed.y.toLocaleString()}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { display: false },
+                            ticks: { display: false, border: { display: false } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            border: { display: false },
+                            ticks: { 
+                                font: { size: 10, weight: '800' },
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

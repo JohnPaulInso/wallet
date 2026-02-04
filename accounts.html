@@ -15,7 +15,19 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     
     <style>
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; }
+        
+        /* Native App Feel - Disable all link behaviors */
+        a, a:visited, a:hover, a:active, a:focus {
+            text-decoration: none !important;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+        }
+        /* Disable text selection highlighting */
+        ::selection { background: transparent; }
+        ::-moz-selection { background: transparent; }
+
         body { background: #f0f2f5; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; justify-content: center; overflow-x: hidden; }
         
         .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
@@ -82,11 +94,75 @@
         .empty-state h2 { font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 12px; }
         .empty-state p { font-size: 15px; color: #64748b; line-height: 1.6; max-width: 280px; margin: 0 auto 32px; }
 
-        .account-card { background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px rgba(0,0,0,0.02); text-align: left; }
-        .account-icon { width: 48px; height: 48px; border-radius: 12px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #1d4ed8; }
-        .account-info { flex: 1; }
-        .account-name { font-size: 16px; font-weight: 700; color: #1e293b; }
+        .account-card { background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px rgba(0,0,0,0.02); text-align: left; position: relative; transition: transform 0.2s, box-shadow 0.2s; }
+        .account-card.dragging { opacity: 0.5; transform: scale(0.98); box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-color: #3b82f6; z-index: 1001; }
+        .account-icon { width: 48px; height: 48px; border-radius: 12px; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #1d4ed8; flex-shrink: 0; }
+        .account-info { flex: 1; overflow: hidden; }
+        .account-name { font-size: 16px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .account-type { font-size: 12px; color: #94a3b8; font-weight: 600; }
+
+        .drag-handle { color: #cbd5e1; cursor: grab; padding: 10px; margin-right: -10px; transition: color 0.2s; }
+        .drag-handle:active { cursor: grabbing; color: #94a3b8; }
+        .drag-handle i { font-size: 20px; }
+
+        /* REDESIGNED ADD ACCOUNT PLACEHOLDER */
+        .add-account-card {
+            background: #fff;
+            padding: 40px 24px;
+            border-radius: 28px;
+            border: 2px dashed #cbd5e1;
+            margin-top: 24px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        .add-account-card:hover {
+            border-color: #1d4ed8;
+            background: #f8fbff;
+        }
+        .add-account-card .icon-placeholder {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+        .add-account-card:hover .icon-placeholder {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .add-account-card p {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            max-width: 220px;
+            line-height: 1.5;
+        }
+        .add-account-btn {
+            background: #1d4ed8;
+            color: #fff;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 14px;
+            font-weight: 800;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(29, 78, 216, 0.2);
+            transition: all 0.2s;
+            cursor: pointer;
+            text-transform: none;
+        }
+        .add-account-btn:active {
+            transform: scale(0.96);
+        }
 
         /* BOTTOM NAV */
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
@@ -169,65 +245,45 @@
                 <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Manage your cards and bank connections.</p>
             </div>
 
-            <div id="cards-list">
-                <!-- Admin-only accounts section -->
-                <div id="admin-accounts" style="display: none;">
-                    <!-- ATOME -->
-                    <div class="account-card">
-                        <div class="account-icon" style="background: #121212; color: #fff;"><i class="material-icons">credit_card</i></div>
-                        <div class="account-info">
-                            <div class="account-name">Atome Card</div>
-                            <div class="account-type">Personal Credit **** 7312</div>
-                        </div>
-                        <div style="font-weight: 800; color: #10b981; font-size: 14px;">Connected</div>
-                    </div>
-
-                    <!-- BPI -->
-                    <div class="account-card">
-                        <div class="account-icon" style="background: #931B1B; color: #fff;"><i class="material-icons">account_balance</i></div>
-                        <div class="account-info">
-                            <div class="account-name">BPI Card</div>
-                            <div class="account-type">Savings Debit **** 6727</div>
-                        </div>
-                        <div style="font-weight: 800; color: #10b981; font-size: 14px;">Connected</div>
+                <!-- DYNAMICALLY LOADED CARDS -->
+                <div id="dynamic-cards">
+                    <div style="padding: 40px; text-align: center;">
+                        <i class="material-icons spin" style="font-size: 32px; color: #cbd5e1;">sync</i>
+                        <p style="color: #94a3b8; font-size: 13px; margin-top: 10px;">Syncing accounts...</p>
                     </div>
                 </div>
-                
-                <!-- DYNAMICALLY LOADED CARDS -->
-                <div id="dynamic-cards"></div>
-            </div>
 
-            <div style="background: #f8fafc; padding: 40px 20px; border-radius: 24px; border: 2px dashed #e2e8f0; margin-top: 24px;">
-                <i class="material-icons" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px;">add_card</i>
-                <p style="color: #64748b; font-size: 14px; font-weight: 700; margin: 0 0 20px 0;">Add a new card to start tracking more spending.</p>
-                <button class="mui-btn mui-btn--raised" onclick="window.location.href='account_setup.html'" style="background: #1d4ed8; color: #fff; border-radius: 12px; font-weight: 800; padding: 10px 24px; text-transform: none;">+ Add Account</button>
+            <div id="add-account-placeholder">
+                <!-- Redesigned placeholder injected here if accounts < 7 -->
             </div>
         </div>
 
-        <!-- BOTTOM NAV -->
-        <div class="bottom-nav">
-            <a href="index.html" class="nav-item">
-                <i class="material-icons">account_balance_wallet</i>
-                <span>Wallet</span>
-            </a>
-            <a href="calendar.html" class="nav-item">
-                <i class="material-icons">calendar_today</i>
-                <span>Calendar</span>
-            </a>
-            <a href="accounts.html" class="nav-item active">
-                <i class="material-icons">account_balance</i>
-                <span>Accounts</span>
-            </a>
-            <a href="goals.html" class="nav-item">
-                <i class="material-icons">track_changes</i>
-                <span>Goals</span>
-            </a>
-        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='index.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">account_balance_wallet</i>
+            <span>Wallet</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='calendar.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">calendar_today</i>
+            <span>Calendar</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item active" onclick="window.location.href='accounts.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">account_balance</i>
+            <span>Accounts</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='goals.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">track_changes</i>
+            <span>Goals</span>
+        </a>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
@@ -240,6 +296,7 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
 
         // Initial UI population from Cache
         const cachedName = localStorage.getItem('user_name');
@@ -253,51 +310,82 @@
         }
 
         // Apply Header Theme from Current Account
-        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
-        const cardBg = document.getElementById('card-bg');
-        if (cardBg) {
-            if (currentAccount === 'bpi') cardBg.setAttribute('fill', '#931B1B');
-            else if (currentAccount === 'atome') cardBg.setAttribute('fill', '#1a1a1a');
-            else {
+        // Apply Header Theme from Current Account
+        function applyAccountTheme(accId) {
+            const cardBg = document.getElementById('card-bg');
+            if (cardBg) {
                 const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-                const acc = accounts.find(a => a.id === currentAccount);
-                if (acc) cardBg.setAttribute('fill', acc.color);
+                const acc = accounts.find(a => a.id === accId);
+                if (acc) {
+                    cardBg.setAttribute('fill', acc.color);
+                } else {
+                    if (accId === 'bpi') cardBg.setAttribute('fill', '#931B1B');
+                    else cardBg.setAttribute('fill', '#1a1a1a');
+                }
             }
         }
+        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
+        applyAccountTheme(currentAccount);
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             const isAnon = !user || user.isAnonymous;
             const gate = document.getElementById('guestGate');
             if (gate) gate.style.display = isAnon ? 'flex' : 'none';
 
-            const adminAccounts = document.getElementById('admin-accounts');
-            const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
-            
-            if (adminAccounts) adminAccounts.style.display = isAdmin ? 'block' : 'none';
-
-            if (user) {
-                if (!user.isAnonymous) {
-                    if (user.displayName) {
-                        const parts = user.displayName.split(' ');
-                        const firstName = parts.length > 1 && parts[0].length <= 5 ? parts.slice(0, 2).join(' ') : parts[0];
-                        document.getElementById('user-display-name').innerText = firstName;
-                        localStorage.setItem('user_name', firstName);
-                    }
-                    if (user.photoURL) {
-                        const badge = document.getElementById('profile-badge');
-                        const pic = document.getElementById('user-pic');
-                        let photoUrl = user.photoURL;
-                        if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                            photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                        }
-                        pic.src = photoUrl;
-                        badge.classList.add('has-pic');
-                        localStorage.setItem('user_pic', photoUrl);
-                    }
-                } else {
-                    document.getElementById('user-display-name').innerText = 'Guest';
-                    document.getElementById('profile-badge').classList.remove('has-pic');
+            if (user && !user.isAnonymous) {
+                // UI Updates
+                if (user.displayName) {
+                    const parts = user.displayName.split(' ');
+                    const firstName = parts.length > 1 && parts[0].length <= 5 ? parts.slice(0, 2).join(' ') : parts[0];
+                    document.getElementById('user-display-name').innerText = firstName;
+                    localStorage.setItem('user_name', firstName);
                 }
+                if (user.photoURL) {
+                    const badge = document.getElementById('profile-badge');
+                    const pic = document.getElementById('user-pic');
+                    let photoUrl = user.photoURL;
+                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                    }
+                    pic.src = photoUrl;
+                    badge.classList.add('has-pic');
+                    localStorage.setItem('user_pic', photoUrl);
+                }
+
+                // FETCH ACCOUNTS
+                const configRef = doc(db, "users", user.uid, "config", "accounts");
+                onSnapshot(configRef, (docSnap) => {
+                    const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
+                    const isAdmin = user.email === 'johnpaulinso123@gmail.com';
+                    
+                    const hasAtome = accounts.find(a => a.id === 'atome');
+                    const hasBPI = accounts.find(a => a.id === 'bpi');
+                    const hasWallet = accounts.find(a => a.id === 'default_wallet');
+
+                    if (accounts.length === 0 || (isAdmin && (!hasAtome || !hasBPI || !hasWallet))) {
+                        // INITIALIZE DEFAULT WALLETS
+                        let list = [];
+                        if (isAdmin) {
+                            list = [
+                                { id: 'atome', name: 'Atome Card', balance: 0, last4: '7312', color: '#121212', type: 'credit', isDefault: true, isBuiltIn: true, createdAt: 1700000000000 },
+                                { id: 'bpi', name: 'BPI Card', balance: 0, last4: '6727', color: '#931B1B', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000100 },
+                                { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: false, isBuiltIn: true, createdAt: 1700000000200 }
+                            ];
+                        } else {
+                            list = [
+                                { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: true, isBuiltIn: true, createdAt: Date.now() }
+                            ];
+                        }
+                        setDoc(configRef, { list });
+                    } else {
+                        const def = accounts.find(a => a.isDefault);
+                        if (def) applyAccountTheme(def.id);
+                        renderAccounts(accounts);
+                    }
+                });
+            } else {
+                document.getElementById('user-display-name').innerText = 'Guest';
+                document.getElementById('profile-badge').classList.remove('has-pic');
             }
         });
 
@@ -325,34 +413,177 @@
             }
         };
 
+        window.renderAccounts = (accounts) => {
+            const container = document.getElementById('dynamic-cards');
+            const placeholderTarget = document.getElementById('add-account-placeholder');
+            
+            if (accounts.length === 0) {
+                container.innerHTML = '<p style="padding: 20px; color: #94a3b8;">No accounts found.</p>';
+                return;
+            }
+
+            // Sync default account to localStorage for index.html to read immediately
+            const def = accounts.find(a => a.isDefault);
+            if (def) localStorage.setItem('wallet_current_account', def.id);
+
+            // Placeholder visibility
+            if (placeholderTarget) {
+                if (accounts.length >= 7) {
+                    placeholderTarget.innerHTML = '';
+                } else {
+                    placeholderTarget.innerHTML = `
+                        <div class="add-account-card" onclick="window.location.href='account_setup.html'">
+                            <div class="icon-placeholder">
+                                <i class="material-icons" style="font-size: 32px;">credit_card</i>
+                            </div>
+                            <p>Add a new card to start tracking more spending.</p>
+                            <button class="add-account-btn">+ Add Account</button>
+                        </div>
+                    `;
+                }
+            }
+
+            // Sort logic: We now respect the order in the array
+            // If we want a specific initial sort (like built-ins first), we should do it only once during creation
+            // For now, we just render as-is from Firestore (which will be updated by drag-and-drop)
+            
+            container.innerHTML = accounts.map((acc, index) => `
+                <div class="account-card" draggable="true" data-id="${acc.id}" data-index="${index}">
+                    <div class="account-icon" style="background: ${acc.color}; color: #fff;">
+                        <i class="material-icons">${acc.type === 'wallet' ? 'account_balance_wallet' : (acc.type === 'debit' ? 'account_balance' : 'credit_card')}</i>
+                    </div>
+                    <div class="account-info">
+                        <div class="account-name">${acc.name} ${acc.isDefault ? '<span style="font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #64748b; margin-left: 4px;">DEFAULT</span>' : ''}</div>
+                        <div class="account-type">${acc.type.toUpperCase()} •••• ${acc.last4}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            ${!acc.isDefault ? `
+                                <button onclick="setDefault('${acc.id}')" style="background: #f1f5f9; border: none; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; color: #1d4ed8; cursor: pointer;">SET DEFAULT</button>
+                            ` : '<div style="font-weight: 800; color: #10b981; font-size: 10px; display: flex; align-items: center; gap: 4px;"><i class="material-icons" style="font-size: 14px;">check_circle</i>ACTIVE</div>'}
+                            
+                            ${!acc.isBuiltIn ? `
+                                <button onclick="deleteAccount('${acc.id}')" style="background: #fff; border: 1px solid #fee2e2; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; color: #ef4444; cursor: pointer;">DELETE</button>
+                            ` : ''}
+                        </div>
+                        <div class="drag-handle">
+                            <i class="material-icons">drag_indicator</i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            initDragAndDrop();
+        };
+
+        let draggedItem = null;
+        function initDragAndDrop() {
+            const cards = document.querySelectorAll('.account-card');
+            const container = document.getElementById('dynamic-cards');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    draggedItem = card;
+                    card.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    saveNewOrder();
+                });
+
+                card.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const afterElement = getDragAfterElement(container, e.clientY);
+                    if (afterElement == null) {
+                        container.appendChild(draggedItem);
+                    } else {
+                        container.insertBefore(draggedItem, afterElement);
+                    }
+                });
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.account-card:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        async function saveNewOrder() {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            const cards = [...document.querySelectorAll('.account-card')];
+            const newOrderIds = cards.map(c => c.dataset.id);
+            
+            // Get current accounts to reorder them
+            const configRef = doc(db, "users", user.uid, "config", "accounts");
+            const snap = await getDoc(configRef);
+            if (snap.exists()) {
+                const currentList = snap.data().list || [];
+                const newList = newOrderIds.map(id => currentList.find(a => a.id === id)).filter(Boolean);
+                
+                // Update Firestore
+                await updateDoc(configRef, { list: newList });
+                console.log('Order saved to Firestore');
+            }
+        }
+
+        window.setDefault = async (accId) => {
+            const user = auth.currentUser;
+            if (!user) return;
+            try {
+                const configRef = doc(db, "users", user.uid, "config", "accounts");
+                const snap = await getDoc(configRef);
+                if (snap.exists()) {
+                    let list = snap.data().list || [];
+                    list = list.map(a => ({ ...a, isDefault: a.id === accId }));
+                    await updateDoc(configRef, { list });
+                    localStorage.setItem('wallet_current_account', accId);
+                }
+            } catch (e) { console.error(e); }
+        };
+
+        window.deleteAccount = async (accId) => {
+            if (!confirm('Are you sure you want to delete this account? All associated locally-synced data for this view will be disconnected.')) return;
+            const user = auth.currentUser;
+            if (!user) return;
+            try {
+                const configRef = doc(db, "users", user.uid, "config", "accounts");
+                const snap = await getDoc(configRef);
+                if (snap.exists()) {
+                    let list = snap.data().list || [];
+                    const toDelete = list.find(a => a.id === accId);
+                    if (toDelete && toDelete.isBuiltIn) return;
+
+                    list = list.filter(a => a.id !== accId);
+                    // If we deleted the default, set first one as default
+                    if (list.length > 0 && !list.some(a => a.isDefault)) {
+                        list[0].isDefault = true;
+                    }
+                    await updateDoc(configRef, { list });
+                }
+            } catch (e) { console.error(e); }
+        };
+
         const header = document.getElementById('header');
         const scrollContainer = document.querySelector('.mobile-wrapper');
         const handleScroll = (container) => {
             if (container.scrollTop > 50) header.classList.add('shrunk');
             else header.classList.remove('shrunk');
         };
-        window.loadSavedCards = () => {
-            const dynamicContainer = document.getElementById('dynamic-cards');
-            if(!dynamicContainer) return;
-            
-            const savedAccounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-            
-            dynamicContainer.innerHTML = savedAccounts.map(acc => `
-                <div class="account-card" style="animation: slideIn 0.3s ease forwards;">
-                    <div class="account-icon" style="background: ${acc.color}; color: #fff;">
-                        <i class="material-icons">payment</i>
-                    </div>
-                    <div class="account-info">
-                        <div class="account-name">${acc.name}</div>
-                        <div class="account-type">${acc.type === 'credit' ? 'Credit Card' : 'Debit Card'} •••• ${acc.last4}</div>
-                    </div>
-                    <div style="font-weight: 800; color: #10b981; font-size: 14px;">Saved</div>
-                </div>
-            `).join('');
-        };
 
         window.addEventListener('DOMContentLoaded', () => {
-            loadSavedCards();
             if (scrollContainer) scrollContainer.addEventListener('scroll', () => handleScroll(scrollContainer));
         });
         window.addEventListener('scroll', () => handleScroll(window.document.documentElement));

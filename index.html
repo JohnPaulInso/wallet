@@ -254,6 +254,18 @@
         .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
         .dropdown-item.logout i { color: #ef4444; }
         .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .biometric-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+            background: #cbd5e1;
+            transition: all 0.3s;
+        }
+        .biometric-status-dot.active {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
 
         /* CARD CAROUSEL SYSTEM */
         .card-viewport {
@@ -1699,6 +1711,11 @@
                     <i class="material-icons">lock</i>
                     <span>Privacy PIN</span>
                 </div>
+                <div class="dropdown-item" id="biometric-menu-item" onclick="toggleBiometricSetting()">
+                    <i class="material-icons">fingerprint</i>
+                    <span>Biometric Login</span>
+                    <div class="biometric-status-dot" id="biometric-status-dot"></div>
+                </div>
                 <div class="dropdown-item logout" onclick="handleSignout()">
                     <i class="material-icons">logout</i>
                     <span>Log Out</span>
@@ -2535,15 +2552,27 @@
                         <i class="material-icons" id="theme-icon">dark_mode</i>
                         <span id="theme-text">Dark Mode</span>
                     </div>
-                    <div class="dropdown-item" onclick="handleAuthClick()">
+                     <div class="dropdown-item" onclick="handleAuthClick()">
                         <i class="material-icons">swap_horiz</i>
                         <span>Switch Account</span>
+                    </div>
+                    <div class="dropdown-item" id="biometric-menu-item" onclick="toggleBiometricSetting()">
+                        <i class="material-icons">fingerprint</i>
+                        <span>Biometric Login</span>
+                        <div class="biometric-status-dot" id="biometric-status-dot"></div>
+                    </div>
+                    <div class="dropdown-item" onclick="promptSetPin()">
+                        <i class="material-icons">lock</i>
+                        <span>Privacy PIN</span>
                     </div>
                     <div class="dropdown-item logout" onclick="handleSignout()">
                         <i class="material-icons">logout</i>
                         <span>Log Out</span>
                     </div>
                  `;
+                 
+                 // Initial status update
+                 setTimeout(() => { if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus(); }, 10);
                  
                  const parts = user.displayName?.split(' ') || [];
                  const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
@@ -5672,6 +5701,11 @@
             e.stopPropagation();
             const dropdown = document.getElementById('profile-dropdown');
             dropdown.classList.toggle('active');
+            
+            // Refresh biometric status when opening
+            if (dropdown.classList.contains('active') && typeof window.updateBiometricStatus === 'function') {
+                window.updateBiometricStatus();
+            }
         };
 
         // Close dropdown when clicking elsewhere
@@ -8892,6 +8926,9 @@
                 if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
                 hideBiometricOverlay();
                 
+                // Refresh status icon
+                if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus();
+                
                 // Show success toast
                 showToast('Biometric login enabled!');
                 return true;
@@ -8998,6 +9035,35 @@
             }
         };
         
+        // Update indicator in settings
+        window.updateBiometricStatus = () => {
+            const dot = document.getElementById('biometric-status-dot');
+            if (dot) {
+                if (isBiometricSetUp()) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            }
+        };
+
+        // Handle profile dropdown click
+        window.toggleBiometricSetting = () => {
+            if (!isBiometricSupported()) {
+                showToast('Biometrics not supported on this device');
+                return;
+            }
+            if (isBiometricSetUp()) {
+                if (confirm('Biometric login is enabled. Would you like to disable it?')) {
+                    localStorage.removeItem('biometric_credential_id');
+                    window.updateBiometricStatus();
+                    showToast('Biometric login disabled');
+                }
+            } else {
+                showBiometricOverlay('setup');
+            }
+        };
+
         // Run on page load
         window.addEventListener('load', () => {
             setTimeout(initBiometric, 500);

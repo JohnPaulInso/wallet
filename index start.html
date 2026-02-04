@@ -40,7 +40,7 @@
             flex-direction: column; 
             overflow-x: hidden; 
             overflow-y: auto;
-            overscroll-behavior-y: contain;
+            overscroll-behavior-y: contain; /* Prevent browser pull-to-refresh */
         }
         @media (min-width: 431px) {
             .mobile-wrapper { height: 100vh; overflow-y: auto; }
@@ -49,32 +49,142 @@
         /* Header spacer - prevents content from hiding under fixed header */
         .header-spacer { height: 70px; flex-shrink: 0; }
         
-        /* PULL-TO-REFRESH INDICATOR */
-        .pull-to-refresh {
+        /* MODERN PULL-TO-REFRESH - Material Design Style */
+        .ptr-container {
             position: fixed;
-            top: 0;
+            top: 75px; /* Lower position below header */
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
             max-width: 430px;
-            height: 0;
-            background: linear-gradient(180deg, #f0f9ff 0%, transparent 100%);
+            height: 80px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 400; /* Behind header z-index of 500 */
+            pointer-events: none;
+            padding-top: 5px;
+        }
+        .ptr-spinner {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            z-index: 450;
-            transition: height 0.2s ease;
+            transform: translateY(-60px) scale(0.6);
+            opacity: 0;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
         }
-        .pull-to-refresh.active { height: 60px; }
-        .pull-to-refresh.refreshing { height: 50px; background: #e0f2fe; }
-        .pull-to-refresh i { font-size: 24px; color: #3b82f6; transition: transform 0.3s ease; }
-        .pull-to-refresh.ready i { transform: rotate(180deg); }
-        .pull-to-refresh.refreshing i { animation: spinRotate 1s linear infinite; }
+        .ptr-spinner.visible {
+            opacity: 1;
+        }
+        .ptr-spinner.refreshing {
+            transform: translateY(0) scale(1) !important;
+            opacity: 1;
+        }
+        .ptr-spinner svg {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.1s linear;
+        }
+        .ptr-spinner.refreshing svg {
+            animation: ptrSpin 0.8s linear infinite;
+        }
+        @keyframes ptrSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Progress arc */
+        .ptr-spinner .ptr-circle {
+            fill: none;
+            stroke: #3b82f6;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-dasharray: 60;
+            stroke-dashoffset: 60;
+            transform-origin: center;
+            transition: stroke-dashoffset 0.1s ease;
+        }
+        .ptr-spinner.refreshing .ptr-circle {
+            stroke-dashoffset: 15;
+            animation: ptrDash 1.2s ease-in-out infinite;
+        }
+        @keyframes ptrDash {
+            0% { stroke-dashoffset: 55; transform: rotate(0deg); }
+            50% { stroke-dashoffset: 15; }
+            100% { stroke-dashoffset: 55; transform: rotate(360deg); }
+        }
         
         /* SKELETON LOADING */
         .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-text { height: 14px; width: 60%; margin-bottom: 8px; }
+        .skeleton-text.short { width: 40%; }
+        .skeleton-text.full { width: 100%; }
+        .skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+        .skeleton-card { height: 200px; border-radius: 20px; }
+        .skeleton-row { display: flex; align-items: center; gap: 14px; padding: 12px 20px; }
+        .skeleton-amount { height: 14px; width: 70px; margin-left: auto; }
+
+        /* BIOMETRIC LOCK SCREEN */
+        .biometric-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            z-index: 10000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+        .biometric-overlay.show { display: flex; }
+        .biometric-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: bioPulse 2s ease-in-out infinite;
+        }
+        .biometric-icon i { font-size: 40px; color: #3b82f6; }
+        @keyframes bioPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+        }
+        .biometric-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
+        .biometric-subtitle { font-size: 14px; color: #94a3b8; font-weight: 500; text-align: center; max-width: 260px; }
+        .biometric-btn {
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+        .biometric-btn:hover { background: #2563eb; transform: scale(1.02); }
+        .biometric-btn:active { transform: scale(0.98); }
+        .biometric-skip {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            padding: 8px 16px;
+            transition: color 0.2s;
+        }
+        .biometric-skip:hover { color: #94a3b8; }
+        .biometric-error { color: #ef4444; font-size: 13px; font-weight: 600; margin-top: 8px; display: none; }
+        .biometric-error.show { display: block; }
 
         /* 60FPS GPU-ACCELERATED ANIMATIONS */
         .balance-card, .modal-overlay, .custom-modal, .txn-item, .month-accordion, 
@@ -84,11 +194,10 @@
             -webkit-backface-visibility: hidden;
             backface-visibility: hidden;
         }
+        /* Smooth transitions for common elements */
         .balance-card, .nav-item, .txn-item, .dropdown-item, .action-btn {
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-
         #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
@@ -145,6 +254,18 @@
         .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
         .dropdown-item.logout i { color: #ef4444; }
         .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .biometric-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: auto;
+            background: #cbd5e1;
+            transition: all 0.3s;
+        }
+        .biometric-status-dot.active {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
 
         /* CARD CAROUSEL SYSTEM */
         .card-viewport {
@@ -1517,6 +1638,36 @@
     <!-- IOS-STYLE ACTION MENU -->
     <div id="ios-menu" class="ios-action-menu"></div>
 
+    <!-- BIOMETRIC LOCK SCREEN -->
+    <div class="biometric-overlay" id="biometricOverlay">
+        <div class="biometric-icon">
+            <i class="material-icons" id="biometricIconType">fingerprint</i>
+        </div>
+        <div class="biometric-title" id="biometricTitle">Unlock SmartWallet</div>
+        <div class="biometric-subtitle" id="biometricSubtitle">Use your fingerprint or Face ID to access your wallet</div>
+        <div class="biometric-error" id="biometricError">Authentication failed. Please try again.</div>
+        <button class="biometric-btn" id="biometricBtn" onclick="triggerBiometricAuth()">
+            <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i>
+            Authenticate
+        </button>
+        <div class="biometric-skip" id="biometricSkip" onclick="skipBiometric()">Skip for now</div>
+    </div>
+
+    <!-- BIOMETRIC LOCK SCREEN -->
+    <div class="biometric-overlay" id="biometricOverlay">
+        <div class="biometric-icon">
+            <i class="material-icons" id="biometricIconType">fingerprint</i>
+        </div>
+        <div class="biometric-title" id="biometricTitle">Unlock SmartWallet</div>
+        <div class="biometric-subtitle" id="biometricSubtitle">Use your fingerprint or Face ID to access your wallet</div>
+        <div class="biometric-error" id="biometricError">Authentication failed. Please try again.</div>
+        <button class="biometric-btn" id="biometricBtn" onclick="triggerBiometricAuth()">
+            <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i>
+            Authenticate
+        </button>
+        <div class="biometric-skip" id="biometricSkip" onclick="skipBiometric()">Skip for now</div>
+    </div>
+
     <div class="mobile-wrapper">
         <!-- GUEST LOGIN GATE -->
         <div id="guestGate" class="guest-gate-overlay" style="display: none;">
@@ -1575,12 +1726,29 @@
                     <i class="material-icons">lock</i>
                     <span>Privacy PIN</span>
                 </div>
+                <div class="dropdown-item" id="biometric-menu-item" onclick="toggleBiometricSetting()">
+                    <i class="material-icons">fingerprint</i>
+                    <span>Biometric Login</span>
+                    <div class="biometric-status-dot" id="biometric-status-dot"></div>
+                </div>
                 <div class="dropdown-item logout" onclick="handleSignout()">
                     <i class="material-icons">logout</i>
                     <span>Log Out</span>
                 </div>
             </div>
         </div>
+        </div>
+
+        <!-- HEADER SPACER - Prevents content from hiding behind fixed header -->
+        <div class="header-spacer"></div>
+        
+        <!-- MODERN PULL-TO-REFRESH SPINNER -->
+        <div class="ptr-container" id="ptrContainer">
+            <div class="ptr-spinner" id="ptrSpinner">
+                <svg viewBox="0 0 24 24">
+                    <circle class="ptr-circle" cx="12" cy="12" r="10" />
+                </svg>
+            </div>
         </div>
 
         <!-- SWIPEABLE CARD VIEWPORT -->
@@ -2403,11 +2571,23 @@
                         <i class="material-icons">swap_horiz</i>
                         <span>Switch Account</span>
                     </div>
+                    <div class="dropdown-item" id="biometric-menu-item" onclick="toggleBiometricSetting()">
+                        <i class="material-icons">fingerprint</i>
+                        <span>Biometric Login</span>
+                        <div class="biometric-status-dot" id="biometric-status-dot"></div>
+                    </div>
+                    <div class="dropdown-item" onclick="promptSetPin()">
+                        <i class="material-icons">lock</i>
+                        <span>Privacy PIN</span>
+                    </div>
                     <div class="dropdown-item logout" onclick="handleSignout()">
                         <i class="material-icons">logout</i>
                         <span>Log Out</span>
                     </div>
                  `;
+
+                 // Initial status update
+                 setTimeout(() => { if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus(); }, 10);
                  
                  const parts = user.displayName?.split(' ') || [];
                  const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : (parts[0] || 'User');
@@ -5536,6 +5716,11 @@
             e.stopPropagation();
             const dropdown = document.getElementById('profile-dropdown');
             dropdown.classList.toggle('active');
+            
+            // Refresh biometric status when opening
+            if (dropdown.classList.contains('active') && typeof window.updateBiometricStatus === 'function') {
+                window.updateBiometricStatus();
+            }
         };
 
         // Close dropdown when clicking elsewhere
@@ -8642,9 +8827,276 @@
     </script>
     
     <script>
+        // BIOMETRIC AUTHENTICATION (WebAuthn)
+        const biometricOverlay = document.getElementById('biometricOverlay');
+        const biometricTitle = document.getElementById('biometricTitle');
+        const biometricSubtitle = document.getElementById('biometricSubtitle');
+        const biometricBtn = document.getElementById('biometricBtn');
+        const biometricSkip = document.getElementById('biometricSkip');
+        const biometricError = document.getElementById('biometricError');
+        
+        // Check if WebAuthn is available
+        const isBiometricSupported = () => {
+            return window.PublicKeyCredential && 
+                   PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable;
+        };
+        
+        // Check if user is logged in
+        const isUserLoggedIn = () => {
+            return localStorage.getItem('g_access_token') || localStorage.getItem('user_name');
+        };
+        
+        // Check if biometric is already set up
+        const isBiometricSetUp = () => {
+            return localStorage.getItem('biometric_credential_id') !== null;
+        };
+        
+        // Generate random bytes for challenge
+        const generateChallenge = () => {
+            const arr = new Uint8Array(32);
+            crypto.getRandomValues(arr);
+            return arr;
+        };
+        
+        // Convert ArrayBuffer to Base64
+        const bufferToBase64 = (buffer) => {
+            return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        };
+        
+        // Convert Base64 to ArrayBuffer
+        const base64ToBuffer = (base64) => {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        };
+        
+        // Show biometric overlay
+        const showBiometricOverlay = (mode = 'verify') => {
+            if (mode === 'setup') {
+                biometricTitle.textContent = 'Enable Biometric Login';
+                biometricSubtitle.textContent = 'Use your fingerprint or Face ID for quick, secure access to your wallet';
+                biometricBtn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i> Set Up Now';
+                biometricSkip.style.display = 'block';
+            } else {
+                biometricTitle.textContent = 'Unlock SmartWallet';
+                biometricSubtitle.textContent = 'Use your fingerprint or Face ID to access your wallet';
+                biometricBtn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i> Authenticate';
+                biometricSkip.style.display = 'none';
+            }
+            biometricError.classList.remove('show');
+            biometricOverlay.classList.add('show');
+        };
+        
+        // Hide biometric overlay
+        const hideBiometricOverlay = () => {
+            biometricOverlay.classList.remove('show');
+        };
+        
+        // Skip biometric setup
+        const skipBiometric = () => {
+            localStorage.setItem('biometric_skipped', 'true');
+            hideBiometricOverlay();
+        };
+        
+        // Register biometric credential
+        const registerBiometric = async () => {
+            try {
+                const userName = localStorage.getItem('user_name') || 'User';
+                const userEmail = localStorage.getItem('user_email') || 'user@smartwallet.app';
+                
+                const credential = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: generateChallenge(),
+                        rp: {
+                            name: "SmartWallet",
+                            id: window.location.hostname
+                        },
+                        user: {
+                            id: new TextEncoder().encode(userEmail),
+                            name: userEmail,
+                            displayName: userName
+                        },
+                        pubKeyCredParams: [
+                            { type: "public-key", alg: -7 },  // ES256
+                            { type: "public-key", alg: -257 } // RS256
+                        ],
+                        authenticatorSelection: {
+                            authenticatorAttachment: "platform",
+                            userVerification: "required",
+                            residentKey: "preferred"
+                        },
+                        timeout: 60000
+                    }
+                });
+                
+                // Store credential ID
+                const credentialId = bufferToBase64(credential.rawId);
+                localStorage.setItem('biometric_credential_id', credentialId);
+                localStorage.removeItem('biometric_skipped');
+                
+                console.log('✅ Biometric registered successfully');
+                if (navigator.vibrate) navigator.vibrate([10, 50, 10]);
+                hideBiometricOverlay();
+                
+                // Refresh status icon
+                if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus();
+                
+                // Show success toast
+                if (typeof showToast === 'function') {
+                    showToast('Biometric login enabled!');
+                }
+                return true;
+            } catch (err) {
+                console.error('❌ Biometric registration failed:', err);
+                biometricError.textContent = err.name === 'NotAllowedError' 
+                    ? 'Biometric cancelled or not available' 
+                    : 'Setup failed. Please try again.';
+                biometricError.classList.add('show');
+                return false;
+            }
+        };
+        
+        // Verify biometric credential
+        const verifyBiometric = async () => {
+            try {
+                const credentialId = localStorage.getItem('biometric_credential_id');
+                if (!credentialId) {
+                    hideBiometricOverlay();
+                    return true;
+                }
+                
+                const credential = await navigator.credentials.get({
+                    publicKey: {
+                        challenge: generateChallenge(),
+                        allowCredentials: [{
+                            type: "public-key",
+                            id: base64ToBuffer(credentialId),
+                            transports: ["internal"]
+                        }],
+                        userVerification: "required",
+                        timeout: 60000
+                    }
+                });
+                
+                console.log('✅ Biometric verified successfully');
+                if (navigator.vibrate) navigator.vibrate(10);
+                hideBiometricOverlay();
+                return true;
+            } catch (err) {
+                console.error('❌ Biometric verification failed:', err);
+                biometricError.textContent = err.name === 'NotAllowedError'
+                    ? 'Authentication cancelled'
+                    : 'Verification failed. Please try again.';
+                biometricError.classList.add('show');
+                return false;
+            }
+        };
+        
+        // Main trigger function
+        const triggerBiometricAuth = async () => {
+            biometricError.classList.remove('show');
+            biometricBtn.disabled = true;
+            biometricBtn.innerHTML = '<i class="material-icons spin" style="vertical-align: middle;">sync</i> Waiting...';
+            
+            let success;
+            if (isBiometricSetUp()) {
+                success = await verifyBiometric();
+            } else {
+                success = await registerBiometric();
+            }
+            
+            biometricBtn.disabled = false;
+            if (!success) {
+                biometricBtn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i> Try Again';
+            }
+        };
+        
+        // Initialize biometric on app load
+        const initBiometric = async () => {
+            // Only proceed if user is logged in
+            if (!isUserLoggedIn()) {
+                console.log('🔐 Biometric: User not logged in, skipping');
+                return;
+            }
+            
+            // Check if biometrics are supported
+            if (!isBiometricSupported()) {
+                console.log('🔐 Biometric: Not supported on this device');
+                return;
+            }
+            
+            try {
+                const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+                if (!available) {
+                    console.log('🔐 Biometric: Platform authenticator not available');
+                    return;
+                }
+                
+                // If biometric is set up, prompt for verification
+                if (isBiometricSetUp()) {
+                    console.log('🔐 Biometric: Prompting for verification');
+                    showBiometricOverlay('verify');
+                    // Auto-trigger verification
+                    setTimeout(() => triggerBiometricAuth(), 500);
+                } 
+                // If not set up and not skipped, prompt for setup
+                else if (!localStorage.getItem('biometric_skipped')) {
+                    console.log('🔐 Biometric: Prompting for setup');
+                    showBiometricOverlay('setup');
+                }
+            } catch (err) {
+                console.error('🔐 Biometric init error:', err);
+            }
+        };
+
+        // Update indicator in settings
+        window.updateBiometricStatus = () => {
+            const dot = document.getElementById('biometric-status-dot');
+            if (dot) {
+                if (isBiometricSetUp()) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            }
+        };
+
+        // Handle profile dropdown click
+        window.toggleBiometricSetting = () => {
+            if (!isBiometricSupported()) {
+                showToast('Biometrics not supported on this device');
+                return;
+            }
+            if (isBiometricSetUp()) {
+                if (confirm('Biometric login is enabled. Would you like to disable it?')) {
+                    localStorage.removeItem('biometric_credential_id');
+                    window.updateBiometricStatus();
+                    showToast('Biometric login disabled');
+                }
+            } else {
+                showBiometricOverlay('setup');
+            }
+        };
+        
+        // Run on page load
+        window.addEventListener('load', () => {
+            setTimeout(initBiometric, 500);
+        });
+    </script>
+    
+    <script>
         // Auto-sync for Atome and BPI wallets on app load (10 emails quick scan)
         window.addEventListener('load', () => {
             setTimeout(() => {
+                // Wait for biometric to finish if active
+                if (biometricOverlay && biometricOverlay.classList.contains('show')) {
+                    console.log('🔄 Auto-sync delayed: Waiting for biometric');
+                    return;
+                }
+                
                 const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
                 
                 // POPUP PREVETION: Check token validity before background sync
@@ -8661,8 +9113,103 @@
                 } else if (gmailToken && isActualExpired) {
                     console.log('🔇 Auto-sync suppressed: Gmail session expired. User must sync manually.');
                 }
-            }, 2000); // Wait 2 seconds after page load
+            }, 3000); // Increased to 3 seconds to wait for biometric
         });
+    </script>
+    
+    <script>
+        // MODERN MATERIAL DESIGN PULL-TO-REFRESH
+        (function() {
+            const spinner = document.getElementById('ptrSpinner');
+            const circle = spinner ? spinner.querySelector('.ptr-circle') : null;
+            const mobileWrapper = document.querySelector('.mobile-wrapper') || document.body;
+            let startY = 0;
+            let pulling = false;
+            let isRefreshing = false;
+            const pullThreshold = 100; // Distance needed to trigger refresh
+            const maxPull = 140; // Maximum pull distance
+            
+            if (!spinner || !circle) return;
+            
+            mobileWrapper.addEventListener('touchstart', (e) => {
+                if (isRefreshing) return;
+                if (mobileWrapper.scrollTop <= 0) {
+                    startY = e.touches[0].clientY;
+                    pulling = true;
+                }
+            }, { passive: true });
+            
+            mobileWrapper.addEventListener('touchmove', (e) => {
+                if (!pulling || isRefreshing || mobileWrapper.scrollTop > 0) return;
+                
+                const currentY = e.touches[0].clientY;
+                const pullDistance = Math.max(0, currentY - startY);
+                
+                if (pullDistance > 10) {
+                    e.preventDefault();
+                    
+                    // Calculate progress with resistance (diminishing returns)
+                    const resistance = 0.5;
+                    const resistedPull = Math.min(pullDistance * resistance, maxPull);
+                    const progress = Math.min(pullDistance / pullThreshold, 1);
+                    
+                    // Show spinner dropping down
+                    spinner.classList.add('visible');
+                    spinner.style.transform = `translateY(${resistedPull - 60}px) scale(${0.6 + progress * 0.4}) rotate(${pullDistance * 2}deg)`;
+                    
+                    // Animate the SVG circle stroke
+                    const dashOffset = 60 - (progress * 45); // Fill from 0 to ~75%
+                    circle.style.strokeDashoffset = dashOffset;
+                    circle.style.transform = `rotate(${pullDistance * 3}deg)`;
+                }
+            }, { passive: false });
+            
+            mobileWrapper.addEventListener('touchend', () => {
+                if (!pulling || isRefreshing) return;
+                pulling = false;
+                
+                const currentTransform = spinner.style.transform;
+                const yMatch = currentTransform.match(/translateY\(([^p]+)px\)/);
+                const currentY = yMatch ? parseFloat(yMatch[1]) : -80;
+                
+                if (currentY > 30) {
+                    // Trigger refresh!
+                    isRefreshing = true;
+                    
+                    // Haptic feedback
+                    if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+                    
+                    // Animate to refreshing state
+                    spinner.classList.add('refreshing');
+                    circle.style.strokeDashoffset = '';
+                    circle.style.transform = '';
+                    
+                    // Trigger sync
+                    const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
+                    console.log('🔄 Pull-to-refresh: Syncing', currentAcc);
+                    
+                    if ((currentAcc === 'atome' || currentAcc === 'bpi') && typeof handleScan === 'function') {
+                        handleScan(50, true);
+                    } else if (typeof refreshUIForAccount === 'function') {
+                        refreshUIForAccount(currentAcc);
+                    }
+                    
+                    // Hide after delay
+                    setTimeout(() => {
+                        spinner.classList.remove('refreshing', 'visible');
+                        spinner.style.transform = '';
+                        circle.style.strokeDashoffset = '60';
+                        isRefreshing = false;
+                    }, 1800);
+                } else {
+                    // Cancel - spring back
+                    spinner.classList.remove('visible');
+                    spinner.style.transform = '';
+                    circle.style.strokeDashoffset = '60';
+                    circle.style.transform = '';
+                }
+            });
+        })();
     </script>
 </body>
 </html>

@@ -21,26 +21,126 @@
 <style>
 
     
-        * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
-        html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; }
+        * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; overscroll-behavior-y: contain; }
+        
+        /* HIDE ALL SCROLLBARS - Native App Feel */
+        * { scrollbar-width: none; -ms-overflow-style: none; }
+        *::-webkit-scrollbar { display: none; width: 0; height: 0; }
         
         /* Mobile Wrapper with PC Scroll Simulation */
         .mobile-wrapper { 
             width: 100%; 
             max-width: 430px; 
             background: #f8fafc; 
-            height: 100vh; /* Fixed height for sticky to work on mobile */
+            height: 100vh;
             position: relative; 
             box-shadow: 0 0 50px rgba(0,0,0,0.1); 
             display: flex; 
             flex-direction: column; 
             overflow-x: hidden; 
-            overflow-y: auto; 
+            overflow-y: auto;
+            overscroll-behavior-y: contain; /* Prevent browser pull-to-refresh */
         }
         @media (min-width: 431px) {
-            .mobile-wrapper { height: 100vh; overflow-y: scroll; }
+            .mobile-wrapper { height: 100vh; overflow-y: auto; }
         }
+        
+        /* Header spacer - prevents content from hiding under fixed header */
+        .header-spacer { height: 70px; flex-shrink: 0; }
+        
+        /* MODERN PULL-TO-REFRESH - Material Design Style */
+        .ptr-container {
+            position: fixed;
+            top: 75px; /* Lower position below header */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            height: 80px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 400; /* Behind header z-index of 500 */
+            pointer-events: none;
+            padding-top: 5px;
+        }
+        .ptr-spinner {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(-60px) scale(0.6);
+            opacity: 0;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+        }
+        .ptr-spinner.visible {
+            opacity: 1;
+        }
+        .ptr-spinner.refreshing {
+            transform: translateY(0) scale(1) !important;
+            opacity: 1;
+        }
+        .ptr-spinner svg {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.1s linear;
+        }
+        .ptr-spinner.refreshing svg {
+            animation: ptrSpin 0.8s linear infinite;
+        }
+        @keyframes ptrSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Progress arc */
+        .ptr-spinner .ptr-circle {
+            fill: none;
+            stroke: #3b82f6;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-dasharray: 60;
+            stroke-dashoffset: 60;
+            transform-origin: center;
+            transition: stroke-dashoffset 0.1s ease;
+        }
+        .ptr-spinner.refreshing .ptr-circle {
+            stroke-dashoffset: 15;
+            animation: ptrDash 1.2s ease-in-out infinite;
+        }
+        @keyframes ptrDash {
+            0% { stroke-dashoffset: 55; transform: rotate(0deg); }
+            50% { stroke-dashoffset: 15; }
+            100% { stroke-dashoffset: 55; transform: rotate(360deg); }
+        }
+        
+        /* SKELETON LOADING */
+        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-text { height: 14px; width: 60%; margin-bottom: 8px; }
+        .skeleton-text.short { width: 40%; }
+        .skeleton-text.full { width: 100%; }
+        .skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+        .skeleton-card { height: 200px; border-radius: 20px; }
+        .skeleton-row { display: flex; align-items: center; gap: 14px; padding: 12px 20px; }
+        .skeleton-amount { height: 14px; width: 70px; margin-left: auto; }
 
+        /* 60FPS GPU-ACCELERATED ANIMATIONS */
+        .balance-card, .modal-overlay, .custom-modal, .txn-item, .month-accordion, 
+        .bottom-nav, .fab, .profile-dropdown, .toast-container, .chart-card, .trend-card {
+            will-change: transform, opacity;
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        /* Smooth transitions for common elements */
+        .balance-card, .nav-item, .txn-item, .dropdown-item, .action-btn {
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        }
         #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
@@ -1533,6 +1633,18 @@
                 </div>
             </div>
         </div>
+        </div>
+
+        <!-- HEADER SPACER - Prevents content from hiding behind fixed header -->
+        <div class="header-spacer"></div>
+        
+        <!-- MODERN PULL-TO-REFRESH SPINNER -->
+        <div class="ptr-container" id="ptrContainer">
+            <div class="ptr-spinner" id="ptrSpinner">
+                <svg viewBox="0 0 24 24">
+                    <circle class="ptr-circle" cx="12" cy="12" r="10" />
+                </svg>
+            </div>
         </div>
 
         <!-- SWIPEABLE CARD VIEWPORT -->
@@ -5280,10 +5392,20 @@
                         window.isSyncing = false;
                         if (resp.error) {
                             if (resp.error === 'immediate_failed') {
-                                console.log('🔒 Silent refresh failed. User interaction needed.');
+                                console.log('🔒 Silent refresh failed (immediate_failed).');
+                                
+                                // If this was a manual trigger, retry with popup
+                                if (window.pendingSyncManual) {
+                                    console.log('🔄 Retrying with user popup since manual trigger...');
+                                    window.pendingSyncManual = false;
+                                    tokenClient.requestAccessToken({ prompt: '' });
+                                    return;
+                                }
+                                
+                                // Background sync - just update UI, no popup
                                 const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
                                 const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
-                                if (statusText) statusText.innerText = 'Log in to sync';
+                                if (statusText) statusText.innerText = 'Tap to sync';
                                 
                                 const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
                                 if (btn) {
@@ -5300,6 +5422,8 @@
                                     btn.innerHTML = '<i class="material-icons">sync</i>';
                                 }
                             }
+                            window.pendingSyncLimit = null;
+                            window.pendingSyncManual = false;
                             return;
                         }
 
@@ -5310,15 +5434,20 @@
                         localStorage.setItem('g_token_expiry', expMs);
                         localStorage.setItem('g_token_issued_at', Date.now());
                         
-                        log('Google Session Secured (Silent Refresh Success)');
+                        // Store user email for future silent refresh hints
+                        fetchUserProfile(accessToken).then(() => {
+                            // Email stored during profile fetch
+                        });
+                        
+                        log('Google Session Secured (Token Refresh Success)');
                         
                         // Handle pending sync if any
                         if (window.pendingSyncLimit) {
                             const limit = window.pendingSyncLimit;
                             window.pendingSyncLimit = null;
+                            window.pendingSyncManual = false;
                             handleScan(limit, true);
                         } else {
-                            fetchUserProfile(accessToken);
                             handleScan(300);
                         }
                     },
@@ -5353,6 +5482,11 @@
                     // Cache for persistence
                     localStorage.setItem('user_name', firstName);
                     localStorage.setItem('user_pic', data.picture);
+                    
+                    // Store email for silent refresh hint
+                    if (data.email) {
+                        localStorage.setItem('user_email', data.email);
+                    }
                 }
             } catch (e) { log('Profile refresh fail: ' + e.message, 'error'); }
         }
@@ -5565,23 +5699,79 @@
                 return;
             }
 
-            const issuedAt = localStorage.getItem('g_token_issued_at');
-            // Token is expired after ~58 mins (3500 seconds)
-            const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > 3500000); 
+            // SMART TOKEN VALIDATION: Check if stored token is actually still valid with Google
+            // Google tokens last ~1 hour, but we validate by actually testing it
+            const storedToken = localStorage.getItem('g_access_token');
             
-            if (isActualExpired) {
-                if (tokenClient) {
-                    console.log('🔄 Gmail token expired. Attempting silent refresh...');
-                    window.pendingSyncLimit = limit;
-                    // Use prompt: 'none' for background silent refresh (no popup)
-                    // If it fails, GIS callback will handle it
-                    tokenClient.requestAccessToken({ prompt: manualTrigger ? '' : 'none' });
-                    return;
-                } else if (!manualTrigger) {
-                    console.log('🔄 Background sync skipped: GIS not ready.');
+            if (storedToken) {
+                // Validate token by making a lightweight API call
+                console.log('🔍 Validating stored Gmail token...');
+                try {
+                    const validateRes = await fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + storedToken);
+                    if (validateRes.ok) {
+                        const tokenInfo = await validateRes.json();
+                        // Token is still valid! Use it directly, no popup needed
+                        console.log(`✅ Token valid! Expires in ${tokenInfo.expires_in}s`);
+                        accessToken = storedToken;
+                        // Update issued_at to extend our local tracking
+                        localStorage.setItem('g_token_issued_at', Date.now());
+                    } else {
+                        // Token is truly expired - need refresh
+                        console.log('⏰ Token expired according to Google API');
+                        
+                        // Try silent refresh via GIS with prompt:'none' (hidden iframe)
+                        if (tokenClient) {
+                            console.log('🔄 Attempting silent token refresh...');
+                            window.pendingSyncLimit = limit;
+                            window.pendingSyncManual = manualTrigger;
+                            
+                            // Use prompt: 'none' for truly silent refresh (iframe-based, no popup)
+                            // This works when user has an active Google session
+                            try {
+                                tokenClient.requestAccessToken({ 
+                                    prompt: 'none',
+                                    hint: localStorage.getItem('user_email') || undefined
+                                });
+                            } catch (silentErr) {
+                                console.log('🔇 Silent refresh not possible:', silentErr.message);
+                                if (manualTrigger) {
+                                    // User clicked, show popup
+                                    tokenClient.requestAccessToken({ prompt: '' });
+                                } else {
+                                    // Background - just show status
+                                    const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+                                    const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                                    if (statusText) statusText.innerText = 'Tap to sync';
+                                }
+                            }
+                            return;
+                        } else if (!manualTrigger) {
+                            console.log('🔇 Background sync skipped: GIS not ready.');
+                            const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
+                            const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
+                            if (statusText) statusText.innerText = 'Tap to sync';
+                            return;
+                        }
+                    }
+                } catch (validateErr) {
+                    console.log('⚠️ Token validation failed:', validateErr.message);
+                    // Network error - try using the token anyway
+                    accessToken = storedToken;
+                }
+            } else if (!storedToken) {
+                // No stored token at all
+                if (!manualTrigger) {
+                    console.log('🔇 Background sync skipped: No Gmail token stored.');
                     const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
                     const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
                     if (statusText) statusText.innerText = 'Log in to sync';
+                    return;
+                }
+                // Manual trigger with no token - show login popup
+                if (tokenClient) {
+                    console.log('🔑 No token. Requesting new authorization...');
+                    window.pendingSyncLimit = limit;
+                    tokenClient.requestAccessToken({ prompt: '' });
                     return;
                 }
             }
@@ -8537,6 +8727,101 @@
                 }
             }, 2000); // Wait 2 seconds after page load
         });
+    </script>
+    
+    <script>
+        // MODERN MATERIAL DESIGN PULL-TO-REFRESH
+        (function() {
+            const spinner = document.getElementById('ptrSpinner');
+            const circle = spinner ? spinner.querySelector('.ptr-circle') : null;
+            const mobileWrapper = document.querySelector('.mobile-wrapper') || document.body;
+            let startY = 0;
+            let pulling = false;
+            let isRefreshing = false;
+            const pullThreshold = 100; // Distance needed to trigger refresh
+            const maxPull = 140; // Maximum pull distance
+            
+            if (!spinner || !circle) return;
+            
+            mobileWrapper.addEventListener('touchstart', (e) => {
+                if (isRefreshing) return;
+                if (mobileWrapper.scrollTop <= 0) {
+                    startY = e.touches[0].clientY;
+                    pulling = true;
+                }
+            }, { passive: true });
+            
+            mobileWrapper.addEventListener('touchmove', (e) => {
+                if (!pulling || isRefreshing || mobileWrapper.scrollTop > 0) return;
+                
+                const currentY = e.touches[0].clientY;
+                const pullDistance = Math.max(0, currentY - startY);
+                
+                if (pullDistance > 10) {
+                    e.preventDefault();
+                    
+                    // Calculate progress with resistance (diminishing returns)
+                    const resistance = 0.5;
+                    const resistedPull = Math.min(pullDistance * resistance, maxPull);
+                    const progress = Math.min(pullDistance / pullThreshold, 1);
+                    
+                    // Show spinner dropping down
+                    spinner.classList.add('visible');
+                    spinner.style.transform = `translateY(${resistedPull - 60}px) scale(${0.6 + progress * 0.4}) rotate(${pullDistance * 2}deg)`;
+                    
+                    // Animate the SVG circle stroke
+                    const dashOffset = 60 - (progress * 45); // Fill from 0 to ~75%
+                    circle.style.strokeDashoffset = dashOffset;
+                    circle.style.transform = `rotate(${pullDistance * 3}deg)`;
+                }
+            }, { passive: false });
+            
+            mobileWrapper.addEventListener('touchend', () => {
+                if (!pulling || isRefreshing) return;
+                pulling = false;
+                
+                const currentTransform = spinner.style.transform;
+                const yMatch = currentTransform.match(/translateY\(([^p]+)px\)/);
+                const currentY = yMatch ? parseFloat(yMatch[1]) : -80;
+                
+                if (currentY > 30) {
+                    // Trigger refresh!
+                    isRefreshing = true;
+                    
+                    // Haptic feedback
+                    if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+                    
+                    // Animate to refreshing state
+                    spinner.classList.add('refreshing');
+                    circle.style.strokeDashoffset = '';
+                    circle.style.transform = '';
+                    
+                    // Trigger sync
+                    const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
+                    console.log('🔄 Pull-to-refresh: Syncing', currentAcc);
+                    
+                    if ((currentAcc === 'atome' || currentAcc === 'bpi') && typeof handleScan === 'function') {
+                        handleScan(50, true);
+                    } else if (typeof refreshUIForAccount === 'function') {
+                        refreshUIForAccount(currentAcc);
+                    }
+                    
+                    // Hide after delay
+                    setTimeout(() => {
+                        spinner.classList.remove('refreshing', 'visible');
+                        spinner.style.transform = '';
+                        circle.style.strokeDashoffset = '60';
+                        isRefreshing = false;
+                    }, 1800);
+                } else {
+                    // Cancel - spring back
+                    spinner.classList.remove('visible');
+                    spinner.style.transform = '';
+                    circle.style.strokeDashoffset = '60';
+                    circle.style.transform = '';
+                }
+            });
+        })();
     </script>
 </body>
 </html>

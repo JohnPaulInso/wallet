@@ -693,15 +693,7 @@
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
-        /* FAB */
-        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
-        .fab:active { transform: scale(0.95); }
-        .fab i { font-size: 32px; }
-        
-        @media (max-width: 430px) {
-            .fab { right: 24px; }
-            .bottom-nav { left: 0; transform: none; }
-        }
+  
 
         /* DARK MODE STYLES */
         :root {
@@ -959,7 +951,6 @@
         
         /* Global Blur for elements */
         .mobile-wrapper.blur-active { filter: blur(4px) brightness(0.9); -webkit-filter: blur(4px) brightness(0.9); transition: filter 0.3s; pointer-events: none; }
-        .fab.blur-active, .bottom-nav.blur-active { filter: blur(10px) brightness(0.6); -webkit-filter: blur(10px) brightness(0.6); pointer-events: none; }
         
         /* Shadow for the elevated clone */
         .premium-txn.elevated-clone { position: fixed; z-index: 2001; background: #fff !important; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); transform: scale(1.02); pointer-events: auto; border: 1px solid rgba(0,0,0,0.05); }

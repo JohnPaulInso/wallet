@@ -1,7 +1,7 @@
 // Firebase Configuration and Initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, where, doc, setDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDoc, getDocs, query, orderBy, where, doc, setDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
 // Firebase configuration
@@ -40,6 +40,7 @@ export {
     onAuthStateChanged,
     collection,
     addDoc,
+    getDoc,
     getDocs,
     query,
     orderBy,
@@ -47,6 +48,7 @@ export {
     doc,
     setDoc,
     updateDoc,
+    deleteDoc,
     serverTimestamp,
     GMAIL_API_KEY,
     GMAIL_CLIENT_ID,

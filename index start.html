@@ -141,14 +141,14 @@
             justify-content: center;
             gap: 24px;
             color: #fff;
-            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1), opacity 0.5s ease;
         }
-        .biometric-overlay.show { display: flex; opacity: 1; transform: scale(1); }
+        .biometric-overlay.show { display: flex; opacity: 1; transform: translateY(0); }
         .biometric-overlay.hiding { 
-            opacity: 0; 
-            transform: scale(1.1); 
+            transform: translateY(100%); 
             pointer-events: none; 
         }
+        
         .biometric-icon {
             width: 80px;
             height: 80px;
@@ -162,16 +162,16 @@
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
         .biometric-icon.success {
-            background: #10b981;
-            border-color: #10b981;
-            transform: scale(1.2);
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+            background: rgba(255,255,255,0.15);
+            border-color: #fff;
+            transform: scale(1.15);
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.3);
         }
         .biometric-icon i { font-size: 40px; color: #fff; transition: all 0.3s; }
-        .biometric-icon.success i { transform: scale(0.8); }
+        .biometric-icon.success i { transform: scale(0.9); text-shadow: 0 0 10px #fff; }
         @keyframes bioPulse {
             0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.1); }
-            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(255, 255, 255, 0); }
         }
         .biometric-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
         .biometric-subtitle { font-size: 14px; color: #94a3b8; font-weight: 500; text-align: center; max-width: 260px; }
@@ -189,16 +189,20 @@
         }
         .biometric-btn:hover { background: #f1f5f9; transform: scale(1.02); }
         .biometric-btn:active { transform: scale(0.98); }
-        .biometric-skip {
-            color: #64748b;
+        .biometric-skip, .biometric-disable {
+            color: rgba(255,255,255,0.4);
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            transition: color 0.2s;
             margin-top: 16px;
             padding: 8px 16px;
-            transition: color 0.2s;
         }
-        .biometric-skip:hover { color: #94a3b8; }
+        .biometric-skip:hover, .biometric-disable:hover { color: #fff; }
+        .biometric-disable { margin-top: 10px; color: rgba(239, 68, 68, 0.6); display: none; }
+        .biometric-disable:hover { color: #ef4444; }
         .biometric-error { color: #ef4444; font-size: 13px; font-weight: 600; margin-top: 8px; display: none; }
         .biometric-error.show { display: block; }
 
@@ -1667,21 +1671,7 @@
             Authenticate
         </button>
         <div class="biometric-skip" id="biometricSkip" onclick="skipBiometric()">Skip for now</div>
-    </div>
-
-    <!-- BIOMETRIC LOCK SCREEN -->
-    <div class="biometric-overlay" id="biometricOverlay">
-        <div class="biometric-icon">
-            <i class="material-icons" id="biometricIconType">fingerprint</i>
-        </div>
-        <div class="biometric-title" id="biometricTitle">Unlock SmartWallet</div>
-        <div class="biometric-subtitle" id="biometricSubtitle">Use your fingerprint or Face ID to access your wallet</div>
-        <div class="biometric-error" id="biometricError">Authentication failed. Please try again.</div>
-        <button class="biometric-btn" id="biometricBtn" onclick="triggerBiometricAuth()">
-            <i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i>
-            Authenticate
-        </button>
-        <div class="biometric-skip" id="biometricSkip" onclick="skipBiometric()">Skip for now</div>
+        <div class="biometric-disable" id="biometricDisable" onclick="disableBiometricFromOverlay()">I don't want biometric login anymore</div>
     </div>
 
     <div class="mobile-wrapper">
@@ -8890,33 +8880,35 @@
         };
         
         // Show biometric overlay
-        const showBiometricOverlay = (mode = 'verify') => {
+        const showBiometricOverlay = (mode) => {
+            const disableBtn = document.getElementById('biometricDisable');
             if (mode === 'setup') {
-                biometricTitle.textContent = 'Enable Biometric Login';
-                biometricSubtitle.textContent = 'Use your fingerprint or Face ID for quick, secure access to your wallet';
+                biometricTitle.innerText = 'Secure Your Wallet';
+                biometricSubtitle.innerText = 'Enable biometric login for faster, more secure access to your accounts.';
                 biometricBtn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i> Set Up Now';
                 biometricSkip.style.display = 'block';
+                if (disableBtn) disableBtn.style.display = 'none';
             } else {
-                biometricTitle.textContent = 'Unlock SmartWallet';
-                biometricSubtitle.textContent = 'Use your fingerprint or Face ID to access your wallet';
+                biometricTitle.innerText = 'Unlock Wallet';
+                biometricSubtitle.innerText = 'Please verify your identity to continue';
                 biometricBtn.innerHTML = '<i class="material-icons" style="vertical-align: middle; margin-right: 8px;">fingerprint</i> Authenticate';
                 biometricSkip.style.display = 'none';
+                if (disableBtn) disableBtn.style.display = 'block';
             }
             biometricError.classList.remove('show');
+            biometricOverlay.classList.remove('hiding');
             biometricOverlay.classList.add('show');
         };
         
         // Hide biometric overlay with fun animation
         const hideBiometricOverlay = async () => {
             const icon = document.querySelector('.biometric-icon');
-            const iconI = icon.querySelector('i');
             
-            // Step 1: Success State
+            // Step 1: Success State (Premium Glow, NO Emerald Checkmark)
             icon.classList.add('success');
-            iconI.innerText = 'check'; // Change to checkmark
-            if (navigator.vibrate) navigator.vibrate([10, 30, 20]);
+            if (navigator.vibrate) navigator.vibrate(15);
             
-            // Step 2: Snappy Reveal
+            // Step 2: Push Down Reveal
             setTimeout(() => {
                 biometricOverlay.classList.add('hiding');
                 
@@ -8924,9 +8916,21 @@
                 setTimeout(() => {
                     biometricOverlay.classList.remove('show', 'hiding');
                     icon.classList.remove('success');
-                    iconI.innerText = 'fingerprint'; // Reset for next time
-                }, 500);
-            }, 600);
+                }, 800);
+            }, 500);
+        };
+        
+        // Disable biometric from overlay
+        window.disableBiometricFromOverlay = () => {
+            if (confirm('Are you sure you want to disable biometric login?')) {
+                localStorage.removeItem('biometric_credential_id');
+                if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus();
+                showToast('Biometric login disabled');
+                biometricOverlay.classList.add('hiding');
+                setTimeout(() => {
+                    biometricOverlay.classList.remove('show', 'hiding');
+                }, 800);
+            }
         };
         
         // Skip biometric setup

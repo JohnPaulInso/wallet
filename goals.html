@@ -3,45 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SmartWallet - Goals</title>
-    <link rel="icon" type="image/png" href="applogo.png?v=4">
-    <link rel="apple-touch-icon" href="applogo.png?v=4">
-    <link rel="manifest" href="manifest.json?v=1">
-    <meta name="theme-color" content="#121212">
-    
-    <!-- Material UI CSS & Premium Fonts -->
-    <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-    
+    <title>Financial Goals - SmartWallet</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
-        body { background: #f0f2f5; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; justify-content: center; overflow-x: hidden; }
-        
-        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
-        @media (min-width: 431px) { .mobile-wrapper { height: 100vh; overflow-y: scroll; } }
+        :root {
+            --bg-primary: #fff;
+            --bg-secondary: #f8fafc;
+            --text-primary: #000000;
+            --text-secondary: #4b5563;
+            --card-bg: #fff;
+            --header-bg: rgba(255, 255, 255, 0.95);
+            --border-color: #e2e8f0;
+            --accent-color: #00851F; /* Precise New Green */
+            --accent-soft: rgba(0, 133, 31, 0.08); 
+            --ai-blue: #e8f0fe;
+            --ai-blue-text: #1a73e8;
+            --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.04);
+            --radius-xl: 20px; /* Reduced for uniformity with index.html */
+            --radius-lg: 16px;
+        }
 
-        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-        #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
-        .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
-        #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
-        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
-        #header.shrunk .user-name { font-size: 15px; }
+        * { 
+            box-sizing: border-box; 
+            -webkit-user-select: none; 
+            user-select: none; 
+            touch-action: manipulation; 
+            -webkit-tap-highlight-color: transparent;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            -webkit-touch-callout: none;
+        }
+        *::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+        /* Native App Feel - Disable all link behaviors */
+        a, a:visited, a:hover, a:active, a:focus {
+            text-decoration: none !important;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+        }
+        /* Disable text selection highlighting */
+        ::selection { background: transparent; }
+        ::-moz-selection { background: transparent; }
+
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            background: #ffffff; 
+            min-height: 100vh; 
+            overflow-x: hidden;
+        }
+
+        /* Mobile Wrapper */
+        .mobile-wrapper { 
+            width: 100%; 
+            max-width: 430px; 
+            margin: 0 auto;
+            background: var(--bg-secondary);
+            min-height: 100vh;
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: stretch;
+            padding-bottom: 100px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            overflow-x: hidden;
+        }
+
+        .goals-list {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        /* UNIFORM HEADER */
+        #header {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 430px;
+            padding: 15px 24px 10px;
+            background: #fff;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         
-        .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        #header.shrunk .header-logo { width: 40px; height: 25px; }
-        
-        #profile-badge { transition: all 0.3s ease; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #header.shrunk #profile-badge { transform: scale(0.8); }
-        
+        .greeting-section { line-height: 1.2; }
+        .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; }
+        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; }
+
+        /* PROFILE DROPDOWN MENU */
+        .profile-container { position: relative; }
+        #profile-badge { width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; }
         #profile-badge i { font-size: 24px; color: #94a3b8; display: block; }
         #profile-badge.has-pic i { display: none; }
         #profile-badge.has-pic img { display: block; }
 
-        /* PROFILE DROPDOWN MENU */
-        .profile-container { position: relative; }
         .profile-dropdown {
             position: absolute;
             top: 50px;
@@ -73,64 +146,623 @@
         }
         .dropdown-item:hover { background: #f8fafc; color: #1e293b; }
         .dropdown-item i { font-size: 20px; color: #94a3b8; }
-        .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
+        .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; }
         .dropdown-item.logout i { color: #ef4444; }
+        .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
 
-        .content { padding: 32px 24px; text-align: center; }
-        .empty-state { margin-top: 60px; }
-        .empty-state i { font-size: 80px; color: #e2e8f0; margin-bottom: 24px; }
-        .empty-state h2 { font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 12px; }
-        .empty-state p { font-size: 15px; color: #64748b; line-height: 1.6; max-width: 280px; margin: 0 auto 32px; }
+        .header-spacer { height: 60px; flex-shrink: 0; }
 
-        /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        /* Summary Card */
+        .summary-card {
+            background: #fff;
+            padding: 24px;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            gap: 24px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+            margin: 20px 24px 10px;
+        }
+        .summary-target {
+            font-size: 13px;
+            opacity: 0.4;
+            font-weight: 700;
+            margin-left: 2px;
+        }
+
+        .progress-ring-container {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .progress-percentage {
+            position: absolute;
+            font-size: 16px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .summary-info {
+            flex: 1;
+        }
+
+        .summary-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .summary-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: #000;
+            letter-spacing: -1.2px;
+        }
+
+        /* Time Forecast Section - Card Style */
+        /* SKELETON LOADER */
+        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-text { height: 14px; width: 60%; margin-bottom: 8px; }
+        .skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+
+        .skeleton-card {
+            height: 90px;
+            background: #fff;
+            border-radius: 24px;
+            margin: 0 24px 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            gap: 16px;
+            box-shadow: var(--shadow-soft);
+            width: calc(100% - 48px);
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .forecast-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+            border-radius: 24px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin: 0 24px 20px;
+            border: 1px solid rgba(191, 219, 254, 0.5);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.05);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            width: auto; /* Stretches to fill margin if parent is stretch */
+        }
+
+        .forecast-icon {
+            width: 40px;
+            height: 40px;
+            background: #fff;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #4f46e5;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+            flex-shrink: 0;
+        }
+
+        .forecast-text {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #1e40af;
+            line-height: 1.4;
+        }
+        
+        .forecast-text b { font-weight: 800; }
+
+        /* Goal Cards */
+        .goal-card {
+            background: var(--card-bg);
+            padding: 16px 20px; 
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 0 24px 12px; 
+            box-shadow: var(--shadow-soft);
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            border: 1px solid var(--border-color);
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        .goal-card.excluded {
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        .sortable-ghost { opacity: 0.3; background: var(--accent-soft); }
+
+        .goal-card.popped {
+            transform: scale(1.04);
+            z-index: 2300 !important;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            background: #fff;
+            border-color: transparent;
+        }
+
+        .goal-card:active:not(.popped) {
+            transform: scale(0.98);
+            background: #fdfdfd;
+        }
+
+        .goal-icon-box {
+            width: 42px; /* Making square smaller as requested */
+            height: 42px;
+            border-radius: 11px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 20px;
+            transition: transform 0.2s;
+        }
+
+        .goal-center {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .goal-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1a1a1a;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .atome-shield-badge {
+            font-size: 7px;
+            background: #121212;
+            color: #c0ff00;
+            padding: 1px 3px;
+            border-radius: 4px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .progress-bar-bg {
+            height: 6px; /* Back to thicker as requested */
+            background: #f1f5f9;
+            border-radius: 100px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 10px;
+            background: var(--accent-color);
+            transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .goal-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 90px;
+        }
+
+        .goal-amount {
+            font-size: 15px;
+            font-weight: 900;
+            color: #000;
+            letter-spacing: -0.4px;
+            padding-right: 4px;
+        }
+
+        .goal-percent {
+            font-size: 8.5px;
+            color: #94a3b8;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .deposit-btn {
+            margin-top: 4px;
+            background: var(--accent-soft);
+            border: 1px solid rgba(7, 99, 13, 0.1);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--accent-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .deposit-btn:hover { background: #e6ffe6; }
+
+        /* Floating Action Button */
+        .fab { 
+            position: fixed; 
+            bottom: 100px; 
+            right: calc(50% - 215px + 28px); 
+            width: 62px; 
+            height: 62px; 
+            border-radius: 50%; 
+            background: #07630D; 
+            color: #fff; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 10px 25px rgba(5, 150, 105, 0.3); 
+            z-index: 999; 
+            cursor: pointer; 
+            border: none; 
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s; 
+        }
+        .fab:active { transform: scale(0.9); background: #054a0a; }
+        .fab i { font-size: 32px; }
+
+        @media (max-width: 430px) {
+            .fab { right: 28px; }
+        }
+
+        /* Skeleton Loaders */
+        .skeleton {
+            background: #f1f5f9;
+            background: linear-gradient(110deg, #f1f5f9 8%, #f8fafc 18%, #f1f5f9 33%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s linear infinite;
+            border-radius: 28px;
+        }
+
+        @keyframes shimmer {
+            to { background-position-x: -200%; }
+        }
+
+        .skeleton-text { height: 14px; border-radius: 8px; background: #f1f5f9; }
+        .skeleton-title { width: 70%; height: 24px; margin-bottom: 15px; }
+        .skeleton-circle { width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; }
+
+        /* REFINED CONTEXT MENU */
+        .context-menu-backdrop {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 2200;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .context-menu-backdrop.show { opacity: 1; display: block; }
+
+        .context-menu-wrapper {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: transparent;
+            z-index: 2400;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .context-menu-wrapper.show { opacity: 1; display: flex; }
+
+        .ios-menu {
+            position: absolute;
+            width: 180px; 
+            background: #ffffff;
+            border-radius: 16px; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 2500;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .ios-menu.show { transform: scale(1); opacity: 1; }
+
+        .ios-menu-item {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #000;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .ios-menu-item:last-child { border-bottom: none; }
+        .ios-menu-item:active { background: #f8fafc; }
+        
+        /* Specific action colors as requested */
+        .ios-menu-item i { font-size: 20px; }
+        .ios-menu-item.edit { color: #2563eb; }
+        .ios-menu-item.edit i { color: #2563eb; }
+        .ios-menu-item.danger { color: #ef4444; }
+        .ios-menu-item.danger i { color: #ef4444; }
+
+        /* Bottom Nav Sync from index.html */
+        .bottom-nav { 
+            position: fixed; 
+            bottom: 0; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 100%; 
+            max-width: 430px; 
+            height: 75px; 
+            background: rgba(255,255,255,0.9); 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-top: 1px solid #f1f5f9; 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            padding: 0 10px; 
+            z-index: 900; 
+            box-shadow: 0 -5px 15px rgba(0,0,0,0.05); 
+        }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
-        .nav-item:hover { text-decoration: none !important; color: #121212; }
-        .nav-item.active { color: #121212; }
+        .nav-item.active { color: #000; }
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
-        /* GUEST GATE OVERLAY */
-        .guest-gate-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .guest-gate-card { background: #fff; padding: 32px 24px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .guest-gate-btn { background: #121212; color: #fff; border: none; padding: 14px 28px; border-radius: 50px; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s; width: 100%; justify-content: center; }
-        .guest-gate-btn:active { transform: scale(0.96); }
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .modal-overlay.blur-bg {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .modal-card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 340px;
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.1);
+            animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 2px solid #f1f5f9;
+            font-size: 14px;
+            font-weight: 700;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: var(--accent-color); }
+
+        .modal-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+        }
+
+        .primary-btn { background: #121212; color: #fff; margin-top: 8px; }
+        .primary-btn:active { transform: scale(0.98); }
+        .ghost-btn { background: transparent; color: var(--text-secondary); margin-top: 4px; }
+        .ghost-btn:active { opacity: 0.7; transform: scale(0.98); }
+
+        .add-goal-btn:active { transform: scale(0.95); opacity: 0.8; }
+        .deposit-btn:active { transform: scale(0.95); background: #e2e8f0; }
+        
+        .goal-card-actions { display: none; }
+
+        .delete-btn {
+            background: #fff;
+            border: 1px solid #fee2e2;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #ef4444;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .delete-btn:active { transform: scale(0.95); background: #fef2f2; }
+        .delete-btn i { font-size: 14px; }
+
+        /* ICON SELECTOR GRID */
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+
+        .icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 8px;
+            border-radius: 16px;
+            border: 2px solid #f1f5f9;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+        }
+
+        .icon-item:hover { border-color: var(--accent-color); background: var(--bg-secondary); }
+        .icon-item.active { 
+            border-color: var(--accent-color); 
+            background: var(--accent-soft);
+            box-shadow: 0 4px 12px rgba(0, 133, 31, 0.1);
+        }
+
+        .icon-item-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .icon-item:active .icon-item-box { transform: scale(0.9); }
+        .icon-item-box i { font-size: 20px; }
+        .icon-item-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+        }
+        .icon-item.active .icon-item-label { color: var(--accent-color); }
+
+        @keyframes fillProgress {
+            from { width: 0; }
+        }
+
+        /* TOAST NOTIFICATION */
+        .toast-container {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #121212;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            z-index: 3000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .toast-container.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* CUSTOM DELETE MODAL */
+        #deleteModal .modal-card {
+            max-width: 320px;
+            text-align: center;
+        }
+        #deleteModal .modal-title {
+            color: #ef4444;
+            margin-bottom: 12px;
+        }
+        .delete-warning {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 24px;
+            line-height: 1.5;
+            font-weight: 600;
+        }
+        .modal-btn.danger-btn {
+            background: #ef4444;
+            color: #fff;
+        }
+        .modal-btn.danger-btn:active {
+            background: #dc2626;
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
     <div class="mobile-wrapper">
-        <!-- GUEST LOGIN GATE -->
-        <div id="guestGate" class="guest-gate-overlay">
-            <div class="guest-gate-card">
-                <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
-                    <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
-                </div>
-                <div>
-                    <h2 style="font-size: 22px; font-weight: 900; color: #121212; margin: 0 0 10px 0;">Sign in Required</h2>
-                    <p style="font-size: 14px; color: #64748b; margin: 0; line-height: 1.6;">To set and track your financial goals, please sign in with Google first.</p>
-                </div>
-                <button class="guest-gate-btn" onclick="handleAuthClick()">
-                    <svg viewBox="0 0 48 48" width="20px" xmlns="http://www.w3.org/2000/svg"><path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" fill="#FFF"/></svg>
-                    Continue with Google
-                </button>
-            </div>
-        </div>
-
+        <!-- Header -->
         <div id="header">
             <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
                 <!-- Dynamic Card Icon -->
                 <svg id="header-card-icon" class="header-logo" viewBox="0 0 48 30" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Card Background -->
                     <rect width="48" height="30" rx="4" fill="#1a1a1a" id="card-bg"/>
-                    
-                    <!-- Mastercard Logo (bottom right) -->
                     <g transform="translate(32, 20)">
                         <circle cx="4" cy="4" r="3.5" fill="#eb001b" opacity="0.9"/>
                         <circle cx="8" cy="4" r="3.5" fill="#f79e1b" opacity="0.9"/>
                     </g>
-                    
-                    <!-- Card Chip (optional detail) -->
                     <rect x="6" y="8" width="8" height="6" rx="1" fill="#d4af37" opacity="0.3"/>
                 </svg>
                 
@@ -140,162 +772,867 @@
                 </div>
             </div>
             <div class="profile-container">
-            <div id="profile-badge" onclick="toggleProfileDropdown(event)">
-                <i class="material-icons">person</i>
-                <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
-            </div>
-            <div id="profile-dropdown" class="profile-dropdown">
-                <div class="dropdown-item" onclick="handleAuthClick()">
-                    <i class="material-icons">sync</i>
-                    <span>Google Sync</span>
+                <div id="profile-badge" onclick="window.toggleProfileDropdown(event)">
+                    <i class="material-icons">person</i>
+                    <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
                 </div>
-                <div class="dropdown-item logout" onclick="handleSignout()">
-                    <i class="material-icons">logout</i>
-                    <span>Log Out</span>
+                <div id="profile-dropdown" class="profile-dropdown">
+                    <!-- Dropdown items will be injected via script or hardcoded if simple -->
+                    <div class="dropdown-header">Account</div>
+                    <div class="dropdown-item" onclick="window.location.href='index.html'">
+                        <i class="material-icons">account_balance_wallet</i>
+                        <span>Wallet</span>
+                    </div>
+                    <div class="dropdown-item logout" onclick="window.handleSignout()">
+                        <i class="material-icons">logout</i>
+                        <span>Log Out</span>
+                    </div>
                 </div>
             </div>
         </div>
-        </div>
+        <div class="header-spacer"></div>
 
-        <div class="content">
-            <div class="empty-state">
-                <i class="material-icons">track_changes</i>
-                <h2>Financial Goals</h2>
-                <p>Set and track your savings and spending milestones in real-time.</p>
-                
-                <div style="background: #f8fafc; padding: 40px 20px; border-radius: 24px; border: 2px dashed #e2e8f0; margin-bottom: 32px;">
-                    <span style="font-size: 13px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Status</span>
-                    <h3 style="margin: 8px 0 0; color: #64748b; font-size: 18px; font-weight: 700;">Coming Soon</h3>
-                </div>
-
-                <button class="mui-btn mui-btn--raised" style="background: #1d4ed8; color: #fff; border-radius: 16px; font-weight: 800; padding: 12px 32px; text-transform: none; font-size: 15px;" onclick="location.href='index.html'">Return to Wallet</button>
+        <!-- Title Section (Since header is now uniform) -->
+        <div style="background: var(--bg-secondary); padding: 30px 24px 12px; border-bottom: 1px solid rgba(0,0,0,0.02);"> 
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="margin: 0; font-size: 26px; font-weight: 900; color: #000; letter-spacing: -1.2px;">Financial Goals</h1>
             </div>
         </div>
 
-        <!-- BOTTOM NAV -->
-        <div class="bottom-nav">
-            <a href="index.html" class="nav-item">
-                <i class="material-icons">account_balance_wallet</i>
-                <span>Wallet</span>
-            </a>
-            <a href="calendar.html" class="nav-item">
-                <i class="material-icons">calendar_today</i>
-                <span>Calendar</span>
-            </a>
-            <a href="accounts.html" class="nav-item">
-                <i class="material-icons">account_balance</i>
-                <span>Accounts</span>
-            </a>
-            <a href="goals.html" class="nav-item active">
-                <i class="material-icons">track_changes</i>
-                <span>Goals</span>
-            </a>
+        <!-- Summary Card Skeleton (Initially Shown) -->
+        <div class="summary-card" id="totalSummary" style="margin: 20px 24px 20px; height: 150px; display: none;">
+            <!-- Content will be injected but we need it wide -->
+        </div>
+
+        <!-- Wide Summary Skeleton -->
+        <div id="summarySkeleton" class="skeleton-card" style="height: 150px; margin: 20px 24px;">
+            <div class="skeleton-circle skeleton" style="width: 80px; height: 80px; border-radius: 50%;"></div>
+            <div style="flex: 1;">
+                <div class="skeleton-text skeleton" style="width: 50%; height: 16px; margin-bottom: 15px;"></div>
+                <div class="skeleton-text skeleton" style="width: 80%; height: 32px;"></div>
+            </div>
+        </div>
+
+        <!-- Time Forecast Skeleton -->
+        <div class="forecast-card skeleton" id="forecastSkeleton" style="min-height: 90px; border: none; margin: 0 24px 20px; background: rgba(224, 236, 255, 0.5); display: flex; align-items: center; padding: 0 24px; gap: 16px;">
+            <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.7); border-radius: 12px; flex-shrink: 0;"></div>
+            <div style="flex: 1;">
+                <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.7); border-radius: 5px; margin-bottom: 10px;"></div>
+                <div style="width: 60%; height: 10px; background: rgba(255,255,255,0.7); border-radius: 5px;"></div>
+            </div>
+        </div>
+
+        <!-- Goals Section Label -->
+        <div style="padding: 0 28px; margin-bottom: 12px; margin-top: 10px;">
+            <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px;">Your Financial Goals</span>
+        </div>
+
+        <!-- Goals List -->
+        <div class="goals-list" id="goalsContainer">
+            <!-- Wide Skeletons -->
+            <div class="skeleton-card">
+                <div class="skeleton-circle skeleton"></div>
+                <div style="flex: 1;">
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 85%;"></div>
+                </div>
+            </div>
+            <div class="skeleton-card">
+                <div class="skeleton-circle skeleton"></div>
+                <div style="flex: 1;">
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 85%;"></div>
+                </div>
+            </div>
+             <div class="skeleton-card">
+                <div class="skeleton-circle skeleton"></div>
+                <div style="flex: 1;">
+                    <div class="skeleton skeleton-title"></div>
+                    <div class="skeleton skeleton-text" style="width: 85%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High-Fidelity Context Menu -->
+        <div class="context-menu-backdrop" id="contextMenuBackdrop" onclick="window.closeContextMenu()"></div>
+        <div class="context-menu-wrapper" id="contextMenuOverlay" onclick="window.closeContextMenu()">
+            <div class="ios-menu" id="iosMenu" onclick="event.stopPropagation()">
+                <div class="ios-menu-item edit" onclick="window.openGoalEdit()">
+                    <i class="material-icons">edit</i>
+                    <span>Edit Goal</span>
+                </div>
+                <div class="ios-menu-item danger" onclick="window.confirmDeleteGoal()">
+                    <i class="material-icons">delete</i>
+                    <span>Delete</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Goal Modal -->
+        <div class="modal-overlay" id="editModal">
+            <div class="modal-card">
+                <div class="modal-title">Edit Goal</div>
+                <div class="form-group">
+                    <label class="form-label">Goal Name</label>
+                    <input type="text" id="editGoalTitle" class="form-input" placeholder="e.g. Dream House">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Amount (PHP)</label>
+                    <input type="number" id="editGoalTarget" class="form-input" placeholder="500000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Select Icon</label>
+                    <div class="icon-grid" id="editIconGrid">
+                        <!-- Icons injected via JS -->
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button class="modal-btn primary-btn" onclick="window.saveEditedGoal()">Save Changes</button>
+                    <button class="modal-btn ghost-btn" onclick="window.closeModals()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='index.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">account_balance_wallet</i>
+            <span>Wallet</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='calendar.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">calendar_today</i>
+            <span>Calendar</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='accounts.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">account_balance</i>
+            <span>Accounts</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item active" onclick="window.location.href='goals.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">track_changes</i>
+            <span>Goals</span>
+        </a>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-container">Action successful</div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="openAddModal()">
+        <i class="material-icons">add</i>
+    </button>
+
+    <!-- Add Goal Modal -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal-card">
+            <div class="modal-title">New Financial Goal</div>
+            <div class="form-group">
+                <label class="form-label">Goal Title</label>
+                <input type="text" id="goalTitle" class="form-input" placeholder="e.g. Emergency Fund">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target Amount (PHP)</label>
+                <input type="text" id="goalTarget" class="form-input" placeholder="20,000" oninput="window.formatCurrencyInput(this)">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Select Icon</label>
+                <div class="icon-grid" id="addIconGrid">
+                    <!-- Icons injected via JS -->
+                </div>
+            </div>
+            <button class="modal-btn primary-btn" onclick="window.saveGoal()" style="margin-top: 20px;">Create Goal</button>
+            <button class="modal-btn ghost-btn" onclick="window.closeModals()">Cancel</button>
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-card">
+            <div class="modal-title">Delete Goal?</div>
+            <p class="delete-warning">Are you sure you want to delete this goal? This action cannot be undone.</p>
+            <div style="display: flex; gap: 12px;">
+                <button class="modal-btn danger-btn" onclick="window.confirmDeleteActual()">Delete</button>
+                <button class="modal-btn ghost-btn" onclick="window.closeModals()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="depositModal">
+        <div class="modal-card">
+            <div class="modal-title">Deposit to Goal</div>
+            <div class="form-group">
+                <label class="form-label">Amount (PHP)</label>
+                <input type="text" id="depositAmount" class="form-input" placeholder="1,000" oninput="window.formatCurrencyInput(this)">
+            </div>
+            <button class="modal-btn primary-btn" id="confirmDepositBtn">Confirm Deposit</button>
+            <button class="modal-btn ghost-btn" onclick="window.closeModals()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- UI & Firebase Logic -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            auth, db, onAuthStateChanged, 
+            collection, addDoc, getDocs, query, orderBy, where, doc, updateDoc, deleteDoc, serverTimestamp,
+            getDoc
+        } from "./firebase-config.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
-            authDomain: "atome-wallet.firebaseapp.com",
-            projectId: "atome-wallet",
-            storageBucket: "atome-wallet.firebasestorage.app",
-            messagingSenderId: "512739266183",
-            appId: "1:512739266183:web:0f00f074d262d499ec052a"
-        };
+        // State Management
+        let goals = [];
+        let currentUser = null;
+        window.selectedGoalId = null; 
+        let selectedIcon = 'savings';
+        let dynamicMonthlySavings = 0;
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        const AVAILABLE_ICONS = [
+            { id: 'savings', label: 'Savings', icon: 'savings', bg: '#f0fdf4', color: '#00851F' },
+            { id: 'shield', label: 'Shield', icon: 'verified_user', bg: '#f0fdf4', color: '#00851F' },
+            { id: 'travel', label: 'Travel', icon: 'flight', bg: '#f0f9ff', color: '#0284c7' },
+            { id: 'directions_car', label: 'Vehicle', icon: 'directions_car', bg: '#f5f3ff', color: '#8b5cf6' },
+            { id: 'home', label: 'Home', icon: 'home', bg: '#f0fdf4', color: '#22c55e' },
+            { id: 'shopping', label: 'Shopping', icon: 'shopping_bag', bg: '#fff7ed', color: '#ea580c' },
+            { id: 'favorite', label: 'Health', icon: 'favorite', bg: '#fff1f2', color: '#ef4444' },
+            { id: 'education', label: 'School', icon: 'school', bg: '#eff6ff', color: '#1d4ed8' },
+            { id: 'trading', label: 'Trading', icon: 'trending_up', bg: '#ecfeff', color: '#0891b2' },
+            { id: 'investment', label: 'Invest', icon: 'diamond', bg: '#fdf4ff', color: '#a855f7' },
+            { id: 'wedding', label: 'Wedding', icon: 'favorite_border', bg: '#fdf2f8', color: '#ec4899' },
+            { id: 'medical', label: 'Medical', icon: 'local_hospital', bg: '#fef2f2', color: '#dc2626' },
+            { id: 'gaming', label: 'Gaming', icon: 'sports_esports', bg: '#f5f3ff', color: '#7c3aed' },
+            { id: 'tech', label: 'Tech', icon: 'phone_iphone', bg: '#f8fafc', color: '#475569' },
+            { id: 'fitness', label: 'Fitness', icon: 'fitness_center', bg: '#fef3c7', color: '#d97706' },
+            { id: 'emergency', label: 'Emergency', icon: 'emergency', bg: '#fee2e2', color: '#ef4444' }
+        ];
 
-        // Initial UI population from Cache
-        const cachedName = localStorage.getItem('user_name');
-        const cachedPic = localStorage.getItem('user_pic');
-        if (cachedName) document.getElementById('user-display-name').innerText = cachedName;
-        if (cachedPic) {
-            const badge = document.getElementById('profile-badge');
-            const picEl = document.getElementById('user-pic');
-            picEl.src = cachedPic;
-            badge.classList.add('has-pic');
+        // Global UI functions (Synchronous enough for responsive buttons)
+        // Gesture State
+        let pressTimer;
+        let isLongPress = false;
+
+        window.startPress = function(e, id) {
+            if (e.type === 'mousedown' && e.button !== 0) return;
+            
+            isLongPress = false;
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                // Don't open context menu if we're dragging, 
+                // but keep it for legacy if needed. 
+                // For now, sorting handle is the icon.
+                window.openContextMenu(e, id);
+            }, 600); 
         }
 
-        // Apply Header Theme from Current Account
-        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
-        const cardBg = document.getElementById('card-bg');
-        if (cardBg) {
-            if (currentAccount === 'bpi') cardBg.setAttribute('fill', '#931B1B');
-            else if (currentAccount === 'atome') cardBg.setAttribute('fill', '#1a1a1a');
-            else {
-                const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-                const acc = accounts.find(a => a.id === currentAccount);
-                if (acc) cardBg.setAttribute('fill', acc.color);
+        window.cancelPress = function() {
+            clearTimeout(pressTimer);
+        }
+
+        window.showToast = function(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        window.handleCardClick = function(id) {
+            if (!isLongPress) {
+                window.openDepositModal(id);
             }
         }
 
-        onAuthStateChanged(auth, (user) => {
-            const isAnon = !user || user.isAnonymous;
-            const gate = document.getElementById('guestGate');
-            if (gate) gate.style.display = isAnon ? 'flex' : 'none';
+        window.openAddModal = function() {
+            window.closeContextMenu();
+            selectedIcon = 'savings';
+            renderIconGrid('addIconGrid');
+            document.getElementById('addModal').style.display = 'flex';
+        }
 
-            if (user) {
-                if (!user.isAnonymous) {
-                    if (user.displayName) {
-                        const parts = user.displayName.split(' ');
-                        const firstName = parts.length > 1 && parts[0].length <= 5 ? parts.slice(0, 2).join(' ') : parts[0];
-                        document.getElementById('user-display-name').innerText = firstName;
-                        localStorage.setItem('user_name', firstName);
-                    }
-                    if (user.photoURL) {
-                        const badge = document.getElementById('profile-badge');
-                        const pic = document.getElementById('user-pic');
-                        let photoUrl = user.photoURL;
-                        if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                            photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                        }
-                        pic.src = photoUrl;
-                        badge.classList.add('has-pic');
-                        localStorage.setItem('user_pic', photoUrl);
-                    }
-                } else {
-                    document.getElementById('user-display-name').innerText = 'Guest';
-                    document.getElementById('profile-badge').classList.remove('has-pic');
-                }
+        window.formatCurrencyInput = function(input) {
+            let selectionStart = input.selectionStart;
+            let originalLength = input.value.length;
+            let val = input.value.replace(/\D/g, '');
+            if (val === '') {
+                input.value = '';
+                return;
             }
-        });
+            let formatted = parseInt(val).toLocaleString();
+            input.value = formatted;
+            let diff = formatted.length - originalLength;
+            input.setSelectionRange(selectionStart + diff, selectionStart + diff);
+        }
 
-        window.toggleProfileDropdown = (e) => {
-            e.stopPropagation();
+        window.openDepositModal = function(id) {
+            window.selectedGoalId = id;
+            document.getElementById('depositModal').style.display = 'flex';
+            const input = document.getElementById('depositAmount');
+            if (input) setTimeout(() => input.focus(), 100);
+        }
+
+        window.openContextMenu = function(e, id) {
+            window.selectedGoalId = id;
+            const card = document.querySelector(`[data-id="${id}"]`);
+            if (!card) return;
+
+            // Mark card as popped
+            document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('popped'));
+            card.classList.add('popped');
+
+            const overlay = document.getElementById('contextMenuOverlay');
+            const backdrop = document.getElementById('contextMenuBackdrop');
+            const menu = document.getElementById('iosMenu');
+            
+            backdrop.style.display = 'block';
+            overlay.style.display = 'flex';
+            
+            // Positioning Logic
+            const rect = card.getBoundingClientRect();
+            const menuWidth = 180;
+            const menuHeight = 110; 
+
+            let topPos, leftPos;
+            const spaceBelow = window.innerHeight - rect.bottom;
+
+            if (spaceBelow >= menuHeight + 12) {
+                topPos = rect.bottom + 12;
+            } else {
+                topPos = rect.top - menuHeight - 12;
+            }
+
+            // Align to the right of the card
+            leftPos = rect.right - menuWidth;
+            leftPos = Math.max(12, Math.min(leftPos, window.innerWidth - menuWidth - 24));
+
+            menu.style.top = `${topPos}px`;
+            menu.style.left = `${leftPos}px`;
+            menu.style.width = `${menuWidth}px`;
+
+            setTimeout(() => {
+                backdrop.classList.add('show');
+                overlay.classList.add('show');
+                menu.classList.add('show');
+            }, 10);
+
+            if (window.navigator.vibrate) window.navigator.vibrate(60);
+        }
+
+        window.openGoalEdit = function() {
+            if (window.selectedGoalId) {
+                window.location.href = 'edit-goal.html?id=' + window.selectedGoalId;
+            }
+        }
+
+        window.closeContextMenu = function() {
+            const overlay = document.getElementById('contextMenuOverlay');
+            const backdrop = document.getElementById('contextMenuBackdrop');
+            const menu = document.getElementById('iosMenu');
+            
+            overlay.classList.remove('show');
+            backdrop.classList.remove('show');
+            menu.classList.remove('show');
+            document.querySelectorAll('.goal-card').forEach(c => c.classList.remove('popped'));
+            
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                backdrop.style.display = 'none';
+            }, 300);
+        }
+
+        window.openEditModal = function() {
+            window.closeContextMenu();
+            const goal = goals.find(g => g.id === window.selectedGoalId);
+            if (!goal) return;
+            
+            document.getElementById('editGoalTitle').value = goal.title;
+            document.getElementById('editGoalTarget').value = goal.targetAmount;
+            selectedIcon = goal.icon || 'savings';
+            
+            renderIconGrid('editIconGrid');
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function renderIconGrid(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            container.innerHTML = AVAILABLE_ICONS.map(icon => {
+                const config = getIconConfig(icon.id);
+                const isActive = selectedIcon === icon.id;
+                return `
+                    <div class="icon-item ${isActive ? 'active' : ''}" onclick="selectIcon('${icon.id}', '${containerId}')">
+                        <div class="icon-item-box" style="background: ${config.bg}; color: ${config.color}">
+                            <i class="material-icons">${config.icon}</i>
+                        </div>
+                        <div class="icon-item-label">${icon.label}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectIcon = function(iconId, containerId) {
+            selectedIcon = iconId;
+            renderIconGrid(containerId);
+        }
+
+        window.saveEditedGoal = async function() {
+            const title = document.getElementById('editGoalTitle').value;
+            const target = parseFloat(document.getElementById('editGoalTarget').value.replace(/,/g, ''));
+            
+            if (!title || isNaN(target)) return;
+            
+            try {
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, selectedGoalId);
+                await updateDoc(goalRef, {
+                    title: title,
+                    targetAmount: target,
+                    icon: selectedIcon,
+                    updatedAt: serverTimestamp()
+                });
+                
+                window.closeModals();
+                loadGoals();
+            } catch (error) {
+                console.error("Error editing goal:", error);
+            }
+        }
+
+        window.confirmDeleteGoal = function() {
+            window.closeContextMenu();
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+
+        window.confirmDeleteActual = async function() {
+            if (!selectedGoalId || !currentUser) return;
+            try {
+                await deleteDoc(doc(db, `users/${currentUser.uid}/goals`, selectedGoalId));
+                window.closeModals();
+                loadGoals();
+            } catch (error) {
+                console.error("Error deleting goal:", error);
+            }
+        }
+
+        window.closeModals = function() {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+            selectedGoalId = null;
+        }
+
+        window.toggleProfileDropdown = function(e) {
+            if (e) e.stopPropagation();
             document.getElementById('profile-dropdown').classList.toggle('active');
-        };
+        }
 
-        window.addEventListener('click', (e) => {
-            const dropdown = document.getElementById('profile-dropdown');
-            if (dropdown && dropdown.classList.contains('active')) {
-                const badge = document.getElementById('profile-badge');
-                if (!badge.contains(e.target)) dropdown.classList.remove('active');
+        window.onclick = (e) => {
+            if (!e.target.closest('.profile-container')) {
+                const dropdown = document.getElementById('profile-dropdown');
+                if (dropdown) dropdown.classList.remove('active');
+            }
+            if (e.target.classList.contains('modal-overlay')) window.closeModals();
+            if (e.target.classList.contains('context-menu-wrapper')) closeContextMenu();
+        }
+
+        // Local Storage Caching
+        function getCachedGoals() {
+            const cached = localStorage.getItem(`goals_${currentUser?.uid}`);
+            return cached ? JSON.parse(cached) : null;
+        }
+
+        function setCachedGoals(data) {
+            if (currentUser) {
+                localStorage.setItem(`goals_${currentUser.uid}`, JSON.stringify(data));
+            }
+        }
+
+        // Authentication & Initialization
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                loadSafeSpendConfig(); // Fetch dynamic results
+                const firstName = user.displayName ? user.displayName.split(' ')[0] : 'User';
+                document.getElementById('user-display-name').innerText = firstName;
+                
+                if (user.photoURL) {
+                    const badge = document.getElementById('profile-badge');
+                    const img = document.getElementById('user-pic');
+                    if (img) img.src = user.photoURL;
+                    if (badge) badge.classList.add('has-pic');
+                }
+
+                // Initial load from cache for speed
+                const cached = getCachedGoals();
+                if (cached) {
+                    goals = cached;
+                    renderGoals();
+                }
+
+                // Always fetch fresh from Firestore
+                loadGoals();
+
+                // Check for URL messages
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('msg')) {
+                    const msg = urlParams.get('msg');
+                    if (msg === 'updated') window.showToast('Goal updated successfully');
+                    // Clear param without reload
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            } else {
+                window.location.href = 'index.html';
             }
         });
 
-        window.handleAuthClick = async () => {
-            const provider = new GoogleAuthProvider();
-            try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); }
-        };
+        window.handleSignout = async function() {
+            try {
+                if (currentUser) localStorage.removeItem(`goals_${currentUser.uid}`);
+                await auth.signOut();
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error("Signout error:", error);
+            }
+        }
 
-        window.handleSignout = async () => {
-            if (confirm('Sign out?')) {
-                try { await auth.signOut(); window.location.reload(); } catch (e) { console.error(e); }
+        async function loadGoals() {
+            if (!currentUser) return;
+            try {
+                const goalsRef = collection(db, `users/${currentUser.uid}/goals`);
+                const querySnapshot = await getDocs(goalsRef);
+                goals = [];
+                querySnapshot.forEach((doc) => {
+                    goals.push({ id: doc.id, ...doc.data() });
+                });
+                // Sort by custom order first, then fallback to createdAt
+                goals.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                
+                // Update cache
+                setCachedGoals(goals);
+                renderGoals();
+                initSortable();
+            } catch (error) {
+                console.error("Error loading goals:", error);
+            }
+        }
+
+        function renderGoals() {
+            const container = document.getElementById('goalsContainer');
+            const totalSummary = document.getElementById('totalSummary');
+            const forecastCard = document.getElementById('forecastSkeleton');
+            
+            const summarySkeleton = document.getElementById('summarySkeleton');
+            
+            // Remove skeleton class if we have data
+            if (summarySkeleton) summarySkeleton.style.display = 'none';
+            totalSummary.style.display = 'flex';
+            
+            if (forecastCard) {
+                forecastCard.style.height = 'auto';
+            }
+
+            if (goals.length === 0) {
+                totalSummary.innerHTML = `
+                    <div style="flex: 1; text-align: center;">
+                        <div class="summary-label">Set your first goal to track progress</div>
+                        <div class="summary-value">₱0.00</div>
+                    </div>
+                `;
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                        <div style="font-size: 64px; margin-bottom: 16px;">🎯</div>
+                        <h3 style="color: var(--text-primary); margin-bottom: 8px;">No goals yet</h3>
+                        <p style="font-size: 14px; line-height: 1.5;">Start your financial journey by adding your first goal. Whether it's an emergency fund or a dream vacation!</p>
+                        <button class="modal-btn primary-btn" style="width: auto; padding: 12px 24px; margin-top: 20px;" onclick="openAddModal()">Add Your First Goal</button>
+                    </div>
+                `;
+                totalSummary.style.display = 'none';
+                if (forecastCard) forecastCard.style.display = 'none';
+                return;
+            }
+
+            // Normal state
+            totalSummary.style.display = 'flex';
+            if (forecastCard) forecastCard.style.display = 'flex';
+            container.innerHTML = '';
+
+            // Update Summary Card HTML
+            totalSummary.innerHTML = `
+                <div class="progress-ring-container">
+                    <svg width="90" height="90" viewBox="0 0 90 90">
+                        <circle class="progress-ring-track" stroke="var(--accent-soft)" stroke-width="8" fill="transparent" r="36" cx="45" cy="45"/>
+                        <circle class="progress-ring-circle" id="summaryRing" stroke="var(--accent-color)" stroke-width="8" stroke-linecap="round" fill="transparent" r="36" cx="45" cy="45" stroke-dasharray="226.2" stroke-dashoffset="226.2"/>
+                    </svg>
+                    <div class="progress-percentage" id="summaryPercent" style="color: var(--text-primary)">0%</div>
+                </div>
+                <div class="summary-info">
+                    <div class="summary-label">Total Savings</div>
+                    <div class="summary-value" id="totalBalance">₱0</div>
+                </div>
+            `;
+            updateSummary();
+            renderGoalsActualPart();
+        }
+
+        window.updateSummary = function() {
+            if (!goals) return;
+            const includedGoals = goals.filter(g => g.isExcluded !== true);
+            const totalSaved = includedGoals.reduce((sum, g) => sum + (g.currentAmount || 0), 0);
+            const totalTarget = includedGoals.reduce((sum, g) => sum + (g.targetAmount || 0), 0);
+            const overallPercent = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0;
+
+            const balEl = document.getElementById('totalBalance');
+            if (balEl) {
+                balEl.innerHTML = `₱${totalSaved.toLocaleString()}<span class="summary-target">/ ₱${totalTarget.toLocaleString()}</span>`;
+            }
+            
+            const pctEl = document.getElementById('summaryPercent');
+            if (pctEl) pctEl.innerText = `${overallPercent}%`;
+            
+            const circle = document.getElementById('summaryRing');
+            if (circle) {
+                const radius = 36;
+                const circumference = 2 * Math.PI * radius;
+                circle.style.strokeDashoffset = circumference - (Math.min(100, overallPercent) / 100 * circumference);
+            }
+
+            const remaining = includedGoals.reduce((sum, g) => sum + Math.max(0, g.targetAmount - (g.currentAmount || 0)), 0);
+            updateForecast(remaining);
+        }
+
+        function initSortable() {
+            const el = document.getElementById('goalsContainer');
+            if (!window.Sortable || !el) return;
+            if (el.sortable) el.sortable.destroy();
+            el.sortable = new Sortable(el, {
+                animation: 150,
+                handle: '.goal-icon-box',
+                ghostClass: 'sortable-ghost',
+                onEnd: async function() {
+                    const items = el.querySelectorAll('.goal-card');
+                    const updates = [];
+                    items.forEach((item, index) => {
+                        const id = item.getAttribute('data-id');
+                        const goal = goals.find(g => g.id === id);
+                        if (goal) {
+                            goal.order = index;
+                            updates.push(updateDoc(doc(db, `users/${currentUser.uid}/goals`, id), { order: index }));
+                        }
+                    });
+                    try { await Promise.all(updates); window.showToast('New order saved'); } catch (e) { }
+                }
+            });
+        }
+
+        window.toggleGoalInclusion = async function(id) {
+            if (!currentUser) return;
+            const goal = goals.find(g => g.id === id);
+            if (!goal) return;
+            const newState = !(goal.isExcluded === true);
+            try {
+                await updateDoc(doc(db, `users/${currentUser.uid}/goals`, id), { isExcluded: newState });
+                goal.isExcluded = newState;
+                renderGoals();
+                window.showToast(newState ? 'Goal excluded' : 'Goal included');
+            } catch (e) { }
+        }
+
+        function renderGoalsActualPart() { // Helper to not mess up renderGoals
+            const container = document.getElementById('goalsContainer');
+            const forecastCard = document.getElementById('forecastSkeleton');
+            if (!container) return;
+
+            // Update Forecast Card HTML
+            if (forecastCard && (forecastCard.classList.contains('skeleton') || forecastCard.style.background.includes('rgba(224, 236, 255'))) {
+                forecastCard.classList.remove('skeleton');
+                forecastCard.style.height = 'auto'; 
+                forecastCard.style.background = ''; // Use CSS gradient from class or default
+                forecastCard.style.boxShadow = '0 10px 25px rgba(59, 130, 246, 0.1)';
+                forecastCard.style.border = '1px solid rgba(147, 197, 253, 0.3)';
+                forecastCard.innerHTML = `
+                    <div class="forecast-icon" style="background: #fff; width: 36px; height: 36px; border-radius: 10px;">
+                        <i class="material-icons" style="font-size: 20px; color: #4f46e5;">auto_awesome</i>
+                    </div>
+                    <div class="forecast-text" id="timeForecast" style="font-size: 11px; color: #1e3a8a;">
+                        Analyzing your <b>Cash Flow</b>...
+                    </div>
+                `;
+            }
+
+            let totalCurrent = 0;
+            let totalTarget = 0;
+
+            goals.forEach(goal => {
+                const percent = goal.targetAmount > 0 ? Math.min(100, Math.round(((goal.currentAmount || 0) / goal.targetAmount) * 100)) : 0;
+                const isExcluded = goal.isExcluded === true;
+                
+                if (!isExcluded) {
+                    totalCurrent += goal.currentAmount || 0;
+                    totalTarget += goal.targetAmount || 0;
+                }
+                
+                const card = document.createElement('div');
+                card.className = `goal-card ${isExcluded ? 'excluded' : ''}`;
+                card.setAttribute('data-id', goal.id);
+                
+                const iconConfig = getIconConfig(goal.icon || 'savings');
+                
+                // Handle custom image vs icon for the icon box
+                const iconBoxContent = iconConfig.customImage 
+                    ? `<img src="${iconConfig.customImage}" style="width: 100%; height: 100%; border-radius: inherit; object-fit: cover;" alt="Goal icon">`
+                    : `<i class="material-icons">${iconConfig.icon}</i>`;
+
+                card.innerHTML = `
+                    <div class="goal-icon-box" 
+                         style="background: ${iconConfig.bg}; color: ${iconConfig.color}; cursor: grab; overflow: hidden;"
+                         onclick="event.stopPropagation(); window.toggleGoalInclusion('${goal.id}')">
+                        ${iconBoxContent}
+                    </div>
+                    <div class="goal-center" onclick="window.handleCardClick('${goal.id}')">
+                        <div class="goal-title">
+                            ${goal.title}
+                            ${goal.isAtome ? '<span class="atome-shield-badge">Shield</span>' : ''}
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: ${percent}%;"></div>
+                        </div>
+                    </div>
+                    <div class="goal-right" onclick="window.handleCardClick('${goal.id}')">
+                        <div class="goal-amount">₱${(goal.currentAmount || 0).toLocaleString()}</div>
+                        <div class="goal-percent">${percent}% / ₱${goal.targetAmount.toLocaleString()}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+                
+                // Event Handling for Context Menu (Long press on card, not icon)
+                card.addEventListener('mousedown', (e) => {
+                    if (!e.target.closest('.goal-icon-box')) window.startPress(e, goal.id);
+                });
+                card.addEventListener('touchstart', (e) => {
+                    if (!e.target.closest('.goal-icon-box')) window.startPress(e, goal.id);
+                }, {passive: true});
+                card.addEventListener('mouseup', window.cancelPress);
+                card.addEventListener('touchend', window.cancelPress);
+                card.addEventListener('mouseleave', window.cancelPress);
+            });
+            
+            updateSummary();
+        }
+
+        // Icon Design System Helper - Professional Material Icons
+        function getIconConfig(type) {
+            // Check if it's a custom image (base64 or URL)
+            if (type && (type.startsWith('data:') || type.startsWith('http'))) {
+                return { icon: null, bg: '#f8fafc', color: '#64748b', customImage: type };
+            }
+            
+            // Find in available icons
+            const found = AVAILABLE_ICONS.find(i => i.id === type);
+            if (found) {
+                return { icon: found.icon, bg: found.bg, color: found.color };
+            }
+            
+            // Fallback
+            return { icon: 'savings', bg: '#f0fdf4', color: '#00851F' };
+        }
+
+        async function loadSafeSpendConfig() {
+            if (!currentUser) return;
+            try {
+                const configRef = doc(db, "users", currentUser.uid, "config", "safe_to_spend");
+                const configSnap = await getDoc(configRef);
+                if (configSnap.exists()) {
+                    const data = configSnap.data();
+                    if (data.savingsAmount) {
+                        dynamicMonthlySavings = parseFloat(data.savingsAmount);
+                        console.log("💰 Dynamic savings loaded:", dynamicMonthlySavings);
+                        // Trigger recalculation if goals already loaded
+                        window.updateSummary();
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading safe_to_spend config:", e);
+            }
+        }
+
+        function updateForecast(remaining) {
+            const el = document.getElementById('timeForecast');
+            if (!el) return;
+            if (remaining <= 0) {
+                el.innerHTML = `<b>Congratulations!</b> You have reached all your goals! 🎉`;
+                return;
+            }
+            if (dynamicMonthlySavings <= 0) {
+                el.innerHTML = `Set a <b>Monthly Savings</b> goal in your dashboard to see completion forecasts.`;
+                return;
+            }
+
+            const monthsToComplete = Math.ceil(remaining / dynamicMonthlySavings);
+            const targetDate = new Date();
+            targetDate.setMonth(targetDate.getMonth() + monthsToComplete);
+            el.innerHTML = `
+                Based on your <b>₱${dynamicMonthlySavings.toLocaleString()}/mo</b> savings,<br>
+                estimated completion is <b>${targetDate.toLocaleString('default', { month: 'long' })} ${targetDate.getFullYear()}</b>.
+            `;
+        }
+
+        window.saveGoal = async function() {
+            const title = document.getElementById('goalTitle').value;
+            const target = parseFloat(document.getElementById('goalTarget').value.replace(/,/g, ''));
+
+            if (!title || !target) return alert('Please fill in all fields');
+            if (!currentUser) return;
+
+            try {
+                const newGoal = {
+                    title: title, icon: selectedIcon, currentAmount: 0, targetAmount: target,
+                    createdAt: serverTimestamp()
+                };
+                await addDoc(collection(db, `users/${currentUser.uid}/goals`), newGoal);
+                document.getElementById('goalTitle').value = '';
+                document.getElementById('goalTarget').value = '';
+                window.closeModals();
+                window.showToast('Goal created successfully');
+                await loadGoals();
+            } catch (error) {
+                console.error("Error saving goal:", error);
+            }
+        }
+
+        window.deleteGoal = async function(id) {
+            if (!confirm("Are you sure you want to delete this goal?")) return;
+            if (!currentUser) return;
+            try {
+                await deleteDoc(doc(db, `users/${currentUser.uid}/goals`, id));
+                window.showToast('Goal deleted');
+                await loadGoals();
+            } catch (error) {
+                console.error("Error deleting goal:", error);
+            }
+        }
+
+        document.getElementById('confirmDepositBtn').onclick = async () => {
+            const amount = parseFloat(document.getElementById('depositAmount').value.replace(/,/g, ''));
+            if (!amount || amount <= 0 || !currentUser || !selectedGoalId) return;
+            try {
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, selectedGoalId);
+                const goal = goals.find(g => g.id === selectedGoalId);
+                if (goal) {
+                    await updateDoc(goalRef, { currentAmount: (goal.currentAmount || 0) + amount });
+                    
+                    // Record Transaction History
+                    await addDoc(collection(db, `users/${currentUser.uid}/goals/${selectedGoalId}/transactions`), {
+                        amount: amount,
+                        type: 'deposit',
+                        timestamp: serverTimestamp()
+                    });
+
+                    if (window.confetti) {
+                        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#00851F', '#ffffff'] });
+                    }
+                    document.getElementById('depositAmount').value = '';
+                    window.closeModals();
+                    window.showToast(`₱${amount.toLocaleString()} deposited!`);
+                    await loadGoals();
+                }
+            } catch (error) {
+                console.error("Error updating deposit:", error);
             }
         };
-
-        const header = document.getElementById('header');
-        const scrollContainer = document.querySelector('.mobile-wrapper');
-        const handleScroll = (container) => {
-            if (container.scrollTop > 50) header.classList.add('shrunk');
-            else header.classList.remove('shrunk');
-        };
-        if (scrollContainer) scrollContainer.addEventListener('scroll', () => handleScroll(scrollContainer));
-        window.addEventListener('scroll', () => handleScroll(window.document.documentElement));
     </script>
 </body>
 </html>

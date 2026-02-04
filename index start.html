@@ -22,6 +22,18 @@
 
     
         * { box-sizing: border-box; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        
+        /* Native App Feel - Disable all link behaviors */
+        a, a:visited, a:hover, a:active, a:focus {
+            text-decoration: none !important;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+        }
+        /* Disable text selection highlighting */
+        ::selection { background: transparent; }
+        ::-moz-selection { background: transparent; }
+
         html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; overscroll-behavior-y: contain; }
         
         /* HIDE ALL SCROLLBARS - Native App Feel */
@@ -38,6 +50,7 @@
             box-shadow: 0 0 50px rgba(0,0,0,0.1); 
             display: flex; 
             flex-direction: column; 
+            align-items: stretch;
             overflow-x: hidden; 
             overflow-y: auto;
             overscroll-behavior-y: contain; /* Prevent browser pull-to-refresh */
@@ -88,7 +101,7 @@
         .ptr-spinner svg {
             width: 24px;
             height: 24px;
-            transition: transform 0.1s linear;
+            transition: transform 0.2s linear;
         }
         .ptr-spinner.refreshing svg {
             animation: ptrSpin 0.8s linear infinite;
@@ -106,7 +119,7 @@
             stroke-dasharray: 60;
             stroke-dashoffset: 60;
             transform-origin: center;
-            transition: stroke-dashoffset 0.1s ease;
+            transition: stroke-dashoffset 0.2s ease;
         }
         .ptr-spinner.refreshing .ptr-circle {
             stroke-dashoffset: 15;
@@ -216,7 +229,7 @@
         .balance-card, .nav-item, .txn-item, .dropdown-item, .action-btn {
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        #header {  padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 1000; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
@@ -690,16 +703,16 @@
         .cat-income { background: #dcfce7; color: #16a34a; }
 
         /* MODAL STYLES */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal-overlay.show { display: flex; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; }
         .custom-modal { background: #fff; width: 92%; max-width: 380px; border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes modalOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
         @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-        .modal-overlay.closing { animation: fadeOut 0.3s forwards; }
-        .modal-overlay.closing .custom-modal { animation: modalOut 0.25s forwards; }
+        .modal-overlay.closing { animation: fadeOut 0.3s forwards; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.closing .custom-modal { animation: modalOut 0.3s forwards; }
         .modal-overlay.closing .custom-modal[id="manual-modal-content"],
         .modal-overlay.closing .custom-modal[id="duplicate-modal-content"] { 
             animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important; 
@@ -800,7 +813,7 @@
         .log-error { color: #f87171; font-weight: bold; }
         
         .loading-overlay { display: none; text-align: center; padding: 60px; color: #64748b; }
-        .btn-sync { background-color: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.1s; }
+        .btn-sync { background-color: #000; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.2s, transform 0.2s; }
         .btn-sync:hover { background-color: #191919; }
         .btn-sync:active { transform: scale(0.98); }
         .btn-sync:disabled { background-color: #94a3b8; cursor: not-allowed; }
@@ -982,15 +995,51 @@
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
-        /* FAB */
-        .fab { position: fixed; bottom: 100px; right: calc(50% - 215px + 24px); width: 62px; height: 62px; border-radius: 50%; background: #000; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 999; cursor: pointer; border: none; transition: transform 0.2s; }
-        .fab:active { transform: scale(0.95); }
-        .fab i { font-size: 32px; }
+      
+      
         
-        @media (max-width: 430px) {
-            .fab { right: 24px; }
-            .bottom-nav { left: 0; transform: none; }
+
+
+        
+           /* Floating Action Button */
+        .fab { 
+            position: fixed; 
+            bottom: 100px; 
+            right: calc(50% - 215px + 28px); 
+            width: 62px; 
+            height: 62px; 
+            border-radius: 50%; 
+            background: #000; 
+            color: #fff; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); 
+            z-index: 1000; 
+            cursor: pointer; 
+            border: none; 
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s; 
         }
+        .fab:active { transform: scale(0.9); background: #000; }
+        .fab i { font-size: 32px; }
+
+        @media (max-width: 430px) {
+            .fab { right: 28px; }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         /* DARK MODE STYLES */
         :root {
@@ -1257,15 +1306,47 @@
         }
         
         /* iOS-STYLE LONG-PRESS BLUR EFFECT */
-        .blur-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; }
-        .blur-overlay.active { display: block; }
+        .blur-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 2000; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .blur-overlay.active { opacity: 1; pointer-events: auto; visibility: visible; }
         
-        /* Global Blur for elements */
-        .mobile-wrapper.blur-active { filter: blur(4px) brightness(0.9); -webkit-filter: blur(4px) brightness(0.9); transition: filter 0.3s; pointer-events: none; }
-        .fab.blur-active, .bottom-nav.blur-active { filter: blur(10px) brightness(0.6); -webkit-filter: blur(10px) brightness(0.6); pointer-events: none; }
+        /* Global Blur - only content areas, NOT header/bottom-nav */
+        .mui-container, .card-viewport, .sticky-banner { transition: filter 0.3s ease, transform 0.3s ease; }
+        .mobile-wrapper.blur-active .mui-container,
+        .mobile-wrapper.blur-active .card-viewport,
+        .mobile-wrapper.blur-active .sticky-banner { filter: blur(3px) brightness(0.97); -webkit-filter: blur(3px) brightness(0.97); pointer-events: none; }
+        /* Keep header, bottom-nav and fab visible and unblurred */
+        .mobile-wrapper.blur-active #header,
+        .mobile-wrapper.blur-active .fab,
+        .mobile-wrapper.blur-active .bottom-nav { filter: none !important; pointer-events: auto; }
         
-        /* Shadow for the elevated clone */
-        .premium-txn.elevated-clone { position: fixed; z-index: 2001; background: #fff !important; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); transform: scale(1.02); pointer-events: auto; border: 1px solid rgba(0,0,0,0.05); }
+        /* Long-press scaling for transactions - QUICK initial animation */
+        .premium-txn { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s, filter 0.2s; }
+        .premium-txn:active:not(.elevated-clone) { transform: scale(1); }
+        .premium-txn.popped { transform: scale(1.05); z-index: 2100; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.1s; }
+        
+        /* Shadow for the elevated clone - 0.3s transitions */
+        .premium-txn.elevated-clone { position: fixed; z-index: 2200; background: #fff !important; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transform: scale(1.02); pointer-events: auto; border: 1px solid rgba(0,0,0,0.05); transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
+        
+        /* iOS Action Menu - HIGHEST z-index, above all modals */
+        .ios-action-menu { 
+            display: none; 
+            position: fixed; 
+            background: rgba(255,255,255,0.98); 
+            backdrop-filter: blur(40px); 
+            -webkit-backdrop-filter: blur(40px); 
+            border-radius: 14px; 
+            padding: 4px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            z-index: 100000; 
+            min-width: 180px; 
+            max-width: 200px; 
+            overflow: hidden; 
+            transform: scale(0.9); 
+            opacity: 0; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes menuSlideIn { from { opacity: 0; transform: translateY(-8px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
         /* BRAND LOGO BADGE */
         .brand-badge {
@@ -1290,10 +1371,6 @@
             object-fit: contain;
             transform: scale(1.15);
         }
-
-        .ios-action-menu { display: none; position: fixed; background: rgba(255,255,255,0.95); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 14px; padding: 4px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 2002; min-width: 180px; max-width: 200px; overflow: hidden; }
-        .ios-action-menu.show { display: block; animation: menuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        @keyframes menuSlideIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
         .ios-action-item { padding: 10px 14px; font-size: 13px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 10px; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .ios-action-item:hover { background: rgba(0,0,0,0.05); }
@@ -1349,7 +1426,7 @@
             justify-content: center;
             padding: 40px;
             text-align: center;
-            animation: fadeIn 0.4s ease-out;
+            animation: fadeIn 0.3s ease-out;
             overflow: hidden;
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -2091,38 +2168,39 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.5</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.6</div>
             </div>
         </div>
 
-        <button class="fab" onclick="openManualTxnModal()">
-            <i class="material-icons">add</i>
-        </button>
+    </div>
 
-        <!-- BOTTOM NAV -->
-        <div class="bottom-nav">
-            <a href="index.html" class="nav-item active">
-                <i class="material-icons">account_balance_wallet</i>
-                <span>Wallet</span>
-            </a>
-            <a href="calendar.html" class="nav-item">
-                <i class="material-icons">calendar_today</i>
-                <span>Calendar</span>
-            </a>
-            <a href="accounts.html" class="nav-item">
-                <i class="material-icons">account_balance</i>
-                <span>Accounts</span>
-            </a>
-            <a href="goals.html" class="nav-item">
-                <i class="material-icons">track_changes</i>
-                <span>Goals</span>
-            </a>
-        </div>
+    <button class="fab" onclick="openManualTxnModal()">
+        <i class="material-icons">add</i>
+    </button>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <a href="javascript:void(0)" class="nav-item active" onclick="window.location.href='index.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">account_balance_wallet</i>
+            <span>Wallet</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='calendar.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">calendar_today</i>
+            <span>Calendar</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='accounts.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">account_balance</i>
+            <span>Accounts</span>
+        </a>
+        <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='goals.html'; return false;" oncontextmenu="return false;" draggable="false">
+            <i class="material-icons">track_changes</i>
+            <span>Goals</span>
+        </a>
     </div>
 
     <!-- iOS-STYLE BLUR OVERLAY (NOW AT BODY LEVEL) -->
-    <div class="blur-overlay" id="blurOverlay" onclick="closeIOSMenu()"></div>
-    <div class="ios-action-menu" id="iosActionMenu"></div>
+    <div class="blur-overlay" id="blur-overlay" onclick="closeIOSMenu()"></div>
+    <div class="ios-action-menu" id="ios-menu"></div>
 
     <!-- CATEGORY BUDGET MODAL (TOP LEVEL) -->
     <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
@@ -2572,7 +2650,7 @@
                         <i class="material-icons" id="theme-icon">dark_mode</i>
                         <span id="theme-text">Dark Mode</span>
                     </div>
-                    <div class="dropdown-item" onclick="handleAuthClick()">
+                     <div class="dropdown-item" onclick="handleAuthClick()">
                         <i class="material-icons">swap_horiz</i>
                         <span>Switch Account</span>
                     </div>
@@ -2590,7 +2668,7 @@
                         <span>Log Out</span>
                     </div>
                  `;
-
+                 
                  // Initial status update
                  setTimeout(() => { if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus(); }, 10);
                  
@@ -4960,7 +5038,7 @@
                         path.style.filter = 'none';
                         path.style.transform = 'scale(1)';
                         hideTooltip();
-                    }, 1500); // Keep tooltip visible for 1.5s after touch
+                    }, 1000); // Keep tooltip visible for 1.5s after touch
                 });
 
                 path.onclick = (e) => {
@@ -6234,13 +6312,15 @@
             // 1. Get exact position
             const rect = item.getBoundingClientRect();
             
-            // 2. Hide original item
+            // 2. Hide original item visually but keep space
             currentElevatedItem = item;
+            item.classList.add('popped'); // Scale up the original item too for the "pop" feel
             item.style.visibility = 'hidden';
             
             // 3. Create and position clone
             clonedItem = item.cloneNode(true);
             clonedItem.classList.add('elevated-clone');
+            clonedItem.classList.remove('popped'); // Clone doesn't need popped class as it has its own elevated style
             
             // Strip IDs to prevent duplicate conflicts
             clonedItem.removeAttribute('id');
@@ -6253,20 +6333,18 @@
             clonedItem.style.setProperty('width', `${rect.width}px`, 'important');
             clonedItem.style.setProperty('height', `${rect.height}px`, 'important');
             clonedItem.style.setProperty('margin', '0', 'important');
-            clonedItem.style.setProperty('z-index', '2001', 'important');
+            clonedItem.style.setProperty('z-index', '2100', 'important'); // Above blur
             clonedItem.style.setProperty('display', 'flex', 'important');
             
             clonedItem.style.visibility = 'visible';
             clonedItem.onclick = closeIOSMenu; 
             document.body.appendChild(clonedItem);
             
-            // 4. Show blur and backdrop
-            document.getElementById('blur-overlay').classList.add('active');
-            document.querySelector('.mobile-wrapper').classList.add('blur-active');
-            const fab = document.querySelector('.fab');
-            if (fab) fab.classList.add('blur-active');
-            const nav = document.querySelector('.bottom-nav');
-            if (nav) nav.classList.add('blur-active');
+            // 4. Show blur and backdrop with slight delay for opening animation
+            setTimeout(() => {
+                document.getElementById('blur-overlay').classList.add('active');
+                document.querySelector('.mobile-wrapper').classList.add('blur-active');
+            }, 50); // Small delay for perceived smoothness
             
             // Prevent scrolling
             document.body.style.overflow = 'hidden';
@@ -6280,11 +6358,11 @@
             
             menu.innerHTML = `
                 <div class="ios-action-item" onclick="handleIOSAction('edit', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}')">
-                    <i class="material-icons">edit</i>
+                    <i class="material-icons" style="color:#2563eb;">edit</i>
                     <span>Edit Transaction</span>
                 </div>
                 <div class="ios-action-item" onclick="handleIOSAction('duplicate', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}', '${date}', '${manualAmount}')">
-                    <i class="material-icons">content_copy</i>
+                    <i class="material-icons" style="color:#059669;">content_copy</i>
                     <span>Duplicate</span>
                 </div>
                 <div class="ios-action-item ${isExcluded ? '' : 'danger'}" onclick="handleIOSAction('exclude', '${txnId}', ${isExcluded}, '${merchantSafe}')">
@@ -6348,28 +6426,59 @@
             const wasMenuOpen = iosMenu && iosMenu.classList.contains('show');
             const mobileWrapper = document.querySelector('.mobile-wrapper');
             const fab = document.querySelector('.fab');
-            const nav = document.querySelector('.bottom-nav');
             
-            // Remove all blur effects
-            if (blurOverlay) blurOverlay.classList.remove('active');
-            if (iosMenu) iosMenu.classList.remove('show');
-            if (mobileWrapper) mobileWrapper.classList.remove('blur-active');
-            if (fab) fab.classList.remove('blur-active');
-            if (nav) nav.classList.remove('blur-active');
+            // Fast close transition - 0.3s
+            if (iosMenu) {
+                iosMenu.style.transition = 'all 0.3s ease-out';
+                iosMenu.classList.remove('show');
+            }
+            if (blurOverlay) {
+                blurOverlay.style.transition = 'opacity 0.3s';
+                blurOverlay.classList.remove('active');
+            }
+            if (mobileWrapper) {
+                mobileWrapper.classList.remove('blur-active');
+            }
+            if (fab) {
+                fab.classList.remove('blur-active');
+            }
             
             // Restore scrolling
             document.body.style.overflow = '';
             if (mobileWrapper) mobileWrapper.style.overflow = 'auto';
             
-            // Remove cloned item
+            // Animate cloned item back to normal scale before removing
             if (clonedItem) {
-                clonedItem.remove();
-                clonedItem = null;
+                clonedItem.style.transition = 'transform 0.3s ease-out, box-shadow 0.3s ease-out, opacity 0.3s ease-out';
+                clonedItem.style.transform = 'scale(1)';
+                clonedItem.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                clonedItem.style.opacity = '0';
+                setTimeout(() => {
+                    if (clonedItem) {
+                        clonedItem.remove();
+                        clonedItem = null;
+                    }
+                }, 300);
             }
             
-            // Restore original item visibility
+            // Restore original item visibility immediately
             if (currentElevatedItem) {
+                currentElevatedItem.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
                 currentElevatedItem.style.visibility = 'visible';
+                currentElevatedItem.style.filter = 'none';
+                currentElevatedItem.style.transform = 'scale(1)';
+                currentElevatedItem.style.background = '';
+                currentElevatedItem.classList.remove('popped');
+                
+                // Final cleanup after transition
+                const target = currentElevatedItem;
+                setTimeout(() => {
+                    if (target) {
+                        target.style.filter = '';
+                        target.style.transform = '';
+                    }
+                }, 300);
+                
                 currentElevatedItem = null;
             }
 
@@ -6557,6 +6666,11 @@
             
             // Show modal
             document.getElementById('duplicate-modal').classList.add('show');
+            const fab = document.querySelector('.fab');
+            if (fab) {
+                fab.classList.add('clicked');
+                setTimeout(() => fab.classList.remove('clicked'), 300);
+            }
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             if (window.modalOpen) {
                 // Handled by replaceModalState in handleIOSAction
@@ -6754,6 +6868,11 @@
             currentTxnId = id;
             currentDeletionAccount = accId || window.currentAccount;
             document.getElementById('delete-modal').classList.add('show');
+            const fab = document.querySelector('.fab');
+            if (fab) {
+                fab.classList.add('clicked');
+                setTimeout(() => fab.classList.remove('clicked'), 300);
+            }
             if (window.pushModalState) pushModalState('delete-txn');
         };
 
@@ -7440,6 +7559,11 @@
         };
 
         window.openManualTxnModal = () => {
+            const fab = document.querySelector('.fab');
+            if (fab) {
+                fab.classList.add('clicked');
+                setTimeout(() => fab.classList.remove('clicked'), 300);
+            }
             window.editingTxnId = null; // Clear edit mode
             document.getElementById('manual-amt').value = '';
             document.getElementById('manual-merchant').value = '';
@@ -8861,7 +8985,7 @@
         };
         
         // Show biometric overlay
-        const showBiometricOverlay = (mode) => {
+        const showBiometricOverlay = (mode = 'verify') => {
             const disableBtn = document.getElementById('biometricDisable');
             if (mode === 'setup') {
                 biometricTitle.innerText = 'Secure Your Wallet';
@@ -8877,7 +9001,7 @@
                 if (disableBtn) disableBtn.style.display = 'block';
             }
             biometricError.classList.remove('show');
-            biometricOverlay.classList.remove('hiding');
+            biometricOverlay.classList.remove('hiding'); // Ensure doors are closed
             biometricOverlay.classList.add('show');
         };
         
@@ -8901,8 +9025,6 @@
             }, 300); // Faster trigger
         };
         
-        
-        // Skip biometric setup
         
         // Skip biometric setup
         const skipBiometric = () => {
@@ -8958,9 +9080,7 @@
                 if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus();
                 
                 // Show success toast
-                if (typeof showToast === 'function') {
-                    showToast('Biometric login enabled!');
-                }
+                showToast('Biometric login enabled!');
                 return true;
             } catch (err) {
                 console.error('❌ Biometric registration failed:', err);
@@ -9003,14 +9123,17 @@
                 localStorage.setItem('biometric_verified_at', now);
                 sessionStorage.setItem('biometric_authenticated', 'true');
                 
+                // Ensure error is hidden
+                biometricError.classList.remove('show');
+                
                 hideBiometricOverlay();
                 return true;
             } catch (err) {
                 console.error('❌ Biometric verification failed:', err);
-                biometricError.textContent = err.name === 'NotAllowedError'
-                    ? 'Authentication cancelled'
-                    : 'Verification failed. Please try again.';
-                biometricError.classList.add('show');
+                if (err.name !== 'NotAllowedError') {
+                    biometricError.textContent = 'Verification failed. Please try again.';
+                    biometricError.classList.add('show');
+                }
                 return false;
             }
         };
@@ -9049,15 +9172,18 @@
             }
 
             // SESSION TIMEOUT CHECK (10 Minutes)
+            // sessionStorage is per tab, localStorage persists app closure
             const lastVerified = localStorage.getItem('biometric_verified_at');
             const now = Date.now();
             const tenMinutes = 10 * 60 * 1000;
             
+            // If we are navigating between pages in the same session, don't re-prompt
             if (sessionStorage.getItem('biometric_authenticated') === 'true') {
                 console.log('🔐 Biometric: Already authenticated in this session');
                 return;
             }
             
+            // If less than 10 minutes since last verification, auto-approve session
             if (lastVerified && (now - lastVerified < tenMinutes)) {
                 console.log('🔐 Biometric: Valid session (within 10 mins)');
                 sessionStorage.setItem('biometric_authenticated', 'true');
@@ -9078,12 +9204,13 @@
                     // Auto-trigger verification (reduced timeout for speed)
                     setTimeout(() => triggerBiometricAuth(), 100);
                 } 
-                // Setup is now manual from the profile dropdown only.
+                // New users will NOT be prompted to setup automatically anymore.
+                // They can enable it manually from the profile dropdown.
             } catch (err) {
                 console.error('🔐 Biometric init error:', err);
             }
         };
-
+        
         // Update indicator in settings
         window.updateBiometricStatus = () => {
             const dot = document.getElementById('biometric-status-dot');
@@ -9119,7 +9246,7 @@
                 showBiometricOverlay('setup');
             }
         };
-        
+
         // Run on page load (DOMContentLoaded for faster speed)
         document.addEventListener('DOMContentLoaded', () => {
             initBiometric();

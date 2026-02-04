@@ -15,7 +15,19 @@
     <meta name="theme-color" content="#121212">
 
     <style>
-        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+        * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        
+        /* Native App Feel - Disable all link behaviors */
+        a, a:visited, a:hover, a:active, a:focus {
+            text-decoration: none !important;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+        }
+        /* Disable text selection highlighting */
+        ::selection { background: transparent; }
+        ::-moz-selection { background: transparent; }
+
         html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         
         .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
@@ -407,19 +419,19 @@
 
         <!-- BOTTOM NAV -->
         <div class="bottom-nav">
-            <a href="index.html" class="nav-item">
+            <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='index.html'; return false;" oncontextmenu="return false;" draggable="false">
                 <i class="material-icons">account_balance_wallet</i>
                 <span>Wallet</span>
             </a>
-            <a href="calendar.html" class="nav-item active">
+            <a href="javascript:void(0)" class="nav-item active" onclick="window.location.href='calendar.html'; return false;" oncontextmenu="return false;" draggable="false">
                 <i class="material-icons">calendar_today</i>
                 <span>Calendar</span>
             </a>
-            <a href="accounts.html" class="nav-item">
+            <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='accounts.html'; return false;" oncontextmenu="return false;" draggable="false">
                 <i class="material-icons">account_balance</i>
                 <span>Accounts</span>
             </a>
-            <a href="goals.html" class="nav-item">
+            <a href="javascript:void(0)" class="nav-item" onclick="window.location.href='goals.html'; return false;" oncontextmenu="return false;" draggable="false">
                 <i class="material-icons">track_changes</i>
                 <span>Goals</span>
             </a>
@@ -464,10 +476,78 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        window.getCollectionName = (accId) => {
+            if (accId === 'atome') return "transactions";
+            if (accId === 'bpi') return "bpi_transactions";
+            return `txns_${accId}`;
+        };
+
+        const CATEGORIES = [
+            { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
+            { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
+            { id: 'Vehicle', icon: 'local_gas_station', label: 'Vehicle', cls: 'cat-vehicle' },
+            { id: 'Food & Drinks', icon: 'restaurant', label: 'Food & Drinks', cls: 'cat-food' },
+            { id: 'Service', icon: 'settings_cell', label: 'Service', cls: 'cat-service-magenta' },
+            { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
+            { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
+            { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
+            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
+            { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
+            { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
+            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
+            { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
+            { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
+        ];
+
+        function displayCategoryName(id) {
+            const cat = CATEGORIES.find(c => c.id === id);
+            return cat ? cat.label : id;
+        }
+
+        function getMerchantDisplay(name = '', t = {}) {
+            let raw = name.toUpperCase();
+            let cleaned = name.replace(/\s+PHL$/i, '').replace(/\s+CEBU\s+CITY\s+PHL$/i, '').replace(/\s+CEBU\s+CITY$/i, '').replace(/\s+DUBAI\s+ARE$/i, '').replace(/\s+LONDON\s+GBR$/i, '').replace(/\s+PH\s+PHL$/i, '').replace(/\s+PH$/i, '').trim();
+            if (cleaned.toUpperCase().includes('GADC') || cleaned.toUpperCase().includes('MCDONALDS') || cleaned.toUpperCase().includes('MCDO')) {
+                let u = cleaned.toUpperCase();
+                if (u.includes('SOUTHCBU') || u.includes('325CLN')) cleaned = 'MCDONALDS SOUTH CEBU';
+                else { cleaned = cleaned.replace(/(GADC|MCDONALDS|MCDO)/i, 'MCDONALDS').trim(); cleaned = cleaned.replace(/MCDONALDS\s+\d+[A-Z]*/i, 'MCDONALDS').trim(); }
+            }
+            if (cleaned.toUpperCase().includes('JOLLIBEE')) cleaned = cleaned.replace(/JB\d+\s+\w+/i, '').trim();
+            if (cleaned.toUpperCase().includes('RIBSHACK')) cleaned = cleaned.replace(/PH\d+/i, '').trim();
+            if (cleaned.toUpperCase().includes('SHOPEE')) cleaned = 'SHOPEE PH';
+            if (cleaned.toUpperCase().includes('TRADERSCONNECT')) cleaned = 'TRADERS CONNECT';
+            if (cleaned.toUpperCase().includes('TIKTOK SHOP')) cleaned = 'TIKTOK SHOP';
+            if (cleaned.toUpperCase().includes('SPOTIFY')) cleaned = 'SPOTIFY';
+            let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
+            if (t.manualCategory) {
+                const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
+                if (userCat) {
+                    display.category = userCat.id;
+                    display.icon = userCat.icon;
+                    const catMap = { 'Online shopping': 'cat-online', 'Shopping': 'cat-shopping', 'Vehicle': 'cat-vehicle', 'Trade Copier': 'cat-aqua', 'Trading Expenses': 'cat-trading', 'Service': 'cat-service-magenta', 'Food & Drinks': 'cat-food', 'Life & Entertainment': 'cat-life', 'Financial Expenses': 'cat-financial', 'Transportation': 'cat-vehicle', 'Travel': 'cat-aqua', 'Education': 'cat-education', 'Sport': 'cat-life', 'Income': 'cat-income' };
+                    display.catClass = userCat.cls || catMap[userCat.id] || 'cat-financial';
+                    return display;
+                }
+            }
+            const mapping = { 'MR DIY BGCC BOGO': 'MR DIY BOGO', 'MR DIY ZBOG BOGO': 'MR DIY BOGO', 'TEC FUEL SAN REMIGIO': 'TECFUEL SAN REMIGIO', 'J AND L SHOPPING BOGO': 'J AND L MALL BOGO', 'TECFUEL BOGO CEBU': 'TECFUEL BOGO', 'KKV SM J Mall Cebu': 'KKV SM J MALL CEBU', 'SM STORE-CEBU': 'SM STORE - CEBU CITY', 'GLOBE-BILLSPAY PH': 'GLOBE / GOMO LOAD', 'SHELL FILLWISE BOGO CEBU': 'SHELL BOGO CEBU', 'GLOBE WEBLOADING EC PH': 'GLOBE / GOMO LOAD', 'WATSONS HISOLER BLDG B': 'WATSONS HISOLER BLDG BOGO', 'SUPER METRO S/M-BOGO': 'SUPER METRO BOGO', 'SM SUPERMARKET SM SRP CEBU': 'SM SUPERMARKET SRP', 'OCTAGON AYALA CENTRAL CEBU': 'OCTAGON AYALA CENTRAL CEBU', 'STARBUCKS 540 CENTRAL CEBU CITY': 'STARBUCKS 540 CENTRAL CEBU CITY', 'ICE SKATING SM SRP CEB': 'ICE SKATING SM SRP CEBU', 'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND', 'MRCRMT': 'MRCRMT', 'tradersconnect.com': 'TRADERS CONNECT', 'TRADERSCONNECT': 'TRADERS CONNECT' };
+            const finalRaw = cleaned.toUpperCase();
+            if (mapping[cleaned]) display.name = mapping[cleaned];
+            else if (mapping[finalRaw]) display.name = mapping[finalRaw];
+            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) { display.category = 'Online shopping'; display.icon = 'shopping_bag'; }
+            else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('7 11') || finalRaw.includes('7/11') || finalRaw.includes('KFC') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) { display.category = 'Food & Drinks'; display.icon = 'restaurant'; }
+            else if (finalRaw.includes('SHELL') || finalRaw.includes('PETRON') || finalRaw.includes('CALTEX') || finalRaw.includes('TECFUEL') || finalRaw.includes('FUEL') || finalRaw.includes('SEAOIL')) { display.category = 'Vehicle'; display.icon = 'local_gas_station'; }
+            else if (finalRaw.includes('TRADERS CONNECT') || finalRaw.includes('IC MARKETS') || finalRaw.includes('EXNESS') || finalRaw.includes('TRADERSCONNECT')) { display.category = 'Trading Expenses'; display.icon = 'insights'; }
+            const catMap = { 'Online shopping': 'cat-online', 'Shopping': 'cat-shopping', 'Vehicle': 'cat-vehicle', 'Trade Copier': 'cat-aqua', 'Trading Expenses': 'cat-trading', 'Service': 'cat-service-magenta', 'Food & Drinks': 'cat-food', 'Life & Entertainment': 'cat-life', 'Financial Expenses': 'cat-financial', 'Transportation': 'cat-vehicle', 'Travel': 'cat-aqua', 'Education': 'cat-education', 'Sport': 'cat-life', 'Income': 'cat-income' };
+            display.catClass = catMap[display.category] || 'cat-financial';
+            return display;
+        }
+
+
+        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
         let currentViewDate = new Date();
         let selectedDate = new Date();
         window.allTxns = [];
-
+        
         // Initial UI population from Cache
         const cachedName = localStorage.getItem('user_name');
         const cachedPic = localStorage.getItem('user_pic');
@@ -478,18 +558,30 @@
             picEl.src = cachedPic;
             badge.classList.add('has-pic');
         }
-
+        
         // Apply Header Theme from Current Account
-        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
-        const cardBg = document.getElementById('card-bg');
-        if (cardBg) {
-            if (currentAccount === 'bpi') cardBg.setAttribute('fill', '#931B1B');
-            else if (currentAccount === 'atome') cardBg.setAttribute('fill', '#1a1a1a');
-            else {
+        function applyAccountTheme(accId) {
+            const cardBg = document.getElementById('card-bg');
+            if (cardBg) {
                 const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-                const acc = accounts.find(a => a.id === currentAccount);
-                if (acc) cardBg.setAttribute('fill', acc.color);
+                const acc = accounts.find(a => a.id === accId);
+                if (acc) {
+                    cardBg.setAttribute('fill', acc.color);
+                } else {
+                    // Fallback
+                    if (accId === 'bpi') cardBg.setAttribute('fill', '#931B1B');
+                    else if (accId === 'atome') cardBg.setAttribute('fill', '#121212');
+                    else cardBg.setAttribute('fill', '#1a1a1a');
+                }
             }
+        }
+        applyAccountTheme(currentAccount);
+
+        // FAST PATH: Early rendering from cache to achieve "instant" load
+        const lastUid = localStorage.getItem('wallet_last_uid');
+        if (lastUid) {
+            console.log('⚡ Fast Path: Rendering Calendar from cache...');
+            loadData(lastUid); 
         }
 
         onAuthStateChanged(auth, (user) => {
@@ -498,36 +590,95 @@
             if (gate) gate.style.display = isAnon ? 'flex' : 'none';
 
             if (user) {
-                // Profile
+                // Save UID for future instant loads
+                localStorage.setItem('wallet_last_uid', user.uid);
+                
                 if (!user.isAnonymous) {
-                    if (user.displayName) {
-                        const parts = user.displayName.split(' ');
-                        const firstName = parts.length > 1 && parts[0].length <= 5 
-                                          ? parts.slice(0, 2).join(' ') 
-                                          : parts[0];
-                        document.getElementById('user-display-name').innerText = firstName;
-                        localStorage.setItem('user_name', firstName);
-                    }
-                    if (user.photoURL) {
-                        const badge = document.getElementById('profile-badge');
-                        const pic = document.getElementById('user-pic');
-                        let photoUrl = user.photoURL;
-                        if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                            photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                        }
-                        pic.src = photoUrl;
-                        badge.classList.add('has-pic');
-                        localStorage.setItem('user_pic', photoUrl);
-                    }
-                } else {
-                    document.getElementById('user-display-name').innerText = 'Guest';
-                    document.getElementById('profile-badge').classList.remove('has-pic');
+                    // Update Cache
+                    localStorage.setItem('user_name', user.displayName || 'User');
+                    localStorage.setItem('user_pic', user.photoURL || '');
                 }
+                updateProfileUI(user);
                 loadData(user.uid);
             } else {
+                updateProfileUI({ isAnonymous: true });
                 renderCalendar();
             }
         });
+
+        function updateProfileUI(user) {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (!dropdown) return;
+            
+            if (user.isAnonymous) {
+                 dropdown.innerHTML = `
+                    <div class="dropdown-header">Guest Session</div>
+                    <div class="dropdown-item" onclick="toggleDarkMode()">
+                        <i class="material-icons" id="theme-icon">dark_mode</i>
+                        <span id="theme-text">Dark Mode</span>
+                    </div>
+                    <div class="dropdown-item" onclick="handleAuthClick()">
+                        <i class="material-icons">cloud_upload</i>
+                        <span>Sign in with Google</span>
+                    </div>
+                 `;
+                 document.getElementById('user-display-name').innerText = 'Guest';
+                 document.getElementById('profile-badge').classList.remove('has-pic');
+            } else {
+                 dropdown.innerHTML = `
+                    <div class="dropdown-header">${user.email || 'User'}</div>
+                    <div class="dropdown-item" onclick="toggleDarkMode()">
+                        <i class="material-icons" id="theme-icon">dark_mode</i>
+                        <span id="theme-text">Dark Mode</span>
+                    </div>
+                    <div class="dropdown-item" onclick="handleAuthClick()">
+                        <i class="material-icons">swap_horiz</i>
+                        <span>Switch Account</span>
+                    </div>
+                    <div class="dropdown-item logout" onclick="handleSignout()">
+                        <i class="material-icons">logout</i>
+                        <span>Log Out</span>
+                    </div>
+                 `;
+                 
+                 const name = localStorage.getItem('user_name') || 'User';
+                 document.getElementById('user-display-name').innerText = name;
+                 
+                 const pic = localStorage.getItem('user_pic');
+                 if (pic) {
+                     const picEl = document.getElementById('user-pic');
+                     const badge = document.getElementById('profile-badge');
+                     picEl.src = pic;
+                     badge.classList.add('has-pic');
+                 }
+            }
+            
+            // Sync theme UI
+            const currentTheme = localStorage.getItem('theme_preference') || 'light';
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (icon) icon.innerText = currentTheme === 'light' ? 'dark_mode' : 'light_mode';
+            if (text) text.innerText = currentTheme === 'light' ? 'Dark Mode' : 'Light Mode';
+            if (currentTheme === 'dark') document.body.classList.add('dark-mode');
+        }
+
+        // DARK MODE TOGGLE
+        window.toggleDarkMode = () => {
+            const currentTheme = localStorage.getItem('theme_preference') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme_preference', newTheme);
+            
+            if (newTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+            
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (icon) icon.innerText = newTheme === 'light' ? 'dark_mode' : 'light_mode';
+            if (text) text.innerText = newTheme === 'light' ? 'Dark Mode' : 'Light Mode';
+        };
 
         // PROFILE DROPDOWN LOGIC
         window.toggleProfileDropdown = (e) => {
@@ -577,8 +728,13 @@
         if (scrollContainer) scrollContainer.addEventListener('scroll', () => handleScroll(scrollContainer));
         window.addEventListener('scroll', () => handleScroll(window.document.documentElement));
 
-        function loadData(uid) {
+        function loadData(providedUid = null) {
             const currentAcc = localStorage.getItem('wallet_current_account') || 'atome';
+            applyAccountTheme(currentAcc);
+            
+            const uid = providedUid || auth.currentUser?.uid;
+            if (!uid) return;
+
             const cacheKey = `wallet_cache_${uid}_${currentAcc}`;
             
             // 1. Instant Cache Load
@@ -587,28 +743,22 @@
                 try {
                     const data = JSON.parse(cached);
                     if (data.txns) {
-                        window.allTxns = data.txns;
+                        window.allTxns = data.txns || [];
                         renderCalendar();
                     }
                 } catch(e) {}
             }
 
-            const collectionName = currentAcc === 'atome' ? "transactions" : "bpi_transactions";
+            const collectionName = window.getCollectionName(currentAcc);
             const q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"));
             
             onSnapshot(q, (snap) => {
                 const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
                 
-                // Compare with current to avoid redundant render (Check first 10 for edits)
+                // Compare with current to avoid redundant render
                 const isSame = window.allTxns && window.allTxns.length === txns.length && 
-                               txns.slice(0, 10).every((t, i) => 
-                                   window.allTxns[i] && 
-                                   window.allTxns[i].id === t.id && 
-                                   window.allTxns[i].note === t.note && 
-                                   window.allTxns[i].manualCategory === t.manualCategory &&
-                                   window.allTxns[i].manualAmount === t.manualAmount &&
-                                   window.allTxns[i].excluded === t.excluded &&
-                                   window.allTxns[i].refund === t.refund
+                               txns.slice(0, 5).every((t, i) => 
+                                   window.allTxns[i] && window.allTxns[i].id === t.id
                                );
 
                 if (isSame) return;
@@ -726,158 +876,7 @@
             renderCalendar();
         };
 
-        // Shared Logic Imports/Mocks
-        const CATEGORIES = [
-            { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
-            { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
-            { id: 'Vehicle', icon: 'local_gas_station', label: 'Vehicle', cls: 'cat-vehicle' },
-            { id: 'Food & Drinks', icon: 'restaurant', label: 'Food & Drinks', cls: 'cat-food' },
-            { id: 'Service', icon: 'settings_cell', label: 'Service', cls: 'cat-service-magenta' },
-            { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
-            { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
-            { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
-            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
-            { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
-            { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
-            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
-            { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
-            { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
-        ];
 
-        function displayCategoryName(id) {
-            const cat = CATEGORIES.find(c => c.id === id);
-            return cat ? cat.label : id;
-        }
-
-        function getMerchantDisplay(name = '', t = {}) {
-            let raw = name.toUpperCase();
-            
-            // 1. GENERAL CLEANUP
-            let cleaned = name
-                .replace(/\s+PHL$/i, '')
-                .replace(/\s+CEBU\s+CITY\s+PHL$/i, '')
-                .replace(/\s+CEBU\s+CITY$/i, '')
-                .replace(/\s+DUBAI\s+ARE$/i, '')
-                .replace(/\s+LONDON\s+GBR$/i, '')
-                .replace(/\s+PH\s+PHL$/i, '')
-                .replace(/\s+PH$/i, '')
-                .trim();
-            
-            // 2. PATTERN REPLACEMENT
-            if (cleaned.toUpperCase().includes('GADC') || cleaned.toUpperCase().includes('MCDONALDS') || cleaned.toUpperCase().includes('MCDO')) {
-                let u = cleaned.toUpperCase();
-                if (u.includes('SOUTHCBU') || u.includes('325CLN')) {
-                    cleaned = 'MCDONALDS SOUTH CEBU';
-                } else {
-                    cleaned = cleaned.replace(/(GADC|MCDONALDS|MCDO)/i, 'MCDONALDS').trim();
-                    cleaned = cleaned.replace(/MCDONALDS\s+\d+[A-Z]*/i, 'MCDONALDS').trim();
-                }
-            }
-            if (cleaned.toUpperCase().includes('JOLLIBEE')) cleaned = cleaned.replace(/JB\d+\s+\w+/i, '').trim();
-            if (cleaned.toUpperCase().includes('RIBSHACK')) cleaned = cleaned.replace(/PH\d+/i, '').trim();
-            if (cleaned.toUpperCase().includes('SHOPEE')) cleaned = 'SHOPEE PH';
-            if (cleaned.toUpperCase().includes('TRADERSCONNECT')) cleaned = 'TRADERS CONNECT';
-            if (cleaned.toUpperCase().includes('TIKTOK SHOP')) cleaned = 'TIKTOK SHOP';
-            if (cleaned.toUpperCase().includes('SPOTIFY')) cleaned = 'SPOTIFY';
-
-            let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
-
-            // 3. MANUAL OVERRIDE
-            if (t.manualCategory) {
-                const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
-                if (userCat) {
-                    display.category = userCat.id;
-                    display.icon = userCat.icon;
-                    const catMap = {
-                        'Online shopping': 'cat-online',
-                        'Shopping': 'cat-shopping',
-                        'Vehicle': 'cat-vehicle',
-                        'Trade Copier': 'cat-aqua',
-                        'Trading Expenses': 'cat-trading',
-                        'Service': 'cat-service-magenta',
-                        'Food & Drinks': 'cat-food',
-                        'Life & Entertainment': 'cat-life',
-                        'Financial Expenses': 'cat-financial',
-                        'Transportation': 'cat-vehicle',
-                        'Travel': 'cat-aqua',
-                        'Education': 'cat-education',
-                        'Sport': 'cat-life',
-                        'Income': 'cat-income'
-                    };
-                    display.catClass = userCat.cls || catMap[userCat.id] || 'cat-financial';
-                    return display;
-                }
-            }
-
-            // 4. EXACT OVERRIDES
-            const mapping = {
-                'MR DIY BGCC BOGO': 'MR DIY BOGO',
-                'MR DIY ZBOG BOGO': 'MR DIY BOGO',
-                'TEC FUEL SAN REMIGIO': 'TECFUEL SAN REMIGIO',
-                'J AND L SHOPPING BOGO': 'J AND L MALL BOGO',
-                'TECFUEL BOGO CEBU': 'TECFUEL BOGO',
-                'KKV SM J Mall Cebu': 'KKV SM J MALL CEBU',
-                'SM STORE-CEBU': 'SM STORE - CEBU CITY',
-                'GLOBE-BILLSPAY PH': 'GLOBE / GOMO LOAD',
-                'SHELL FILLWISE BOGO CEBU': 'SHELL BOGO CEBU',
-                'GLOBE WEBLOADING EC PH': 'GLOBE / GOMO LOAD',
-                'WATSONS HISOLER BLDG B': 'WATSONS HISOLER BLDG BOGO',
-                'SUPER METRO S/M-BOGO': 'SUPER METRO BOGO',
-                'SM SUPERMARKET SM SRP CEBU': 'SM SUPERMARKET SRP',
-                'OCTAGON AYALA CENTRAL CEBU': 'OCTAGON AYALA CENTRAL CEBU',
-                'STARBUCKS 540 CENTRAL CEBU CITY': 'STARBUCKS 540 CENTRAL CEBU CITY',
-                'ICE SKATING SM SRP CEB': 'ICE SKATING SM SRP CEBU',
-                'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND',
-                'MRCRMT': 'MRCRMT',
-                'tradersconnect.com': 'TRADERS CONNECT',
-                'TRADERSCONNECT': 'TRADERS CONNECT'
-            };
-
-            const finalRaw = cleaned.toUpperCase();
-            if (mapping[cleaned]) display.name = mapping[cleaned];
-            else if (mapping[finalRaw]) display.name = mapping[finalRaw];
-
-            // 5. CATEGORY DETECTION
-            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
-                display.category = 'Online shopping';
-                display.icon = 'shopping_bag';
-                display.catClass = 'cat-online';
-            } else if (finalRaw.includes('FUEL') || finalRaw.includes('SHELL') || finalRaw.includes('TECFUEL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL')) {
-                display.category = 'Vehicle';
-                display.icon = 'local_gas_station';
-                display.catClass = 'cat-vehicle';
-            } else if (finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS') || finalRaw.includes('SM STORE') || finalRaw.includes('KKV') || finalRaw.includes('SHOPPING') || finalRaw.includes('MALL') || finalRaw.includes('METRO') || finalRaw.includes('SUPERMARKET') || finalRaw.includes('OCTAGON')) {
-                display.category = 'Shopping';
-                display.icon = 'shopping_cart';
-                display.catClass = 'cat-shopping';
-            } else if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
-                display.category = 'Trade Copier';
-                display.icon = 'hub';
-                display.catClass = 'cat-aqua';
-            } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
-                display.category = 'Trading Expenses';
-                display.icon = 'insights';
-                display.catClass = 'cat-trading';
-            } else if (finalRaw.includes('GLOBE') || finalRaw.includes('GOMO') || finalRaw.includes('BILLSPAY')) {
-                display.category = 'Service';
-                display.icon = 'settings_cell';
-                display.catClass = 'cat-service-magenta';
-            } else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('MCDONALDS') || finalRaw.includes('FOOD') || finalRaw.includes('RESTAURANT') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) {
-                display.category = 'Food & Drinks';
-                display.icon = 'restaurant';
-                display.catClass = 'cat-food';
-            } else if (finalRaw.includes('ICE SKATING') || finalRaw.includes('CINEMA') || finalRaw.includes('ENTERTAINMENT') || finalRaw.includes('SPOTIFY') || finalRaw.includes('NETFLIX')) {
-                display.category = 'Life & Entertainment';
-                display.icon = 'confirmation_number';
-                display.catClass = 'cat-life';
-            } else {
-                display.category = 'Financial expenses';
-                display.icon = 'payments';
-                display.catClass = 'cat-financial';
-            }
-
-            return display;
-        }
 
         function createTxnChip(t, mapped, amt, type) {
             const chip = document.createElement('div');

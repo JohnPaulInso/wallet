@@ -133,35 +133,51 @@
         .biometric-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: #000;
             z-index: 10000;
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 24px;
+            color: #fff;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .biometric-overlay.show { display: flex; }
+        .biometric-overlay.show { display: flex; opacity: 1; transform: scale(1); }
+        .biometric-overlay.hiding { 
+            opacity: 0; 
+            transform: scale(1.1); 
+            pointer-events: none; 
+        }
         .biometric-icon {
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
             display: flex;
             align-items: center;
             justify-content: center;
             animation: bioPulse 2s ease-in-out infinite;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
-        .biometric-icon i { font-size: 40px; color: #3b82f6; }
+        .biometric-icon.success {
+            background: #10b981;
+            border-color: #10b981;
+            transform: scale(1.2);
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.4);
+        }
+        .biometric-icon i { font-size: 40px; color: #fff; transition: all 0.3s; }
+        .biometric-icon.success i { transform: scale(0.8); }
         @keyframes bioPulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.1); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
         }
         .biometric-title { font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; }
         .biometric-subtitle { font-size: 14px; color: #94a3b8; font-weight: 500; text-align: center; max-width: 260px; }
         .biometric-btn {
-            background: #3b82f6;
-            color: #fff;
+            background: #fff;
+            color: #000;
             border: none;
             padding: 14px 32px;
             border-radius: 14px;
@@ -171,7 +187,7 @@
             margin-top: 20px;
             transition: all 0.2s;
         }
-        .biometric-btn:hover { background: #2563eb; transform: scale(1.02); }
+        .biometric-btn:hover { background: #f1f5f9; transform: scale(1.02); }
         .biometric-btn:active { transform: scale(0.98); }
         .biometric-skip {
             color: #64748b;
@@ -8890,9 +8906,27 @@
             biometricOverlay.classList.add('show');
         };
         
-        // Hide biometric overlay
-        const hideBiometricOverlay = () => {
-            biometricOverlay.classList.remove('show');
+        // Hide biometric overlay with fun animation
+        const hideBiometricOverlay = async () => {
+            const icon = document.querySelector('.biometric-icon');
+            const iconI = icon.querySelector('i');
+            
+            // Step 1: Success State
+            icon.classList.add('success');
+            iconI.innerText = 'check'; // Change to checkmark
+            if (navigator.vibrate) navigator.vibrate([10, 30, 20]);
+            
+            // Step 2: Snappy Reveal
+            setTimeout(() => {
+                biometricOverlay.classList.add('hiding');
+                
+                // Final Cleanup
+                setTimeout(() => {
+                    biometricOverlay.classList.remove('show', 'hiding');
+                    icon.classList.remove('success');
+                    iconI.innerText = 'fingerprint'; // Reset for next time
+                }, 500);
+            }, 600);
         };
         
         // Skip biometric setup
@@ -8983,6 +9017,12 @@
                 
                 console.log('✅ Biometric verified successfully');
                 if (navigator.vibrate) navigator.vibrate(10);
+                
+                // Set session validity (10 minutes)
+                const now = Date.now();
+                localStorage.setItem('biometric_verified_at', now);
+                sessionStorage.setItem('biometric_authenticated', 'true');
+                
                 hideBiometricOverlay();
                 return true;
             } catch (err) {
@@ -9027,6 +9067,22 @@
                 console.log('🔐 Biometric: Not supported on this device');
                 return;
             }
+
+            // SESSION TIMEOUT CHECK (10 Minutes)
+            const lastVerified = localStorage.getItem('biometric_verified_at');
+            const now = Date.now();
+            const tenMinutes = 10 * 60 * 1000;
+            
+            if (sessionStorage.getItem('biometric_authenticated') === 'true') {
+                console.log('🔐 Biometric: Already authenticated in this session');
+                return;
+            }
+            
+            if (lastVerified && (now - lastVerified < tenMinutes)) {
+                console.log('🔐 Biometric: Valid session (within 10 mins)');
+                sessionStorage.setItem('biometric_authenticated', 'true');
+                return;
+            }
             
             try {
                 const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
@@ -9039,14 +9095,10 @@
                 if (isBiometricSetUp()) {
                     console.log('🔐 Biometric: Prompting for verification');
                     showBiometricOverlay('verify');
-                    // Auto-trigger verification
-                    setTimeout(() => triggerBiometricAuth(), 500);
+                    // Auto-trigger verification (reduced timeout for speed)
+                    setTimeout(() => triggerBiometricAuth(), 100);
                 } 
-                // If not set up and not skipped, prompt for setup
-                else if (!localStorage.getItem('biometric_skipped')) {
-                    console.log('🔐 Biometric: Prompting for setup');
-                    showBiometricOverlay('setup');
-                }
+                // Setup is now manual from the profile dropdown only.
             } catch (err) {
                 console.error('🔐 Biometric init error:', err);
             }
@@ -9081,9 +9133,9 @@
             }
         };
         
-        // Run on page load
-        window.addEventListener('load', () => {
-            setTimeout(initBiometric, 500);
+        // Run on page load (DOMContentLoaded for faster speed)
+        document.addEventListener('DOMContentLoaded', () => {
+            initBiometric();
         });
     </script>
     

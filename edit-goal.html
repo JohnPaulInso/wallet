@@ -59,12 +59,38 @@
             height: 100vh;
             overflow-y: auto;
             overflow-x: hidden;
+            overscroll-behavior-y: contain;
         }
+    </style>
+</head>
+<body>
+    <div class="mobile-wrapper" id="pageWrapper">
+        <!-- MODERN PULL-TO-REFRESH SPINNER -->
+        <div class="ptr-container" id="ptrContainer">
+            <div class="ptr-spinner" id="ptrSpinner">
+                <svg viewBox="0 0 24 24">
+                    <circle class="ptr-circle" cx="12" cy="12" r="10" />
+                </svg>
+            </div>
+        </div>
 
+        <!-- ENHANCED ACTION OVERLAY -->
+        <div id="loadingOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 10000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                <div class="ptr-spinner visible refreshing" style="position: relative; transform: none !important; opacity: 1 !important; box-shadow: none; background: transparent; margin: 0 auto;">
+                    <svg viewBox="0 0 24 24" style="width: 40px; height: 40px;">
+                        <circle class="ptr-circle" cx="12" cy="12" r="10" />
+                    </svg>
+                </div>
+                <p style="margin-top: 15px; font-weight: 800; color: #1e293b; font-size: 14px;">Processing...</p>
+            </div>
+        </div>
+
+<style>
         /* HEADER */
         .page-header {
             background: #fff;
-            padding: 15px 24px 10px;
+            padding: 12px 24px 8px;
             display: flex;
             align-items: center;
             gap: 16px;
@@ -78,8 +104,8 @@
         .header-spacer { height: 75px; }
 
         .back-btn {
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 12px;
             background: #f1f5f9;
             display: flex;
@@ -93,7 +119,7 @@
         .back-btn:active { transform: scale(0.95); }
 
         .page-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -0.5px;
@@ -558,35 +584,52 @@
 
         /* ICON PICKER */
         .icon-grid {
-            display: flex;
-            flex-direction: row;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 12px;
             margin-top: 12px;
-            overflow-x: auto;
+            max-height: 240px;
+            overflow-y: auto;
             padding: 10px 4px;
             /* Premium Scrollbar */
             scrollbar-width: thin;
             scrollbar-color: var(--accent-color) #f1f5f9;
         }
-        .icon-grid::-webkit-scrollbar { height: 6px; }
+        .icon-grid::-webkit-scrollbar { width: 6px; }
         .icon-grid::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .icon-grid::-webkit-scrollbar-thumb { background: var(--accent-color); border-radius: 4px; }
         
         .icon-item {
-            flex-shrink: 0;
-            width: 85px;
             display: flex; flex-direction: column; align-items: center; gap: 8px;
-            padding: 16px 10px; border-radius: 20px; border: 2px solid var(--border-color);
+            padding: 12px 8px; border-radius: 16px; border: 2px solid var(--border-color);
             cursor: pointer; transition: all 0.2s; background: #fff;
         }
         .icon-item:hover { border-color: var(--accent-color); background: #f8fafc; }
-        .icon-item.active { border-color: var(--accent-color); background: #f0fdf4; border-width: 2.5px; }
+        .icon-item.active { 
+            border-color: var(--accent-color); 
+            background: rgba(0, 133, 31, 0.08);
+            box-shadow: 0 4px 12px rgba(0, 133, 31, 0.1);
+        }
         .icon-item-box {
             width: 40px; height: 40px; border-radius: 12px;
             display: flex; align-items: center; justify-content: center;
             transition: transform 0.2s;
         }
         .icon-item:active .icon-item-box { transform: scale(0.9); }
+        .section-header i { color: var(--accent-color); font-size: 20px; }
+        .section-title { font-size: 14px; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* MODERN PULL-TO-REFRESH SPINNER */
+        .ptr-container { position: absolute; top: 0; left: 0; width: 100%; height: 0; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
+        .ptr-spinner { width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 3px 12px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; transform: translateY(-60px) scale(0.6); opacity: 0; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease; }
+        .ptr-spinner.visible { opacity: 1; }
+        .ptr-spinner.refreshing { transform: translateY(0) scale(1) !important; opacity: 1; }
+        .ptr-spinner svg { width: 24px; height: 24px; transition: transform 0.2s linear; }
+        .ptr-spinner.refreshing svg { animation: ptrSpin 0.8s linear infinite; }
+        @keyframes ptrSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .ptr-spinner .ptr-circle { fill: none; stroke: #00851F; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 60; stroke-dashoffset: 60; transform-origin: center; transition: stroke-dashoffset 0.2s ease; }
+        .ptr-spinner.refreshing .ptr-circle { stroke-dashoffset: 15; animation: ptrDash 1.2s ease-in-out infinite; }
+        @keyframes ptrDash { 0% { stroke-dashoffset: 55; transform: rotate(0deg); } 50% { stroke-dashoffset: 15; } 100% { transform: rotate(360deg); } }
         .icon-item-box i { font-size: 20px; }
         .icon-item-label { font-size: 9px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; text-align: center; }
         .icon-item.active .icon-item-label { color: var(--accent-color); }
@@ -641,14 +684,43 @@
 
         /* Hide Streak */
         #streakCard { display: none !important; }
+
+        /* PRIVACY MASKING */
+        .privacy-active .preview-amount-big,
+        .privacy-active .preview-target-small,
+        .privacy-active .history-amt,
+        .privacy-active .v-value {
+            visibility: hidden;
+            position: relative;
+        }
+        .privacy-active .preview-amount-big::after,
+        .privacy-active .preview-target-small::after,
+        .privacy-active .history-amt::after,
+        .privacy-active .v-value::after {
+            content: '****';
+            visibility: visible;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+        .privacy-active .preview-amount-big::after { left: 50%; transform: translate(-50%, -50%); }
+        .privacy-active .preview-target-small::after { left: 50%; transform: translate(-50%, -50%); }
+
+        /* PREMIUM FADE-IN */
+        .fade-in {
+            animation: fadeInPremium 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            opacity: 0;
+        }
+        @keyframes fadeInPremium {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
-<body>
-    <div class="mobile-wrapper" id="pageWrapper">
-        <!-- ACTION OVERLAY (For Save/Delete) -->
-        <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); align-items: center; justify-content: center; z-index: 3000;">
-            <div style="font-weight: 800; color: var(--accent-color);">Processing...</div>
-        </div>
+
 
         <!-- GLOBAL SKELETON (Replaces overlay) -->
         <div id="loadingSkeletons" class="loading-only">
@@ -945,14 +1017,8 @@
                            style="border: 1.5px solid #00851F; border-radius: 14px; padding: 16px; margin-bottom: 0;"
                            oninput="window.formatCurrencyInput(this)">
                 </div>
-                <button class="modal-btn" onclick="window.confirmDepositActual()" 
-                        style="background: #121212; color: #fff; padding: 18px; border-radius: 18px; text-transform: uppercase; letter-spacing: 1px; height: 60px; margin-bottom: 16px;">
-                    Confirm Deposit
-                </button>
-                <div onclick="window.closeDepositModal()" 
-                     style="text-align: center; color: #475569; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; padding: 8px;">
-                    Cancel
-                </div>
+                <button class="modal-btn primary-btn" onclick="window.confirmDepositActual()">Confirm Deposit</button>
+                <button class="modal-btn ghost-btn" onclick="window.closeDepositModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -1382,6 +1448,16 @@
             }
         }
 
+        const nav = window.NavState;
+
+        function initPrivacyMode() {
+            const isPrivacyActive = localStorage.getItem('wallet_privacy_mode') === 'true';
+            const wrapper = document.getElementById('pageWrapper');
+            if (isPrivacyActive && wrapper) {
+                wrapper.classList.add('privacy-active');
+            }
+        }
+
         function updateUI() {
             if (!currentGoalData) return;
             
@@ -1435,6 +1511,7 @@
             }
 
             updateGoalForecast();
+            initPrivacyMode();
         }
 
         async function loadSafeSpendConfig() {
@@ -1540,10 +1617,13 @@
         if (saveBtn) saveBtn.onclick = window.saveAllChanges;
 
         window.confirmDeleteGoal = function() {
-            document.getElementById('deleteGoalModal').style.display = 'flex';
+            const modal = document.getElementById('deleteGoalModal');
+            modal.style.display = 'flex';
+            if (nav) nav.pushModalState('deleteGoalModal', () => modal.style.display = 'none');
         };
 
         window.closeDeleteGoalModal = function() {
+            if (nav) nav.popModalState('deleteGoalModal');
             document.getElementById('deleteGoalModal').style.display = 'none';
         };
 
@@ -1597,10 +1677,13 @@
         };
 
         window.openOptionsModal = function() {
-            document.getElementById('optionsModal').style.display = 'flex';
+            const modal = document.getElementById('optionsModal');
+            modal.style.display = 'flex';
+            if (nav) nav.pushModalState('optionsModal', () => modal.style.display = 'none');
         };
 
         window.closeOptionsModal = function() {
+            if (nav) nav.popModalState('optionsModal');
             document.getElementById('optionsModal').style.display = 'none';
         };
 
@@ -1608,19 +1691,25 @@
             window.closeOptionsModal();
             const input = document.getElementById('newAmountInput');
             input.value = (selectedTxn.amount || 0).toLocaleString();
-            document.getElementById('editAmountModal').style.display = 'flex';
+            const modal = document.getElementById('editAmountModal');
+            modal.style.display = 'flex';
+            if (nav) nav.pushModalState('editAmountModal', () => modal.style.display = 'none');
         };
 
         window.closeEditModal = function() {
+            if (nav) nav.popModalState('editAmountModal');
             document.getElementById('editAmountModal').style.display = 'none';
         };
 
         window.openDeleteConfirmModal = function() {
             window.closeOptionsModal();
-            document.getElementById('deleteConfirmModal').style.display = 'flex';
+            const modal = document.getElementById('deleteConfirmModal');
+            modal.style.display = 'flex';
+            if (nav) nav.pushModalState('deleteConfirmModal', () => modal.style.display = 'none');
         };
 
         window.closeDeleteConfirmModal = function() {
+            if (nav) nav.popModalState('deleteConfirmModal');
             document.getElementById('deleteConfirmModal').style.display = 'none';
         };
 
@@ -1683,11 +1772,22 @@
         window.openIconPicker = function() {
             renderIconGrid();
             updateCustomImagePreview();
-            document.getElementById('iconPickerModal').style.display = 'flex';
+            const modal = document.getElementById('iconPickerModal');
+            modal.style.display = 'flex';
+            if (nav) nav.pushModalState('iconPickerModal', () => modal.style.display = 'none');
         };
 
         window.closeIconPicker = function() {
+            if (nav) nav.popModalState('iconPickerModal');
             document.getElementById('iconPickerModal').style.display = 'none';
+        };
+        
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal-overlay')) {
+                const modalId = event.target.id;
+                if (nav) nav.popModalState(modalId);
+                event.target.style.display = 'none';
+            }
         };
 
         function renderIconGrid() {
@@ -1854,6 +1954,114 @@
                 }
             });
         }
+
+        // Initialize NavState
+        if (window.NavState) {
+            window.NavState.quickInit('edit-goal.html', () => {
+                loadGoalData();
+                loadTransactionHistory();
+            });
+        }
+
+        // Wait for page to be "ready" after data load to fade in
+        window.addEventListener('load', () => {
+            // Initial check for loading state
+        });
+    </script>
+    <script>
+        // MODERN MATERIAL DESIGN PULL-TO-REFRESH
+        (function() {
+            const spinner = document.getElementById('ptrSpinner');
+            const circle = spinner ? spinner.querySelector('.ptr-circle') : null;
+            const mobileWrapper = document.querySelector('.mobile-wrapper') || document.body;
+            let startY = 0;
+            let pulling = false;
+            let isRefreshing = false;
+            const pullThreshold = 100; // Distance needed to trigger refresh
+            const maxPull = 140; // Maximum pull distance
+            
+            if (!spinner || !circle) return;
+            
+            mobileWrapper.addEventListener('touchstart', (e) => {
+                if (isRefreshing) return;
+                if (mobileWrapper.scrollTop <= 0) {
+                    startY = e.touches[0].clientY;
+                    pulling = true;
+                }
+            }, { passive: true });
+            
+            mobileWrapper.addEventListener('touchmove', (e) => {
+                if (!pulling || isRefreshing || mobileWrapper.scrollTop > 0) return;
+                
+                const currentY = e.touches[0].clientY;
+                const pullDistance = Math.max(0, currentY - startY);
+                
+                if (pullDistance > 10) {
+                    e.preventDefault();
+                    
+                    // Calculate progress with resistance (diminishing returns)
+                    const resistance = 0.5;
+                    const resistedPull = Math.min(pullDistance * resistance, maxPull);
+                    const progress = Math.min(pullDistance / pullThreshold, 1);
+                    
+                    // Show spinner dropping down
+                    spinner.classList.add('visible');
+                    spinner.style.transform = `translateY(${resistedPull - 60}px) scale(${0.6 + progress * 0.4}) rotate(${pullDistance * 2}deg)`;
+                    
+                    // Animate the SVG circle stroke
+                    const dashOffset = 60 - (progress * 45); // Fill from 0 to ~75%
+                    circle.style.strokeDashoffset = dashOffset;
+                    circle.style.transform = `rotate(${pullDistance * 3}deg)`;
+                }
+            }, { passive: false });
+            
+            mobileWrapper.addEventListener('touchend', () => {
+                if (!pulling || isRefreshing) return;
+                pulling = false;
+                
+                const currentTransform = spinner.style.transform;
+                const yMatch = currentTransform.match(/translateY\(([^p]+)px\)/);
+                const currentY = yMatch ? parseFloat(yMatch[1]) : -80;
+                
+                if (currentY > 30) {
+                    // Trigger refresh!
+                    isRefreshing = true;
+                    
+                    // Haptic feedback
+                    if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
+                    
+                    // Animate to refreshing state
+                    spinner.classList.add('refreshing');
+                    circle.style.strokeDashoffset = '';
+                    circle.style.transform = '';
+                    
+                    // Trigger sync
+                    console.log('🔄 Pull-to-refresh: Syncing goal details');
+                    
+                    // Force a fresh fetch from Firestore
+                    if (typeof loadGoalData === 'function') {
+                        loadGoalData();
+                        loadTransactionHistory();
+                    } else {
+                        window.location.reload();
+                    }
+                    
+                    // Hide after delay
+                    setTimeout(() => {
+                        spinner.classList.remove('refreshing', 'visible');
+                        spinner.style.transform = '';
+                        circle.style.strokeDashoffset = '60';
+                        isRefreshing = false;
+                    }, 1800);
+                } else {
+                    // Cancel - spring back
+                    spinner.classList.remove('visible');
+                    spinner.style.transform = '';
+                    circle.style.strokeDashoffset = '60';
+                    circle.style.transform = '';
+                }
+            });
+        })();
     </script>
 </body>
 </html>

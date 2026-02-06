@@ -15,6 +15,21 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     <link rel="manifest" href="manifest.json?v=2">
     <meta name="theme-color" content="#f8fafc">
+    
+    <!-- AUTH PERFORMANCE OPTIMIZATION (PRELOADS) -->
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js">
+    
+    <!-- SPEED UP FIREBASE AUTH POPUP -->
+    <link rel="preconnect" href="https://accounts.google.com">
+    <link rel="preconnect" href="https://atome-wallet.firebaseapp.com">
+    <link rel="dns-prefetch" href="https://accounts.google.com">
+    <link rel="dns-prefetch" href="https://atome-wallet.firebaseapp.com">
+    
+    <!-- GOOGLE IDENTITY SERVICES (EAGER LOAD) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
 <!-- <link rel="stylesheet" href="index.css"> -->
 
    
@@ -69,7 +84,7 @@
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
-            max-width: 430px;
+            max-width: 100%;
             height: 80px;
             display: flex;
             align-items: flex-start;
@@ -244,9 +259,9 @@
         #header.shrunk #profile-badge { transform: scale(0.8); }
         
         #profile-badge { width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top: 0; left: 0; }
         #profile-badge i { font-size: 24px; color: #94a3b8; display: block; }
-        #profile-badge.has-pic i { display: none; }
+        #profile-badge.has-pic i { opacity: 0; pointer-events: none; }
         #profile-badge.has-pic img { display: block; }
 
         /* PROFILE DROPDOWN MENU */
@@ -988,11 +1003,12 @@
         }
 
         /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
-        .nav-item:hover { text-decoration: none !important; color: #000; }
-        .nav-item.active { color: #000; }
-        .nav-item i { font-size: 24px; }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: stretch; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; transition: all 0.2s; border-radius: 12px; margin: 6px 4px; }
+        .nav-item:hover { background: #f1f5f9; color: #1e293b; text-decoration: none !important; }
+        .nav-item.active { color: #121212; }
+        .nav-item i { font-size: 24px; transition: transform 0.2s; }
+        .nav-item:hover i { transform: translateY(-2px); }
         .nav-item span { font-size: 11px; font-weight: 700; }
 
       
@@ -2243,7 +2259,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // HELPER: Format date to YYYY-MM-DD based on LOCAL time
         window.formatLocalDate = (date) => {
@@ -2268,6 +2284,156 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // GOOGLE AUTH CONSTANTS
+        const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile';
+        let tokenClient;
+        let accessToken = localStorage.getItem('g_access_token');
+        let expiry = localStorage.getItem('g_token_expiry');
+
+        // --- CORE AUTH HANDLERS (Moved early for reliability) ---
+        
+        // Identity Services Initialization
+        function initGIS() {
+            try {
+                log('Initializing Google Identity Services...');
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: async (resp) => {
+                        window.isSyncing = false;
+                        if (resp.error) {
+                            if (resp.error === 'immediate_failed') {
+                                log('🔒 Silent refresh failed (immediate_failed).');
+                                if (window.pendingSyncManual) {
+                                    log('🔄 Retrying with user popup...');
+                                    window.pendingSyncManual = false;
+                                    tokenClient.requestAccessToken({ prompt: '' });
+                                    return;
+                                }
+                            } else {
+                                log('Google Auth failed: ' + resp.error, 'error');
+                            }
+                            window.pendingSyncLimit = null;
+                            window.pendingSyncManual = false;
+                            return;
+                        }
+
+                        accessToken = resp.access_token;
+                        const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
+                        localStorage.setItem('g_access_token', accessToken);
+                        localStorage.setItem('g_token_expiry', expMs);
+                        localStorage.setItem('g_token_issued_at', Date.now());
+                        
+                        fetchUserProfile(accessToken);
+                        log('Google Session Secured (Token Refresh Success)');
+                        
+                        // PREPARE SYNC LIMITS (Adaptive Sync Logic - Reduced for instant feel)
+                        const lastDeep = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
+                        const now = Date.now();
+                        const dayInMs = 24 * 60 * 60 * 1000;
+                        let syncLimit = 25; // Default Quick Sync
+                        
+                        if (!lastDeep || (now - parseInt(lastDeep)) > dayInMs) {
+                            syncLimit = 50; // Moderate sync on auto-login (reduced from 400)
+                            log(`Moderate sync planned for ${window.currentAccount}...`);
+                        }
+
+                        if (window.pendingSyncLimit) {
+                            const limit = Math.max(window.pendingSyncLimit, syncLimit);
+                            window.pendingSyncLimit = null;
+                            window.pendingSyncManual = false;
+                            handleScan(limit, true);
+                        } else {
+                            handleScan(syncLimit);
+                        }
+                    },
+                });
+                const gisBadge = document.getElementById('gis-status');
+                if (gisBadge) {
+                    gisBadge.innerText = 'GIS: Ready';
+                    gisBadge.classList.add('status-ready');
+                }
+            } catch (e) { log('GIS Init Error: ' + e.message, 'error'); }
+        }
+        window.initGISModule = initGIS;
+
+        async function fetchUserProfile(token) {
+            try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.name) {
+                    const firstName = data.given_name || data.name.split(',')[0].split(' ').slice(0, 2).join(' ');
+                    document.getElementById('user-display-name').innerText = firstName;
+                    
+                    const badge = document.getElementById('profile-badge');
+                    const picEl = document.getElementById('user-pic');
+                    picEl.src = data.picture;
+                    badge.classList.add('has-pic');
+                    
+                    localStorage.setItem('user_name', firstName);
+                    localStorage.setItem('user_pic', data.picture);
+                    if (data.email) localStorage.setItem('user_email', data.email);
+                }
+            } catch (e) { log('Profile refresh fail: ' + e.message, 'error'); }
+        }
+
+        window.handleAuthClick = async () => {
+            log('Starting Google Sign-In Flow...');
+            // Zero-latency UI feedback
+            const btn = event?.currentTarget || document.activeElement;
+            if (btn && btn.classList) btn.style.opacity = '0.5';
+
+            try {
+                const provider = new GoogleAuthProvider(); // Use eager import from top level
+                provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+                
+                log('Calling signInWithPopup...');
+                const result = await signInWithPopup(auth, provider);
+                log('Popup success! User: ' + result.user.email);
+                
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                if (credential) {
+                    accessToken = credential.accessToken;
+                    const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
+                    localStorage.setItem('g_access_token', accessToken);
+                    localStorage.setItem('g_token_expiry', expMs);
+                    localStorage.setItem('g_token_issued_at', Date.now());
+                }
+
+                if (result.user.displayName) {
+                    const parts = result.user.displayName.split(' ');
+                    const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : parts[0];
+                    document.getElementById('user-display-name').innerText = firstName;
+                    localStorage.setItem('user_name', firstName);
+                }
+                
+                if (result.user.photoURL) {
+                    const picEl = document.getElementById('user-pic');
+                    let photoUrl = result.user.photoURL;
+                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                    }
+                    picEl.src = photoUrl;
+                    document.getElementById('profile-badge').classList.add('has-pic');
+                    localStorage.setItem('user_pic', photoUrl);
+                }
+
+                log('Loading user data...');
+                await loadData();
+                showToast('Signed in successfully!');
+                
+            } catch (e) {
+                log('Google Sign-In Error: ' + e.message, 'error');
+                console.error(e);
+                showToast('Login failed. Please try again.');
+            } finally {
+                if (btn && btn.classList) btn.style.opacity = '1';
+            }
+        };
+
 
         // UNIFIED PROMISE-BASED DIALOG SYSTEM
         window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, customActions = null, callback = null }) => {
@@ -2281,12 +2447,9 @@
                 const cancelBtn = document.getElementById('dialog-cancel-btn');
                 const okBtn = document.getElementById('dialog-ok-btn');
                 
-                // Clear and recreate default buttons if needed later? No, let's just show/hide them
-                // But for custom actions, we need a fresh start
                 if (customActions) {
                     okBtn.style.display = 'none';
                     cancelBtn.style.display = 'none';
-                    // Remove any old custom buttons
                     overlay.querySelectorAll('.custom-dialog-btn').forEach(b => b.remove());
                     
                     customActions.forEach(action => {
@@ -2316,11 +2479,11 @@
                 okBtn.innerText = (confirm || input) ? 'CONFIRM' : 'OK';
 
                 const close = (res) => {
+                    if (window.NavState) window.NavState.popModalState('app-dialog');
                     overlay.classList.remove('show');
-                    // Cleanup
                     okBtn.onclick = null;
                     cancelBtn.onclick = null;
-                    overlay.onclick = null; // Backdrop click
+                    overlay.onclick = null;
                     overlay.querySelectorAll('.custom-dialog-btn').forEach(b => b.remove());
                     
                     if (callback) callback(res);
@@ -2328,19 +2491,22 @@
                 };
 
                 okBtn.onclick = () => close(input ? inputEl.value : true);
-                cancelBtn.onclick = () => close(false);
+                cancelBtn.onclick = () => close(null);
                 
-                // NEW: Close on backdrop click (outside the card)
+                // Close on backdrop click (outside the card)
                 overlay.onclick = (e) => {
-                    if (e.target === overlay) close(false);
+                    if (e.target === overlay) close(null);
                 };
 
                 overlay.classList.add('show');
+                if (window.NavState) window.NavState.pushModalState('app-dialog', () => overlay.classList.remove('show'));
             });
         };
 
 
-        // ENABLE OFFLINE PERSISTENCE
+
+        // ENABLE OFFLINE PERSISTENCE (Synchronous - Required for popup auth)
+        // Must be called before any auth operations
         enableIndexedDbPersistence(db).catch((err) => {
             if (err.code == 'failed-precondition') {
                 log('Persistence failed: Multiple tabs open');
@@ -2349,6 +2515,7 @@
             }
         });
 
+
         // REGISTER SERVICE WORKER
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
@@ -2356,12 +2523,7 @@
                 .catch(err => console.log('SW Registration Failed', err));
         }
 
-        // GOOGLE AUTH CONSTANTS
-        const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com';
-        const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile';
-        let tokenClient;
-        let accessToken = localStorage.getItem('g_access_token');
-        let expiry = localStorage.getItem('g_token_expiry');
+        // GMAIL API LOGIC (Constants moved early)
 
         // GMAIL TOKEN STORAGE HELPER - Sets 1 year expiry instead of default 1 hour
         window.storeGmailToken = function(token) {
@@ -2414,17 +2576,13 @@
             log('🧹 Session purge complete. User isolated.', 'info');
         }
 
-        // INITIALIZE APP
         window.addEventListener('DOMContentLoaded', async () => {
-            log('SmartWallet Sync - v1.3.4 Active');
-            const origin = window.location.origin;
-            log('--- 🛡️ FINAL AUTH FIX ---', 'warn');
-            log('You see "Requested action is invalid" because your local server address is not authorized.', 'error');
-            log('1. Go to Firebase Console > Authentication > Settings > Authorized Domains');
-            log('2. Add BOTH "127.0.0.1" AND "localhost" to the list.', 'info');
-            log('3. Current URL: ' + window.location.href);
-            log('4. Ensure your server is running on ' + origin, 'info');
             log('-------------------------', 'warn');
+
+            // Load profile data early
+            if (window.NavState) {
+                window.NavState.loadProfile();
+            }
 
             // POPULATE DYNAMIC PREVIOUS 3 MONTHS IN EXPENSES DROPDOWN
             const chartFilter = document.getElementById('chart-filter');
@@ -2481,6 +2639,7 @@
                     
                     // Trigger data load using stored UID
                     // (loadData will use localStorage cache first internally)
+                    window.fastPathTriggered = true;
                     loadData(lastUid); 
                 } catch(e) { console.warn('Fast path failed', e); }
             }
@@ -2507,9 +2666,46 @@
                 log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
 
                 // Show login modal for non-anonymous users (only on fresh login)
-                if (!user.isAnonymous && !sessionStorage.getItem('login_modal_shown')) {
+                // PREVENT SHOWING ON TOP OF BIOMETRICS
+                const bioOverlay = document.getElementById('biometricOverlay');
+                const isBioShowing = bioOverlay && bioOverlay.classList.contains('show');
+
+                if (!user.isAnonymous && !sessionStorage.getItem('login_modal_shown') && !isBioShowing) {
                     sessionStorage.setItem('just_logged_in', 'true');
                     sessionStorage.setItem('login_modal_shown', 'true');
+                } else if (isBioShowing) {
+                    // Check again after biometric is hidden
+                    const checkBioInterval = setInterval(() => {
+                        if (!bioOverlay.classList.contains('show')) {
+                            clearInterval(checkBioInterval);
+                            if (!sessionStorage.getItem('login_modal_shown')) {
+                                sessionStorage.setItem('just_logged_in', 'true');
+                                sessionStorage.setItem('login_modal_shown', 'true');
+                            }
+                        }
+                    }, 500);
+                }
+
+                // Update UI with full first name
+                const fullName = user.displayName || (user.isAnonymous ? 'Guest' : 'User');
+                const parts = fullName.trim().split(/\s+/);
+                const displayName = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0];
+                const picUrl = user.photoURL || '';
+                
+                const nameEl = document.getElementById('user-display-name');
+                if (nameEl) nameEl.textContent = displayName;
+                
+                const badge = document.getElementById('profile-badge');
+                const picEl = document.getElementById('user-pic');
+                if (picEl && picUrl) {
+                    picEl.src = picUrl;
+                    picEl.style.display = 'block';
+                    if (badge) badge.classList.add('has-pic');
+                }
+
+                // Save to NavState for other pages
+                if (window.NavState && !user.isAnonymous) {
+                    window.NavState.saveProfile(fullName, picUrl, user.email);
                 }
 
                 // DYNAMIC ACCOUNT HUB
@@ -2583,7 +2779,12 @@
                         localStorage.setItem('wallet_current_account', current);
                         
                         applyAccountTheme(window.currentAccount, accounts);
-                        loadData(); 
+                        
+                        // Only load data if Fast Path didn't already trigger for this UID
+                        if (!window.fastPathTriggered || window.currentAccount !== localStorage.getItem('wallet_current_account')) {
+                            loadData(); 
+                        }
+                        window.fastPathTriggered = false; // Reset for future changes
                         
                         // AUTO-LOGIN GMAIL: Check token validity for admin users
                         if (isAdmin) {
@@ -2630,7 +2831,7 @@
         function updateProfileUI(user) {
             const dropdown = document.getElementById('profile-dropdown');
             if (user.isAnonymous) {
-                 dropdown.innerHTML = `
+                dropdown.innerHTML = `
                     <div class="dropdown-header">Guest Session</div>
                     <div class="dropdown-item" onclick="toggleDarkMode()">
                         <i class="material-icons" id="theme-icon">dark_mode</i>
@@ -2640,17 +2841,17 @@
                         <i class="material-icons">cloud_upload</i>
                         <span>Sign in with Google</span>
                     </div>
-                 `;
-                 document.getElementById('user-display-name').innerText = 'Guest';
-                 document.getElementById('profile-badge').classList.remove('has-pic');
+                `;
+                document.getElementById('user-display-name').innerText = 'Guest';
+                document.getElementById('profile-badge').classList.remove('has-pic');
             } else {
-                 dropdown.innerHTML = `
+                dropdown.innerHTML = `
                     <div class="dropdown-header">${user.email}</div>
                     <div class="dropdown-item" onclick="toggleDarkMode()">
                         <i class="material-icons" id="theme-icon">dark_mode</i>
                         <span id="theme-text">Dark Mode</span>
                     </div>
-                     <div class="dropdown-item" onclick="handleAuthClick()">
+                    <div class="dropdown-item" onclick="handleAuthClick()">
                         <i class="material-icons">swap_horiz</i>
                         <span>Switch Account</span>
                     </div>
@@ -2667,7 +2868,7 @@
                         <i class="material-icons">logout</i>
                         <span>Log Out</span>
                     </div>
-                 `;
+                `;
                  
                  // Initial status update
                  setTimeout(() => { if (typeof window.updateBiometricStatus === 'function') window.updateBiometricStatus(); }, 10);
@@ -3150,30 +3351,26 @@
 
         // FETCH TRANSACTIONS FROM FIRESTORE (REAL-TIME LISTENER)
         window.unsubscribeSnapshot = null; // Store listener to detach later
+        window.isDataLoading = false; 
 
         async function loadData(providedUid = null) {
+            const uid = providedUid || auth.currentUser?.uid;
+            if (!uid) return;
+
+            // PREVENT REDUNDANT CALLS: Early exit if already loading this specific account
+            const loadKey = `${uid}_${window.currentAccount}`;
+            if (window.lastLoadKey === loadKey && window.isDataLoading) {
+                console.log('⏳ Load already in progress for:', loadKey);
+                return;
+            }
+            window.lastLoadKey = loadKey;
+            window.isDataLoading = true;
+
             window.historyLimit = 6; 
             const container = document.getElementById('history-container');
             const spinner = document.getElementById('loading-spinner');
             
-            // HARD REFRESH LOGIC: If this is a page reload, clear cache to force fresh fetch
-            try {
-                const nav = performance.getEntriesByType("navigation")[0];
-                if (nav && nav.type === 'reload') {
-                    // Only clear the current account's cache to be efficient, or all if preferred.
-                    // Let's clear current account cache to fix perceived sync issues
-                    const uid = providedUid || auth.currentUser?.uid;
-                    if (uid) {
-                        log('Hard Reload Detected. Busting Cache...', 'warn');
-                        localStorage.removeItem(`wallet_cache_${uid}_${window.currentAccount}`);
-                        // Also clear deep/quick sync timestamps to force a scan if needed
-                        localStorage.removeItem(`last_deep_sync_${window.currentAccount}`);
-                        localStorage.removeItem(`last_quick_sync_${window.currentAccount}`);
-                    }
-                }
-            } catch(e) { console.warn('Nav timing not supported'); }
-            
-            // If already listening, don't re-attach unless we are forcing a reset (handling logic elsewhere)
+            // Clear existing listener if any
             if (window.unsubscribeSnapshot) {
                 window.unsubscribeSnapshot();
                 window.unsubscribeSnapshot = null;
@@ -3183,12 +3380,11 @@
             const currentSyncId = Date.now() + Math.random();
             window.activeSyncId = currentSyncId;
 
-            const uid = providedUid || auth.currentUser?.uid;
-            if (!uid) return;
-
             // INSTANT CACHE LOAD for seamless switching
             const cacheKey = `wallet_cache_${uid}_${window.currentAccount}`;
             const cachedData = localStorage.getItem(cacheKey);
+            let hasValidCache = false;
+
             if (cachedData) {
                 try {
                     const cache = JSON.parse(cachedData);
@@ -3198,6 +3394,7 @@
                         window.allTxns = cache.txns;
                         renderHistory(cache.txns);
                         updateBalanceToThisMonth(cache.txns);
+                        hasValidCache = true;
                         
                         // Robust Chart Initialization with slight delay to ensure DOM readiness
                         setTimeout(() => {
@@ -3208,12 +3405,27 @@
                             }
                         }, 100);
                         
-                        spinner.style.display = 'none'; 
+                        if (spinner) spinner.style.display = 'none'; 
                     }
                 } catch(e) { console.warn("Cache error", e); }
             }
 
-            spinner.style.display = 'block';
+            // SPINNER LOGIC: Only show if no cache is valid, or show with short delay
+            if (spinner) {
+                if (!hasValidCache) {
+                    spinner.style.display = 'block';
+                } else {
+                    // Cache exists: Only show spinner if data takes >500ms to arrive
+                    clearTimeout(window.spinnerTimeout);
+                    window.spinnerTimeout = setTimeout(() => {
+                        if (window.isDataLoading && spinner) {
+                            spinner.style.display = 'block';
+                            log('Cloud sync taking longer than expected...');
+                        }
+                    }, 500);
+                }
+            }
+
             try {
                 const isAnon = auth.currentUser.isAnonymous;
                 
@@ -3229,7 +3441,7 @@
                 const syncAccount = window.currentAccount; // Capture for closure check
                 window.unsubscribeSnapshot = onSnapshot(q, (snap) => {
                     // STALE CHECK: If user switched accounts while this listener was active
-                if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) {
+                    if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) {
                         return;
                     }
                     let txns = [];
@@ -3241,17 +3453,24 @@
                     snap.docs.forEach(d => {
                         const data = d.data();
                         if (data.deleted) return; 
-                        txns.push({ id: d.id, ...data });
+                        
+                        // PRE-CALCULATE SORT KEYS for performance
+                        const dateVal = new Date(data.date).getTime() || 0;
+                        const createVal = data.createdAt ? 
+                            (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : 0;
+                        
+                        txns.push({ 
+                            id: d.id, 
+                            _sortKey: dateVal, 
+                            _createKey: createVal, 
+                            ...data 
+                        });
                     });
 
-                    // Sort locally
+                    // Sort locally - Optimized (O(N log N) with fewer object creations)
                     txns.sort((a, b) => {
-                        const dateA = new Date(a.date).getTime();
-                        const dateB = new Date(b.date).getTime();
-                        if (dateB !== dateA) return dateB - dateA;
-                        const createA = a.createdAt ? (a.createdAt.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt).getTime()) : 0;
-                        const createB = b.createdAt ? (b.createdAt.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt).getTime()) : 0;
-                        return createB - createA;
+                        if (b._sortKey !== a._sortKey) return b._sortKey - a._sortKey;
+                        return b._createKey - a._createKey;
                     });
 
                     const isSame = prevTxns.length === txns.length && 
@@ -3286,10 +3505,19 @@
                     // Store globally & Cache with timestamp
                     window.allTxns = txns;
                     const currentAccCacheKey = `wallet_cache_${uid}_${syncAccount}`;
+                    
+                    // Cleanup internal sort keys before caching
+                    const cacheTxns = txns.map(({_sortKey, _createKey, ...t}) => t);
+                    
                     localStorage.setItem(currentAccCacheKey, JSON.stringify({
-                        txns: txns,
+                        txns: cacheTxns,
                         timestamp: Date.now()
                     }));
+                    
+                    // Reset loading state as data has arrived
+                    window.isDataLoading = false;
+                    clearTimeout(window.spinnerTimeout);
+                    if (spinner) spinner.style.display = 'none';
                     
                     updateBalanceToThisMonth(txns, syncAccount); 
 
@@ -3332,10 +3560,18 @@
                     }
                 }, (error) => {
                     log('Snapshot Error: ' + error.message, 'error');
+                    window.isDataLoading = false;
+                    if (spinner) spinner.style.display = 'none';
+                    clearTimeout(window.spinnerTimeout);
                 });
 
-                // Hide spinner immediately - don't wait for data to load
-                spinner.style.display = 'none';
+                // Clear loading state after listener is successfully attached
+                // The actual data processing happens in the listener
+                setTimeout(() => { 
+                    window.isDataLoading = false; 
+                    clearTimeout(window.spinnerTimeout);
+                    if (spinner) spinner.style.display = 'none';
+                }, 1000); // 1s safety margin for initial sync
 
                 window.highlightTransactions = (categoryName, categoryColor = null) => {
                     const items = document.querySelectorAll('.premium-txn');
@@ -5581,219 +5817,6 @@
             if (activeEl) activeEl.classList.add('active');
         };
 
-        // GOOGLE IDENTITY SERVICES
-        function initGIS() {
-            try {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID,
-                    scope: SCOPES,
-                    callback: async (resp) => {
-                        window.isSyncing = false;
-                        if (resp.error) {
-                            if (resp.error === 'immediate_failed') {
-                                console.log('🔒 Silent refresh failed (immediate_failed).');
-                                
-                                // If this was a manual trigger, retry with popup
-                                if (window.pendingSyncManual) {
-                                    console.log('🔄 Retrying with user popup since manual trigger...');
-                                    window.pendingSyncManual = false;
-                                    tokenClient.requestAccessToken({ prompt: '' });
-                                    return;
-                                }
-                                
-                                // Background sync - just update UI, no popup
-                                const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
-                                const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
-                                if (statusText) statusText.innerText = 'Tap to sync';
-                                
-                                const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
-                                if (btn) {
-                                    btn.disabled = false;
-                                    btn.innerHTML = '<i class="material-icons">sync</i>';
-                                }
-                            } else {
-                                log('Google Auth failed: ' + resp.error, 'error');
-                                // Reset buttons if they were spinning
-                                const activeCard = document.querySelector(`.balance-card[data-account="${window.currentAccount}"]`);
-                                const btn = activeCard ? activeCard.querySelector('.scan-btn') : null;
-                                if (btn) {
-                                    btn.disabled = false;
-                                    btn.innerHTML = '<i class="material-icons">sync</i>';
-                                }
-                            }
-                            window.pendingSyncLimit = null;
-                            window.pendingSyncManual = false;
-                            return;
-                        }
-
-                        accessToken = resp.access_token;
-                        // EXTEND PERSISTENCE: Logical expiry only, token still 1hr
-                        const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
-                        localStorage.setItem('g_access_token', accessToken);
-                        localStorage.setItem('g_token_expiry', expMs);
-                        localStorage.setItem('g_token_issued_at', Date.now());
-                        
-                        // Store user email for future silent refresh hints
-                        fetchUserProfile(accessToken).then(() => {
-                            // Email stored during profile fetch
-                        });
-                        
-                        log('Google Session Secured (Token Refresh Success)');
-                        
-                        // Handle pending sync if any
-                        if (window.pendingSyncLimit) {
-                            const limit = window.pendingSyncLimit;
-                            window.pendingSyncLimit = null;
-                            window.pendingSyncManual = false;
-                            handleScan(limit, true);
-                        } else {
-                            handleScan(300);
-                        }
-                    },
-                });
-                const gisBadge = document.getElementById('gis-status');
-                if (gisBadge) {
-                    gisBadge.innerText = 'GIS: Ready';
-                    gisBadge.classList.add('status-ready');
-                }
-            } catch (e) { log('GIS Init Error: ' + e.message, 'error'); }
-        }
-
-        // Expose init to global bridge
-        window.initGISModule = initGIS;
-        if (window.gisReadyPending) initGIS();
-
-        async function fetchUserProfile(token) {
-            try {
-                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (data.name) {
-                    const firstName = data.given_name || data.name.split(',')[0].split(' ').slice(0, 2).join(' ');
-                    document.getElementById('user-display-name').innerText = firstName;
-                    
-                    const badge = document.getElementById('profile-badge');
-                    const picEl = document.getElementById('user-pic');
-                    picEl.src = data.picture;
-                    badge.classList.add('has-pic');
-                    
-                    // Cache for persistence
-                    localStorage.setItem('user_name', firstName);
-                    localStorage.setItem('user_pic', data.picture);
-                    
-                    // Store email for silent refresh hint
-                    if (data.email) {
-                        localStorage.setItem('user_email', data.email);
-                    }
-                }
-            } catch (e) { log('Profile refresh fail: ' + e.message, 'error'); }
-        }
-
-        window.handleAuthClick = async () => {
-            log('Starting Google Sign-In...');
-            const prevUid = auth.currentUser?.uid;
-            const isAnonymous = auth.currentUser?.isAnonymous;
-
-            const provider = new GoogleAuthProvider();
-            provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-            
-            try {
-                log('Calling signInWithPopup... Browser should show a window.');
-                const result = await signInWithPopup(auth, provider);
-                log('Popup Result Received!');
-                
-                if (!result || !result.user) {
-                    log('Popup closed, but no user data found.', 'error');
-                    return;
-                }
-                
-                log('Sign-in success! Email: ' + result.user.email);
-                
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    accessToken = credential.accessToken;
-                    // EXTEND PERSISTENCE: Set logical expiry to 1 year
-                    const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
-                    localStorage.setItem('g_access_token', accessToken);
-                    localStorage.setItem('g_token_expiry', expMs);
-                    localStorage.setItem('g_token_issued_at', Date.now());
-                    log('Google Access Token secured.');
-                } else {
-                    log('Warning: Google Credential not returned, Gmail sync might wait.', 'warn');
-                }
-                
-                log('Sign-in successful.');
-                
-                const user = result.user;
-                if (user.displayName) {
-                    const parts = user.displayName.split(' ');
-                    // Always take first 2 parts (first name + middle name) if available
-                    const firstName = parts.length > 1 
-                                      ? parts.slice(0, 2).join(' ') 
-                                      : parts[0];
-                    document.getElementById('user-display-name').innerText = firstName;
-                    localStorage.setItem('user_name', firstName);
-                }
-                if (user.photoURL) {
-                    const badge = document.getElementById('profile-badge');
-                    const picEl = document.getElementById('user-pic');
-                    let photoUrl = user.photoURL;
-                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                    }
-                    picEl.src = photoUrl;
-                    badge.classList.add('has-pic');
-                    localStorage.setItem('user_pic', photoUrl);
-                } else {
-                    document.getElementById('profile-badge').classList.remove('has-pic');
-                }
-
-                /* DISABLED AUTO-MERGE FOR STRICT PRIVACY
-                   Only sync what's in the specific user's folder.
-                log('Checking for data to sync...');
-                // ... (Migration logic removed)
-                */
-                log('Cloud account active. Loading isolated user data...');
-
-                await loadData();
-                
-                // PREPARE SYNC LIMITS
-                const lastDeep = localStorage.getItem(`last_deep_sync_${window.currentAccount}`);
-                const now = Date.now();
-                const dayInMs = 24 * 60 * 60 * 1000;
-                let limit = 25; // Default Quick Sync
-                
-                if (!lastDeep || (now - parseInt(lastDeep)) > dayInMs) {
-                    limit = 400; // Deep Sync
-                    log(`Deep sync needed for ${window.currentAccount}...`);
-                }
-                
-                handleScan(limit);
-            } catch (error) {
-                log('Auth Error: ' + error.code, 'error');
-                log('Message: ' + error.message, 'error');
-                console.error('Detailed Auth Failure:', error);
-                
-                // Show high-visibility troubleshooter for common developer errors
-                if (error.code === 'auth/invalid-action-code' || 
-                    error.code === 'auth/unauthorized-domain' || 
-                    error.code === 'auth/configuration-not-found' ||
-                    error.message.includes('invalid action')) {
-                    
-                    const codeLabel = document.getElementById('auth-error-code');
-                    if (codeLabel) {
-                        codeLabel.innerText = error.code || 'Configuration Mismatch';
-                        document.getElementById('auth-trouble-modal').classList.add('show');
-                    }
-                } else if (error.code === 'auth/popup-closed-by-user') {
-                    showToast('Sign-in cancelled');
-                } else {
-                    showToast('Sign-in failed');
-                }
-            }
-        };
-        
         // PROFILE DROPDOWN LOGIC
         window.toggleProfileDropdown = (e) => {
             e.stopPropagation();
@@ -6007,9 +6030,13 @@
 
                     if (msgs.length === 0) break;
 
-                    const batchSize = 10;
-                    for (let i = 0; i < msgs.length; i += batchSize) {
-                        const batch = msgs.slice(i, i + batchSize);
+                    // OPTIMIZED BATCH WRITES: Use Firestore writeBatch for bulk commits
+                    const fetchBatchSize = 10;
+                    for (let i = 0; i < msgs.length; i += fetchBatchSize) {
+                        const batch = msgs.slice(i, i + fetchBatchSize);
+                        
+                        // Fetch email details in parallel
+                        const txnsToWrite = [];
                         const promises = batch.map(async (m) => {
                             try {
                                 const detailRes = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}`, { headers: { 'Authorization': `Bearer ${accessToken}` }});
@@ -6017,7 +6044,6 @@
                                 
                                 let txn = null;
                                 const fullBody = getBody(d.payload);
-                                // For parsing, we strip tags to handle HTML templates
                                 const cleanText = stripTags(fullBody) || d.snippet;
 
                                 if (syncAccount === 'atome') {
@@ -6034,54 +6060,59 @@
                                     const collectionName = getCollectionName(syncAccount);
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
-                                     const snap = await getDoc(docRef);
-                                     if (snap.exists()) {
-                                         // RESPECT DELETIONS & MANUAL EDITS: Skip if already exists
-                                         return false; 
-                                     } else {
-                                         await setDoc(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
-                                         
-                                         // USER REQUEST 2026: Automatic duplicate BPI "Credit Card Payment" to Atome
-                                         // Check by category OR merchant for robustness
-                                         const isAtomePayment = (txn.manualCategory === 'Credit Card Payment' || txn.merchant?.toUpperCase()?.includes('ATOME'));
-                                         console.log(`🔄 BPI Txn: ${txn.merchant} | Cat: ${txn.manualCategory} | Date: ${txn.date} | IsAtome: ${isAtomePayment}`);
-                                         
-                                         if (syncAccount === 'bpi' && isAtomePayment && txn.date >= '2026-01-01') {
-                                             const atomeCol = getCollectionName('atome');
-                                             const atomeTxnId = 'auto_' + txn.id;
-                                             const atomeDocRef = doc(db, "users", uid, atomeCol, atomeTxnId);
-                                             
-                                             try {
-                                                 const atomeSnap = await getDoc(atomeDocRef);
-                                                 if (!atomeSnap.exists()) {
-                                                     const atomeTxn = {
-                                                         ...txn,
-                                                         id: atomeTxnId,
-                                                         amount: Math.abs(txn.amount), // Invert to positive (Income) for Atome
-                                                         manualAmount: txn.manualAmount !== undefined ? Math.abs(txn.manualAmount) : undefined,
-                                                         manualCategory: 'Income',
-                                                         note: (txn.note || '') + ' (Auto-BPI)',
-                                                         duplicatedFrom: txn.id,
-                                                         duplicatedFromAccount: 'bpi'
-                                                     };
-                                                     await setDoc(atomeDocRef, { ...atomeTxn, deleted: false, createdAt: serverTimestamp() });
-                                                     console.log(`✅ Auto-duplicated ${txn.id} to Atome`);
-                                                 } else {
-                                                     console.log(`⏭️ Skipped auto-dup ${txn.id}: already exists in Atome`);
-                                                 }
-                                             } catch (e) {
-                                                 console.error("Auto-duplicate failed", e);
-                                             }
-                                         }
-                                     }
-                                    return true;
+                                    const snap = await getDoc(docRef);
+                                    if (!snap.exists()) {
+                                        return { txn, docRef, uid };
+                                    }
                                 }
-                            } catch (err) { return false; }
-                            return false;
+                            } catch (err) { return null; }
+                            return null;
                         });
                         
                         const results = await Promise.all(promises);
-                        savedCount += results.filter(Boolean).length;
+                        const validTxns = results.filter(Boolean);
+                        
+                        if (validTxns.length > 0) {
+                            // BATCH WRITE: Commit all new transactions at once
+                            const firestoreBatch = writeBatch(db);
+                            const uid = validTxns[0].uid;
+                            
+                            for (const {txn, docRef} of validTxns) {
+                                firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                
+                                // USER REQUEST 2026: Automatic duplicate BPI "Credit Card Payment" to Atome
+                                const isAtomePayment = (txn.manualCategory === 'Credit Card Payment' || txn.merchant?.toUpperCase()?.includes('ATOME'));
+                                
+                                if (syncAccount === 'bpi' && isAtomePayment && txn.date >= '2026-01-01') {
+                                    const atomeCol = getCollectionName('atome');
+                                    const atomeTxnId = 'auto_' + txn.id;
+                                    const atomeDocRef = doc(db, "users", uid, atomeCol, atomeTxnId);
+                                    
+                                    try {
+                                        const atomeSnap = await getDoc(atomeDocRef);
+                                        if (!atomeSnap.exists()) {
+                                            const atomeTxn = {
+                                                ...txn,
+                                                id: atomeTxnId,
+                                                amount: Math.abs(txn.amount),
+                                                manualAmount: txn.manualAmount !== undefined ? Math.abs(txn.manualAmount) : undefined,
+                                                manualCategory: 'Income',
+                                                note: (txn.note || '') + ' (Auto-BPI)',
+                                                duplicatedFrom: txn.id,
+                                                duplicatedFromAccount: 'bpi'
+                                            };
+                                            firestoreBatch.set(atomeDocRef, { ...atomeTxn, deleted: false, createdAt: serverTimestamp() });
+                                        }
+                                    } catch (e) {
+                                        console.error("Auto-duplicate check failed", e);
+                                    }
+                                }
+                            }
+                            
+                            await firestoreBatch.commit();
+                            savedCount += validTxns.length;
+                            console.log(`✅ Batch committed ${validTxns.length} transactions`);
+                        }
                     }
                     
                     totalProcessed += msgs.length;
@@ -7026,13 +7057,17 @@
             const overlays = document.querySelectorAll('.modal-overlay.show, .dialog-overlay.show');
             
             if (overlays.length > 0) {
-                overlays.forEach(m => m.classList.add('closing'));
+                overlays.forEach(m => {
+                    m.classList.add('closing');
+                    if (window.NavState) window.NavState.popModalState(m.id);
+                });
                 
                 // Allow animation to finish before removing show and cleaning up
                 setTimeout(() => {
                     overlays.forEach(m => {
                         m.classList.remove('show');
                         m.classList.remove('closing');
+                        m.style.display = 'none'; // Ensure hidden
                     });
                     cleanupModalState(wasModalOpen, fromPopState);
                 }, 300); // Sync with 0.3s CSS animations
@@ -7599,7 +7634,7 @@
             document.getElementById('manual-txn-modal').classList.add('show');
             
             // Push history state for back button handling
-            if (window.pushModalState) pushModalState('manual-txn');
+            if (window.NavState) window.NavState.pushModalState('manual-txn', () => window.closeModals());
             
             // Blur background
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
@@ -7675,12 +7710,9 @@
             renderManualCategories();
             document.getElementById('manual-txn-modal').classList.add('show');
             
-            // Push history state if not already handled by replaceModalState
-            if (window.modalOpen) {
-                // If modalOpen is already true, it means handleIOSAction 
-                // already called replaceModalState.
-            } else {
-                if (window.pushModalState) pushModalState('edit-txn');
+            // Push history state if not already handled
+            if (!window.modalOpen) {
+                if (window.NavState) window.NavState.pushModalState('edit-txn', () => window.closeModals());
             }
             
             // Blur background
@@ -8796,6 +8828,8 @@
         .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
         .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
         .manual-cat-item span { font-size: 10px !important; }
+        /* AUTH FEEDBACK */
+        .banner-pill-btn:active, .mui-btn:active { transform: scale(0.96); opacity: 0.8; transition: transform 0.1s, opacity 0.1s; }
     </style>
 
     <script>
@@ -9377,6 +9411,27 @@
                 }
             });
         })();
+    </script>
+    
+    <!-- Navigation State Management -->
+    <script src="nav-state.js"></script>
+    <script>
+        // Initialize NavState for index.html after DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.NavState) {
+                window.NavState.quickInit('index.html', () => {
+                    // Refresh callback - handled by pull-to-refresh above
+                    const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
+                    console.log('🔄 NavState refresh triggered for', currentAcc);
+                    
+                    if ((currentAcc === 'atome' || currentAcc === 'bpi') && typeof handleScan === 'function') {
+                        handleScan(50, true);
+                    } else if (typeof refreshUIForAccount === 'function') {
+                        refreshUIForAccount(currentAcc);
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>

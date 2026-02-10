@@ -160,8 +160,8 @@
         /* BIOMETRIC LOCK SCREEN */
         .biometric-overlay {
             position: fixed;
-            top: 0; left: 50%; transform: translateX(-50%); right: auto; bottom: 0;
-            width: 100%; max-width: 430px;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%;
             background: #000;
             z-index: 10000;
             display: none;
@@ -642,9 +642,10 @@
         .month-content > div:last-child { border-radius: 0 0 12px 12px; }
 
         /* TRANSACTION ITEM - PREMIUM REDESIGN */
-        .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.2s; background: #fff; }
+        .txn-item { padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); background: #fff; cursor: pointer; }
         .txn-item:last-child { border-bottom: none; }
         .txn-item:hover { background-color: #f8fafc; }
+        .txn-item:active { transform: scale(0.975); background-color: #f1f5f9; }
         
         .txn-left { display: flex; align-items: center; gap: 15px; flex: 1; }
         .txn-icon-box { min-width: 48px; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; position: relative; }
@@ -5939,48 +5940,37 @@
                 return;
             }
 
-            // SMART TOKEN VALIDATION: Trust token for 1 year unless explicitly sync fails
+            // SMART TOKEN VALIDATION: Refresh token if older than 50 minutes
             const storedToken = localStorage.getItem('g_access_token');
             const issuedAt = localStorage.getItem('g_token_issued_at');
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-            const isLogicalValid = storedToken && issuedAt && (Date.now() - parseInt(issuedAt) < ONE_YEAR_MS);
+            const FIFTY_MINS_MS = 50 * 60 * 1000;
+            const isLogicalValid = storedToken && issuedAt && (Date.now() - parseInt(issuedAt) < FIFTY_MINS_MS);
             
             if (isLogicalValid) {
-                console.log('🚀 Using stored Gmail token (1-year persistence trusted)...');
+                console.log('🚀 Using valid stored Gmail token...');
                 accessToken = storedToken;
-            } else if (storedToken) {
-                // Only validate if it's older than 1 year or missing issuedAt
-                console.log('🔍 Validating old Gmail token...');
+            } else if (storedToken || tokenClient) {
+                console.log('🔄 Token expired or missing issued_at. Attempting silent refresh...');
                 try {
-                    const validateRes = await fetch('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=' + storedToken);
-                    if (validateRes.ok) {
-                        accessToken = storedToken;
-                        localStorage.setItem('g_token_issued_at', Date.now().toString());
-                    } else if (tokenClient) {
-                        console.log('🔄 Token truly expired. Refreshing...');
-                        window.pendingSyncLimit = limit;
-                        window.pendingSyncManual = manualTrigger;
-                        tokenClient.requestAccessToken({ 
-                            prompt: manualTrigger ? '' : 'none',
-                            hint: localStorage.getItem('user_email') || undefined
-                        });
-                        return;
-                    }
+                    // Start refresh process
+                    window.pendingSyncLimit = limit;
+                    window.pendingSyncManual = manualTrigger;
+                    
+                    // Silent refresh if not manual, or if we want to avoid popup
+                    tokenClient.requestAccessToken({ 
+                        prompt: manualTrigger ? '' : 'none',
+                        hint: localStorage.getItem('user_email') || undefined
+                    });
+                    return; // initGIS callback will re-trigger handleScan
                 } catch (e) {
-                    accessToken = storedToken; // Try anyway if network fails
+                    console.error('Refresh request failed', e);
+                    if (storedToken) accessToken = storedToken; // Fallback to old token
                 }
             } else if (!storedToken) {
-                // No stored token at all
-                if (!manualTrigger) {
-                    console.log('🔇 Background sync skipped: No Gmail token stored.');
-                    const activeCard = document.querySelector(`.balance-card[data-account="${syncAccount}"]`);
-                    const statusText = activeCard ? activeCard.querySelector('.syncStatusText') : null;
-                    if (statusText) statusText.innerText = 'Log in to sync';
-                    return;
-                }
-                // Manual trigger with no token - show login popup
+                // No token at all
+                if (!manualTrigger) return;
+                
                 if (tokenClient) {
-                    console.log('🔑 No token. Requesting new authorization...');
                     window.pendingSyncLimit = limit;
                     tokenClient.requestAccessToken({ prompt: '' });
                     return;
@@ -6093,24 +6083,27 @@
                             for (const {txn, docRef} of validTxns) {
                                 firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
                                 
-                                // USER REQUEST 2026: Automatic duplicate BPI "Credit Card Payment" to Atome
-                                const isAtomePayment = (txn.manualCategory === 'Credit Card Payment' || txn.merchant?.toUpperCase()?.includes('ATOME'));
-                                
-                                if (syncAccount === 'bpi' && isAtomePayment && txn.date >= '2026-01-01') {
+                                // USER REQUEST 2026: Automatic duplicate BPI "Atome Payment" to Atome
+                                const merchantLower = txn.merchant?.toLowerCase() || '';
+                                const categoryLower = txn.manualCategory?.toLowerCase() || '';
+                                const isAtomePayment = merchantLower.includes('atome') || categoryLower.includes('credit card payment');
+
+                                if (syncAccount === 'bpi' && isAtomePayment) {
                                     const atomeCol = getCollectionName('atome');
                                     const atomeTxnId = 'auto_' + txn.id;
                                     const atomeDocRef = doc(db, "users", uid, atomeCol, atomeTxnId);
-                                    
+
                                     try {
                                         const atomeSnap = await getDoc(atomeDocRef);
                                         if (!atomeSnap.exists()) {
+                                            log(`Auto-duplicating ${txn.merchant} to Atome wallet...`);
                                             const atomeTxn = {
                                                 ...txn,
                                                 id: atomeTxnId,
                                                 amount: Math.abs(txn.amount),
                                                 manualAmount: txn.manualAmount !== undefined ? Math.abs(txn.manualAmount) : undefined,
                                                 manualCategory: 'Income',
-                                                note: (txn.note || '') + ' (Auto-BPI)',
+                                                note: (txn.note || '') + ' (BPI Sync)',
                                                 duplicatedFrom: txn.id,
                                                 duplicatedFromAccount: 'bpi'
                                             };
@@ -6709,7 +6702,12 @@
             `).join('');
             
             // Show modal
-            document.getElementById('duplicate-modal').classList.add('show');
+            const dupModal = document.getElementById('duplicate-modal');
+            if (dupModal) {
+                dupModal.style.display = 'flex'; // Reset inline style
+                dupModal.classList.add('show');
+            }
+            window.modalOpen = true;
             const fab = document.querySelector('.fab');
             if (fab) {
                 fab.classList.add('clicked');
@@ -6911,7 +6909,12 @@
         window.openDeleteModal = (id, accId) => {
             currentTxnId = id;
             currentDeletionAccount = accId || window.currentAccount;
-            document.getElementById('delete-modal').classList.add('show');
+            const delModal = document.getElementById('delete-modal');
+            if (delModal) {
+                delModal.style.display = 'flex'; // Reset inline style
+                delModal.classList.add('show');
+            }
+            window.modalOpen = true;
             const fab = document.querySelector('.fab');
             if (fab) {
                 fab.classList.add('clicked');
@@ -7243,7 +7246,12 @@
                 }
             };
             
-            document.getElementById('note-modal').classList.add('show');
+            const noteModal = document.getElementById('note-modal');
+            if (noteModal) {
+                noteModal.style.display = 'flex'; // Reset inline style
+                noteModal.classList.add('show');
+            }
+            window.modalOpen = true;
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
@@ -7565,31 +7573,43 @@
             const btnInc = document.getElementById('btn-income');
             
             if (type === 'expense') {
-                btnExp.style.background = '#ef4444'; 
-                btnExp.style.color = '#fff';
-                btnExp.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.3)';
+                if (btnExp) {
+                    btnExp.style.background = '#ef4444'; 
+                    btnExp.style.color = '#fff';
+                    btnExp.style.boxShadow = '0 4px 10px rgba(239, 68, 68, 0.3)';
+                }
                 
-                btnInc.style.background = 'transparent';
-                btnInc.style.color = '#64748b';
-                btnInc.style.boxShadow = 'none';
+                if (btnInc) {
+                    btnInc.style.background = 'transparent';
+                    btnInc.style.color = '#64748b';
+                    btnInc.style.boxShadow = 'none';
+                }
                 
                 // Show category section for expenses
-                document.getElementById('category-section').style.display = 'block';
+                const catSection = document.getElementById('category-section');
+                if (catSection) catSection.style.display = 'block';
                 if (!window.editingTxnId) selectedManualCatId = 'Financial Expenses';
             } else {
-                btnInc.style.background = '#10b981';
-                btnInc.style.color = '#fff';
-                btnInc.style.boxShadow = '0 4px 10px rgba(16, 185, 129, 0.3)';
+                if (btnInc) {
+                    btnInc.style.background = '#10b981';
+                    btnInc.style.color = '#fff';
+                    btnInc.style.boxShadow = '0 4px 10px rgba(16, 185, 129, 0.3)';
+                }
                 
-                btnExp.style.background = 'transparent';
-                btnExp.style.color = '#64748b';
-                btnExp.style.boxShadow = 'none';
+                if (btnExp) {
+                    btnExp.style.background = 'transparent';
+                    btnExp.style.color = '#64748b';
+                    btnExp.style.boxShadow = 'none';
+                }
                 
                 // Hide category section for income (only one category)
-                document.getElementById('category-section').style.display = 'none';
+                const catSection = document.getElementById('category-section');
+                if (catSection) catSection.style.display = 'none';
                 selectedManualCatId = 'Income';
             }
-            renderManualCategories();
+            if (typeof renderManualCategories === 'function') {
+                renderManualCategories();
+            }
         };
 
         window.updateManualAccountUI = (val) => {
@@ -7637,23 +7657,33 @@
             
             // Enable Button
             const btn = document.getElementById('done-btn');
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
+            if (btn) {
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+                btn.innerText = 'Done';
+            }
             
             // Update modal title
-            document.getElementById('modal-title').innerText = 'New Transaction';
+            const titleEl = document.getElementById('modal-title');
+            if (titleEl) titleEl.innerText = 'New Transaction';
 
-            renderManualCategories();
-            document.getElementById('manual-txn-modal').classList.add('show');
+            if (typeof renderManualCategories === 'function') {
+                renderManualCategories();
+            }
+            
+            const modal = document.getElementById('manual-txn-modal');
+            if (modal) {
+                modal.style.display = 'flex'; // Reset inline style from closeModals
+                modal.classList.add('show');
+            }
+            window.modalOpen = true;
             
             // Push history state for back button handling
             if (window.NavState) window.NavState.pushModalState('manual-txn', () => window.closeModals());
             
-            // Blur background
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
-
+            // Remove global blur to fix blurry modal content issues
+            // document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+            
             setTimeout(() => document.getElementById('manual-amt').focus(), 300);
             
             // Add Enter key to save transaction
@@ -7679,8 +7709,8 @@
             window.originalAccount = window.currentAccount || (txnId.startsWith('bpi_') ? 'bpi' : 'atome'); 
             
             // Find the transaction to get all its data
-            const txn = window.allTxns.find(t => t.id === txnId);
-            if (!txn) return;
+            const txn = (window.allTxns || []).find(t => t.id === txnId);
+            const dateValue = txn ? txn.date : new Date();
             
             // Populate fields
             document.getElementById('manual-amt').value = amount;
@@ -7690,50 +7720,61 @@
             // Dynamic Account Population
             const select = document.getElementById('manual-account');
             const accounts = window.walletAccounts || [];
-            select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+            if (accounts.length > 0) {
+                select.innerHTML = accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
+            }
 
             // Set to account that holds this txn
             const activeAcc = window.originalAccount || window.currentAccount || 'atome';
-            select.value = activeAcc;
+            if (select.querySelector(`option[value="${activeAcc}"]`)) {
+                select.value = activeAcc;
+            }
             updateManualAccountUI(activeAcc);
             
             // Set date
-            const d = formatLocalDate(new Date(txn.date));
+            const d = formatLocalDate(new Date(dateValue));
             document.getElementById('manual-date').value = d;
             
             // Set category
-            selectedManualCatId = txn.manualCategory || category;
+            selectedManualCatId = (txn && txn.manualCategory) ? txn.manualCategory : category;
             
             // Determine type based on category
-            if (category === 'Income') {
+            if (selectedManualCatId === 'Income' || category === 'Income') {
                 setTxnType('income');
             } else {
                 setTxnType('expense');
             }
             
-            // Disable Button to prevent double taps
+            // Enable Button
             const btn = document.getElementById('done-btn');
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
-            btn.innerHTML = 'Done';
+            if (btn) {
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+                btn.innerText = 'Done';
+            }
             
             // Update modal title
-            document.getElementById('modal-title').innerText = 'Edit Transaction';
+            const titleEl = document.getElementById('modal-title');
+            if (titleEl) titleEl.innerText = 'Edit Transaction';
 
             renderManualCategories();
-            document.getElementById('manual-txn-modal').classList.add('show');
+            const modal = document.getElementById('manual-txn-modal');
+            if (modal) {
+                modal.style.display = 'flex'; // Reset inline style from closeModals
+                modal.classList.add('show');
+            }
+            window.modalOpen = true;
             
-            // Push history state if not already handled
+            // Push history state if not already handled by replaceModalState
             if (!window.modalOpen) {
                 if (window.NavState) window.NavState.pushModalState('edit-txn', () => window.closeModals());
             }
             
-            // Blur background
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            // Removed global blurring to match manual modal fix
             
             setTimeout(() => document.getElementById('manual-amt').focus(), 100);
+            
+            // ... (handleEnterKey logic remains the same)
             
             // Add Enter key to save transaction
             const handleEnterKey = (e) => {

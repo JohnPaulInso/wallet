@@ -84,7 +84,7 @@
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
-            max-width: 100%;
+            max-width: 430px;
             height: 80px;
             display: flex;
             align-items: flex-start;
@@ -160,7 +160,8 @@
         /* BIOMETRIC LOCK SCREEN */
         .biometric-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0; left: 50%; transform: translateX(-50%); right: auto; bottom: 0;
+            width: 100%; max-width: 430px;
             background: #000;
             z-index: 10000;
             display: none;
@@ -718,7 +719,7 @@
         .cat-income { background: #dcfce7; color: #16a34a; }
 
         /* MODAL STYLES */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.show { display: flex; opacity: 1; }
         .custom-modal { background: #fff; width: 92%; max-width: 380px; border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -1322,7 +1323,7 @@
         }
         
         /* iOS-STYLE LONG-PRESS BLUR EFFECT */
-        .blur-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 2000; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        .blur-overlay { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 2000; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
         .blur-overlay.active { opacity: 1; pointer-events: auto; visibility: visible; }
         
         /* Global Blur - only content areas, NOT header/bottom-nav */
@@ -1348,8 +1349,8 @@
             display: none; 
             position: fixed; 
             background: rgba(255,255,255,0.98); 
-            backdrop-filter: blur(40px); 
-            -webkit-backdrop-filter: blur(40px); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
             border-radius: 14px; 
             padding: 4px; 
             box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
@@ -1401,7 +1402,8 @@
         
         /* APP DIALOG MODAL (REPLACES ALERT/PROMPT/CONFIRM) */
         .dialog-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            position: fixed; top: 0; left: 50%; transform: translateX(-50%); right: auto; bottom: 0;
+            width: 100%; max-width: 430px;
             background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
             display: flex; align-items: center; justify-content: center; z-index: 99999;
             opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 20px;
@@ -1431,7 +1433,8 @@
 
         .guest-gate-overlay {
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
+            top: 0; left: 50%; transform: translateX(-50%); right: auto; bottom: 0;
+            width: 100%; max-width: 430px;
             background: rgba(18, 18, 18, 0.6);
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
@@ -1765,6 +1768,15 @@
     </div>
 
     <div class="mobile-wrapper">
+        <script>
+            // Safety shim: Ensure handleAuthClick exists immediately
+            if (!window.handleAuthClick) {
+                window.handleAuthClick = () => {
+                   console.log('⏳ Auth module loading... please wait.');
+                   // Optional: show a small toast or spinner
+                };
+            }
+        </script>
         <!-- GUEST LOGIN GATE -->
         <div id="guestGate" class="guest-gate-overlay" style="display: none;">
             <div class="guest-gate-card">
@@ -2196,7 +2208,7 @@
 
     <!-- BOTTOM NAV -->
     <div class="bottom-nav">
-        <a href="javascript:void(0)" class="nav-item active" onclick="window.location.href='index.html'; return false;" oncontextmenu="return false;" draggable="false">
+        <a href="#" class="nav-item active" onclick="return false;" oncontextmenu="return false;" draggable="false">
             <i class="material-icons">account_balance_wallet</i>
             <span>Wallet</span>
         </a>
@@ -2258,7 +2270,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // HELPER: Format date to YYYY-MM-DD based on LOCAL time
@@ -2391,6 +2403,7 @@
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
                 log('Calling signInWithPopup...');
+                await setPersistence(auth, browserLocalPersistence);
                 const result = await signInWithPopup(auth, provider);
                 log('Popup success! User: ' + result.user.email);
                 

@@ -2316,6 +2316,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Pre-set persistence to avoid delay in click handler
+        setPersistence(auth, browserLocalPersistence).catch(e => console.error("Persistence error", e));
+
         // GOOGLE AUTH CONSTANTS
         const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile';
@@ -2422,11 +2425,10 @@
                 const provider = new GoogleAuthProvider();
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
-                await setPersistence(auth, browserLocalPersistence);
-
-                log('Attempting signInWithPopup...');
+                // NO AWAIT HERE: Call popup immediately to preserve user gesture
                 try {
                     const result = await signInWithPopup(auth, provider);
+                    log('Attempting signInWithPopup...');
                     handleAuthResult(result);
                 } catch (popupError) {
                     // Check if popup was blocked or if error indicates redirect is needed

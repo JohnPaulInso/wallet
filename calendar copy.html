@@ -4,26 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SmartWallet - Calendar</title>
-    <link rel="icon" type="image/png" href="applogo.png?v=3">
-    <link rel="apple-touch-icon" href="applogo.png">
+    <link rel="icon" type="image/png" href="applogo.png?v=4">
+    <link rel="apple-touch-icon" href="applogo.png?v=4">
     
     <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1d4ed8">
+    <link rel="manifest" href="manifest.json?v=1">
+    <meta name="theme-color" content="#121212">
 
     <style>
         * { box-sizing: border-box; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
         html, body { background: #f0f2f5; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         
-        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; min-height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
+        .mobile-wrapper { width: 100%; max-width: 430px; background: #fff; height: 100vh; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; padding-bottom: 90px; }
         @media (min-width: 431px) { .mobile-wrapper { height: 100vh; overflow-y: scroll; } }
 
-        #header { padding: 30px 24px 20px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
-        .header-title { font-size: 24px; font-weight: 800; color: #1e293b; }
+        #header { padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #fff; position: sticky; top: 0; z-index: 500; border-bottom: 1px solid rgba(0,0,0,0.02); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
+        .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
+        #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
+        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
+        #header.shrunk .user-name { font-size: 15px; }
         
+        .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #header.shrunk .header-logo { width: 40px; height: 25px; }
+        
+        #profile-badge { transition: all 0.3s ease; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #header.shrunk #profile-badge { transform: scale(0.8); }
+        
+        #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        #profile-badge i { font-size: 24px; color: #94a3b8; display: block; }
+        #profile-badge.has-pic i { display: none; }
+        #profile-badge.has-pic img { display: block; }
+
+        /* PROFILE DROPDOWN MENU */
+        .profile-container { position: relative; }
+        .profile-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            min-width: 200px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 2000;
+            border: 1px solid #f1f5f9;
+            padding: 6px;
+        }
+        .profile-dropdown.active { display: flex; animation: dropIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes dropIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .dropdown-item {
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .dropdown-item:hover { background: #f8fafc; color: #1e293b; }
+        .dropdown-item i { font-size: 20px; color: #94a3b8; }
+        .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
+        .dropdown-item.logout i { color: #ef4444; }
+        .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+
         .mui-container { width: 100%; max-width: 100% !important; margin: 0; padding: 0 20px; }
 
         /* CALENDAR STYLES */
@@ -166,15 +219,15 @@
         .txn-chip-icon i { font-size: 24px; color: inherit; }
         
         .txn-chip-info { flex: 1; display: flex; flex-direction: column; gap: 0.5px; min-width: 0; }
-        .txn-chip-name { font-size: 10px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .txn-chip-meta { font-size: 7.5px; color: #94a3b8; font-weight: 500; display: flex; align-items: center; gap: 4px; }
-        .txn-chip-note { font-size: 8px; font-weight: 700; margin-top: 1px; }
+        .txn-chip-name { font-size: 12px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .txn-chip-meta { font-size: 9.5px; color: #94a3b8; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+        .txn-chip-note { font-size: 10px; font-weight: 700; margin-top: 1px; }
         
         .txn-chip-amount-wrapper { text-align: right; flex-shrink: 0; }
-        .txn-chip-amount { font-size: 10px; font-weight: 700; color: #1e293b; }
+        .txn-chip-amount { font-size: 12.5px; font-weight: 700; color: #1e293b; }
         .txn-chip.income .txn-chip-amount { color: #10B981; }
         .txn-chip.expense .txn-chip-amount { color: #ef4444; }
-        .txn-chip-status { font-size: 7px; color: #cbd5e1; font-weight: 600; }
+        .txn-chip-status { font-size: 9px; color: #cbd5e1; font-weight: 600; }
 
 
         /* SUMMARY PILLS */
@@ -186,12 +239,19 @@
         .income-pill .pill-value { color: #16a34a; }
 
         /* BOTTOM NAV */
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 80px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 75px; background: #fff; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; align-items: center; padding: 0 10px; z-index: 1000; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; cursor: pointer; text-decoration: none; padding: 10px; transition: all 0.2s; }
-        .nav-item:hover { text-decoration: none !important; color: #1d4ed8; }
-        .nav-item.active { color: #1d4ed8; }
+        .nav-item:hover { text-decoration: none !important; color: #121212; }
+        .nav-item.active { color: #121212; }
         .nav-item i { font-size: 24px; }
         .nav-item span { font-size: 11px; font-weight: 700; }
+
+        /* GUEST GATE OVERLAY */
+        .guest-gate-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .guest-gate-card { background: #fff; padding: 32px 24px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .guest-gate-btn { background: #121212; color: #fff; border: none; padding: 14px 28px; border-radius: 50px; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s; width: 100%; justify-content: center; }
+        .guest-gate-btn:active { transform: scale(0.96); }
 
         /* CUSTOM CONTENT SECTION */
         .custom-section { margin-top: 32px; padding: 24px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 28px; color: #fff; position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
@@ -212,13 +272,13 @@
         .modal-overlay.show { display: flex; }
         .modal-content { background: #fff; border-radius: 28px; width: 95%; max-width: 400px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fff; z-index: 10; flex-shrink: 0; }
-        .modal-title { font-size: 16px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
+        .modal-title { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px; }
         .modal-close { width: 32px; height: 32px; border-radius: 50%; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); color: #64748b; }
         .modal-close:hover { background: #fee2e2; color: #dc2626; border-color: #fecaca; transform: scale(1.1) rotate(90deg); }
         .modal-close:active { transform: scale(0.95) rotate(90deg); }
         .modal-body { padding: 16px 20px 20px; flex: 1; overflow-y: auto; }
         .modal-category-group { margin-bottom: 20px; }
-        .modal-category-header { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .modal-category-header { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
         .modal-category-icon { width: 28px; height: 28px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; background: currentColor; }
         .modal-cat-txns { display: flex; flex-direction: column; gap: 4px; }
         
@@ -240,10 +300,10 @@
         }
         .modal-summary-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .modal-summary-row:last-child { margin-bottom: 0; padding-top: 12px; border-top: 1px solid #f1f5f9; }
-        .modal-summary-label { font-size: 9.5px; font-weight: 700; color: #64748b; }
-        .modal-summary-value { font-size: 10.5px; font-weight: 800; }
-        .modal-summary-row.total .modal-summary-label { font-size: 11px; color: #1e293b; font-weight: 800; }
-        .modal-summary-row.total .modal-summary-value { font-size: 12.5px; color: #ef4444; font-weight: 800; }
+        .modal-summary-label { font-size: 11.5px; font-weight: 700; color: #64748b; }
+        .modal-summary-value { font-size: 13px; font-weight: 800; }
+        .modal-summary-row.total .modal-summary-label { font-size: 13px; color: #1e293b; font-weight: 800; }
+        .modal-summary-row.total .modal-summary-value { font-size: 15px; color: #ef4444; font-weight: 800; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { transform: translateY(40px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
@@ -254,12 +314,61 @@
 <body>
 
     <div class="mobile-wrapper">
-        <div id="header">
-            <div class="header-title">Calendar</div>
-            <div id="profile-badge" style="width: 40px; height: 40px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <i class="material-icons" style="color: #94a3b8;">person</i>
-                <img id="user-pic" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+        <!-- GUEST LOGIN GATE -->
+        <div id="guestGate" class="guest-gate-overlay">
+            <div class="guest-gate-card">
+                <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
+                    <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
+                </div>
+                <div>
+                    <h2 style="font-size: 22px; font-weight: 900; color: #121212; margin: 0 0 10px 0;">Sign in Required</h2>
+                    <p style="font-size: 14px; color: #64748b; margin: 0; line-height: 1.6;">To view your spending history and calendar, please sign in with Google first.</p>
+                </div>
+                <button class="guest-gate-btn" onclick="handleAuthClick()">
+                    <svg viewBox="0 0 48 48" width="20px" xmlns="http://www.w3.org/2000/svg"><path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" fill="#FFF"/></svg>
+                    Continue with Google
+                </button>
             </div>
+        </div>
+
+        <div id="header">
+            <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
+                <!-- Dynamic Card Icon -->
+                <svg id="header-card-icon" class="header-logo" viewBox="0 0 48 30" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Card Background -->
+                    <rect width="48" height="30" rx="4" fill="#1a1a1a" id="card-bg"/>
+                    
+                    <!-- Mastercard Logo (bottom right) -->
+                    <g transform="translate(32, 20)">
+                        <circle cx="4" cy="4" r="3.5" fill="#eb001b" opacity="0.9"/>
+                        <circle cx="8" cy="4" r="3.5" fill="#f79e1b" opacity="0.9"/>
+                    </g>
+                    
+                    <!-- Card Chip (optional detail) -->
+                    <rect x="6" y="8" width="8" height="6" rx="1" fill="#d4af37" opacity="0.3"/>
+                </svg>
+                
+                <div class="greeting-section">
+                    <div class="greeting-text">Hello,</div>
+                    <div class="user-name" id="user-display-name">Guest</div>
+                </div>
+            </div>
+            <div class="profile-container">
+            <div id="profile-badge" onclick="toggleProfileDropdown(event)">
+                <i class="material-icons">person</i>
+                <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
+            </div>
+            <div id="profile-dropdown" class="profile-dropdown">
+                <div class="dropdown-item" onclick="handleAuthClick()">
+                    <i class="material-icons">sync</i>
+                    <span>Google Sync</span>
+                </div>
+                <div class="dropdown-item logout" onclick="handleSignout()">
+                    <i class="material-icons">logout</i>
+                    <span>Log Out</span>
+                </div>
+            </div>
+        </div>
         </div>
 
         <div class="mui-container">
@@ -355,32 +464,287 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        window.getCollectionName = (accId) => {
+            if (accId === 'atome') return "transactions";
+            if (accId === 'bpi') return "bpi_transactions";
+            return `txns_${accId}`;
+        };
+
+        const CATEGORIES = [
+            { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
+            { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
+            { id: 'Vehicle', icon: 'local_gas_station', label: 'Vehicle', cls: 'cat-vehicle' },
+            { id: 'Food & Drinks', icon: 'restaurant', label: 'Food & Drinks', cls: 'cat-food' },
+            { id: 'Service', icon: 'settings_cell', label: 'Service', cls: 'cat-service-magenta' },
+            { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
+            { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
+            { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
+            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
+            { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
+            { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
+            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
+            { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
+            { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
+        ];
+
+        function displayCategoryName(id) {
+            const cat = CATEGORIES.find(c => c.id === id);
+            return cat ? cat.label : id;
+        }
+
+        function getMerchantDisplay(name = '', t = {}) {
+            let raw = name.toUpperCase();
+            let cleaned = name.replace(/\s+PHL$/i, '').replace(/\s+CEBU\s+CITY\s+PHL$/i, '').replace(/\s+CEBU\s+CITY$/i, '').replace(/\s+DUBAI\s+ARE$/i, '').replace(/\s+LONDON\s+GBR$/i, '').replace(/\s+PH\s+PHL$/i, '').replace(/\s+PH$/i, '').trim();
+            if (cleaned.toUpperCase().includes('GADC') || cleaned.toUpperCase().includes('MCDONALDS') || cleaned.toUpperCase().includes('MCDO')) {
+                let u = cleaned.toUpperCase();
+                if (u.includes('SOUTHCBU') || u.includes('325CLN')) cleaned = 'MCDONALDS SOUTH CEBU';
+                else { cleaned = cleaned.replace(/(GADC|MCDONALDS|MCDO)/i, 'MCDONALDS').trim(); cleaned = cleaned.replace(/MCDONALDS\s+\d+[A-Z]*/i, 'MCDONALDS').trim(); }
+            }
+            if (cleaned.toUpperCase().includes('JOLLIBEE')) cleaned = cleaned.replace(/JB\d+\s+\w+/i, '').trim();
+            if (cleaned.toUpperCase().includes('RIBSHACK')) cleaned = cleaned.replace(/PH\d+/i, '').trim();
+            if (cleaned.toUpperCase().includes('SHOPEE')) cleaned = 'SHOPEE PH';
+            if (cleaned.toUpperCase().includes('TRADERSCONNECT')) cleaned = 'TRADERS CONNECT';
+            if (cleaned.toUpperCase().includes('TIKTOK SHOP')) cleaned = 'TIKTOK SHOP';
+            if (cleaned.toUpperCase().includes('SPOTIFY')) cleaned = 'SPOTIFY';
+            let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
+            if (t.manualCategory) {
+                const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
+                if (userCat) {
+                    display.category = userCat.id;
+                    display.icon = userCat.icon;
+                    const catMap = { 'Online shopping': 'cat-online', 'Shopping': 'cat-shopping', 'Vehicle': 'cat-vehicle', 'Trade Copier': 'cat-aqua', 'Trading Expenses': 'cat-trading', 'Service': 'cat-service-magenta', 'Food & Drinks': 'cat-food', 'Life & Entertainment': 'cat-life', 'Financial Expenses': 'cat-financial', 'Transportation': 'cat-vehicle', 'Travel': 'cat-aqua', 'Education': 'cat-education', 'Sport': 'cat-life', 'Income': 'cat-income' };
+                    display.catClass = userCat.cls || catMap[userCat.id] || 'cat-financial';
+                    return display;
+                }
+            }
+            const mapping = { 'MR DIY BGCC BOGO': 'MR DIY BOGO', 'MR DIY ZBOG BOGO': 'MR DIY BOGO', 'TEC FUEL SAN REMIGIO': 'TECFUEL SAN REMIGIO', 'J AND L SHOPPING BOGO': 'J AND L MALL BOGO', 'TECFUEL BOGO CEBU': 'TECFUEL BOGO', 'KKV SM J Mall Cebu': 'KKV SM J MALL CEBU', 'SM STORE-CEBU': 'SM STORE - CEBU CITY', 'GLOBE-BILLSPAY PH': 'GLOBE / GOMO LOAD', 'SHELL FILLWISE BOGO CEBU': 'SHELL BOGO CEBU', 'GLOBE WEBLOADING EC PH': 'GLOBE / GOMO LOAD', 'WATSONS HISOLER BLDG B': 'WATSONS HISOLER BLDG BOGO', 'SUPER METRO S/M-BOGO': 'SUPER METRO BOGO', 'SM SUPERMARKET SM SRP CEBU': 'SM SUPERMARKET SRP', 'OCTAGON AYALA CENTRAL CEBU': 'OCTAGON AYALA CENTRAL CEBU', 'STARBUCKS 540 CENTRAL CEBU CITY': 'STARBUCKS 540 CENTRAL CEBU CITY', 'ICE SKATING SM SRP CEB': 'ICE SKATING SM SRP CEBU', 'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND', 'MRCRMT': 'MRCRMT', 'tradersconnect.com': 'TRADERS CONNECT', 'TRADERSCONNECT': 'TRADERS CONNECT' };
+            const finalRaw = cleaned.toUpperCase();
+            if (mapping[cleaned]) display.name = mapping[cleaned];
+            else if (mapping[finalRaw]) display.name = mapping[finalRaw];
+            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) { display.category = 'Online shopping'; display.icon = 'shopping_bag'; }
+            else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('7 11') || finalRaw.includes('7/11') || finalRaw.includes('KFC') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) { display.category = 'Food & Drinks'; display.icon = 'restaurant'; }
+            else if (finalRaw.includes('SHELL') || finalRaw.includes('PETRON') || finalRaw.includes('CALTEX') || finalRaw.includes('TECFUEL') || finalRaw.includes('FUEL') || finalRaw.includes('SEAOIL')) { display.category = 'Vehicle'; display.icon = 'local_gas_station'; }
+            else if (finalRaw.includes('TRADERS CONNECT') || finalRaw.includes('IC MARKETS') || finalRaw.includes('EXNESS') || finalRaw.includes('TRADERSCONNECT')) { display.category = 'Trading Expenses'; display.icon = 'insights'; }
+            const catMap = { 'Online shopping': 'cat-online', 'Shopping': 'cat-shopping', 'Vehicle': 'cat-vehicle', 'Trade Copier': 'cat-aqua', 'Trading Expenses': 'cat-trading', 'Service': 'cat-service-magenta', 'Food & Drinks': 'cat-food', 'Life & Entertainment': 'cat-life', 'Financial Expenses': 'cat-financial', 'Transportation': 'cat-vehicle', 'Travel': 'cat-aqua', 'Education': 'cat-education', 'Sport': 'cat-life', 'Income': 'cat-income' };
+            display.catClass = catMap[display.category] || 'cat-financial';
+            return display;
+        }
+
+
+        const currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
         let currentViewDate = new Date();
         let selectedDate = new Date();
         window.allTxns = [];
+        
+        // Initial UI population from Cache
+        const cachedName = localStorage.getItem('user_name');
+        const cachedPic = localStorage.getItem('user_pic');
+        if (cachedName) document.getElementById('user-display-name').innerText = cachedName;
+        if (cachedPic) {
+            const badge = document.getElementById('profile-badge');
+            const picEl = document.getElementById('user-pic');
+            picEl.src = cachedPic;
+            badge.classList.add('has-pic');
+        }
+        
+        // Apply Header Theme from Current Account
+        function applyAccountTheme(accId) {
+            const cardBg = document.getElementById('card-bg');
+            if (cardBg) {
+                const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+                const acc = accounts.find(a => a.id === accId);
+                if (acc) {
+                    cardBg.setAttribute('fill', acc.color);
+                } else {
+                    // Fallback
+                    if (accId === 'bpi') cardBg.setAttribute('fill', '#931B1B');
+                    else if (accId === 'atome') cardBg.setAttribute('fill', '#121212');
+                    else cardBg.setAttribute('fill', '#1a1a1a');
+                }
+            }
+        }
+        applyAccountTheme(currentAccount);
 
         onAuthStateChanged(auth, (user) => {
+            const isAnon = !user || user.isAnonymous;
+            const gate = document.getElementById('guestGate');
+            if (gate) gate.style.display = isAnon ? 'flex' : 'none';
+
             if (user) {
-                // Profile
                 if (!user.isAnonymous) {
-                    if (user.photoURL) {
-                        const pic = document.getElementById('user-pic');
-                        pic.src = user.photoURL;
-                        pic.style.display = 'block';
-                        document.querySelector('#profile-badge i').style.display = 'none';
-                    }
+                    // Update Cache
+                    localStorage.setItem('user_name', user.displayName || 'User');
+                    localStorage.setItem('user_pic', user.photoURL || '');
                 }
+                updateProfileUI(user);
                 loadData(user.uid);
             } else {
-                // No user logged in - still show calendar with no transactions
+                updateProfileUI({ isAnonymous: true });
                 renderCalendar();
             }
         });
 
+        function updateProfileUI(user) {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (!dropdown) return;
+            
+            if (user.isAnonymous) {
+                 dropdown.innerHTML = `
+                    <div class="dropdown-header">Guest Session</div>
+                    <div class="dropdown-item" onclick="toggleDarkMode()">
+                        <i class="material-icons" id="theme-icon">dark_mode</i>
+                        <span id="theme-text">Dark Mode</span>
+                    </div>
+                    <div class="dropdown-item" onclick="handleAuthClick()">
+                        <i class="material-icons">cloud_upload</i>
+                        <span>Sign in with Google</span>
+                    </div>
+                 `;
+                 document.getElementById('user-display-name').innerText = 'Guest';
+                 document.getElementById('profile-badge').classList.remove('has-pic');
+            } else {
+                 dropdown.innerHTML = `
+                    <div class="dropdown-header">${user.email || 'User'}</div>
+                    <div class="dropdown-item" onclick="toggleDarkMode()">
+                        <i class="material-icons" id="theme-icon">dark_mode</i>
+                        <span id="theme-text">Dark Mode</span>
+                    </div>
+                    <div class="dropdown-item" onclick="handleAuthClick()">
+                        <i class="material-icons">swap_horiz</i>
+                        <span>Switch Account</span>
+                    </div>
+                    <div class="dropdown-item logout" onclick="handleSignout()">
+                        <i class="material-icons">logout</i>
+                        <span>Log Out</span>
+                    </div>
+                 `;
+                 
+                 const name = localStorage.getItem('user_name') || 'User';
+                 document.getElementById('user-display-name').innerText = name;
+                 
+                 const pic = localStorage.getItem('user_pic');
+                 if (pic) {
+                     const picEl = document.getElementById('user-pic');
+                     const badge = document.getElementById('profile-badge');
+                     picEl.src = pic;
+                     badge.classList.add('has-pic');
+                 }
+            }
+            
+            // Sync theme UI
+            const currentTheme = localStorage.getItem('theme_preference') || 'light';
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (icon) icon.innerText = currentTheme === 'light' ? 'dark_mode' : 'light_mode';
+            if (text) text.innerText = currentTheme === 'light' ? 'Dark Mode' : 'Light Mode';
+            if (currentTheme === 'dark') document.body.classList.add('dark-mode');
+        }
+
+        // DARK MODE TOGGLE
+        window.toggleDarkMode = () => {
+            const currentTheme = localStorage.getItem('theme_preference') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            localStorage.setItem('theme_preference', newTheme);
+            
+            if (newTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+            
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            if (icon) icon.innerText = newTheme === 'light' ? 'dark_mode' : 'light_mode';
+            if (text) text.innerText = newTheme === 'light' ? 'Dark Mode' : 'Light Mode';
+        };
+
+        // PROFILE DROPDOWN LOGIC
+        window.toggleProfileDropdown = (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('profile-dropdown');
+            dropdown.classList.toggle('active');
+        };
+
+        window.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('profile-dropdown');
+            if (dropdown && dropdown.classList.contains('active')) {
+                const badge = document.getElementById('profile-badge');
+                if (!badge.contains(e.target)) {
+                    dropdown.classList.remove('active');
+                }
+            }
+        });
+
+        window.handleAuthClick = async () => {
+            const provider = new GoogleAuthProvider();
+            provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error('Auth Failure:', error);
+            }
+        };
+
+        window.handleSignout = async () => {
+            if (confirm('Sign out?')) {
+                try {
+                    await auth.signOut();
+                    window.location.reload();
+                } catch (e) {
+                    console.error('Sign out error:', e);
+                }
+            }
+        };
+
+        // Header Shrink Logic
+        const header = document.getElementById('header');
+        const scrollContainer = document.querySelector('.mobile-wrapper');
+        const handleScroll = (container) => {
+            if (container.scrollTop > 50) header.classList.add('shrunk');
+            else header.classList.remove('shrunk');
+        };
+        if (scrollContainer) scrollContainer.addEventListener('scroll', () => handleScroll(scrollContainer));
+        window.addEventListener('scroll', () => handleScroll(window.document.documentElement));
+
         function loadData(uid) {
-            const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
+            const currentAcc = localStorage.getItem('wallet_current_account') || 'atome';
+            applyAccountTheme(currentAcc);
+            const cacheKey = `wallet_cache_${uid}_${currentAcc}`;
+            
+            // 1. Instant Cache Load
+            const cached = localStorage.getItem(cacheKey);
+            if (cached) {
+                try {
+                    const data = JSON.parse(cached);
+                    if (data.txns) {
+                        window.allTxns = data.txns || [];
+                        renderCalendar();
+                    }
+                } catch(e) {}
+            }
+
+            const collectionName = window.getCollectionName(currentAcc);
+            const q = query(collection(db, "users", uid, collectionName), orderBy("date", "desc"));
+            
             onSnapshot(q, (snap) => {
-                window.allTxns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                
+                // Compare with current to avoid redundant render
+                const isSame = window.allTxns && window.allTxns.length === txns.length && 
+                               txns.slice(0, 5).every((t, i) => 
+                                   window.allTxns[i] && window.allTxns[i].id === t.id
+                               );
+
+                if (isSame) return;
+
+                window.allTxns = txns;
+                
+                // Update Cache
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    txns: txns,
+                    timestamp: Date.now()
+                }));
+                
                 renderCalendar();
             });
         }
@@ -486,158 +850,7 @@
             renderCalendar();
         };
 
-        // Shared Logic Imports/Mocks
-        const CATEGORIES = [
-            { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
-            { id: 'Shopping', icon: 'shopping_cart', label: 'Shopping', cls: 'cat-shopping' },
-            { id: 'Vehicle', icon: 'local_gas_station', label: 'Vehicle', cls: 'cat-vehicle' },
-            { id: 'Food & Drinks', icon: 'restaurant', label: 'Food & Drinks', cls: 'cat-food' },
-            { id: 'Service', icon: 'settings_cell', label: 'Service', cls: 'cat-service-magenta' },
-            { id: 'Trade Copier', icon: 'hub', label: 'Trade Copier', cls: 'cat-aqua' },
-            { id: 'Trading Expenses', icon: 'insights', label: 'Trading Expenses', cls: 'cat-trading' },
-            { id: 'Life & Entertainment', icon: 'confirmation_number', label: 'Life & Ent.', cls: 'cat-life' },
-            { id: 'Financial Expenses', icon: 'payments', label: 'Financial Expenses', cls: 'cat-financial' },
-            { id: 'Transportation', icon: 'directions_bus', label: 'Transportation', cls: 'cat-vehicle' },
-            { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
-            { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
-            { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
-            { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
-        ];
 
-        function displayCategoryName(id) {
-            const cat = CATEGORIES.find(c => c.id === id);
-            return cat ? cat.label : id;
-        }
-
-        function getMerchantDisplay(name = '', t = {}) {
-            let raw = name.toUpperCase();
-            
-            // 1. GENERAL CLEANUP
-            let cleaned = name
-                .replace(/\s+PHL$/i, '')
-                .replace(/\s+CEBU\s+CITY\s+PHL$/i, '')
-                .replace(/\s+CEBU\s+CITY$/i, '')
-                .replace(/\s+DUBAI\s+ARE$/i, '')
-                .replace(/\s+LONDON\s+GBR$/i, '')
-                .replace(/\s+PH\s+PHL$/i, '')
-                .replace(/\s+PH$/i, '')
-                .trim();
-            
-            // 2. PATTERN REPLACEMENT
-            if (cleaned.toUpperCase().includes('GADC') || cleaned.toUpperCase().includes('MCDONALDS') || cleaned.toUpperCase().includes('MCDO')) {
-                let u = cleaned.toUpperCase();
-                if (u.includes('SOUTHCBU') || u.includes('325CLN')) {
-                    cleaned = 'MCDONALDS SOUTH CEBU';
-                } else {
-                    cleaned = cleaned.replace(/(GADC|MCDONALDS|MCDO)/i, 'MCDONALDS').trim();
-                    cleaned = cleaned.replace(/MCDONALDS\s+\d+[A-Z]*/i, 'MCDONALDS').trim();
-                }
-            }
-            if (cleaned.toUpperCase().includes('JOLLIBEE')) cleaned = cleaned.replace(/JB\d+\s+\w+/i, '').trim();
-            if (cleaned.toUpperCase().includes('RIBSHACK')) cleaned = cleaned.replace(/PH\d+/i, '').trim();
-            if (cleaned.toUpperCase().includes('SHOPEE')) cleaned = 'SHOPEE PH';
-            if (cleaned.toUpperCase().includes('TRADERSCONNECT')) cleaned = 'TRADERS CONNECT';
-            if (cleaned.toUpperCase().includes('TIKTOK SHOP')) cleaned = 'TIKTOK SHOP';
-            if (cleaned.toUpperCase().includes('SPOTIFY')) cleaned = 'SPOTIFY';
-
-            let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
-
-            // 3. MANUAL OVERRIDE
-            if (t.manualCategory) {
-                const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
-                if (userCat) {
-                    display.category = userCat.id;
-                    display.icon = userCat.icon;
-                    const catMap = {
-                        'Online shopping': 'cat-online',
-                        'Shopping': 'cat-shopping',
-                        'Vehicle': 'cat-vehicle',
-                        'Trade Copier': 'cat-aqua',
-                        'Trading Expenses': 'cat-trading',
-                        'Service': 'cat-service-magenta',
-                        'Food & Drinks': 'cat-food',
-                        'Life & Entertainment': 'cat-life',
-                        'Financial Expenses': 'cat-financial',
-                        'Transportation': 'cat-vehicle',
-                        'Travel': 'cat-aqua',
-                        'Education': 'cat-education',
-                        'Sport': 'cat-life',
-                        'Income': 'cat-income'
-                    };
-                    display.catClass = userCat.cls || catMap[userCat.id] || 'cat-financial';
-                    return display;
-                }
-            }
-
-            // 4. EXACT OVERRIDES
-            const mapping = {
-                'MR DIY BGCC BOGO': 'MR DIY BOGO',
-                'MR DIY ZBOG BOGO': 'MR DIY BOGO',
-                'TEC FUEL SAN REMIGIO': 'TECFUEL SAN REMIGIO',
-                'J AND L SHOPPING BOGO': 'J AND L MALL BOGO',
-                'TECFUEL BOGO CEBU': 'TECFUEL BOGO',
-                'KKV SM J Mall Cebu': 'KKV SM J MALL CEBU',
-                'SM STORE-CEBU': 'SM STORE - CEBU CITY',
-                'GLOBE-BILLSPAY PH': 'GLOBE / GOMO LOAD',
-                'SHELL FILLWISE BOGO CEBU': 'SHELL BOGO CEBU',
-                'GLOBE WEBLOADING EC PH': 'GLOBE / GOMO LOAD',
-                'WATSONS HISOLER BLDG B': 'WATSONS HISOLER BLDG BOGO',
-                'SUPER METRO S/M-BOGO': 'SUPER METRO BOGO',
-                'SM SUPERMARKET SM SRP CEBU': 'SM SUPERMARKET SRP',
-                'OCTAGON AYALA CENTRAL CEBU': 'OCTAGON AYALA CENTRAL CEBU',
-                'STARBUCKS 540 CENTRAL CEBU CITY': 'STARBUCKS 540 CENTRAL CEBU CITY',
-                'ICE SKATING SM SRP CEB': 'ICE SKATING SM SRP CEBU',
-                'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND',
-                'MRCRMT': 'MRCRMT',
-                'tradersconnect.com': 'TRADERS CONNECT',
-                'TRADERSCONNECT': 'TRADERS CONNECT'
-            };
-
-            const finalRaw = cleaned.toUpperCase();
-            if (mapping[cleaned]) display.name = mapping[cleaned];
-            else if (mapping[finalRaw]) display.name = mapping[finalRaw];
-
-            // 5. CATEGORY DETECTION
-            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY')) {
-                display.category = 'Online shopping';
-                display.icon = 'shopping_bag';
-                display.catClass = 'cat-online';
-            } else if (finalRaw.includes('FUEL') || finalRaw.includes('SHELL') || finalRaw.includes('TECFUEL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL')) {
-                display.category = 'Vehicle';
-                display.icon = 'local_gas_station';
-                display.catClass = 'cat-vehicle';
-            } else if (finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS') || finalRaw.includes('SM STORE') || finalRaw.includes('KKV') || finalRaw.includes('SHOPPING') || finalRaw.includes('MALL') || finalRaw.includes('METRO') || finalRaw.includes('SUPERMARKET') || finalRaw.includes('OCTAGON')) {
-                display.category = 'Shopping';
-                display.icon = 'shopping_cart';
-                display.catClass = 'cat-shopping';
-            } else if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
-                display.category = 'Trade Copier';
-                display.icon = 'hub';
-                display.catClass = 'cat-aqua';
-            } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
-                display.category = 'Trading Expenses';
-                display.icon = 'insights';
-                display.catClass = 'cat-trading';
-            } else if (finalRaw.includes('GLOBE') || finalRaw.includes('GOMO') || finalRaw.includes('BILLSPAY')) {
-                display.category = 'Service';
-                display.icon = 'settings_cell';
-                display.catClass = 'cat-service-magenta';
-            } else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('MCDONALDS') || finalRaw.includes('FOOD') || finalRaw.includes('RESTAURANT') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK')) {
-                display.category = 'Food & Drinks';
-                display.icon = 'restaurant';
-                display.catClass = 'cat-food';
-            } else if (finalRaw.includes('ICE SKATING') || finalRaw.includes('CINEMA') || finalRaw.includes('ENTERTAINMENT') || finalRaw.includes('SPOTIFY') || finalRaw.includes('NETFLIX')) {
-                display.category = 'Life & Entertainment';
-                display.icon = 'confirmation_number';
-                display.catClass = 'cat-life';
-            } else {
-                display.category = 'Financial expenses';
-                display.icon = 'payments';
-                display.catClass = 'cat-financial';
-            }
-
-            return display;
-        }
 
         function createTxnChip(t, mapped, amt, type) {
             const chip = document.createElement('div');

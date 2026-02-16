@@ -112,6 +112,15 @@
                 <label class="label">Account Name</label>
                 <input type="text" id="acc-name" class="input-box" placeholder="e.g. My Savings" oninput="updatePreview()">
             </div>
+
+            <div class="form-group">
+                <label class="label">Account Type</label>
+                <select id="acc-type" class="input-box" onchange="updatePreview()">
+                    <option value="wallet">Wallet Card</option>
+                    <option value="debit">Debit Card</option>
+                    <option value="credit">Credit Card</option>
+                </select>
+            </div>
             
             <div class="form-group">
                 <label class="label">Balance</label>
@@ -151,57 +160,127 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
+            authDomain: "atome-wallet.firebaseapp.com",
+            projectId: "atome-wallet",
+            storageBucket: "atome-wallet.firebasestorage.app",
+            messagingSenderId: "64186651619",
+            appId: "1:64186651619:web:cd7d426cfb663aab6606d6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
         let selectedColor = '#121212';
-        
-        function selectColor(el) {
+        let currentUser = null;
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (!user || user.isAnonymous) {
+                alert('Please sign in to add accounts.');
+                window.location.href = 'accounts.html';
+            }
+        });
+
+        window.selectColor = (el) => {
             document.querySelectorAll('.color-option').forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
             selectedColor = el.dataset.color;
             updatePreview();
-        }
+        };
         
-        function updatePreview() {
-            const name = document.getElementById('acc-name').value || 'CREDIT CARD';
+        window.updatePreview = () => {
+            const name = document.getElementById('acc-name').value || 'MY ACCOUNT';
+            const type = document.getElementById('acc-type').value;
             const balance = parseFloat(document.getElementById('acc-balance').value) || 0;
             const last4 = document.getElementById('acc-last4').value || '1234';
             
-            document.getElementById('preview-type-label').innerText = name.toUpperCase();
+            document.getElementById('preview-type-label').innerText = type.toUpperCase() + ' • ' + name.toUpperCase();
             document.getElementById('preview-balance').innerText = 'PHP ' + balance.toLocaleString(undefined, {minimumFractionDigits:2});
             document.getElementById('preview-number').innerText = '•••• •••• •••• ' + last4;
             
             const card = document.getElementById('preview-card');
-            if (selectedColor === '#121212') {
-                card.style.background = 'linear-gradient(135deg, #121212 0%, #1a1a1a 100%)';
-            } else if (selectedColor === '#BA2727') {
-                 // BPI Style special case if wanted, or just simple color
-                 card.style.background = selectedColor;
-            } else {
-                card.style.background = selectedColor;
-            }
-        }
+            card.style.background = selectedColor;
+        };
         
-        function saveAccount() {
-            const name = document.getElementById('acc-name').value;
+        window.saveAccount = async () => {
+            if (!currentUser) return;
+            const name = document.getElementById('acc-name').value.trim();
+            const balance = parseFloat(document.getElementById('acc-balance').value) || 0;
+            const last4 = document.getElementById('acc-last4').value.trim() || '0000';
+            const type = document.getElementById('acc-type').value;
+            
             if(!name) { alert('Please enter account name'); return; }
             
-            const newAccount = {
-                id: name.toLowerCase().replace(/\s/g, '_'),
-                name: name,
-                balance: parseFloat(document.getElementById('acc-balance').value) || 0,
-                last4: document.getElementById('acc-last4').value || '0000',
-                color: selectedColor,
-                type: 'credit' // Default to credit for now
-            };
-            
-            // In a real app, we would save to localStorage saving a list of accounts
-            let accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-            accounts.push(newAccount);
-            localStorage.setItem('wallet_accounts', JSON.stringify(accounts));
-            
-            alert('Account Saved!');
-            window.location.href = 'accounts.html';
-        }
+            const btn = document.querySelector('.save-btn');
+            const originalText = btn.innerText;
+            btn.innerText = 'SAVING...';
+            btn.disabled = true;
+
+            try {
+                const uid = currentUser.uid;
+                const configRef = doc(db, "users", uid, "config", "accounts");
+                const snap = await getDoc(configRef);
+                
+                let accounts = [];
+                if (snap.exists()) {
+                    accounts = snap.data().list || [];
+                }
+
+                if (accounts.length >= 6) {
+                    alert('Maximum of 6 accounts allowed.');
+                    return;
+                }
+
+                const newAccount = {
+                    id: 'acc_' + Date.now(),
+                    name: name,
+                    balance: balance,
+                    last4: last4,
+                    color: selectedColor,
+                    type: type,
+                    isDefault: false,
+                    isBuiltIn: false,
+                    createdAt: Date.now()
+                };
+
+                if (!snap.exists()) {
+                    // Create with default wallet FIRST
+                    const defaultWallet = {
+                        id: 'default_wallet',
+                        name: 'My Wallet',
+                        balance: 0,
+                        last4: '0000',
+                        color: '#121212',
+                        type: 'wallet',
+                        isDefault: true,
+                        isBuiltIn: true,
+                        createdAt: Date.now() - 1000
+                    };
+                    await setDoc(configRef, { list: [defaultWallet, newAccount] });
+                } else {
+                    await updateDoc(configRef, {
+                        list: arrayUnion(newAccount)
+                    });
+                }
+                
+                alert('Account Saved!');
+                window.location.href = 'accounts.html';
+            } catch (e) {
+                console.error(e);
+                alert('Error: ' + e.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>

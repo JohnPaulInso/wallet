@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SmartWallet - Accounts</title>
+    <title>Smart Wallet - Accounts</title>
     <link rel="icon" type="image/png" href="applogo.png?v=4">
     <link rel="apple-touch-icon" href="applogo.png?v=4">
     <link rel="manifest" href="manifest.json?v=1">
-    <meta name="theme-color" content="#121212">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     
     <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
@@ -437,7 +440,7 @@
     <script src="nav-state.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -610,8 +613,39 @@
 
         window.handleAuthClick = async () => {
             const provider = new GoogleAuthProvider();
-            try { await signInWithPopup(auth, provider); } catch (e) { console.error(e); }
+            provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+            
+            // DETECT MOBILE FOR REDIRECT
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            if (isMobile) {
+                try { await signInWithRedirect(auth, provider); } catch (e) { console.error(e); }
+                return;
+            }
+
+            try { 
+                const result = await signInWithPopup(auth, provider); 
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                if (credential) {
+                    localStorage.setItem('g_access_token', credential.accessToken);
+                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                    localStorage.setItem('g_token_expiry', (Date.now() + 365 * 24 * 60 * 60 * 1000).toString());
+                    console.log('✅ Gmail token saved from Popup');
+                }
+            } catch (e) { console.error(e); }
         };
+
+        // HANDLE REDIRECT RESULT
+        getRedirectResult(auth).then(result => {
+            if (result) {
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                if (credential) {
+                    localStorage.setItem('g_access_token', credential.accessToken);
+                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                    localStorage.setItem('g_token_expiry', (Date.now() + 365 * 24 * 60 * 60 * 1000).toString());
+                    console.log('✅ Gmail token saved from Redirect');
+                }
+            }
+        }).catch(e => console.error('Redirect error:', e));
 
         window.handleSignout = async () => {
             if (confirm('Sign out?')) {

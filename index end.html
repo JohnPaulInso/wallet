@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>SmartWallet - JP</title>
+    <title>Smart Wallet</title>
     <link rel="icon" type="image/png" href="applogo.png?v=4">
     <link rel="apple-touch-icon" href="applogo.png?v=4">
     
@@ -14,7 +14,10 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
     <link rel="manifest" href="manifest.json?v=2">
-    <meta name="theme-color" content="#f8fafc">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
     
     <!-- AUTH PERFORMANCE OPTIMIZATION (PRELOADS) -->
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js">
@@ -1938,13 +1941,15 @@
                     </div>
 
                     <!-- Credit Card Payment -->
-                    <div class="breakdown-item">
-                        <div class="breakdown-icon breakdown-yellow">
-                            <i class="material-icons">credit_card</i>
-                        </div>
-                        <div class="breakdown-info">
-                            <div class="breakdown-name">CREDIT CARD PAYMENT</div>
-                            <div class="breakdown-meta">Atome Wallet Link</div>
+                    <div class="breakdown-item" id="item-credit">
+                        <div class="breakdown-left" onclick="toggleAtome()" style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;">
+                            <div class="breakdown-icon breakdown-yellow" id="icon-credit">
+                                <i class="material-icons" id="credit-check">credit_card</i>
+                            </div>
+                            <div class="breakdown-info">
+                                <div class="breakdown-name">CREDIT CARD PAYMENT</div>
+                                <div class="breakdown-meta" id="credit-meta">Atome Wallet Link</div>
+                            </div>
                         </div>
                         <div id="breakdown-credit" class="breakdown-val breakdown-yellow-text privacy-mask">₱0.00</div>
                     </div>
@@ -1957,10 +1962,24 @@
                             </div>
                             <div class="breakdown-info">
                                 <div class="breakdown-name">SAVINGS</div>
-                                <div class="breakdown-meta" id="savings-meta">Monthly Income</div>
+                                <div class="breakdown-meta" id="savings-meta">Monthly Target</div>
                             </div>
                         </div>
                         <div id="breakdown-savings" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSavings()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱3,000.00</div>
+                    </div>
+
+                    <!-- Upcoming Salary -->
+                    <div class="breakdown-item" id="item-salary">
+                        <div class="breakdown-left" onclick="toggleSalary()" style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;">
+                            <div class="breakdown-icon breakdown-green" id="icon-salary">
+                                <i class="material-icons" id="salary-check">payments</i>
+                            </div>
+                            <div class="breakdown-info">
+                                <div class="breakdown-name">UPCOMING SALARY</div>
+                                <div class="breakdown-meta" id="salary-meta">Included in safe budget</div>
+                            </div>
+                        </div>
+                        <div id="breakdown-salary" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSalary()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱8,800.00</div>
                     </div>
 
                     <!-- DYNAMIC OBLIGATIONS WILL BE INJECTED HERE -->
@@ -2271,7 +2290,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // HELPER: Format date to YYYY-MM-DD based on LOCAL time
@@ -2403,6 +2422,16 @@
                 const provider = new GoogleAuthProvider(); // Use eager import from top level
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
+                // DETECT MOBILE FOR REDIRECT (Prevents "Popup Blocked")
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                
+                if (isMobile) {
+                    log('Mobile Detected: Using signInWithRedirect...');
+                    await setPersistence(auth, browserLocalPersistence);
+                    await signInWithRedirect(auth, provider);
+                    return; // Page will redirect
+                }
+
                 log('Calling signInWithPopup...');
                 await setPersistence(auth, browserLocalPersistence);
                 const result = await signInWithPopup(auth, provider);
@@ -2411,10 +2440,12 @@
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 if (credential) {
                     accessToken = credential.accessToken;
-                    const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
+                    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+                    const expMs = Date.now() + ONE_YEAR_MS;
                     localStorage.setItem('g_access_token', accessToken);
-                    localStorage.setItem('g_token_expiry', expMs);
-                    localStorage.setItem('g_token_issued_at', Date.now());
+                    localStorage.setItem('g_token_expiry', expMs.toString());
+                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                    console.log('✅ Token stored with 1-year expiry');
                 }
 
                 if (result.user.displayName) {
@@ -2447,6 +2478,25 @@
                 if (btn && btn.classList) btn.style.opacity = '1';
             }
         };
+
+        // HANDLE REDIRECT RESULT (For Mobile)
+        getRedirectResult(auth).then((result) => {
+            if (result) {
+                log('Redirect success! User: ' + result.user.email);
+                const credential = GoogleAuthProvider.credentialFromResult(result);
+                if (credential) {
+                    accessToken = credential.accessToken;
+                    localStorage.setItem('g_access_token', accessToken);
+                    localStorage.setItem('g_token_expiry', Date.now() + (365 * 24 * 60 * 60 * 1000));
+                    localStorage.setItem('g_token_issued_at', Date.now());
+                }
+                showToast('Signed in successfully!');
+            }
+        }).catch((error) => {
+            if (error.code !== 'auth/web-storage-unsupported') {
+                log('Redirect Auth Error: ' + error.message, 'error');
+            }
+        });
 
 
         // UNIFIED PROMISE-BASED DIALOG SYSTEM
@@ -2826,6 +2876,11 @@
                             scrollToActiveCard(window.currentAccount);
                             setTimeout(() => { window.isInitialLoading = false; }, 800);
                         }, 500);
+
+                        // START BACKGROUND ATOME WATCHER (Keep Safe To Spend accurate)
+                        if (isAdmin) {
+                            window.watchAtomeBalance();
+                        }
                     });
                 } else {
                     window.currentAccount = 'default_wallet';
@@ -3624,6 +3679,56 @@
         }
         window.loadData = loadData;
 
+        // BACKGROUND WATCHER: Keep Atome balance in sync even when on BPI account
+        window.watchAtomeBalance = () => {
+            const uid = auth.currentUser?.uid;
+            if (!uid) return;
+            
+            // Avoid duplicate listeners
+            if (window.unsubscribeAtomeWatch) {
+                window.unsubscribeAtomeWatch();
+            }
+
+            log('Background Atome Watcher: Starting...', 'ready');
+            const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
+            
+            window.unsubscribeAtomeWatch = onSnapshot(q, (snap) => {
+                let incomeTotal = 0;
+                let expenseTotal = 0;
+
+                snap.docs.forEach(d => {
+                    const t = d.data();
+                    if (t.deleted || t.excluded || t.refund) return;
+                    
+                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    const mapped = getMerchantDisplay(t.merchant, t);
+
+                    if (mapped.category === 'Income') {
+                        incomeTotal += amt;
+                    } else {
+                        expenseTotal += amt;
+                    }
+                });
+
+                const balance = incomeTotal - expenseTotal;
+                window.atomeBalanceVal = balance;
+                
+                // Update Atome specific elements if they exist in the DOM (even if hidden)
+                const atomeEl = document.getElementById('atome-balance') || document.querySelector('.balance-card[data-account="atome"] .balance-amount');
+                if (atomeEl) {
+                    const formatted = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                    atomeEl.dataset.raw = formatted;
+                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
+                    atomeEl.innerText = isHidden ? '******' : formatted;
+                }
+
+                log(`Background Atome Sync: ${balance.toFixed(2)}`, 'ready');
+                updateSafeSpendUI();
+            }, (err) => {
+                log('Atome Watcher Error: ' + err.message, 'error');
+            });
+        };
+
         // BACKGROUND CACHE HYDRATION (Warm up all accounts)
         window.hydrateAllCaches = async () => {
             const uid = auth.currentUser?.uid;
@@ -3762,8 +3867,16 @@
              
              const effectiveMainBal = isExcluded ? 0 : mainBalValue;
              const effectiveSavings = isSavingsExcluded ? 0 : savingsValue;
+             
+             // NEW: Toggleable items
+             const isAtomeExcluded = config.excludeAtome === true;
+             const isSalaryIncluded = config.includeSalary === true;
+             const salaryValue = config.salaryAmount || 8800;
+             
+             const effectiveAtome = isAtomeExcluded ? 0 : ccPayment;
+             const effectiveSalary = isSalaryIncluded ? salaryValue : 0;
 
-             const safeAmount = balance - effectiveMainBal - effectiveSavings - ccPayment - obligationsTotal;
+             const safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
              const safeEl = document.getElementById('safe-spend-val');
              const formatted = `PHP ${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
              
@@ -3833,11 +3946,57 @@
              }
 
              // CC Payment Update
+             const itemCredit = document.getElementById('item-credit');
+             const checkCredit = document.getElementById('credit-check');
+             const metaCredit = document.getElementById('credit-meta');
              const creditEl = document.getElementById('breakdown-credit');
+
+             if (isAtomeExcluded) {
+                 if (itemCredit) {
+                    itemCredit.style.opacity = '0.4';
+                    itemCredit.style.filter = 'grayscale(1)';
+                 }
+                 if (checkCredit) checkCredit.innerText = 'remove_circle_outline';
+                 if (metaCredit) metaCredit.innerText = 'Excluded from safe budget';
+             } else {
+                 if (itemCredit) {
+                    itemCredit.style.opacity = '1';
+                    itemCredit.style.filter = 'none';
+                 }
+                 if (checkCredit) checkCredit.innerText = 'credit_card';
+                 if (metaCredit) metaCredit.innerText = 'Atome Wallet Link';
+             }
              if (creditEl) {
                  const val = `₱${ccPayment.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                  creditEl.dataset.raw = val;
                  creditEl.innerText = isHidden ? '******' : val;
+             }
+
+             // Salary Update
+             const itemSalary = document.getElementById('item-salary');
+             const checkSalary = document.getElementById('salary-check');
+             const metaSalary = document.getElementById('salary-meta');
+             const salaryEl = document.getElementById('breakdown-salary');
+
+             if (!isSalaryIncluded) {
+                 if (itemSalary) {
+                    itemSalary.style.opacity = '0.4';
+                    itemSalary.style.filter = 'grayscale(1)';
+                 }
+                 if (checkSalary) checkSalary.innerText = 'remove_circle_outline';
+                 if (metaSalary) metaSalary.innerText = 'Excluded from safe budget';
+             } else {
+                 if (itemSalary) {
+                    itemSalary.style.opacity = '1';
+                    itemSalary.style.filter = 'none';
+                 }
+                 if (checkSalary) checkSalary.innerText = 'payments';
+                 if (metaSalary) metaSalary.innerText = 'Included in safe budget';
+             }
+             if (salaryEl) {
+                 const val = `₱${salaryValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                 salaryEl.dataset.raw = val;
+                 salaryEl.innerText = isHidden ? '******' : val;
              }
 
              // 5. Dynamic Obligations rendering
@@ -4039,6 +4198,60 @@
              } catch (e) { console.error('Failed to save savings toggle', e); }
              
              showToast(newState ? 'Savings excluded' : 'Savings included');
+        };
+
+        window.toggleAtome = async () => {
+             const config = window.safeToSpendConfig || {};
+             const isExcluded = config.excludeAtome === true;
+             const newState = !isExcluded;
+             
+             window.safeToSpendConfig = { ...config, excludeAtome: newState };
+             updateSafeSpendUI();
+             
+             try {
+                 const uid = auth.currentUser?.uid;
+                 if (uid) {
+                     await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { excludeAtome: newState }, { merge: true });
+                 }
+             } catch (e) { console.error('Failed to save Atome toggle', e); }
+             
+             showToast(newState ? 'Atome excluded' : 'Atome included');
+        };
+
+        window.toggleSalary = async () => {
+             const config = window.safeToSpendConfig || {};
+             const isIncluded = config.includeSalary === true;
+             const newState = !isIncluded;
+             
+             window.safeToSpendConfig = { ...config, includeSalary: newState };
+             updateSafeSpendUI();
+             
+             try {
+                 const uid = auth.currentUser?.uid;
+                 if (uid) {
+                     await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { includeSalary: newState }, { merge: true });
+                 }
+             } catch (e) { console.error('Failed to save salary toggle', e); }
+             
+             showToast(newState ? 'Salary included' : 'Salary excluded');
+        };
+
+        window.promptSetSalary = async () => {
+            const currentAmount = window.safeToSpendConfig?.salaryAmount || 8800;
+            const res = await showAppDialog({
+                title: 'Upcoming Salary Amount',
+                message: 'Enter your expected salary amount (PHP).',
+                input: true,
+                value: currentAmount
+            });
+            if (res !== null && res !== false && !isNaN(res)) {
+                const val = parseFloat(res);
+                const uid = auth.currentUser.uid;
+                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { 
+                    salaryAmount: val 
+                }, { merge: true });
+                showToast('Salary amount updated!');
+            }
         };
 
         window.promptSetSavings = async () => {
@@ -5958,13 +6171,18 @@
                     
                     // Silent refresh if not manual, or if we want to avoid popup
                     tokenClient.requestAccessToken({ 
+                        callback: (resp) => {
+                           if (resp.error) throw resp;
+                           // The initGIS callback will also handle this, but adding safety
+                        },
                         prompt: manualTrigger ? '' : 'none',
-                        hint: localStorage.getItem('user_email') || undefined
+                        hint: localStorage.getItem('user_email') || auth.currentUser?.email || undefined
                     });
                     return; // initGIS callback will re-trigger handleScan
                 } catch (e) {
                     console.error('Refresh request failed', e);
-                    if (storedToken) accessToken = storedToken; // Fallback to old token
+                    // Don't clear token here, try to use it as fallback if we have one
+                    if (storedToken) accessToken = storedToken;
                 }
             } else if (!storedToken) {
                 // No token at all
@@ -6018,12 +6236,17 @@
                     const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                     
                     if (res.status === 401) {
-                        console.warn('🚫 Gmail Token expired or revoked. Clearing session.');
-                        localStorage.removeItem('g_access_token');
-                        localStorage.removeItem('g_token_issued_at');
+                        console.warn('🚫 Gmail Token expired or revoked.');
+                        
+                        // IF MANUAL: Try one more time with prompt
                         if (manualTrigger && tokenClient) {
+                            console.log('🔄 Manual Trigger: Requesting new access token with popup...');
                             tokenClient.requestAccessToken({ prompt: '' });
+                            throw new Error('Unauthorized - Refreshing');
                         }
+                        
+                        // IF AUTO: Don't clear localStorage immediately, let the next reload try a refresh
+                        // This prevents the "Sync Expired" state where the token is gone forever
                         throw new Error('Unauthorized');
                     }
                     
@@ -7613,17 +7836,44 @@
         };
 
         window.updateManualAccountUI = (val) => {
-            const iconBox = document.getElementById('manual-account-icon-box');
-            if (iconBox) {
-                const acc = (window.walletAccounts || []).find(a => a.id === val);
-                if (acc) {
-                    iconBox.style.background = acc.color;
-                } else {
-                    // Fallback
-                    if (val === 'bpi') iconBox.style.background = '#8b0000';
-                    else iconBox.style.background = '#1a1a1a';
-                }
+            const box = document.getElementById('manual-account-icon-box');
+            if (val === 'atome') {
+                box.style.background = '#1a1a1a';
+                box.style.color = '#fff';
+            } else if (val === 'bpi') {
+                box.style.background = '#931B1B';
+                box.style.color = '#fff';
+            } else {
+                box.style.background = '#f8fafc';
+                box.style.color = '#64748b';
             }
+        };
+
+        window.updateManualExcludeUI = (isExcluded) => {
+            const box = document.getElementById('manual-exclude-icon-box');
+            const icon = document.getElementById('manual-exclude-icon');
+            const statusText = document.getElementById('manual-exclude-text');
+            const toggle = document.getElementById('manual-exclude-toggle');
+
+            if (isExcluded) {
+                box.style.background = '#fef2f2';
+                box.style.color = '#ef4444';
+                icon.innerText = 'cancel';
+                statusText.innerText = 'Excluded from Calculations';
+                toggle.checked = true;
+            } else {
+                box.style.background = '#f0fdf4';
+                box.style.color = '#16a34a';
+                icon.innerText = 'check_circle';
+                statusText.innerText = 'Included in Calculations';
+                toggle.checked = false;
+            }
+        };
+
+        window.toggleManualTxnExclusion = () => {
+            const toggle = document.getElementById('manual-exclude-toggle');
+            const newState = !toggle.checked;
+            window.updateManualExcludeUI(newState);
         };
 
         window.openManualTxnModal = () => {
@@ -7636,6 +7886,7 @@
             document.getElementById('manual-amt').value = '';
             document.getElementById('manual-merchant').value = '';
             document.getElementById('manual-note').value = '';
+            window.updateManualExcludeUI(false); // Reset to included
             
             // Dynamic Account Population
             const select = document.getElementById('manual-account');
@@ -7716,6 +7967,7 @@
             document.getElementById('manual-amt').value = amount;
             document.getElementById('manual-merchant').value = merchant;
             document.getElementById('manual-note').value = note || '';
+            window.updateManualExcludeUI(txn ? txn.excluded === true : false);
             
             // Dynamic Account Population
             const select = document.getElementById('manual-account');
@@ -7884,7 +8136,8 @@
                     note: note || '',
                     manualCategory: selectedManualCatId,
                     category: selectedManualCatId,
-                    type: manualTxnType
+                    type: manualTxnType,
+                    excluded: document.getElementById('manual-exclude-toggle').checked
                 };
 
                 // Use the selected account in the modal
@@ -8865,6 +9118,21 @@
                         <input type="text" id="manual-note" maxlength="30" placeholder="Add notes..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                     </div>
                 </div>
+
+                <!-- Include/Exclude Toggle Row -->
+                <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer;" onclick="toggleManualTxnExclusion()">
+                    <div id="manual-exclude-icon-box" style="width: 40px; height: 40px; border-radius: 12px; background: #f0fdf4; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #16a34a; transition: all 0.3s ease;">
+                        <i id="manual-exclude-icon" class="material-icons" style="font-size: 20px;">check_circle</i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Budget Status</div>
+                        <div id="manual-exclude-text" style="font-size: 14px; font-weight: 700; color: #1e293b;">Included in Calculations</div>
+                    </div>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="manual-exclude-toggle" style="display: none;">
+                        <div class="toggle-slider"></div>
+                    </div>
+                </div>
             </div>
 
             </div>
@@ -8884,6 +9152,39 @@
         .manual-cat-item span { font-size: 10px !important; }
         /* AUTH FEEDBACK */
         .banner-pill-btn:active, .mui-btn:active { transform: scale(0.96); opacity: 0.8; transition: transform 0.1s, opacity 0.1s; }
+
+        /* TOGGLE SWITCH STYLES */
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            position: relative;
+        }
+        .toggle-slider {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #e2e8f0;
+            border-radius: 34px;
+            transition: .3s;
+            cursor: pointer;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #manual-exclude-toggle:checked + .toggle-slider {
+            background-color: #ef4444;
+        }
+        #manual-exclude-toggle:checked + .toggle-slider:before {
+            transform: translateX(20px);
+        }
     </style>
 
     <script>

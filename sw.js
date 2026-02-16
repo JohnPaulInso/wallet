@@ -1,10 +1,11 @@
-const CACHE_NAME = 'smartwallet-v1.4';
+const CACHE_NAME = 'smartwallet-v1.5';
 const ASSETS = [
     './',
     './index.html',
     './calendar.html',
     './manifest.json',
     './applogo.png',
+    './nav-state.js',
     'https://cdn.muicss.com/mui-0.10.3/css/mui.min.css',
     'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap',
     'https://fonts.googleapis.com/icon?family=Material+Icons',

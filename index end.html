@@ -2479,12 +2479,8 @@
             }
         };
 
-        // FLAG: Prevent anonymous sign-in from racing with redirect result
-        let redirectChecked = false;
-
         // HANDLE REDIRECT RESULT (For Mobile)
         getRedirectResult(auth).then((result) => {
-            redirectChecked = true;
             if (result) {
                 log('Redirect success! User: ' + result.user.email);
                 const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -2497,7 +2493,6 @@
                 showToast('Signed in successfully!');
             }
         }).catch((error) => {
-            redirectChecked = true;
             if (error.code !== 'auth/web-storage-unsupported') {
                 log('Redirect Auth Error: ' + error.message, 'error');
             }
@@ -2716,20 +2711,6 @@
             // FETCH ACCOUNTS & SYNC THEME (Master Observer)
             onAuthStateChanged(auth, async (user) => {
                 if (!user) {
-                    // WAIT for redirect check to complete before falling back to anonymous
-                    if (!redirectChecked) {
-                        log('Waiting for redirect result before anonymous sign-in...');
-                        let waited = 0;
-                        while (!redirectChecked && waited < 5000) {
-                            await new Promise(r => setTimeout(r, 100));
-                            waited += 100;
-                        }
-                        // If redirect sign-in succeeded, skip anonymous
-                        if (auth.currentUser && !auth.currentUser.isAnonymous) {
-                            log('Redirect sign-in completed, skipping anonymous.');
-                            return;
-                        }
-                    }
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     return;

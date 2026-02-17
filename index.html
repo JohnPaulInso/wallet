@@ -2266,12 +2266,12 @@
             <div class="insight-row">
                 <div class="insight-card">
                     <div class="insight-label">Daily Average</div>
-                    <div class="insight-value" id="daily-avg-val">₱0</div>
+                    <div class="insight-value privacy-mask" id="daily-avg-val">₱0</div>
                     <div class="insight-sub" id="daily-avg-sub">this month</div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-label">Biggest Expense</div>
-                    <div class="insight-value" id="biggest-txn-val">₱0</div>
+                    <div class="insight-value privacy-mask" id="biggest-txn-val">₱0</div>
                     <div class="insight-sub" id="biggest-txn-sub">—</div>
                 </div>
             </div>
@@ -2288,7 +2288,7 @@
                     <div class="summary-grid">
                         <div class="summary-item">
                             <span class="s-label">Total Spent</span>
-                            <span class="s-value" id="summary-total">₱0</span>
+                            <span class="s-value privacy-mask" id="summary-total">₱0</span>
                         </div>
                         <div class="summary-item">
                             <span class="s-label">vs Last Month</span>
@@ -4874,12 +4874,18 @@
 
             const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
 
+            const isHidden = localStorage.getItem('balance_hidden') === 'true';
+            
             // --- DAILY AVERAGE ---
             const thisMonthTotal = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
             const dailyAvg = dayOfMonth > 0 ? thisMonthTotal / dayOfMonth : 0;
             const dailyAvgEl = document.getElementById('daily-avg-val');
             const dailyAvgSub = document.getElementById('daily-avg-sub');
-            if (dailyAvgEl) dailyAvgEl.textContent = '₱' + dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            if (dailyAvgEl) {
+                const formatted = '₱' + dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                dailyAvgEl.dataset.raw = formatted;
+                dailyAvgEl.textContent = isHidden ? '******' : formatted;
+            }
 
             // Compare to last month's daily average
             const lastMonthTotal = lastMonthTxns.reduce((s, t) => s + getAmt(t), 0);
@@ -4910,7 +4916,11 @@
             });
             const bigVal = document.getElementById('biggest-txn-val');
             const bigSub = document.getElementById('biggest-txn-sub');
-            if (bigVal) bigVal.textContent = '₱' + biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            if (bigVal) {
+                const formatted = '₱' + biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                bigVal.dataset.raw = formatted;
+                bigVal.textContent = isHidden ? '******' : formatted;
+            }
             if (bigSub) bigSub.textContent = biggestName;
 
             // --- MONTHLY SUMMARY ---
@@ -4919,7 +4929,11 @@
             const summaryTopCat = document.getElementById('summary-top-cat');
             const summaryCount = document.getElementById('summary-txn-count');
 
-            if (summaryTotal) summaryTotal.textContent = '₱' + thisMonthTotal.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            if (summaryTotal) {
+                const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                summaryTotal.dataset.raw = formatted;
+                summaryTotal.textContent = isHidden ? '******' : formatted;
+            }
             if (summaryCount) summaryCount.textContent = thisMonthTxns.length;
 
             // % change vs last month
@@ -5558,7 +5572,14 @@
                     guide.style.opacity = '1';
 
                     const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(dataPoints[nearestIdx]).toLocaleString()}</div>`;
+                    let tooltipHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div>`;
+                    tooltipHTML += `<div style="color:#d1fae5; font-size:13px; font-weight:800;">₱${Math.round(dataPoints[nearestIdx]).toLocaleString()}</div>`;
+                    
+                    if (filter === 'this_vs_prev' && dataPointsCompare[nearestIdx] !== undefined) {
+                        tooltipHTML += `<div style="color:#94a3b8; font-size:11px; margin-top:2px;">₱${Math.round(dataPointsCompare[nearestIdx]).toLocaleString()}</div>`;
+                    }
+                    
+                    tooltip.innerHTML = tooltipHTML;
                     tooltip.style.opacity = '1';
                     tooltip.style.display = 'block';
                     

@@ -1366,8 +1366,8 @@
             opacity: 0; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
         }
-        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        @keyframes menuSlideIn { from { opacity: 0; transform: translateY(-8px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuFadeIn 0.2s ease-out; }
+        @keyframes menuFadeIn { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
         /* BRAND LOGO BADGE */
         .brand-badge {
@@ -1707,8 +1707,89 @@
         .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
         .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
         .manual-cat-item span { font-size: 10px !important; }
-   
-   
+
+        /* UNDO SNACKBAR STACK */
+        .undo-stack {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 400px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .undo-snackbar {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            pointer-events: auto;
+            animation: undoSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .undo-snackbar.removing {
+            animation: undoSlideOut 0.3s ease forwards;
+        }
+        .undo-snackbar-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+        }
+        .undo-snackbar-text {
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .undo-snackbar-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .undo-snackbar-btn:active {
+            background: rgba(239, 68, 68, 0.1);
+            transform: scale(0.95);
+        }
+        .undo-progress-bar {
+            height: 3px;
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .undo-progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            border-radius: 0 0 14px 14px;
+            animation: undoShrink 7s linear forwards;
+        }
+        @keyframes undoShrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        @keyframes undoSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes undoSlideOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(20px) scale(0.95); }
+        }
+
 </style>
 
 
@@ -2316,6 +2397,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Pre-set persistence to avoid delay in click handler
+        setPersistence(auth, browserLocalPersistence).catch(e => console.error("Persistence error", e));
+
         // GOOGLE AUTH CONSTANTS
         const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile';
@@ -2419,80 +2503,77 @@
             if (btn && btn.classList) btn.style.opacity = '0.5';
 
             try {
-                const provider = new GoogleAuthProvider(); // Use eager import from top level
+                const provider = new GoogleAuthProvider();
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
-                // DETECT MOBILE FOR REDIRECT (Prevents "Popup Blocked")
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                
-                if (isMobile) {
-                    log('Mobile Detected: Using signInWithRedirect...');
-                    await setPersistence(auth, browserLocalPersistence);
-                    await signInWithRedirect(auth, provider);
-                    return; // Page will redirect
-                }
-
-                log('Calling signInWithPopup...');
-                await setPersistence(auth, browserLocalPersistence);
-                const result = await signInWithPopup(auth, provider);
-                log('Popup success! User: ' + result.user.email);
-                
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    accessToken = credential.accessToken;
-                    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                    const expMs = Date.now() + ONE_YEAR_MS;
-                    localStorage.setItem('g_access_token', accessToken);
-                    localStorage.setItem('g_token_expiry', expMs.toString());
-                    localStorage.setItem('g_token_issued_at', Date.now().toString());
-                    console.log('✅ Token stored with 1-year expiry');
-                }
-
-                if (result.user.displayName) {
-                    const parts = result.user.displayName.split(' ');
-                    const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : parts[0];
-                    document.getElementById('user-display-name').innerText = firstName;
-                    localStorage.setItem('user_name', firstName);
-                }
-                
-                if (result.user.photoURL) {
-                    const picEl = document.getElementById('user-pic');
-                    let photoUrl = result.user.photoURL;
-                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                // NO AWAIT HERE: Call popup immediately to preserve user gesture
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    log('Attempting signInWithPopup...');
+                    handleAuthResult(result);
+                } catch (popupError) {
+                    // Check if popup was blocked or if error indicates redirect is needed
+                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        log('Popup blocked or mobile detected. Falling back to signInWithRedirect...');
+                        localStorage.setItem('auth_redirect_pending', 'true');
+                        await signInWithRedirect(auth, provider);
+                    } else {
+                        throw popupError;
                     }
-                    picEl.src = photoUrl;
-                    document.getElementById('profile-badge').classList.add('has-pic');
-                    localStorage.setItem('user_pic', photoUrl);
                 }
-
-                log('Loading user data...');
-                await loadData();
-                showToast('Signed in successfully!');
-                
             } catch (e) {
                 log('Google Sign-In Error: ' + e.message, 'error');
-                console.error(e);
                 showToast('Login failed. Please try again.');
             } finally {
                 if (btn && btn.classList) btn.style.opacity = '1';
             }
         };
 
+        // Helper to handle authentication result (shared between popup and redirect)
+        function handleAuthResult(result) {
+            log('Auth success! User: ' + result.user.email);
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential) {
+                accessToken = credential.accessToken;
+                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+                localStorage.setItem('g_access_token', accessToken);
+                localStorage.setItem('g_token_expiry', (Date.now() + ONE_YEAR_MS).toString());
+                localStorage.setItem('g_token_issued_at', Date.now().toString());
+            }
+
+            if (result.user.displayName) {
+                const parts = result.user.displayName.split(' ');
+                const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : parts[0];
+                document.getElementById('user-display-name').innerText = firstName;
+                localStorage.setItem('user_name', firstName);
+            }
+            
+            if (result.user.photoURL) {
+                const picEl = document.getElementById('user-pic');
+                let photoUrl = result.user.photoURL;
+                if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                    photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                }
+                picEl.src = photoUrl;
+                document.getElementById('profile-badge').classList.add('has-pic');
+                localStorage.setItem('user_pic', photoUrl);
+            }
+
+            log('Loading user data...');
+            loadData();
+            showToast('Signed in successfully!');
+        }
+
         // HANDLE REDIRECT RESULT (For Mobile)
         getRedirectResult(auth).then((result) => {
+            // Always clear the pending flag when result (or lack thereof) settles
+            localStorage.removeItem('auth_redirect_pending');
+            
             if (result) {
-                log('Redirect success! User: ' + result.user.email);
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    accessToken = credential.accessToken;
-                    localStorage.setItem('g_access_token', accessToken);
-                    localStorage.setItem('g_token_expiry', Date.now() + (365 * 24 * 60 * 60 * 1000));
-                    localStorage.setItem('g_token_issued_at', Date.now());
-                }
-                showToast('Signed in successfully!');
+                handleAuthResult(result);
             }
         }).catch((error) => {
+            localStorage.removeItem('auth_redirect_pending');
             if (error.code !== 'auth/web-storage-unsupported') {
                 log('Redirect Auth Error: ' + error.message, 'error');
             }
@@ -2710,7 +2791,13 @@
 
             // FETCH ACCOUNTS & SYNC THEME (Master Observer)
             onAuthStateChanged(auth, async (user) => {
+                const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
+
                 if (!user) {
+                    if (isRedirectPending) {
+                        log('Redirect pending detected. Holding anonymous fallback...');
+                        return; // Wait for getRedirectResult to finish
+                    }
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     return;
@@ -2855,15 +2942,26 @@
                             const gmailToken = localStorage.getItem('g_access_token');
                             const gmailExpiry = localStorage.getItem('g_token_expiry');
                             
-                            // Extended expiry: 1 year (365 days) instead of default 1 hour
-                            // Only request if token doesn't exist or is logically expired (after 1 year)
                             if (!gmailToken || !gmailExpiry || Date.now() >= parseInt(gmailExpiry)) {
                                 console.log('⚠️ Gmail token missing or expired. Please use the sync button to authenticate.');
-                                // DO NOT auto-request token on page load to prevent popup flash
-                                // User must manually click sync button to authenticate
                             } else {
                                 const daysUntilExpiry = Math.floor((parseInt(gmailExpiry) - Date.now()) / (1000 * 60 * 60 * 24));
                                 console.log(`✅ Gmail token valid for ${daysUntilExpiry} more days`);
+                            }
+
+                            // AUTO-REFRESH GMAIL TOKEN: Proactively refresh every 45 minutes
+                            // Google OAuth access tokens expire in ~60 min; this prevents expiry
+                            if (gmailToken && tokenClient) {
+                                if (window.gmailRefreshInterval) clearInterval(window.gmailRefreshInterval);
+                                window.gmailRefreshInterval = setInterval(() => {
+                                    console.log('🔄 Proactive Gmail token refresh (45-min timer)...');
+                                    try {
+                                        tokenClient.requestAccessToken({ prompt: '' });
+                                    } catch (e) {
+                                        console.warn('Proactive refresh failed:', e.message);
+                                    }
+                                }, 45 * 60 * 1000); // 45 minutes
+                                console.log('⏱️ Gmail auto-refresh timer started (every 45 min)');
                             }
                         }
                         
@@ -3140,12 +3238,21 @@
         };
 
         function applyUserView(user) {
-            const isAnon = !user || user.isAnonymous;
+            const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
+            const isGoogleUser = user && !user.isAnonymous;
             const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
             
             // SHOW/HIDE GATE
             const gate = document.getElementById('guestGate');
-            if (gate) gate.style.display = isAnon ? 'flex' : 'none';
+            if (gate) {
+                // ALWAYS show gate if not a Google user, unless a redirect is currently in progress
+                // This fulfills the "sign in required must always show up" request.
+                if (isRedirectPending) {
+                    gate.style.display = 'none';
+                } else {
+                    gate.style.display = isGoogleUser ? 'none' : 'flex';
+                }
+            }
 
             const scrollContainer = document.getElementById('cardCarouselScroll');
             const placeholder = document.querySelector('.add-card-placeholder');
@@ -4843,6 +4950,22 @@
             
             if (!path || txns.length === 0) return;
 
+            // CATEGORY FILTER: Read from the existing txn-cat-filter dropdown (bottom section)
+            const trendCatEl = document.getElementById('txn-cat-filter');
+            const selectedTrendCat = trendCatEl ? trendCatEl.value : 'all';
+
+            // Helper: check if transaction matches category filter
+            // txn-cat-filter uses cat.label as values, so match against both ID and label
+            const matchesCatFilter = (t, mappedTrn) => {
+                if (selectedTrendCat === 'all') return true;
+                const txnCatId = t.manualCategory || t.category || mappedTrn.category || '';
+                // Also get the display label for comparison
+                const txnCatLabel = displayCategoryName ? displayCategoryName(txnCatId) : txnCatId;
+                return txnCatId.toLowerCase() === selectedTrendCat.toLowerCase() || 
+                       txnCatLabel.toLowerCase() === selectedTrendCat.toLowerCase();
+            };
+
+
             // Reset labels
             const labelsContainer = document.getElementById('trend-labels');
             if (labelsContainer) labelsContainer.innerHTML = '';
@@ -4867,6 +4990,7 @@
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || t.reimbursed || d < startOfWeek || mappedTrn.category === 'Income') return; 
+                    if (!matchesCatFilter(t, mappedTrn)) return;
 
                     const diff = Math.floor((d - startOfWeek) / 86400000);
                     if (diff >= 0 && diff < 7) {
@@ -4893,6 +5017,7 @@
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (!matchesCatFilter(t, mappedTrn)) return;
 
                     // Calculate month difference
                     const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
@@ -4932,6 +5057,7 @@
                     // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (!matchesCatFilter(t, mappedTrn)) return;
                     
                     let idx;
                     if (filter === 'this_month') {
@@ -6153,43 +6279,21 @@
                 return;
             }
 
-            // SMART TOKEN VALIDATION: Refresh token if older than 50 minutes
+            // SMART TOKEN VALIDATION: Try existing token first, auto-refresh on 401
+            // Instead of rejecting tokens after 50 min, let the API tell us via 401
             const storedToken = localStorage.getItem('g_access_token');
-            const issuedAt = localStorage.getItem('g_token_issued_at');
-            const FIFTY_MINS_MS = 50 * 60 * 1000;
-            const isLogicalValid = storedToken && issuedAt && (Date.now() - parseInt(issuedAt) < FIFTY_MINS_MS);
             
-            if (isLogicalValid) {
-                console.log('🚀 Using valid stored Gmail token...');
+            if (storedToken) {
+                console.log('🚀 Using stored Gmail token (will auto-refresh on 401)...');
                 accessToken = storedToken;
-            } else if (storedToken || tokenClient) {
-                console.log('🔄 Token expired or missing issued_at. Attempting silent refresh...');
-                try {
-                    // Start refresh process
-                    window.pendingSyncLimit = limit;
-                    window.pendingSyncManual = manualTrigger;
-                    
-                    // Silent refresh if not manual, or if we want to avoid popup
-                    tokenClient.requestAccessToken({ 
-                        callback: (resp) => {
-                           if (resp.error) throw resp;
-                           // The initGIS callback will also handle this, but adding safety
-                        },
-                        prompt: manualTrigger ? '' : 'none',
-                        hint: localStorage.getItem('user_email') || auth.currentUser?.email || undefined
-                    });
-                    return; // initGIS callback will re-trigger handleScan
-                } catch (e) {
-                    console.error('Refresh request failed', e);
-                    // Don't clear token here, try to use it as fallback if we have one
-                    if (storedToken) accessToken = storedToken;
-                }
             } else if (!storedToken) {
-                // No token at all
+                // No token at all — need to authenticate
                 if (!manualTrigger) return;
                 
                 if (tokenClient) {
+                    console.log('🔑 No token found. Requesting authentication...');
                     window.pendingSyncLimit = limit;
+                    window.pendingSyncManual = manualTrigger;
                     tokenClient.requestAccessToken({ prompt: '' });
                     return;
                 }
@@ -6236,18 +6340,15 @@
                     const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                     
                     if (res.status === 401) {
-                        console.warn('🚫 Gmail Token expired or revoked.');
+                        console.warn('🚫 Gmail Token expired. Auto-refreshing...');
                         
-                        // IF MANUAL: Try one more time with prompt
-                        if (manualTrigger && tokenClient) {
-                            console.log('🔄 Manual Trigger: Requesting new access token with popup...');
+                        // ALWAYS auto-refresh on 401 (both manual and auto triggers)
+                        if (tokenClient) {
+                            window.pendingSyncLimit = limit;
+                            window.pendingSyncManual = manualTrigger;
                             tokenClient.requestAccessToken({ prompt: '' });
-                            throw new Error('Unauthorized - Refreshing');
                         }
-                        
-                        // IF AUTO: Don't clear localStorage immediately, let the next reload try a refresh
-                        // This prevents the "Sync Expired" state where the token is gone forever
-                        throw new Error('Unauthorized');
+                        throw new Error('Unauthorized - Auto-Refreshing');
                     }
                     
                     const data = await res.json();
@@ -7146,6 +7247,88 @@
             if (window.pushModalState) pushModalState('delete-txn');
         };
 
+        // UNDO SNACKBAR STACK SYSTEM (max 3)
+        window.undoQueue = []; // Array of { id, txnId, accId, col, deletedItem, timer, el }
+
+        function createUndoSnackbar(txnId, accId, col, deletedItem) {
+            const stack = document.getElementById('undo-stack');
+            if (!stack) return;
+
+            const entryId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+
+            // If already 3 in queue, commit and remove the oldest
+            if (window.undoQueue.length >= 3) {
+                const oldest = window.undoQueue.shift();
+                commitAndRemoveSnackbar(oldest);
+            }
+
+            // Get the item name for display
+            const itemName = deletedItem ? (deletedItem.note || deletedItem.merchant || deletedItem.description || 'Item') : 'Item';
+            const displayName = itemName.length > 20 ? itemName.substring(0, 20) + '…' : itemName;
+
+            // Create snackbar element
+            const el = document.createElement('div');
+            el.className = 'undo-snackbar';
+            el.dataset.entryId = entryId;
+            el.innerHTML = `
+                <div class="undo-snackbar-content">
+                    <span class="undo-snackbar-text">${displayName} deleted</span>
+                    <button class="undo-snackbar-btn" onclick="undoById('${entryId}')">UNDO</button>
+                </div>
+                <div class="undo-progress-bar">
+                    <div class="undo-progress-fill"></div>
+                </div>
+            `;
+            stack.prepend(el);
+
+            // Set 7-second timer
+            const timer = setTimeout(() => {
+                const entry = window.undoQueue.find(e => e.id === entryId);
+                if (entry) {
+                    commitAndRemoveSnackbar(entry);
+                    window.undoQueue = window.undoQueue.filter(e => e.id !== entryId);
+                }
+            }, 7000);
+
+            window.undoQueue.push({ id: entryId, txnId, accId, col, deletedItem, timer, el });
+        }
+
+        function commitAndRemoveSnackbar(entry) {
+            // Commit the delete to Firestore
+            commitDelete(entry.txnId, entry.accId, entry.col);
+            clearTimeout(entry.timer);
+            // Animate out
+            if (entry.el && entry.el.parentNode) {
+                entry.el.classList.add('removing');
+                setTimeout(() => entry.el.remove(), 300);
+            }
+        }
+
+        window.undoById = (entryId) => {
+            const idx = window.undoQueue.findIndex(e => e.id === entryId);
+            if (idx === -1) return;
+            const entry = window.undoQueue[idx];
+            
+            // Cancel pending delete
+            clearTimeout(entry.timer);
+            
+            // Restore the item
+            if (entry.deletedItem) {
+                window.allTxns.push(entry.deletedItem);
+                window.allTxns.sort((a, b) => new Date(b.date) - new Date(a.date));
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+                showToast('Transaction restored');
+            }
+            
+            // Remove snackbar
+            if (entry.el && entry.el.parentNode) {
+                entry.el.classList.add('removing');
+                setTimeout(() => entry.el.remove(), 300);
+            }
+            window.undoQueue.splice(idx, 1);
+        };
+
         window.confirmDelete = async () => {
              if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is in "Local Mode". Sign in with Google to sync deletions to the cloud?')) {
@@ -7164,48 +7347,47 @@
             // Locate element for animation
             const txnEl = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
             
-            const performDelete = async () => {
-                // OPTIMISTIC UPDATE (Internal State)
-                const idx = window.allTxns.findIndex(t => t.id === txnId);
-                let deletedItem = null;
-                if (idx > -1) {
-                    deletedItem = window.allTxns[idx];
-                    window.allTxns.splice(idx, 1);
-                    renderHistory(window.allTxns);
-                    updateBalanceToThisMonth(window.allTxns);
-                }
+            // OPTIMISTIC UPDATE: Remove from UI immediately
+            const idx = window.allTxns.findIndex(t => t.id === txnId);
+            let deletedItem = null;
+            if (idx > -1) {
+                deletedItem = { ...window.allTxns[idx] };
+                window.allTxns.splice(idx, 1);
+            }
 
-                try {
-                     if (!auth.currentUser) return;
-                     const uid = auth.currentUser.uid;
-                     await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
-                     
-                     const cacheKey = `wallet_cache_${uid}_${accId}`;
-                     localStorage.setItem(cacheKey, JSON.stringify({
-                         txns: window.allTxns,
-                         timestamp: Date.now()
-                     }));
-                     
-                     showToast('Transaction deleted');
-                } catch (error) { 
-                    log("Error deleting: " + error.message, "error");
-                    showToast('Delete failed');
-                    // Revert
-                    if (deletedItem) {
-                        window.allTxns.push(deletedItem); 
-                        window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); 
-                        renderHistory(window.allTxns);
-                    }
-                }
+            const removeAndRender = () => {
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
             };
 
-            // Trigger Animation -> then perform deletion logic
+            // Trigger Thanos animation then render
             if (txnEl) {
-                window.runThanosSnap(txnEl, performDelete);
+                window.runThanosSnap(txnEl, removeAndRender);
             } else {
-                performDelete();
+                removeAndRender();
             }
+
+            // CREATE UNDO SNACKBAR (max 3 stacked)
+            createUndoSnackbar(txnId, accId, col, deletedItem);
         };
+
+        // COMMIT DELETE: Actually write to Firestore
+        async function commitDelete(txnId, accId, col) {
+            try {
+                if (!auth.currentUser) return;
+                const uid = auth.currentUser.uid;
+                await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
+                
+                const cacheKey = `wallet_cache_${uid}_${accId}`;
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    txns: window.allTxns,
+                    timestamp: Date.now()
+                }));
+            } catch (error) { 
+                log("Error deleting: " + error.message, "error");
+                showToast('Delete failed');
+            }
+        }
 
         // --- CUSTOMIZATION MODALS ---
         const CATEGORIES = [
@@ -8293,31 +8475,8 @@
                 acc.style.display = visibleCount > 0 ? 'block' : 'none';
             });
 
-            // Update Trends Chart based on filtered transactions
-            if (window.allTxns) {
-                const filteredTxns = window.allTxns.filter(t => {
-                    const mapped = getMerchantDisplay(t.merchant, t);
-                    const itemCatId = mapped.category || '';
-                    const itemCatLabel = displayCategoryName(itemCatId);
-                    const merchantName = (t.merchant || '').toLowerCase();
-                    const note = (t.note || '').toLowerCase();
-                    const amount = (t.amount || (t.manualAmount || 0)).toString();
-                    const cleanAmount = amount.replace(/,/g, '');
-
-                    const matchCat = (catSelection === 'all') || 
-                                   (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
-                                   (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
-
-                    const matchKeyword = !keyword || 
-                                       merchantName.includes(keyword) || 
-                                       note.includes(keyword) || 
-                                       amount.includes(keyword) || 
-                                       (cleanKeyword.length > 0 && cleanAmount.includes(cleanKeyword));
-                    
-                    return matchCat && matchKeyword;
-                });
-                drawTrendChart(filteredTxns);
-            }
+            // Update Trends Chart to reflect category filter selection
+            if (typeof window.refreshTrendChart === 'function') window.refreshTrendChart();
         };
 
         window.handleSearchInput = () => {
@@ -8942,13 +9101,16 @@
     <div id="delete-modal" class="modal-overlay">
         <div class="custom-modal" style="text-align: center;">
             <div class="modal-header" style="color: #ef4444; justify-content: center; margin-bottom: 8px;">Delete Transaction?</div>
-            <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">This action cannot be undone.</p>
+            <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">You can undo this within 7 seconds.</p>
             <div class="modal-actions" style="justify-content: center; gap: 16px;">
                 <div class="cancel-link" onclick="closeModals()">CANCEL</div>
                 <button class="mui-btn mui-btn--raised" onclick="confirmDelete()" style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
             </div>
         </div>
     </div>
+
+    <!-- UNDO DELETE SNACKBAR STACK -->
+    <div id="undo-stack" class="undo-stack"></div>
 
     <!-- PREMIUM OBLIGATION MODAL -->
     <div id="obligation-modal" class="dialog-overlay">

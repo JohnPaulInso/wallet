@@ -2316,6 +2316,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Pre-set persistence to avoid delay in click handler
+        setPersistence(auth, browserLocalPersistence).catch(e => console.error("Persistence error", e));
+
         // GOOGLE AUTH CONSTANTS
         const CLIENT_ID = '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com';
         const SCOPES = 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.profile';
@@ -2419,80 +2422,77 @@
             if (btn && btn.classList) btn.style.opacity = '0.5';
 
             try {
-                const provider = new GoogleAuthProvider(); // Use eager import from top level
+                const provider = new GoogleAuthProvider();
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
-                // DETECT MOBILE FOR REDIRECT (Prevents "Popup Blocked")
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                
-                if (isMobile) {
-                    log('Mobile Detected: Using signInWithRedirect...');
-                    await setPersistence(auth, browserLocalPersistence);
-                    await signInWithRedirect(auth, provider);
-                    return; // Page will redirect
-                }
-
-                log('Calling signInWithPopup...');
-                await setPersistence(auth, browserLocalPersistence);
-                const result = await signInWithPopup(auth, provider);
-                log('Popup success! User: ' + result.user.email);
-                
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    accessToken = credential.accessToken;
-                    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                    const expMs = Date.now() + ONE_YEAR_MS;
-                    localStorage.setItem('g_access_token', accessToken);
-                    localStorage.setItem('g_token_expiry', expMs.toString());
-                    localStorage.setItem('g_token_issued_at', Date.now().toString());
-                    console.log('✅ Token stored with 1-year expiry');
-                }
-
-                if (result.user.displayName) {
-                    const parts = result.user.displayName.split(' ');
-                    const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : parts[0];
-                    document.getElementById('user-display-name').innerText = firstName;
-                    localStorage.setItem('user_name', firstName);
-                }
-                
-                if (result.user.photoURL) {
-                    const picEl = document.getElementById('user-pic');
-                    let photoUrl = result.user.photoURL;
-                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                // NO AWAIT HERE: Call popup immediately to preserve user gesture
+                try {
+                    const result = await signInWithPopup(auth, provider);
+                    log('Attempting signInWithPopup...');
+                    handleAuthResult(result);
+                } catch (popupError) {
+                    // Check if popup was blocked or if error indicates redirect is needed
+                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                        log('Popup blocked or mobile detected. Falling back to signInWithRedirect...');
+                        localStorage.setItem('auth_redirect_pending', 'true');
+                        await signInWithRedirect(auth, provider);
+                    } else {
+                        throw popupError;
                     }
-                    picEl.src = photoUrl;
-                    document.getElementById('profile-badge').classList.add('has-pic');
-                    localStorage.setItem('user_pic', photoUrl);
                 }
-
-                log('Loading user data...');
-                await loadData();
-                showToast('Signed in successfully!');
-                
             } catch (e) {
                 log('Google Sign-In Error: ' + e.message, 'error');
-                console.error(e);
                 showToast('Login failed. Please try again.');
             } finally {
                 if (btn && btn.classList) btn.style.opacity = '1';
             }
         };
 
+        // Helper to handle authentication result (shared between popup and redirect)
+        function handleAuthResult(result) {
+            log('Auth success! User: ' + result.user.email);
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential) {
+                accessToken = credential.accessToken;
+                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+                localStorage.setItem('g_access_token', accessToken);
+                localStorage.setItem('g_token_expiry', (Date.now() + ONE_YEAR_MS).toString());
+                localStorage.setItem('g_token_issued_at', Date.now().toString());
+            }
+
+            if (result.user.displayName) {
+                const parts = result.user.displayName.split(' ');
+                const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : parts[0];
+                document.getElementById('user-display-name').innerText = firstName;
+                localStorage.setItem('user_name', firstName);
+            }
+            
+            if (result.user.photoURL) {
+                const picEl = document.getElementById('user-pic');
+                let photoUrl = result.user.photoURL;
+                if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
+                    photoUrl = photoUrl.split('=')[0] + '=s96-c';
+                }
+                picEl.src = photoUrl;
+                document.getElementById('profile-badge').classList.add('has-pic');
+                localStorage.setItem('user_pic', photoUrl);
+            }
+
+            log('Loading user data...');
+            loadData();
+            showToast('Signed in successfully!');
+        }
+
         // HANDLE REDIRECT RESULT (For Mobile)
         getRedirectResult(auth).then((result) => {
+            // Always clear the pending flag when result (or lack thereof) settles
+            localStorage.removeItem('auth_redirect_pending');
+            
             if (result) {
-                log('Redirect success! User: ' + result.user.email);
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                if (credential) {
-                    accessToken = credential.accessToken;
-                    localStorage.setItem('g_access_token', accessToken);
-                    localStorage.setItem('g_token_expiry', Date.now() + (365 * 24 * 60 * 60 * 1000));
-                    localStorage.setItem('g_token_issued_at', Date.now());
-                }
-                showToast('Signed in successfully!');
+                handleAuthResult(result);
             }
         }).catch((error) => {
+            localStorage.removeItem('auth_redirect_pending');
             if (error.code !== 'auth/web-storage-unsupported') {
                 log('Redirect Auth Error: ' + error.message, 'error');
             }
@@ -2710,7 +2710,13 @@
 
             // FETCH ACCOUNTS & SYNC THEME (Master Observer)
             onAuthStateChanged(auth, async (user) => {
+                const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
+
                 if (!user) {
+                    if (isRedirectPending) {
+                        log('Redirect pending detected. Holding anonymous fallback...');
+                        return; // Wait for getRedirectResult to finish
+                    }
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     return;
@@ -3140,12 +3146,21 @@
         };
 
         function applyUserView(user) {
-            const isAnon = !user || user.isAnonymous;
+            const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
+            const isGoogleUser = user && !user.isAnonymous;
             const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
             
             // SHOW/HIDE GATE
             const gate = document.getElementById('guestGate');
-            if (gate) gate.style.display = isAnon ? 'flex' : 'none';
+            if (gate) {
+                // ALWAYS show gate if not a Google user, unless a redirect is currently in progress
+                // This fulfills the "sign in required must always show up" request.
+                if (isRedirectPending) {
+                    gate.style.display = 'none';
+                } else {
+                    gate.style.display = isGoogleUser ? 'none' : 'flex';
+                }
+            }
 
             const scrollContainer = document.getElementById('cardCarouselScroll');
             const placeholder = document.querySelector('.add-card-placeholder');
@@ -6171,6 +6186,10 @@
                     
                     // Silent refresh if not manual, or if we want to avoid popup
                     tokenClient.requestAccessToken({ 
+                        callback: (resp) => {
+                           if (resp.error) throw resp;
+                           // The initGIS callback will also handle this, but adding safety
+                        },
                         prompt: manualTrigger ? '' : 'none',
                         hint: localStorage.getItem('user_email') || auth.currentUser?.email || undefined
                     });

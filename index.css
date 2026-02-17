@@ -1295,4 +1295,66 @@
         .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
         .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
         .manual-cat-item span { font-size: 10px !important; }
+
+        /* UNDO DELETE SNACKBAR */
+        .undo-snackbar {
+            position: fixed;
+            bottom: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 400px;
+            background: #1e293b;
+            border-radius: 14px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            z-index: 3000;
+            overflow: hidden;
+            transition: bottom 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .undo-snackbar.show {
+            bottom: 90px;
+        }
+        .undo-snackbar-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+        }
+        .undo-snackbar-text {
+            color: #f1f5f9;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .undo-snackbar-btn {
+            background: none;
+            border: none;
+            color: #60a5fa;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .undo-snackbar-btn:active {
+            background: rgba(96, 165, 250, 0.15);
+            transform: scale(0.95);
+        }
+        .undo-progress-bar {
+            height: 3px;
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+        }
+        .undo-progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+            border-radius: 0 0 14px 14px;
+        }
+        @keyframes undoShrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
    

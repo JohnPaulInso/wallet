@@ -1612,19 +1612,33 @@
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             } else {
-                window.location.href = 'index.html';
+                // PERSISTENCE FIX: Wait a moment for session to restore before kicking to login
+                const lastAuthType = localStorage.getItem('wallet_auth_type');
+                if (lastAuthType === 'google') {
+                    console.log('⌛ Protected Page: Waiting for Google session to restore...');
+                    setTimeout(() => {
+                        if (!auth.currentUser) {
+                            console.log('🚨 Session lost. Redirecting to login.');
+                            window.location.href = 'index.html';
+                        }
+                    }, 3000); // 3 second grace period for protected pages
+                } else {
+                    window.location.href = 'index.html';
+                }
             }
         });
 
         window.handleSignout = async function() {
-            try {
-                if (currentUser) localStorage.removeItem(`goals_${currentUser.uid}`);
-                await auth.signOut();
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error("Signout error:", error);
+            if (confirm('Sign out?')) {
+                try {
+                    localStorage.clear();
+                    await auth.signOut();
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error("Signout error:", error);
+                }
             }
-        }
+        };
 
         async function loadGoals() {
             if (!currentUser) return;

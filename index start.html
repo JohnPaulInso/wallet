@@ -1143,6 +1143,36 @@
         body.dark-mode .trend-label { color: #525252; }
         body.dark-mode .data-mgmt-card { background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); }
 
+        /* MODALS & DIALOGS DARK MODE */
+        body.dark-mode .mui-panel { background: #1a1a1a; color: #fff; border-color: #262626; }
+        body.dark-mode .mui-textfield > input, 
+        body.dark-mode .mui-textfield > textarea { color: #fff; border-bottom-color: #404040; }
+        body.dark-mode .mui-textfield > input:focus, 
+        body.dark-mode .mui-textfield > textarea:focus { border-bottom-color: #3b82f6; }
+        body.dark-mode .mui-textfield > label { color: #94a3b8; }
+        body.dark-mode .mui-btn--raised, body.dark-mode .mui-btn--fab { background-color: #262626; color: #fff; }
+        body.dark-mode .mui--text-title { color: #fff; }
+        body.dark-mode .mui-select > select { color: #fff; background-color: #1a1a1a; border-bottom-color: #404040; }
+        body.dark-mode .mui-select > label { color: #94a3b8; }
+
+        /* Custom Sheets e.g. Daily Summary or Goal */
+        body.dark-mode .obligation-card, 
+        body.dark-mode .goal-card { background: #1a1a1a; border-color: #262626; }
+        body.dark-mode .modal-content { background: #1a1a1a; color: #fff; }
+        body.dark-mode input[type="text"], 
+        body.dark-mode input[type="number"], 
+        body.dark-mode select { background: #262626; color: #fff; border-color: #404040; }
+
+        /* Pin Modal */
+        body.dark-mode .pin-modal-content { background: #1a1a1a; color: #fff; }
+        body.dark-mode .pin-dot { border-color: #404040; }
+        body.dark-mode .pin-dot.filled { background: #fff; }
+        body.dark-mode .pin-btn { background: #262626; color: #fff; }
+
+        /* Undo Snackbar */
+        body.dark-mode .undo-snackbar { background: #1a1a1a; border-color: #262626; }
+        body.dark-mode .undo-snackbar-text { color: #fff; }
+
         /* TREND CHART */
         .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
         .trend-path { filter: drop-shadow(0 4px 6px rgba(29, 78, 216, 0.2)); }
@@ -1366,8 +1396,8 @@
             opacity: 0; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
         }
-        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        @keyframes menuSlideIn { from { opacity: 0; transform: translateY(-8px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuFadeIn 0.2s ease-out; }
+        @keyframes menuFadeIn { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
         /* BRAND LOGO BADGE */
         .brand-badge {
@@ -1707,8 +1737,242 @@
         .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
         .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
         .manual-cat-item span { font-size: 10px !important; }
-   
-   
+
+        /* DAILY AVERAGE & MONTHLY SUMMARY INSIGHT CARDS */
+        .insight-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .insight-card {
+            flex: 1;
+            background: #fff;
+            border-radius: 20px;
+            padding: 18px 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        }
+        .insight-card .insight-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+        .insight-card .insight-value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.5px;
+            margin-bottom: 2px;
+        }
+        .insight-card .insight-sub {
+            font-size: 10px;
+            font-weight: 700;
+            color: #94a3b8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+        }
+        .insight-card .insight-sub.up { color: #ef4444; }
+        .insight-card .insight-sub.down { color: #10b981; }
+        .insight-card .insight-sub.neutral { color: #94a3b8; }
+        body.dark-mode .insight-card { background: var(--card-bg); border-color: var(--border-color); }
+        body.dark-mode .insight-card .insight-value { color: var(--text-primary); }
+
+        /* MONTHLY SUMMARY CARD (Collapsible) */
+        .monthly-summary-card {
+            background: #fff;
+            border-radius: 24px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+        .monthly-summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .monthly-summary-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1e293b;
+        }
+        .monthly-summary-toggle {
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+        .monthly-summary-toggle.collapsed { transform: rotate(-90deg); }
+        .monthly-summary-body {
+            overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.25s ease;
+            max-height: 200px;
+            opacity: 1;
+        }
+        .monthly-summary-body.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .summary-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .summary-item .s-label {
+            font-size: 9px;
+            font-weight: 800;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+        .summary-item .s-value {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e293b;
+        }
+        .summary-item .s-value.red { color: #ef4444; }
+        .summary-item .s-value.green { color: #10b981; }
+        body.dark-mode .monthly-summary-card { background: var(--card-bg); border-color: var(--border-color); }
+        body.dark-mode .monthly-summary-header h3 { color: var(--text-primary); }
+        body.dark-mode .summary-item .s-value { color: var(--text-primary); }
+        body.dark-mode .monthly-summary-toggle { background: var(--border-color); }
+
+        /* SWIPE-TO-ACTION on Transaction Items */
+        .txn-swipe-wrapper {
+            position: relative;
+            overflow: hidden;
+        }
+        .txn-swipe-bg {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-weight: 800;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.15s;
+            pointer-events: none;
+        }
+        .txn-swipe-bg.left {
+            background: #ef4444;
+            justify-content: flex-end;
+        }
+        .txn-swipe-bg.right {
+            background: #f59e0b;
+            justify-content: flex-start;
+        }
+        .txn-swipe-bg.active { opacity: 1; }
+        .txn-swipe-wrapper .premium-txn {
+            position: relative;
+            z-index: 1;
+            transition: transform 0.15s ease;
+        }
+
+        /* UNDO SNACKBAR STACK */
+        .undo-stack {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 400px;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .undo-snackbar {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+            pointer-events: auto;
+            animation: undoSlideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .undo-snackbar.removing {
+            animation: undoSlideOut 0.3s ease forwards;
+        }
+        .undo-snackbar-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+        }
+        .undo-snackbar-text {
+            color: #1e293b;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .undo-snackbar-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .undo-snackbar-btn:active {
+            background: rgba(239, 68, 68, 0.1);
+            transform: scale(0.95);
+        }
+        .undo-progress-bar {
+            height: 3px;
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        .undo-progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            border-radius: 0 0 14px 14px;
+            animation: undoShrink 7s linear forwards;
+        }
+        @keyframes undoShrink {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        @keyframes undoSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes undoSlideOut {
+            from { opacity: 1; transform: translateY(0) scale(1); }
+            to { opacity: 0; transform: translateY(20px) scale(0.95); }
+        }
+
 </style>
 
 
@@ -1998,6 +2262,50 @@
                 </div>
             </div>
 
+            <!-- DAILY AVERAGE + TOP CATEGORY INSIGHT ROW -->
+            <div class="insight-row">
+                <div class="insight-card">
+                    <div class="insight-label">Daily Average</div>
+                    <div class="insight-value privacy-mask" id="daily-avg-val">₱0</div>
+                    <div class="insight-sub" id="daily-avg-sub">this month</div>
+                </div>
+                <div class="insight-card">
+                    <div class="insight-label">Biggest Expense</div>
+                    <div class="insight-value privacy-mask" id="biggest-txn-val">₱0</div>
+                    <div class="insight-sub" id="biggest-txn-sub">—</div>
+                </div>
+            </div>
+
+            <!-- MONTHLY SUMMARY (Collapsible) -->
+            <div class="monthly-summary-card">
+                <div class="monthly-summary-header" onclick="toggleMonthlySummary()">
+                    <h3>Monthly Summary</h3>
+                    <div class="monthly-summary-toggle" id="summary-toggle">
+                        <i class="material-icons" style="font-size: 16px; color: #64748b;">expand_more</i>
+                    </div>
+                </div>
+                <div class="monthly-summary-body" id="summary-body">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="s-label">Total Spent</span>
+                            <span class="s-value privacy-mask" id="summary-total">₱0</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="s-label">vs Last Month</span>
+                            <span class="s-value" id="summary-change">—</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="s-label">Top Category</span>
+                            <span class="s-value" id="summary-top-cat">—</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="s-label">Transactions</span>
+                            <span class="s-value" id="summary-txn-count">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
             <div id="chart-section" class="chart-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
@@ -2049,36 +2357,57 @@
                     <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">Spending Trends</h3>
                     <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f1f5f9; padding: 0 4px 0 10px; border-radius: 6px; height: 26px; text-transform: none; border: none; outline: none; cursor: pointer; text-align: left; min-width: 90px;">
                         <option value="this_month" selected>This Month</option>
+                        <option value="this_vs_prev">This vs Prev Month</option>
                         <option value="this_week">This Week</option>
                         <option value="last_3_months">Past 3 Months</option>
                         <option value="last_6_months">Past 6 Months</option>
                     </select>
                 </div>
                 <div id="trend-month-label" style="text-align: left; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">January 2026</div>
-                <div style="height: 140px; width: 100%; position: relative; margin-bottom: 20px;">
-                    <svg id="trendChart" width="100%" height="140" viewBox="0 0 400 140" preserveAspectRatio="none">
+                <div style="position: relative; margin-bottom: 24px;">
+                    <svg id="trendChart" width="100%" height="140" viewBox="0 0 400 140" preserveAspectRatio="none" style="display: block;">
                         <defs>
                             <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                                 <stop offset="0%" style="stop-color:#3b82f6; stop-opacity:0.1" />
                                 <stop offset="100%" style="stop-color:#3b82f6; stop-opacity:0" />
                             </linearGradient>
+                            <linearGradient id="trendGradientCompare" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#94a3b8; stop-opacity:0.05" />
+                                <stop offset="100%" style="stop-color:#94a3b8; stop-opacity:0" />
+                            </linearGradient>
                         </defs>
+                        <path id="trendAreaCompare" d="" fill="url(#trendGradientCompare)"></path>
+                        <path id="trendPathCompare" d="" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,4"></path>
                         <path id="trendArea" d="" fill="url(#trendGradient)"></path>
                         <path id="trendPath" class="trend-path" d="" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"></path>
                         <g id="trendDots"></g>
+                        <g id="trendDotsCompare"></g>
                     </svg>
-                    <div id="trend-labels" style="display: flex; justify-content: space-between; margin-top: 10px; padding: 0 5px;">
+                    <div id="trend-labels" style="display: flex; justify-content: space-between; margin-top: 12px; padding: 0 5px;">
                         <span class="trend-label">Week 1</span>
                         <span class="trend-label">Week 2</span>
                         <span class="trend-label">Week 3</span>
                         <span class="trend-label">Week 4</span>
                     </div>
                 </div>
-                <div style="border-top: 1px dashed #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; align-items: center; padding-top: 16px;">
+                <!-- Legend for Comparison -->
+                <div id="trend-legend" style="display: none; justify-content: center; gap: 20px; margin: 0 0 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 12px; height: 3px; background: #3b82f6; border-radius: 2px;"></div>
+                        <span style="color: #64748b;">Current</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <div style="width: 12px; height: 0; border-top: 2px dashed #94a3b8;"></div>
+                        <span style="color: #94a3b8;">Previous</span>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px dashed #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 13px; color: #64748b; font-weight: 600;">Period Total</span>
                     <span style="font-size: 1.1rem; font-weight: 800; color: #10b981;" id="trend-period-total">PHP 0.00</span>
                 </div>
             </div>
+
 
             <div class="recent-header">
                 <h3>Recent Transactions</h3>
@@ -2124,8 +2453,6 @@
 
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
             <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
-
-            <div style="margin: 10px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
             <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
@@ -2451,6 +2778,8 @@
         // Helper to handle authentication result (shared between popup and redirect)
         function handleAuthResult(result) {
             log('Auth success! User: ' + result.user.email);
+            localStorage.setItem('wallet_auth_type', 'google'); // Mark as Google user
+            
             const credential = GoogleAuthProvider.credentialFromResult(result);
             if (credential) {
                 accessToken = credential.accessToken;
@@ -2589,50 +2918,9 @@
 
         // GMAIL API LOGIC (Constants moved early)
 
-        // GMAIL TOKEN STORAGE HELPER - Sets 1 year expiry instead of default 1 hour
-        window.storeGmailToken = function(token) {
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000; // 365 days in milliseconds
-            const expiryTimestamp = Date.now() + ONE_YEAR_MS;
-            
-            localStorage.setItem('g_access_token', token);
-            localStorage.setItem('g_token_expiry', expiryTimestamp.toString());
-            
-            // Update global variables
-            accessToken = token;
-            expiry = expiryTimestamp.toString();
-            
-            console.log('✅ Gmail token stored with 1-year expiry:', new Date(expiryTimestamp).toLocaleDateString());
-        };
-
-        // INTERCEPT localStorage.setItem to auto-extend Gmail token expiry
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
-            // If storing Gmail access token, also update expiry to 1 year
-            if (key === 'g_access_token' && value) {
-                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                const expiryTimestamp = Date.now() + ONE_YEAR_MS;
-                originalSetItem.call(localStorage, 'g_token_expiry', expiryTimestamp.toString());
-                console.log('🔒 Auto-extended Gmail token expiry to 1 year');
-            }
-            // Call original setItem
-            originalSetItem.call(localStorage, key, value);
-        };
-
-        // EXTEND EXISTING TOKEN EXPIRY if it's too short
-        if (accessToken && expiry) {
-            const currentExpiry = parseInt(expiry);
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-            const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-            
-            // If token expires in less than 1 month, extend it to 1 year
-            // This satisfies the user request to keep the session for 1 year
-            if (currentExpiry - Date.now() < ONE_MONTH_MS) {
-                const newExpiry = Date.now() + ONE_YEAR_MS;
-                localStorage.setItem('g_token_expiry', newExpiry.toString());
-                localStorage.setItem('g_token_issued_at', Date.now().toString());
-                expiry = newExpiry.toString();
-                console.log('🔄 Session Persistence: Extended Gmail token visibility to 1 year.');
-            }
+        if (window.location.search.includes('logout=true')) {
+            // Force a deep reset on the first load after logout
+            log('🧹 Session purge complete. User isolated.', 'info');
         }
 
         if (window.location.search.includes('logout=true')) {
@@ -2709,17 +2997,39 @@
             }
 
             // FETCH ACCOUNTS & SYNC THEME (Master Observer)
+            let authWaitStarted = false;
             onAuthStateChanged(auth, async (user) => {
                 const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
+                const lastAuthType = localStorage.getItem('wallet_auth_type');
 
                 if (!user) {
                     if (isRedirectPending) {
                         log('Redirect pending detected. Holding anonymous fallback...');
                         return; // Wait for getRedirectResult to finish
                     }
+
+                    // PERSISTENCE FIX: If we previously had a google session, wait before falling back to guest
+                    if (lastAuthType === 'google' && !authWaitStarted) {
+                        authWaitStarted = true;
+                        log('Waiting for persistent Google session...');
+                        // Give it 2.5 seconds to restore
+                        setTimeout(() => {
+                            if (!auth.currentUser) {
+                                log('Google session not found. Using local fallback.');
+                                signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
+                            }
+                        }, 2500);
+                        return;
+                    }
+
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     return;
+                }
+
+                // If logged in as Google, update flag
+                if (!user.isAnonymous) {
+                    localStorage.setItem('wallet_auth_type', 'google');
                 }
 
                 // Save UID for future instant loads
@@ -2861,15 +3171,26 @@
                             const gmailToken = localStorage.getItem('g_access_token');
                             const gmailExpiry = localStorage.getItem('g_token_expiry');
                             
-                            // Extended expiry: 1 year (365 days) instead of default 1 hour
-                            // Only request if token doesn't exist or is logically expired (after 1 year)
                             if (!gmailToken || !gmailExpiry || Date.now() >= parseInt(gmailExpiry)) {
                                 console.log('⚠️ Gmail token missing or expired. Please use the sync button to authenticate.');
-                                // DO NOT auto-request token on page load to prevent popup flash
-                                // User must manually click sync button to authenticate
                             } else {
                                 const daysUntilExpiry = Math.floor((parseInt(gmailExpiry) - Date.now()) / (1000 * 60 * 60 * 24));
                                 console.log(`✅ Gmail token valid for ${daysUntilExpiry} more days`);
+                            }
+
+                            // AUTO-REFRESH GMAIL TOKEN: Proactively refresh every 45 minutes
+                            // Google OAuth access tokens expire in ~60 min; this prevents expiry
+                            if (gmailToken && tokenClient) {
+                                if (window.gmailRefreshInterval) clearInterval(window.gmailRefreshInterval);
+                                window.gmailRefreshInterval = setInterval(() => {
+                                    console.log('🔄 Proactive Gmail token refresh (45-min timer)...');
+                                    try {
+                                        tokenClient.requestAccessToken({ prompt: '' });
+                                    } catch (e) {
+                                        console.warn('Proactive refresh failed:', e.message);
+                                    }
+                                }, 45 * 60 * 1000); // 45 minutes
+                                console.log('⏱️ Gmail auto-refresh timer started (every 45 min)');
                             }
                         }
                         
@@ -2900,6 +3221,18 @@
                 handleLocalModeNudge(user);
                 
                 applyUserView(user);
+
+                // SILENT TOKEN REFRESH ON LOAD (If Google user)
+                if (!user.isAnonymous && tokenClient) {
+                    const lastIssued = localStorage.getItem('g_token_issued_at');
+                    const now = Date.now();
+                    const filterAge = 50 * 60 * 1000; // 50 minutes
+                    
+                    if (!lastIssued || (now - parseInt(lastIssued)) > filterAge) {
+                        log('🔄 Session identified: Attempting silent token refresh...');
+                        tokenClient.requestAccessToken({ prompt: 'none' });
+                    }
+                }
             });
         });
 
@@ -3149,13 +3482,13 @@
             const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
             const isGoogleUser = user && !user.isAnonymous;
             const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
+            const lastAuthType = localStorage.getItem('wallet_auth_type');
             
             // SHOW/HIDE GATE
             const gate = document.getElementById('guestGate');
             if (gate) {
-                // ALWAYS show gate if not a Google user, unless a redirect is currently in progress
-                // This fulfills the "sign in required must always show up" request.
-                if (isRedirectPending) {
+                // LOADING STATE: If we are a returning Google user but auth isn't back yet, keep gate hidden
+                if (isRedirectPending || (lastAuthType === 'google' && !isGoogleUser && !user?.isAnonymous)) {
                     gate.style.display = 'none';
                 } else {
                     gate.style.display = isGoogleUser ? 'none' : 'flex';
@@ -4423,6 +4756,16 @@
 
         // SAFETY: Initialize visibility and theme on load
         window.addEventListener('DOMContentLoaded', () => {
+             // Initialize theme
+             const savedTheme = localStorage.getItem('theme_preference') || 'light';
+             if (savedTheme === 'dark') {
+                 document.body.classList.add('dark-mode');
+                 const icon = document.getElementById('dark-mode-icon');
+                 const text = document.getElementById('dark-mode-text');
+                 if (icon) icon.innerText = 'light_mode';
+                 if (text) text.innerText = 'Light Mode';
+             }
+
              // Initialize privacy mask
              const isHidden = localStorage.getItem('balance_hidden') === 'true';
              if(isHidden) {
@@ -4486,7 +4829,140 @@
                 if (acc === 'bpi') window.bpiBalanceVal = balance;
                 updateBPIInsight();
             }
+
+            // Update insight cards and comparison charts
+            updateInsightCards(txns);
+
         }
+
+
+        // ---- INSIGHT CARDS & MONTHLY SUMMARY ----
+        function updateInsightCards(txns) {
+            if (!txns || txns.length === 0) return;
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const dayOfMonth = now.getDate();
+
+            // This month's expenses (non-excluded, non-refund, non-income)
+            const thisMonthTxns = txns.filter(t => {
+                if (t.excluded || t.refund || t.reimbursed) return false;
+                const d = new Date(t.date);
+                if (d.getFullYear() !== year || d.getMonth() !== month) return false;
+                const mapped = getMerchantDisplay(t.merchant, t);
+                return mapped.category !== 'Income';
+            });
+
+            // Last month's expenses
+            const lastMonthDate = new Date(year, month - 1, 1);
+            const lmYear = lastMonthDate.getFullYear();
+            const lmMonth = lastMonthDate.getMonth();
+            const lastMonthTxns = txns.filter(t => {
+                if (t.excluded || t.refund || t.reimbursed) return false;
+                const d = new Date(t.date);
+                if (d.getFullYear() !== lmYear || d.getMonth() !== lmMonth) return false;
+                const mapped = getMerchantDisplay(t.merchant, t);
+                return mapped.category !== 'Income';
+            });
+
+            const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+
+            const isHidden = localStorage.getItem('balance_hidden') === 'true';
+            
+            // --- DAILY AVERAGE ---
+            const thisMonthTotal = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
+            const dailyAvg = dayOfMonth > 0 ? thisMonthTotal / dayOfMonth : 0;
+            const dailyAvgEl = document.getElementById('daily-avg-val');
+            const dailyAvgSub = document.getElementById('daily-avg-sub');
+            if (dailyAvgEl) {
+                const formatted = '₱' + dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                dailyAvgEl.dataset.raw = formatted;
+                dailyAvgEl.textContent = isHidden ? '******' : formatted;
+            }
+
+            // Compare to last month's daily average
+            const lastMonthTotal = lastMonthTxns.reduce((s, t) => s + getAmt(t), 0);
+            const daysInLastMonth = new Date(lmYear, lmMonth + 1, 0).getDate();
+            const lastDailyAvg = daysInLastMonth > 0 ? lastMonthTotal / daysInLastMonth : 0;
+            if (dailyAvgSub) {
+                if (lastDailyAvg > 0) {
+                    const pctChange = ((dailyAvg - lastDailyAvg) / lastDailyAvg) * 100;
+                    const arrow = pctChange > 0 ? '↑' : '↓';
+                    dailyAvgSub.textContent = `${arrow} ${Math.abs(pctChange).toFixed(0)}% vs last month`;
+                    dailyAvgSub.className = 'insight-sub ' + (pctChange > 0 ? 'up' : 'down');
+                } else {
+                    dailyAvgSub.textContent = 'this month';
+                    dailyAvgSub.className = 'insight-sub neutral';
+                }
+            }
+
+            // --- BIGGEST EXPENSE ---
+            let biggestAmt = 0;
+            let biggestName = '—';
+            thisMonthTxns.forEach(t => {
+                const amt = getAmt(t);
+                if (amt > biggestAmt) {
+                    biggestAmt = amt;
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    biggestName = t.note || mapped.name || t.merchant || 'Unknown';
+                }
+            });
+            const bigVal = document.getElementById('biggest-txn-val');
+            const bigSub = document.getElementById('biggest-txn-sub');
+            if (bigVal) {
+                const formatted = '₱' + biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                bigVal.dataset.raw = formatted;
+                bigVal.textContent = isHidden ? '******' : formatted;
+            }
+            if (bigSub) bigSub.textContent = biggestName;
+
+            // --- MONTHLY SUMMARY ---
+            const summaryTotal = document.getElementById('summary-total');
+            const summaryChange = document.getElementById('summary-change');
+            const summaryTopCat = document.getElementById('summary-top-cat');
+            const summaryCount = document.getElementById('summary-txn-count');
+
+            if (summaryTotal) {
+                const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                summaryTotal.dataset.raw = formatted;
+                summaryTotal.textContent = isHidden ? '******' : formatted;
+            }
+            if (summaryCount) summaryCount.textContent = thisMonthTxns.length;
+
+            // % change vs last month
+            if (summaryChange) {
+                if (lastMonthTotal > 0) {
+                    const pct = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
+                    const arrow = pct > 0 ? '↑' : '↓';
+                    summaryChange.textContent = `${arrow} ${Math.abs(pct).toFixed(0)}%`;
+                    summaryChange.className = 's-value ' + (pct > 0 ? 'red' : 'green');
+                } else {
+                    summaryChange.textContent = '—';
+                    summaryChange.className = 's-value';
+                }
+            }
+
+            // Top category
+            if (summaryTopCat) {
+                const catTotals = {};
+                thisMonthTxns.forEach(t => {
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    const cat = t.manualCategory || mapped.category || 'Uncategorized';
+                    const label = typeof displayCategoryName === 'function' ? displayCategoryName(cat) : cat;
+                    catTotals[label] = (catTotals[label] || 0) + getAmt(t);
+                });
+                const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+                summaryTopCat.textContent = topCat ? topCat[0] : '—';
+            }
+        }
+
+        // Toggle Monthly Summary collapse
+        window.toggleMonthlySummary = () => {
+            const body = document.getElementById('summary-body');
+            const toggle = document.getElementById('summary-toggle');
+            if (body) body.classList.toggle('collapsed');
+            if (toggle) toggle.classList.toggle('collapsed');
+        };
 
         window.toggleAdminMode = () => {
             const user = auth.currentUser;
@@ -4851,37 +5327,56 @@
         function drawTrendChart(txns) {
             const path = document.getElementById('trendPath');
             const area = document.getElementById('trendArea');
+            const pathCompare = document.getElementById('trendPathCompare');
+            const areaCompare = document.getElementById('trendAreaCompare');
             const dots = document.getElementById('trendDots');
+            const dotsCompare = document.getElementById('trendDotsCompare');
             const totalEl = document.getElementById('trend-period-total');
-            const filterEl = document.getElementById('trend-filter'); // Correct ID for trend filter
+            const filterEl = document.getElementById('trend-filter');
             const filter = filterEl ? filterEl.value : 'this_month';
             
             if (!path || txns.length === 0) return;
 
-            // Reset labels
+            // Reset elements
+            if (pathCompare) pathCompare.setAttribute('d', '');
+            if (areaCompare) areaCompare.setAttribute('d', '');
+            if (dotsCompare) dotsCompare.innerHTML = '';
+            const legendEl = document.getElementById('trend-legend');
+            if (legendEl) legendEl.style.display = (filter === 'this_vs_prev') ? 'flex' : 'none';
+
+            // CATEGORY FILTER
+            const trendCatEl = document.getElementById('txn-cat-filter');
+            const selectedTrendCat = trendCatEl ? trendCatEl.value : 'all';
+
+            const matchesCatFilter = (t, mappedTrn) => {
+                if (selectedTrendCat === 'all') return true;
+                const txnCatId = t.manualCategory || t.category || mappedTrn.category || '';
+                const txnCatLabel = displayCategoryName ? displayCategoryName(txnCatId) : txnCatId;
+                return txnCatId.toLowerCase() === selectedTrendCat.toLowerCase() || 
+                       txnCatLabel.toLowerCase() === selectedTrendCat.toLowerCase();
+            };
+
             const labelsContainer = document.getElementById('trend-labels');
             if (labelsContainer) labelsContainer.innerHTML = '';
 
             const now = new Date();
             let periodTotal = 0;
             let dataPoints = [];
+            let dataPointsCompare = [];
             let labels = [];
 
             if (filter === 'this_week') {
-                // Group by Day (Sun-Sat) as requested
                 dataPoints = [0,0,0,0,0,0,0];
                 labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-                
-                // Calculate Start of Week (Sunday)
                 const startOfWeek = new Date(now);
-                startOfWeek.setDate(now.getDate() - now.getDay()); // Go back to Sunday
+                startOfWeek.setDate(now.getDate() - now.getDay());
                 startOfWeek.setHours(0,0,0,0);
 
                 txns.forEach(t => {
                     const d = new Date(t.date);
-                    // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || t.reimbursed || d < startOfWeek || mappedTrn.category === 'Income') return; 
+                    if (!matchesCatFilter(t, mappedTrn)) return;
 
                     const diff = Math.floor((d - startOfWeek) / 86400000);
                     if (diff >= 0 && diff < 7) {
@@ -4891,197 +5386,159 @@
                     }
                 });
             } else if (filter === 'last_6_months') {
-                // Monthly View (6 Data Points)
                 const monthsCount = 6;
                 dataPoints = new Array(monthsCount).fill(0);
-                
-                // Generate labels (e.g. Jan, Feb)
                 for (let i = monthsCount - 1; i >= 0; i--) {
                     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
                     labels.push(d.toLocaleString('default', { month: 'short' }));
                 }
-
-                const limitDate = new Date(now.getFullYear(), now.getMonth() - 5, 1); // Start of 6th month back
-
+                const limitDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
                 txns.forEach(t => {
                     const d = new Date(t.date);
-                    // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
                     if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
-
-                    // Calculate month difference
+                    if (!matchesCatFilter(t, mappedTrn)) return;
                     const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
                     const idx = (monthsCount - 1) - monthDiff;
-                    
                     if (idx >= 0 && idx < monthsCount) {
                         const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                         dataPoints[idx] += amt;
                         periodTotal += amt;
                     }
                 });
-
             } else {
-                // Default: Weekly Buckets (This Month: 4-5 weeks, 3M: 12 weeks)
+                // this_month or last_3_months or this_vs_prev
                 let weeksCount = 4;
                 if (filter === 'last_3_months') weeksCount = 12;
-                else if (filter === 'this_month') {
-                    // Dynamic weeks in month
+                else {
                     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
                     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-                    const used = firstDay.getDay() + lastDay.getDate();
-                    weeksCount = Math.ceil(used / 7);
+                    weeksCount = Math.ceil((firstDay.getDay() + lastDay.getDate()) / 7);
                 }
 
                 dataPoints = new Array(weeksCount).fill(0);
+                if (filter === 'this_vs_prev') dataPointsCompare = new Array(weeksCount).fill(0);
                 
-                let limitDate;
-                if (filter === 'this_month') {
-                     limitDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                } else {
-                     limitDate = new Date(now);
-                     limitDate.setDate(now.getDate() - (weeksCount * 7));
-                }
+                const limitDate = (filter === 'last_3_months') 
+                    ? new Date(now.getTime() - (12 * 7 * 86400000))
+                    : new Date(now.getFullYear(), now.getMonth(), 1);
+
+                const prevMonthLimit = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
                 txns.forEach(t => {
                     const d = new Date(t.date);
-                    // Check exclusion, refund, and Income
                     const mappedTrn = getMerchantDisplay(t.merchant, t);
-                    if (t.excluded || t.refund || t.reimbursed || d < limitDate || mappedTrn.category === 'Income') return;
+                    if (t.excluded || t.refund || t.reimbursed || mappedTrn.category === 'Income') return;
+                    if (!matchesCatFilter(t, mappedTrn)) return;
                     
-                    let idx;
-                    if (filter === 'this_month') {
-                        // Week of the month (0-4)
-                        const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
-                        const dayOfWeek = firstDay.getDay(); // 0-6
-                        const dayOfMonth = d.getDate();
-                        const adjustedDate = dayOfMonth + dayOfWeek;
-                        idx = Math.ceil(adjustedDate / 7) - 1;
-                        if (idx >= weeksCount) idx = weeksCount - 1; // Clamp
-                    } else {
-                        // Rolling back from Now
-                        const diffWeeks = Math.floor((now - d) / (7 * 86400000));
-                        idx = (weeksCount - 1) - diffWeeks;
-                    }
-
-                    if (idx >= 0 && idx < weeksCount) {
-                        const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                        dataPoints[idx] += amt;
-                        periodTotal += amt;
+                    if (d >= limitDate) {
+                        let idx;
+                        if (filter === 'last_3_months') {
+                            const diffWeeks = Math.floor((now - d) / (7 * 86400000));
+                            idx = (weeksCount - 1) - diffWeeks;
+                        } else {
+                            const firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+                            idx = Math.ceil((d.getDate() + firstDay.getDay()) / 7) - 1;
+                        }
+                        if (idx >= 0 && idx < weeksCount) {
+                            const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                            dataPoints[idx] += amt;
+                            periodTotal += amt;
+                        }
+                    } else if (filter === 'this_vs_prev' && d >= prevMonthLimit && d <= prevMonthEnd) {
+                        const firstDayPrev = new Date(d.getFullYear(), d.getMonth(), 1);
+                        const idx = Math.ceil((d.getDate() + firstDayPrev.getDay()) / 7) - 1;
+                        if (idx >= 0 && idx < weeksCount) {
+                            const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                            dataPointsCompare[idx] += amt;
+                        }
                     }
                 });
 
                 // Labels
                 for(let i=0; i<weeksCount; i++) {
-                    let d;
-                    if (filter === 'this_month') {
-                        d = new Date(now.getFullYear(), now.getMonth(), i * 7 + 1);
-                    } else {
-                        d = new Date(limitDate);
-                        d.setDate(d.getDate() + (i * 7));
-                    }
-                    
-                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const monthStr = monthNames[d.getMonth()];
-                    const yearStr = d.getFullYear();
-                    
-                    // Simple week of month calculation for label
-                    const dayOfMonth = d.getDate();
-                    const weekNum = Math.ceil(dayOfMonth / 7);
-                    
-                    const fullLabel = `${monthStr} ${yearStr} W${weekNum}`;
-                    labels.push(fullLabel);
+                    labels.push(filter === 'this_vs_prev' ? `Week ${i+1}` : `W${i+1}`);
                 }
             }
 
-            // Update Labels UI
+            // UI UPDATES
             if (labelsContainer) {
-                labelsContainer.innerHTML = '';
+                labelsContainer.innerHTML = ''; // Clear existing labels
                 labels.forEach((l, i) => {
                     const span = document.createElement('span');
                     span.className = 'trend-label';
-                    
-                    // Only show Axis label for 1st week, last week, or if month changes
-                    let showAxis = i === 0 || i === labels.length - 1 || (i % 4 === 0);
-                    
-                    if (showAxis) {
-                        // For axis, just show "MMM W#" or "W#"
-                        const parts = l.split(' '); // ["Jan", "2026", "W1"]
-                        span.innerText = `${parts[0]} ${parts[2]}`;
-                    } else {
-                        span.innerText = '';
-                    }
+                    span.innerText = l;
                     labelsContainer.appendChild(span);
                 });
             }
 
-            // Update Total
-            // totalEl.style.color = '#000'; // REMOVED HARDCODE
             const periodFormatted = `PHP ${periodTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-            totalEl.dataset.raw = periodFormatted;
-            totalEl.classList.add('privacy-mask');
-            totalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : periodFormatted;
+            if (totalEl) {
+                totalEl.dataset.raw = periodFormatted;
+                totalEl.classList.add('privacy-mask');
+                totalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : periodFormatted;
+            }
 
-            // Update Month Label
             const monthLabelEl = document.getElementById('trend-month-label');
             if (monthLabelEl) {
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                
-                if (filter === 'this_week') {
-                    const startOfWeek = new Date(now);
-                    startOfWeek.setDate(now.getDate() - now.getDay());
-                    monthLabelEl.innerText = `${monthNames[startOfWeek.getMonth()]} ${startOfWeek.getFullYear()}`;
-                } else if (filter === 'this_month') {
-                    monthLabelEl.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-                } else if (filter === 'last_3_months') {
-                    const start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-                    monthLabelEl.innerText = `${shortMonths[start.getMonth()]} ${start.getFullYear()} - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
-                } else if (filter === 'last_6_months') {
-                    const start = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-                    monthLabelEl.innerText = `${shortMonths[start.getMonth()]} ${start.getFullYear()} - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
-                }
+                if (filter === 'this_vs_prev') monthLabelEl.innerText = "Current vs Previous Month";
+                else if (filter === 'this_month') monthLabelEl.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+                else if (filter === 'this_week') monthLabelEl.innerText = "This Week";
+                else monthLabelEl.innerText = filter.replace('_', ' ').toUpperCase();
             }
 
-            const points = dataPoints;
-            const max = Math.max(...points, 500) * 1.2;
-            const w = 400;
-            const h = 130; 
-            const padding = 20; 
+            // DRAWING
+            const max = Math.max(...dataPoints, ...dataPointsCompare, 500) * 1.2;
+            const w = 400, h = 130, padding = 20;
             const chartW = w - (padding * 2);
-            const step = chartW / (points.length - 1 || 1);
+            const step = chartW / (dataPoints.length - 1 || 1);
 
-            let d = "";
-            let areaD = "";
-            dots.innerHTML = '';
+            const drawPath = (points, pathEl, areaEl, dotsEl, isCompare) => {
+                if (!points || points.length === 0) return;
+                let d = "", areaD = "";
+                if (dotsEl) dotsEl.innerHTML = '';
 
-            const getPoint = (i) => {
-                const x = padding + (i * step);
-                const y = h - (points[i] / max) * h;
-                return { x, y };
+                for (let i = 0; i < points.length; i++) {
+                    const x = padding + (i * step);
+                    const y = h - (points[i] / max) * h;
+                    
+                    if (i === 0) {
+                        d += `M ${x} ${y}`;
+                        areaD += `M ${x} ${h} L ${x} ${y}`;
+                    } else {
+                        const px = padding + ((i-1) * step);
+                        const py = h - (points[i-1] / max) * h;
+                        const cp1x = px + (x - px) / 2;
+                        d += ` C ${cp1x} ${py}, ${cp1x} ${y}, ${x} ${y}`;
+                        areaD += ` C ${cp1x} ${py}, ${cp1x} ${y}, ${x} ${y}`;
+                    }
+                    
+                    // Dots removed as per user request
+                }
+                areaD += ` L ${padding + ((points.length-1) * step)} ${h} Z`;
+                if (areaEl) areaEl.setAttribute('d', areaD);
+                if (pathEl) pathEl.setAttribute('d', d);
             };
 
-            for (let i = 0; i < points.length; i++) {
-                const p = getPoint(i);
-                
-                if (i === 0) {
-                    d += `M ${p.x} ${p.y}`;
-                    areaD += `M ${p.x} ${h} L ${p.x} ${p.y}`;
-                } else {
-                    const prev = getPoint(i - 1);
-                    const cp1x = prev.x + (p.x - prev.x) / 2;
-                    d += ` C ${cp1x} ${prev.y}, ${cp1x} ${p.y}, ${p.x} ${p.y}`;
-                    areaD += ` C ${cp1x} ${prev.y}, ${cp1x} ${p.y}, ${p.x} ${p.y}`;
-                }
+            drawPath(dataPoints, path, area, dots, false);
+            if (filter === 'this_vs_prev') {
+                drawPath(dataPointsCompare, pathCompare, areaCompare, dotsCompare, true);
+            } else {
+                if (pathCompare) pathCompare.setAttribute('d', '');
+                if (areaCompare) areaCompare.setAttribute('d', '');
             }
-
-            const lastP = getPoint(points.length - 1);
-            areaD += ` L ${lastP.x} ${h} Z`;
-                area.setAttribute('d', areaD);
-                path.setAttribute('d', d);
                 if (window.currentThemeTrend) {
                     path.setAttribute('stroke', window.currentThemeTrend);
                     totalEl.style.color = window.currentThemeTrend;
                 }
+
+                // Interaction Helper
+                const getPoint = (i) => ({
+                    x: padding + (i * step),
+                    y: h - (dataPoints[i] / max) * h
+                });
 
                 // Add Guide Line
                 let guide = document.getElementById('trend-guide');
@@ -5108,7 +5565,14 @@
                     guide.style.opacity = '1';
 
                     const tooltip = document.getElementById('chart-tooltip');
-                    tooltip.innerHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div><div style="color:#d1fae5; font-size:13px;">₱${Math.round(points[nearestIdx]).toLocaleString()}</div>`;
+                    let tooltipHTML = `<div style="font-weight:800; margin-bottom:2px;">${labels[nearestIdx] || 'Period'}</div>`;
+                    tooltipHTML += `<div style="color:#d1fae5; font-size:13px; font-weight:800;">₱${Math.round(dataPoints[nearestIdx]).toLocaleString()}</div>`;
+                    
+                    if (filter === 'this_vs_prev' && dataPointsCompare[nearestIdx] !== undefined) {
+                        tooltipHTML += `<div style="color:#94a3b8; font-size:11px; margin-top:2px;">₱${Math.round(dataPointsCompare[nearestIdx]).toLocaleString()}</div>`;
+                    }
+                    
+                    tooltip.innerHTML = tooltipHTML;
                     tooltip.style.opacity = '1';
                     tooltip.style.display = 'block';
                     
@@ -5130,7 +5594,7 @@
                     
                     let nearestIdx = 0;
                     let minDist = Infinity;
-                    for (let i = 0; i < points.length; i++) {
+                    for (let i = 0; i < dataPoints.length; i++) {
                         const p = getPoint(i);
                         const dist = Math.abs(p.x - viewBoxX);
                         if (dist < minDist) {
@@ -5151,7 +5615,7 @@
                     
                     let nearestIdx = 0;
                     let minDist = Infinity;
-                    for (let i = 0; i < points.length; i++) {
+                    for (let i = 0; i < dataPoints.length; i++) {
                         const p = getPoint(i);
                         const dist = Math.abs(p.x - viewBoxX);
                         if (dist < minDist) {
@@ -5680,31 +6144,35 @@
 
                     const noteSafe = (t.note || '').replace(/"/g, '&quot;');
                     contentHTML += `
-                        <div class="premium-txn ${excludedClass}" 
-                             data-txn-id="${t.id}" 
-                             data-merchant="${mapped.name.replace(/'/g, "\\'")}" 
-                             data-amount="${amount}"
-                             data-date="${t.date}"
-                             data-manual-amount="${t.manualAmount !== undefined ? t.manualAmount : ''}"
-                             data-category="${mapped.category}"
-                             data-note="${noteSafe}"
-                             data-excluded="${t.excluded || false}"
-                             data-refund="${t.refund || false}"
-                             data-reimbursed="${t.reimbursed || false}">
-                            <div class="icon-box ${mapped.catClass}">
-                                <i class="material-icons">${mapped.icon}</i>
-                                ${logoHTML}
-                            </div>
-                            <div class="txn-details">
-                                <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
-                                <div class="txn-sub">
-                                    <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
+                        <div class="txn-swipe-wrapper">
+                            <div class="txn-swipe-bg left">DELETE</div>
+                            <div class="txn-swipe-bg right">EXCLUDE</div>
+                            <div class="premium-txn ${excludedClass}" 
+                                 data-txn-id="${t.id}" 
+                                 data-merchant="${mapped.name.replace(/'/g, "\\'")}" 
+                                 data-amount="${amount}"
+                                 data-date="${t.date}"
+                                 data-manual-amount="${t.manualAmount !== undefined ? t.manualAmount : ''}"
+                                 data-category="${mapped.category}"
+                                 data-note="${noteSafe}"
+                                 data-excluded="${t.excluded || false}"
+                                 data-refund="${t.refund || false}"
+                                 data-reimbursed="${t.reimbursed || false}">
+                                <div class="icon-box ${mapped.catClass}">
+                                    <i class="material-icons">${mapped.icon}</i>
+                                    ${logoHTML}
                                 </div>
-                                ${displayNote ? `<div class="txn-note" style="color: ${(mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'))}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
-                            </div>
-                            <div class="txn-right">
-                                <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                    ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                <div class="txn-details">
+                                    <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
+                                    <div class="txn-sub">
+                                        <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
+                                    </div>
+                                    ${displayNote ? `<div class="txn-note" style="color: ${(mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'))}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                                </div>
+                                <div class="txn-right">
+                                    <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                        ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                    </div>
                                 </div>
                             </div>
                         </div>`;
@@ -6168,43 +6636,21 @@
                 return;
             }
 
-            // SMART TOKEN VALIDATION: Refresh token if older than 50 minutes
+            // SMART TOKEN VALIDATION: Try existing token first, auto-refresh on 401
+            // Instead of rejecting tokens after 50 min, let the API tell us via 401
             const storedToken = localStorage.getItem('g_access_token');
-            const issuedAt = localStorage.getItem('g_token_issued_at');
-            const FIFTY_MINS_MS = 50 * 60 * 1000;
-            const isLogicalValid = storedToken && issuedAt && (Date.now() - parseInt(issuedAt) < FIFTY_MINS_MS);
             
-            if (isLogicalValid) {
-                console.log('🚀 Using valid stored Gmail token...');
+            if (storedToken) {
+                console.log('🚀 Using stored Gmail token (will auto-refresh on 401)...');
                 accessToken = storedToken;
-            } else if (storedToken || tokenClient) {
-                console.log('🔄 Token expired or missing issued_at. Attempting silent refresh...');
-                try {
-                    // Start refresh process
-                    window.pendingSyncLimit = limit;
-                    window.pendingSyncManual = manualTrigger;
-                    
-                    // Silent refresh if not manual, or if we want to avoid popup
-                    tokenClient.requestAccessToken({ 
-                        callback: (resp) => {
-                           if (resp.error) throw resp;
-                           // The initGIS callback will also handle this, but adding safety
-                        },
-                        prompt: manualTrigger ? '' : 'none',
-                        hint: localStorage.getItem('user_email') || auth.currentUser?.email || undefined
-                    });
-                    return; // initGIS callback will re-trigger handleScan
-                } catch (e) {
-                    console.error('Refresh request failed', e);
-                    // Don't clear token here, try to use it as fallback if we have one
-                    if (storedToken) accessToken = storedToken;
-                }
             } else if (!storedToken) {
-                // No token at all
+                // No token at all — need to authenticate
                 if (!manualTrigger) return;
                 
                 if (tokenClient) {
+                    console.log('🔑 No token found. Requesting authentication...');
                     window.pendingSyncLimit = limit;
+                    window.pendingSyncManual = manualTrigger;
                     tokenClient.requestAccessToken({ prompt: '' });
                     return;
                 }
@@ -6251,18 +6697,16 @@
                     const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                     
                     if (res.status === 401) {
-                        console.warn('🚫 Gmail Token expired or revoked.');
+                        console.warn('🚫 Gmail Token expired. Auto-refreshing...');
+                        window.isSyncing = false;
                         
-                        // IF MANUAL: Try one more time with prompt
-                        if (manualTrigger && tokenClient) {
-                            console.log('🔄 Manual Trigger: Requesting new access token with popup...');
-                            tokenClient.requestAccessToken({ prompt: '' });
-                            throw new Error('Unauthorized - Refreshing');
+                        // ALWAYS auto-refresh on 401 (both manual and auto triggers)
+                        if (tokenClient) {
+                            window.pendingSyncLimit = limit;
+                            window.pendingSyncManual = manualTrigger;
+                            tokenClient.requestAccessToken({ prompt: 'none' }); 
                         }
-                        
-                        // IF AUTO: Don't clear localStorage immediately, let the next reload try a refresh
-                        // This prevents the "Sync Expired" state where the token is gone forever
-                        throw new Error('Unauthorized');
+                        throw new Error('Unauthorized - Auto-Refreshing');
                     }
                     
                     const data = await res.json();
@@ -6525,45 +6969,115 @@
         
         function setupLongPressHandlers() {
             document.querySelectorAll('.premium-txn').forEach(item => {
+                const wrapper = item.closest('.txn-swipe-wrapper');
+                const bgLeft = wrapper ? wrapper.querySelector('.txn-swipe-bg.left') : null;
+                const bgRight = wrapper ? wrapper.querySelector('.txn-swipe-bg.right') : null;
+
                 // Remove old event listeners by cloning
                 const newItem = item.cloneNode(true);
                 item.parentNode.replaceChild(newItem, item);
                 
                 let startX, startY;
+                let isSwiping = false;
+                let swipeDirection = null; // 'left' or 'right'
                 
-                const startLongPress = (e) => {
+                const startTouch = (e) => {
                     startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
                     startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
-                    
+                    isSwiping = false;
+                    swipeDirection = null;
+                    newItem.style.transition = 'none';
+
                     longPressTimer = setTimeout(() => {
-                        showIOSMenu(newItem, e);
-                    }, 400); // Faster response
+                        if (!isSwiping) showIOSMenu(newItem, e);
+                    }, 400);
                 };
                 
-                const cancelLongPress = (e) => {
+                const moveTouch = (e) => {
+                    if (!startX || !startY) return;
+                    const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                    const currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+                    
+                    const diffX = currentX - startX;
+                    const diffY = currentY - startY;
+
+                    // Detect swipe vs scroll vs long-press
+                    if (!isSwiping && Math.abs(diffX) > 10 && Math.abs(diffX) > Math.abs(diffY)) {
+                        isSwiping = true;
+                        if (longPressTimer) {
+                            clearTimeout(longPressTimer);
+                            longPressTimer = null;
+                        }
+                    }
+
+                    if (isSwiping) {
+                        // Prevent page scroll if swiping
+                        if (e.cancelable) e.preventDefault();
+
+                        // Limit swipe distance
+                        const moveX = Math.max(-120, Math.min(120, diffX));
+                        newItem.style.transform = `translateX(${moveX}px)`;
+
+                        // Show/hide background labels
+                        if (bgLeft) bgLeft.classList.toggle('active', moveX < -10);
+                        if (bgRight) bgRight.classList.toggle('active', moveX > 10);
+                    } else if (Math.sqrt(diffX*diffX + diffY*diffY) > 10) {
+                        if (longPressTimer) {
+                            clearTimeout(longPressTimer);
+                            longPressTimer = null;
+                        }
+                    }
+                };
+                
+                const endTouch = (e) => {
                     if (longPressTimer) {
                         clearTimeout(longPressTimer);
                         longPressTimer = null;
                     }
-                };
-                
-                const checkMove = (e) => {
-                    const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-                    const currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
-                    const distance = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
-                    
-                    if (distance > 10) {
-                        cancelLongPress();
+
+                    if (isSwiping) {
+                        const currentX = e.type === 'touchend' ? e.changedTouches[0].clientX : e.clientX;
+                        const diffX = currentX - startX;
+                        newItem.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+
+                        if (diffX < -80) {
+                            // SWIPE LEFT -> DELETE MODAL
+                            const txnId = newItem.dataset.txnId;
+                            if (typeof openDeleteModal === 'function') {
+                                openDeleteModal(txnId);
+                                newItem.style.transform = 'translateX(0)';
+                            }
+                        } else if (diffX > 80) {
+                            // SWIPE RIGHT -> EXCLUDE
+                            const txnId = newItem.dataset.txnId;
+                            const isExcluded = newItem.dataset.excluded === 'true';
+                            const merch = newItem.dataset.merchant || '';
+                            if (typeof toggleExclusion === 'function') toggleExclusion(txnId, merch, isExcluded);
+                            newItem.style.transform = 'translateX(0)';
+                        } else {
+                            // SNAP BACK
+                            newItem.style.transform = 'translateX(0)';
+                        }
+
+                        // Hide BGs
+                        setTimeout(() => {
+                            if (bgLeft) bgLeft.classList.remove('active');
+                            if (bgRight) bgRight.classList.remove('active');
+                        }, 300);
                     }
+
+                    startX = null;
+                    startY = null;
+                    isSwiping = false;
                 };
                 
-                newItem.addEventListener('mousedown', startLongPress);
-                newItem.addEventListener('touchstart', startLongPress, { passive: true });
-                newItem.addEventListener('mouseup', cancelLongPress);
-                newItem.addEventListener('touchend', cancelLongPress);
-                newItem.addEventListener('mousemove', checkMove);
-                newItem.addEventListener('touchmove', checkMove, { passive: true });
-                newItem.addEventListener('mouseleave', cancelLongPress);
+                newItem.addEventListener('mousedown', startTouch);
+                newItem.addEventListener('touchstart', startTouch, { passive: true });
+                newItem.addEventListener('mouseup', endTouch);
+                newItem.addEventListener('touchend', endTouch);
+                newItem.addEventListener('mousemove', moveTouch);
+                newItem.addEventListener('touchmove', moveTouch, { passive: false }); // Needs false to prevent scroll
+                newItem.addEventListener('mouseleave', endTouch);
             });
         }
         
@@ -7151,6 +7665,9 @@
             if (delModal) {
                 delModal.style.display = 'flex'; // Reset inline style
                 delModal.classList.add('show');
+                document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+                document.querySelector('.fab')?.classList.add('blur-active');
+                document.querySelector('.bottom-nav')?.classList.add('blur-active');
             }
             window.modalOpen = true;
             const fab = document.querySelector('.fab');
@@ -7159,6 +7676,88 @@
                 setTimeout(() => fab.classList.remove('clicked'), 300);
             }
             if (window.pushModalState) pushModalState('delete-txn');
+        };
+
+        // UNDO SNACKBAR STACK SYSTEM (max 3)
+        window.undoQueue = []; // Array of { id, txnId, accId, col, deletedItem, timer, el }
+
+        function createUndoSnackbar(txnId, accId, col, deletedItem) {
+            const stack = document.getElementById('undo-stack');
+            if (!stack) return;
+
+            const entryId = Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+
+            // If already 3 in queue, commit and remove the oldest
+            if (window.undoQueue.length >= 3) {
+                const oldest = window.undoQueue.shift();
+                commitAndRemoveSnackbar(oldest);
+            }
+
+            // Get the item name for display
+            const itemName = deletedItem ? (deletedItem.note || deletedItem.merchant || deletedItem.description || 'Item') : 'Item';
+            const displayName = itemName.length > 20 ? itemName.substring(0, 20) + '…' : itemName;
+
+            // Create snackbar element
+            const el = document.createElement('div');
+            el.className = 'undo-snackbar';
+            el.dataset.entryId = entryId;
+            el.innerHTML = `
+                <div class="undo-snackbar-content">
+                    <span class="undo-snackbar-text">${displayName} deleted</span>
+                    <button class="undo-snackbar-btn" onclick="undoById('${entryId}')">UNDO</button>
+                </div>
+                <div class="undo-progress-bar">
+                    <div class="undo-progress-fill"></div>
+                </div>
+            `;
+            stack.prepend(el);
+
+            // Set 7-second timer
+            const timer = setTimeout(() => {
+                const entry = window.undoQueue.find(e => e.id === entryId);
+                if (entry) {
+                    commitAndRemoveSnackbar(entry);
+                    window.undoQueue = window.undoQueue.filter(e => e.id !== entryId);
+                }
+            }, 7000);
+
+            window.undoQueue.push({ id: entryId, txnId, accId, col, deletedItem, timer, el });
+        }
+
+        function commitAndRemoveSnackbar(entry) {
+            // Commit the delete to Firestore
+            commitDelete(entry.txnId, entry.accId, entry.col);
+            clearTimeout(entry.timer);
+            // Animate out
+            if (entry.el && entry.el.parentNode) {
+                entry.el.classList.add('removing');
+                setTimeout(() => entry.el.remove(), 300);
+            }
+        }
+
+        window.undoById = (entryId) => {
+            const idx = window.undoQueue.findIndex(e => e.id === entryId);
+            if (idx === -1) return;
+            const entry = window.undoQueue[idx];
+            
+            // Cancel pending delete
+            clearTimeout(entry.timer);
+            
+            // Restore the item
+            if (entry.deletedItem) {
+                window.allTxns.push(entry.deletedItem);
+                window.allTxns.sort((a, b) => new Date(b.date) - new Date(a.date));
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
+                showToast('Transaction restored');
+            }
+            
+            // Remove snackbar
+            if (entry.el && entry.el.parentNode) {
+                entry.el.classList.add('removing');
+                setTimeout(() => entry.el.remove(), 300);
+            }
+            window.undoQueue.splice(idx, 1);
         };
 
         window.confirmDelete = async () => {
@@ -7179,48 +7778,47 @@
             // Locate element for animation
             const txnEl = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
             
-            const performDelete = async () => {
-                // OPTIMISTIC UPDATE (Internal State)
-                const idx = window.allTxns.findIndex(t => t.id === txnId);
-                let deletedItem = null;
-                if (idx > -1) {
-                    deletedItem = window.allTxns[idx];
-                    window.allTxns.splice(idx, 1);
-                    renderHistory(window.allTxns);
-                    updateBalanceToThisMonth(window.allTxns);
-                }
+            // OPTIMISTIC UPDATE: Remove from UI immediately
+            const idx = window.allTxns.findIndex(t => t.id === txnId);
+            let deletedItem = null;
+            if (idx > -1) {
+                deletedItem = { ...window.allTxns[idx] };
+                window.allTxns.splice(idx, 1);
+            }
 
-                try {
-                     if (!auth.currentUser) return;
-                     const uid = auth.currentUser.uid;
-                     await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
-                     
-                     const cacheKey = `wallet_cache_${uid}_${accId}`;
-                     localStorage.setItem(cacheKey, JSON.stringify({
-                         txns: window.allTxns,
-                         timestamp: Date.now()
-                     }));
-                     
-                     showToast('Transaction deleted');
-                } catch (error) { 
-                    log("Error deleting: " + error.message, "error");
-                    showToast('Delete failed');
-                    // Revert
-                    if (deletedItem) {
-                        window.allTxns.push(deletedItem); 
-                        window.allTxns.sort((a,b) => new Date(b.date) - new Date(a.date)); 
-                        renderHistory(window.allTxns);
-                    }
-                }
+            const removeAndRender = () => {
+                renderHistory(window.allTxns);
+                updateBalanceToThisMonth(window.allTxns);
             };
 
-            // Trigger Animation -> then perform deletion logic
+            // Trigger Thanos animation then render
             if (txnEl) {
-                window.runThanosSnap(txnEl, performDelete);
+                window.runThanosSnap(txnEl, removeAndRender);
             } else {
-                performDelete();
+                removeAndRender();
             }
+
+            // CREATE UNDO SNACKBAR (max 3 stacked)
+            createUndoSnackbar(txnId, accId, col, deletedItem);
         };
+
+        // COMMIT DELETE: Actually write to Firestore
+        async function commitDelete(txnId, accId, col) {
+            try {
+                if (!auth.currentUser) return;
+                const uid = auth.currentUser.uid;
+                await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
+                
+                const cacheKey = `wallet_cache_${uid}_${accId}`;
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    txns: window.allTxns,
+                    timestamp: Date.now()
+                }));
+            } catch (error) { 
+                log("Error deleting: " + error.message, "error");
+                showToast('Delete failed');
+            }
+        }
 
         // --- CUSTOMIZATION MODALS ---
         const CATEGORIES = [
@@ -8308,31 +8906,8 @@
                 acc.style.display = visibleCount > 0 ? 'block' : 'none';
             });
 
-            // Update Trends Chart based on filtered transactions
-            if (window.allTxns) {
-                const filteredTxns = window.allTxns.filter(t => {
-                    const mapped = getMerchantDisplay(t.merchant, t);
-                    const itemCatId = mapped.category || '';
-                    const itemCatLabel = displayCategoryName(itemCatId);
-                    const merchantName = (t.merchant || '').toLowerCase();
-                    const note = (t.note || '').toLowerCase();
-                    const amount = (t.amount || (t.manualAmount || 0)).toString();
-                    const cleanAmount = amount.replace(/,/g, '');
-
-                    const matchCat = (catSelection === 'all') || 
-                                   (itemCatId.toLowerCase() === catSelection.toLowerCase()) || 
-                                   (itemCatLabel.toLowerCase() === catSelection.toLowerCase());
-
-                    const matchKeyword = !keyword || 
-                                       merchantName.includes(keyword) || 
-                                       note.includes(keyword) || 
-                                       amount.includes(keyword) || 
-                                       (cleanKeyword.length > 0 && cleanAmount.includes(cleanKeyword));
-                    
-                    return matchCat && matchKeyword;
-                });
-                drawTrendChart(filteredTxns);
-            }
+            // Update Trends Chart to reflect category filter selection
+            if (typeof window.refreshTrendChart === 'function') window.refreshTrendChart();
         };
 
         window.handleSearchInput = () => {
@@ -8957,13 +9532,16 @@
     <div id="delete-modal" class="modal-overlay">
         <div class="custom-modal" style="text-align: center;">
             <div class="modal-header" style="color: #ef4444; justify-content: center; margin-bottom: 8px;">Delete Transaction?</div>
-            <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">This action cannot be undone.</p>
+            <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">You can undo this within 7 seconds.</p>
             <div class="modal-actions" style="justify-content: center; gap: 16px;">
                 <div class="cancel-link" onclick="closeModals()">CANCEL</div>
                 <button class="mui-btn mui-btn--raised" onclick="confirmDelete()" style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
             </div>
         </div>
     </div>
+ 
+    <!-- UNDO DELETE SNACKBAR STACK -->
+    <div id="undo-stack" class="undo-stack"></div>
 
     <!-- PREMIUM OBLIGATION MODAL -->
     <div id="obligation-modal" class="dialog-overlay">

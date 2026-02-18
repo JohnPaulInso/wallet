@@ -1087,7 +1087,18 @@
                 loadGoalData();
                 loadTransactionHistory();
             } else {
-                window.location.href = 'index.html';
+                // PERSISTENCE FIX: Wait for Firebase to restore session before redirecting
+                const lastAuthType = localStorage.getItem('wallet_auth_type');
+                if (lastAuthType === 'google') {
+                    // Give it a grace period to restore persistent login
+                    setTimeout(() => {
+                        if (!auth.currentUser) {
+                            window.location.href = 'index.html';
+                        }
+                    }, 2500); // 2.5s parity with index.html
+                } else {
+                    window.location.href = 'index.html';
+                }
             }
         });
 

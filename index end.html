@@ -249,6 +249,7 @@
             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
         }
         #header {  padding: 15px 24px 10px; display: flex; align-items: center; justify-content: space-between; background: #ffffff; position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 1000; border-bottom: 1px solid rgba(0,0,0,0.05); transition: all 0.3s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        body.dark-mode #header { background: #0f172a; border-color: rgba(255,255,255,0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
         #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
         .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
@@ -299,9 +300,12 @@
             border-radius: 10px;
             transition: all 0.2s;
         }
-        .dropdown-item:hover { background: #f8fafc; color: #1e293b; }
+        body.dark-mode .profile-dropdown { background: #1e293b; border-color: rgba(255,255,255,0.05); }
+        body.dark-mode .dropdown-item { color: #94a3b8; }
+        body.dark-mode .dropdown-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
         .dropdown-item i { font-size: 20px; color: #94a3b8; }
         .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
+        body.dark-mode .dropdown-item.logout { border-top-color: rgba(255,255,255,0.05); }
         .dropdown-item.logout i { color: #ef4444; }
         .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
         .biometric-status-dot {
@@ -520,8 +524,8 @@
         
         .card-footer { display: flex; justify-content: space-between; align-items: flex-end; position: relative; z-index: 2; margin-top: auto; }
         .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; width: 140px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .chart-center-label { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
-        .chart-center-value { font-size: 18px; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; line-height: 1.2; }
+        .chart-center-label { font-size: 10px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+        .chart-center-value { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; line-height: 1.2; }
         .chart-center-pct { font-size: 11px; font-weight: 800; color: #10b981; letter-spacing: -0.5px; margin-top: 2px; }
         .card-number-box { line-height: 1.4; }
         .card-number-label { font-size: 8px; font-weight: 800; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
@@ -1141,7 +1145,76 @@
         body.dark-mode .chart-total-summary { color: #fff; }
         body.dark-mode #expenses-total-summary { color: #fff; }
         body.dark-mode .trend-label { color: #525252; }
-        body.dark-mode .data-mgmt-card { background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); }
+        body.dark-mode .data-mgmt-card { 
+            background: linear-gradient(135deg, #1a1a1a 0%, #111 100%); 
+            border-color: var(--border-color); 
+        }
+        body.dark-mode .mgmt-icon-box { background: #1e293b; color: #60a5fa; }
+        body.dark-mode #import-btn { background: #262626; color: var(--text-primary); border-color: var(--border-color); }
+        
+        /* DARK MODE CONTRAST FIXES */
+        body.dark-mode .month-accordion { background: #1a1a1a; border-color: #262626; box-shadow: none; }
+        body.dark-mode .month-header:hover { background: #262626; }
+        body.dark-mode .month-header .month-title { color: #f8fafc; }
+        body.dark-mode .month-header .month-total { color: #60a5fa; }
+        body.dark-mode .month-content { border-top-color: #262626; }
+        body.dark-mode .txn-item { background: #1a1a1a; border-bottom-color: #262626; }
+        body.dark-mode .txn-item:hover { background-color: #262626; }
+        body.dark-mode .txn-merchant { color: #f8fafc; }
+        body.dark-mode .txn-subtitle { color: #94a3b8; }
+        body.dark-mode .txn-amount { color: #f8fafc; }
+        body.dark-mode .legend-label { color: #f8fafc !important; }
+        body.dark-mode .chart-total-label { color: #94a3b8 !important; }
+        body.dark-mode #chart-total-val { color: #f8fafc !important; }
+        body.dark-mode .cat-budget-name { color: #f8fafc !important; }
+        body.dark-mode .trend-footer-stats div:first-child { color: #94a3b8 !important; }
+        body.dark-mode .trend-footer-value { color: #f8fafc !important; }
+        body.dark-mode #load-more-btn { background: #1e293b; color: #f8fafc; border: 1px solid #334155; }
+        body.dark-mode .privacy-toggle { background: #1e293b; color: #f8fafc; border-color: #334155; }
+        body.dark-mode .dash-filter-select { background: #1e293b; color: #f8fafc; border-color: #334155; }
+        
+        /* DARK MODE UTILITIES */
+        .dash-section-title { font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; }
+        body.dark-mode .dash-section-title { color: var(--text-primary); }
+        
+        .dash-filter-select { font-size: 11px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 4px 0 10px; border-radius: 8px; height: 28px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 100px; }
+        body.dark-mode .dash-filter-select { background: #262626; color: var(--text-primary); border-color: var(--border-color); }
+        
+        .dash-total-val { color: #0f172a; }
+        body.dark-mode .dash-total-val { color: var(--text-primary); }
+
+        /* CATEGORY LIMITS DARK MODE */
+        .cat-budget-card {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+        body.dark-mode .cat-budget-card {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+        }
+        .cat-budget-title { font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px; }
+        body.dark-mode .cat-budget-title { color: var(--text-primary); }
+        .cat-budget-add-btn { background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; padding: 6px 12px; border-radius: 10px; font-size: 11px; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
+        body.dark-mode .cat-budget-add-btn { background: #262626; color: var(--text-secondary); border-color: var(--border-color); }
+
+        /* RECURRING ITEMS DARK MODE */
+        body.dark-mode #subscription-section { background: var(--card-bg); border-color: var(--border-color); }
+        body.dark-mode #sub-count-badge { background: #262626; color: var(--text-secondary); }
+        body.dark-mode #sub-total-label { color: var(--text-primary); }
+        body.dark-mode .sub-icon { background: #262626; color: var(--text-secondary); }
+        body.dark-mode .sub-name { color: var(--text-primary); }
+        body.dark-mode .subscription-item { border-bottom-color: var(--border-color); }
+        body.dark-mode .sub-limit-bar, body.dark-mode .sub-item-progress-bg { background: #262626; }
+        
+        body.dark-mode .troubleshoot-card { background: rgba(255,255,255,0.02); border-color: #404040 !important; }
+        body.dark-mode .troubleshoot-text { color: var(--text-secondary); }
+        .hard-refresh-btn { background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s; }
+        body.dark-mode .hard-refresh-btn { background: #262626; }
 
         /* MODALS & DIALOGS DARK MODE */
         body.dark-mode .mui-panel { background: #1a1a1a; color: #fff; border-color: #262626; }
@@ -1172,6 +1245,36 @@
         /* Undo Snackbar */
         body.dark-mode .undo-snackbar { background: #1a1a1a; border-color: #262626; }
         body.dark-mode .undo-snackbar-text { color: #fff; }
+        
+        /* LOAD MORE BUTTON DARK MODE */
+        body.dark-mode .load-more-btn { background: #1e293b !important; color: #f8fafc !important; box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important; }
+        body.dark-mode .load-more-btn:hover { background: #334155 !important; }
+        
+        /* CATEGORY LIMITS DARK MODE */
+        body.dark-mode .cat-budget-item { border-bottom-color: #262626; }
+        body.dark-mode .cat-budget-item:hover { background: #262626; }
+        /* USER REQUEST: Keep original logo colors, just dark bg for the box */
+        body.dark-mode .cat-budget-icon-box { border-color: rgba(255,255,255,0.1) !important; background: #262626; } 
+        body.dark-mode .cat-budget-name { color: #f8fafc; }
+        body.dark-mode .cat-budget-progress-bg { background: #262626; }
+        
+        /* ELEVATED CLONE DARK MODE */
+        body.dark-mode .premium-txn.elevated-clone { background: #262626 !important; border-color: #404040; color: #fff; }
+        body.dark-mode .premium-txn.elevated-clone .txn-merch { color: #fff; }
+        body.dark-mode .premium-txn.elevated-clone .txn-amount { color: #fff; }
+        
+        /* RECENT TRANSACTION HEADER */
+        body.dark-mode .recent-header h3 { color: #94a3b8; }
+        body.dark-mode .recent-header .see-all { color: #f8fafc; }
+        body.dark-mode .recent-header .see-all i { color: #f8fafc; }
+
+        /* DROPDOWNS & PROFILE BADGE DARK MODE */
+        body.dark-mode .dash-filter-select { background: #1e293b; color: #f8fafc; border: 1px solid #334155; }
+        body.dark-mode #profile-badge { background: #1e293b; border-color: #334155; }
+        body.dark-mode #profile-badge i { color: #f8fafc; }
+        body.dark-mode .dropdown-menu { background: #1e293b; border-color: #334155; }
+        body.dark-mode .dropdown-item { color: #f8fafc; }
+        body.dark-mode .dropdown-item:hover { background: #334155; }
 
         /* TREND CHART */
         .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
@@ -1311,8 +1414,8 @@
             position: relative;
             display: flex;
             align-items: center;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
             border-radius: 14px;
             padding: 0 14px;
             height: 48px;
@@ -1337,10 +1440,10 @@
             height: 100%;
             font-size: 13px;
             font-weight: 700;
-            color: #1e293b;
+            color: var(--text-primary);
         }
         #txn-search::placeholder {
-            color: #94a3b8;
+            color: var(--text-muted);
             font-weight: 600;
         }
         .search-clear {
@@ -1376,13 +1479,13 @@
         .premium-txn.popped { transform: scale(1.05); z-index: 2100; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.1s; }
         
         /* Shadow for the elevated clone - 0.3s transitions */
-        .premium-txn.elevated-clone { position: fixed; z-index: 2200; background: #fff !important; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transform: scale(1.02); pointer-events: auto; border: 1px solid rgba(0,0,0,0.05); transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
+        .premium-txn.elevated-clone { position: fixed; z-index: 2200; background: var(--card-bg) !important; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transform: scale(1.02); pointer-events: auto; border: 1px solid var(--border-color); transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
         
         /* iOS Action Menu - HIGHEST z-index, above all modals */
         .ios-action-menu { 
             display: none; 
             position: fixed; 
-            background: rgba(255,255,255,0.98); 
+            background: #fff; 
             backdrop-filter: blur(20px); 
             -webkit-backdrop-filter: blur(20px); 
             border-radius: 14px; 
@@ -1394,6 +1497,7 @@
             overflow: hidden; 
             transform: scale(0.9); 
             opacity: 0; 
+            border: 1px solid var(--border-color);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
         }
         .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuFadeIn 0.2s ease-out; }
@@ -1424,8 +1528,11 @@
         }
         
         .ios-action-item { padding: 10px 14px; font-size: 13px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 10px; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
+        body.dark-mode .ios-action-item { color: #ffffff; }
         .ios-action-item:hover { background: rgba(0,0,0,0.05); }
+        body.dark-mode .ios-action-item:hover { background: rgba(255,255,255,0.1); }
         .ios-action-item i { font-size: 18px; color: #3b82f6; }
+        body.dark-mode .ios-action-item i { color: #60a5fa; }
         .ios-action-item.danger { color: #ef4444; }
         .ios-action-item.danger i { color: #ef4444; }
         .ios-action-item.warning { color: #f59e0b; }
@@ -2182,8 +2289,8 @@
             <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
             <div id="safe-spend-widget" class="safe-spend-card">
                 <div class="safe-spend-header-v2">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Safe To Spend</h3>
-                    <button class="obligation-btn" onclick="promptSetObligations()" style="background: #f1f5f9; border: none; padding: 4px 10px; border-radius: 8px; color: #64748b; font-size: 10px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Safe To Spend</h3>
+                    <button class="obligation-btn" onclick="promptSetObligations()">
                         <i class="material-icons" style="font-size: 14px;">add</i> ADD
                     </button>
                 </div>
@@ -2281,7 +2388,7 @@
                 <div class="monthly-summary-header" onclick="toggleMonthlySummary()">
                     <h3>Monthly Summary</h3>
                     <div class="monthly-summary-toggle" id="summary-toggle">
-                        <i class="material-icons" style="font-size: 16px; color: #64748b;">expand_more</i>
+                        <i class="material-icons" style="font-size: 16px; color: var(--text-muted);">expand_more</i>
                     </div>
                 </div>
                 <div class="monthly-summary-body" id="summary-body">
@@ -2309,8 +2416,8 @@
             <!-- EXPENSES STRUCTURE (WEB3 MODERN) -->
             <div id="chart-section" class="chart-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Expenses structure</h3>
-                    <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 0 4px 0 10px; border-radius: 8px; height: 28px; text-transform: none; border: 1px solid #e2e8f0; outline: none; cursor: pointer; text-align: left; width: auto; min-width: 100px;">
+                    <h3 class="dash-section-title" style="margin: 0; text-decoration: none;">Expenses structure</h3>
+                    <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat dash-filter-select">
                         <option value="this_month" selected>This Month</option>
                         <option value="today">Today</option>
                         <option value="this_week">This Week</option>
@@ -2327,12 +2434,12 @@
 
                 <div style="display: flex; margin-bottom: 20px;">
                     <div style="flex: 1;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Total Expenses</div>
-                        <div style="font-size: 22px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;" id="expenses-total-summary">PHP 0.00</div>
+                        <div style="font-size: 11px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.9;">Total Expenses</div>
+                        <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);" id="expenses-total-summary" class="dash-total-val">PHP 0.00</div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 11px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">vs past period</div>
-                        <div id="mom-growth-box" style="font-size: 22px; font-weight: 800; color: #ef4444; letter-spacing: -0.5px;"><span id="mom-growth"></span></div>
+                        <div style="font-size: 11px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.8;">vs past period</div>
+                        <div id="mom-growth-box" style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);"><span id="mom-growth"></span></div>
                     </div>
                 </div>
 
@@ -2354,8 +2461,8 @@
             <!-- TREND SECTION -->
             <div class="trend-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b;">Spending Trends</h3>
-                    <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat" style="font-size: 11px; font-weight: 600; color: #1e293b; background: #f1f5f9; padding: 0 4px 0 10px; border-radius: 6px; height: 26px; text-transform: none; border: none; outline: none; cursor: pointer; text-align: left; min-width: 90px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); text-decoration: none;">Spending Trends</h3>
+                    <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat dash-filter-select">
                         <option value="this_month" selected>This Month</option>
                         <option value="this_vs_prev">This vs Prev Month</option>
                         <option value="this_week">This Week</option>
@@ -2363,23 +2470,23 @@
                         <option value="last_6_months">Past 6 Months</option>
                     </select>
                 </div>
-                <div id="trend-month-label" style="text-align: left; font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">January 2026</div>
+                <div id="trend-month-label" style="text-align: left; font-size: 10px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">January 2026</div>
                 <div style="position: relative; margin-bottom: 24px;">
                     <svg id="trendChart" width="100%" height="140" viewBox="0 0 400 140" preserveAspectRatio="none" style="display: block;">
                         <defs>
                             <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#3b82f6; stop-opacity:0.1" />
-                                <stop offset="100%" style="stop-color:#3b82f6; stop-opacity:0" />
+                                <stop offset="0%" style="stop-color:var(--nav-active); stop-opacity:0.2" />
+                                <stop offset="100%" style="stop-color:var(--nav-active); stop-opacity:0" />
                             </linearGradient>
                             <linearGradient id="trendGradientCompare" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#94a3b8; stop-opacity:0.05" />
-                                <stop offset="100%" style="stop-color:#94a3b8; stop-opacity:0" />
+                                <stop offset="0%" style="stop-color:var(--text-secondary); stop-opacity:0.1" />
+                                <stop offset="100%" style="stop-color:var(--text-secondary); stop-opacity:0" />
                             </linearGradient>
                         </defs>
                         <path id="trendAreaCompare" d="" fill="url(#trendGradientCompare)"></path>
-                        <path id="trendPathCompare" d="" fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4,4"></path>
+                        <path id="trendPathCompare" d="" fill="none" stroke="var(--text-secondary)" stroke-width="2" stroke-dasharray="4,4" opacity="0.5"></path>
                         <path id="trendArea" d="" fill="url(#trendGradient)"></path>
-                        <path id="trendPath" class="trend-path" d="" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"></path>
+                        <path id="trendPath" class="trend-path" d="" fill="none" stroke="var(--nav-active)" stroke-width="4" stroke-linecap="round"></path>
                         <g id="trendDots"></g>
                         <g id="trendDotsCompare"></g>
                     </svg>
@@ -2394,16 +2501,16 @@
                 <div id="trend-legend" style="display: none; justify-content: center; gap: 20px; margin: 0 0 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
                     <div style="display: flex; align-items: center; gap: 6px;">
                         <div style="width: 12px; height: 3px; background: #3b82f6; border-radius: 2px;"></div>
-                        <span style="color: #64748b;">Current</span>
+                        <span style="color: var(--text-muted);">Current</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px;">
-                        <div style="width: 12px; height: 0; border-top: 2px dashed #94a3b8;"></div>
-                        <span style="color: #94a3b8;">Previous</span>
+                        <div style="width: 12px; height: 0; border-top: 2px dashed var(--text-secondary);"></div>
+                        <span style="color: var(--text-secondary);">Previous</span>
                     </div>
                 </div>
 
-                <div style="border-top: 1px dashed #e2e8f0; padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 13px; color: #64748b; font-weight: 600;">Period Total</span>
+                <div style="border-top: 1px dashed var(--border-color); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 13px; color: var(--text-primary); font-weight: 600;">Period Total</span>
                     <span style="font-size: 1.1rem; font-weight: 800; color: #10b981;" id="trend-period-total">PHP 0.00</span>
                 </div>
             </div>
@@ -2412,18 +2519,18 @@
             <div class="recent-header">
                 <h3>Recent Transactions</h3>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: #e0f2fe; padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                        <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: #0284c7;">visibility</i>
+                    <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: var(--bg-secondary); padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; border: .5px solid #e0e0e0">
+                        <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: var(--nav-active);">visibility</i>
                         
                     </div>
-                    <select id="txn-cat-filter" onchange="filterTxnList()" style="font-size: 10px; font-weight: 700; color: #64748b; background: #f8fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; outline: none; cursor: pointer;">
+                    <select id="txn-cat-filter" onchange="filterTxnList()" style="font-size: 10px; font-weight: 700; color: var(--text-secondary); background: var(--bg-secondary); padding: 6px 8px; border-radius: 8px; border: 1px solid #e0e0e0; outline: none; cursor: pointer;">
                         <option value="all">All Items</option>
                     </select>
                 </div>
             </div>
 
             <div class="search-container">
-                <div class="search-wrapper">
+                <div class="search-wrapper" style="border: 1px solid #e0e0e0;">
                     <i class="material-icons">search</i>
                     <input type="text" id="txn-search" placeholder="Search merchant, note, or price..." oninput="handleSearchInput()">
                     <i class="material-icons search-clear" id="search-clear-btn" onclick="clearSearch()">cancel</i>
@@ -2454,12 +2561,10 @@
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
             <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
-            <div style="margin: 10px 0px 40px; height: 1px; background: #f1f5f9; width: 100%;"></div>
-
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
             <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h3 style="margin:0; font-size: 0.95rem; font-weight: 800; color: #1e293b; letter-spacing: -0.3px;">Cash Flow</h3>
+                    <h3 class="dash-section-title" style="margin:0; font-size: 0.95rem;">Cash Flow</h3>
                     <div class="savings-chip">Savings Rate: <span id="savings-rate-val">0%</span></div>
                 </div>
                 <div style="font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 15px;">Income vs Expenses (Last 6 Months)</div>
@@ -2482,7 +2587,7 @@
             <div class="analytics-card" id="subscription-section" style="display: none; margin: 10px 16px 20px; padding: 15px; border-radius: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <h3 style="margin:0; font-size: 0.95rem; font-weight: 800; color: #1e293b; letter-spacing: -0.3px;">Recurring Items</h3>
+                        <h3 class="dash-section-title" style="margin:0; font-size: 0.95rem;">Recurring Items</h3>
                         <span id="sub-count-badge" style="background:#f1f5f9; color:#64748b; font-size:9px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
                     </div>
                     <div style="text-align: right;">
@@ -2499,13 +2604,13 @@
             </div>
             
             <!-- DATA MANAGEMENT SECTION (PREMIUM DESIGN) -->
-            <div class="data-mgmt-card" style="margin: 30px 16px 20px; padding: 12px 16px; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02);">
+            <div class="data-mgmt-card" style="margin: 30px 16px 20px; padding: 12px 16px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.02);">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                    <div style="width: 28px; height: 28px; border-radius: 6px; background: #eff6ff; color: #000; display: flex; align-items: center; justify-content: center;">
+                    <div class="mgmt-icon-box">
                         <i class="material-icons" style="font-size: 16px;">storage</i>
                     </div>
                     <div style="text-align: left;">
-                        <div style="font-size: 11px; font-weight: 800; color: #1e293b; letter-spacing: -0.2px;">Account Backup</div>
+                        <div style="font-size: 11px; font-weight: 800; letter-spacing: -0.2px;" class="cat-budget-title">Account Backup</div>
                         <div style="font-size: 9px; color: #64748b; font-weight: 600;">Secure your data locally</div>
                     </div>
                 </div>
@@ -2514,7 +2619,7 @@
                     <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #000; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);" onclick="exportData()">
                         <i class="material-icons" style="font-size: 14px;">download</i> Export
                     </button>
-                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #fff; color: #1e293b; border: 1px solid #e2e8f0; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px;" onclick="document.getElementById('import-file').click()">
+                    <button class="mui-btn mui-btn--flat" style="flex: 1; height: 34px; border-radius: 8px; text-transform: none; font-weight: 800; background: #fff; color: #1e293b; border: 1px solid #e2e8f0; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px;" id="import-btn" onclick="document.getElementById('import-file').click()">
                         <i class="material-icons" style="font-size: 14px;">upload</i> Import
                     </button>
                 </div>
@@ -2522,10 +2627,10 @@
             </div>
 
             <!-- TROUBLESHOOTING SECTION -->
-            <div class="data-mgmt-card" style="margin: 0 16px 20px; padding: 12px 16px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff;">
+            <div class="data-mgmt-card troubleshoot-card" style="margin: 0 16px 20px; padding: 12px 16px; border: 1px dashed #cbd5e1; border-radius: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b;">Having sync issues?</div>
-                    <button onclick="window.hardRefresh()" style="background: #f1f5f9; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #ef4444; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <div style="font-size: 11px; font-weight: 700; color: #64748b;" class="troubleshoot-text">Having sync issues?</div>
+                    <button onclick="window.hardRefresh()" class="hard-refresh-btn">
                         <i class="material-icons" style="font-size: 14px;">refresh</i> HARD REFRESH
                     </button>
                 </div>
@@ -2780,6 +2885,8 @@
         // Helper to handle authentication result (shared between popup and redirect)
         function handleAuthResult(result) {
             log('Auth success! User: ' + result.user.email);
+            localStorage.setItem('wallet_auth_type', 'google'); // Mark as Google user
+            
             const credential = GoogleAuthProvider.credentialFromResult(result);
             if (credential) {
                 accessToken = credential.accessToken;
@@ -2918,50 +3025,9 @@
 
         // GMAIL API LOGIC (Constants moved early)
 
-        // GMAIL TOKEN STORAGE HELPER - Sets 1 year expiry instead of default 1 hour
-        window.storeGmailToken = function(token) {
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000; // 365 days in milliseconds
-            const expiryTimestamp = Date.now() + ONE_YEAR_MS;
-            
-            localStorage.setItem('g_access_token', token);
-            localStorage.setItem('g_token_expiry', expiryTimestamp.toString());
-            
-            // Update global variables
-            accessToken = token;
-            expiry = expiryTimestamp.toString();
-            
-            console.log('✅ Gmail token stored with 1-year expiry:', new Date(expiryTimestamp).toLocaleDateString());
-        };
-
-        // INTERCEPT localStorage.setItem to auto-extend Gmail token expiry
-        const originalSetItem = localStorage.setItem;
-        localStorage.setItem = function(key, value) {
-            // If storing Gmail access token, also update expiry to 1 year
-            if (key === 'g_access_token' && value) {
-                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                const expiryTimestamp = Date.now() + ONE_YEAR_MS;
-                originalSetItem.call(localStorage, 'g_token_expiry', expiryTimestamp.toString());
-                console.log('🔒 Auto-extended Gmail token expiry to 1 year');
-            }
-            // Call original setItem
-            originalSetItem.call(localStorage, key, value);
-        };
-
-        // EXTEND EXISTING TOKEN EXPIRY if it's too short
-        if (accessToken && expiry) {
-            const currentExpiry = parseInt(expiry);
-            const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-            const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
-            
-            // If token expires in less than 1 month, extend it to 1 year
-            // This satisfies the user request to keep the session for 1 year
-            if (currentExpiry - Date.now() < ONE_MONTH_MS) {
-                const newExpiry = Date.now() + ONE_YEAR_MS;
-                localStorage.setItem('g_token_expiry', newExpiry.toString());
-                localStorage.setItem('g_token_issued_at', Date.now().toString());
-                expiry = newExpiry.toString();
-                console.log('🔄 Session Persistence: Extended Gmail token visibility to 1 year.');
-            }
+        if (window.location.search.includes('logout=true')) {
+            // Force a deep reset on the first load after logout
+            log('🧹 Session purge complete. User isolated.', 'info');
         }
 
         if (window.location.search.includes('logout=true')) {
@@ -3038,17 +3104,39 @@
             }
 
             // FETCH ACCOUNTS & SYNC THEME (Master Observer)
+            let authWaitStarted = false;
             onAuthStateChanged(auth, async (user) => {
                 const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
+                const lastAuthType = localStorage.getItem('wallet_auth_type');
 
                 if (!user) {
                     if (isRedirectPending) {
                         log('Redirect pending detected. Holding anonymous fallback...');
                         return; // Wait for getRedirectResult to finish
                     }
+
+                    // PERSISTENCE FIX: If we previously had a google session, wait before falling back to guest
+                    if (lastAuthType === 'google' && !authWaitStarted) {
+                        authWaitStarted = true;
+                        log('Waiting for persistent Google session...');
+                        // Give it 2.5 seconds to restore
+                        setTimeout(() => {
+                            if (!auth.currentUser) {
+                                log('Google session not found. Using local fallback.');
+                                signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
+                            }
+                        }, 2500);
+                        return;
+                    }
+
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     return;
+                }
+
+                // If logged in as Google, update flag
+                if (!user.isAnonymous) {
+                    localStorage.setItem('wallet_auth_type', 'google');
                 }
 
                 // Save UID for future instant loads
@@ -3240,6 +3328,18 @@
                 handleLocalModeNudge(user);
                 
                 applyUserView(user);
+
+                // SILENT TOKEN REFRESH ON LOAD (If Google user)
+                if (!user.isAnonymous && tokenClient) {
+                    const lastIssued = localStorage.getItem('g_token_issued_at');
+                    const now = Date.now();
+                    const filterAge = 50 * 60 * 1000; // 50 minutes
+                    
+                    if (!lastIssued || (now - parseInt(lastIssued)) > filterAge) {
+                        log('🔄 Session identified: Attempting silent token refresh...');
+                        tokenClient.requestAccessToken({ prompt: 'none' });
+                    }
+                }
             });
         });
 
@@ -3489,13 +3589,13 @@
             const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
             const isGoogleUser = user && !user.isAnonymous;
             const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
+            const lastAuthType = localStorage.getItem('wallet_auth_type');
             
             // SHOW/HIDE GATE
             const gate = document.getElementById('guestGate');
             if (gate) {
-                // ALWAYS show gate if not a Google user, unless a redirect is currently in progress
-                // This fulfills the "sign in required must always show up" request.
-                if (isRedirectPending) {
+                // LOADING STATE: If we are a returning Google user but auth isn't back yet, keep gate hidden
+                if (isRedirectPending || (lastAuthType === 'google' && !isGoogleUser && !user?.isAnonymous)) {
                     gate.style.display = 'none';
                 } else {
                     gate.style.display = isGoogleUser ? 'none' : 'flex';
@@ -4265,7 +4365,7 @@
                     itemMaintaining.style.filter = 'none';
                  }
                  if (checkMaintaining) checkMaintaining.innerText = 'account_balance';
-                 if (metaMaintaining) metaMaintaining.innerText = 'BPI Required';
+                 if (metaMaintaining) metaMaintaining.innerText = 'BPI REQUIRED';
              }
              if (maintainingEl) {
                  const val = `₱${mainBalValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -4292,7 +4392,7 @@
                     itemSavings.style.filter = 'none';
                  }
                  if (checkSavings) checkSavings.innerText = 'savings';
-                 if (metaSavings) metaSavings.innerText = 'Monthly Income';
+                 if (metaSavings) metaSavings.innerText = 'MONTHLY INCOME';
              }
              if (savingsEl) {
                  const val = `₱${savingsValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -4319,7 +4419,7 @@
                     itemCredit.style.filter = 'none';
                  }
                  if (checkCredit) checkCredit.innerText = 'credit_card';
-                 if (metaCredit) metaCredit.innerText = 'Atome Wallet Link';
+                 if (metaCredit) metaCredit.innerText = 'ATOME WALLET LINK';
              }
              if (creditEl) {
                  const val = `₱${ccPayment.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -4346,7 +4446,7 @@
                     itemSalary.style.filter = 'none';
                  }
                  if (checkSalary) checkSalary.innerText = 'payments';
-                 if (metaSalary) metaSalary.innerText = 'Included in safe budget';
+                 if (metaSalary) metaSalary.innerText = 'INCLUDED IN SAFE BUDGET';
              }
              if (salaryEl) {
                  const val = `₱${salaryValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -4911,7 +5011,8 @@
                 if (amt > biggestAmt) {
                     biggestAmt = amt;
                     const mapped = getMerchantDisplay(t.merchant, t);
-                    biggestName = t.note || mapped.name || t.merchant || 'Unknown';
+                    // USER REQUEST: Prioritize merchant name over note
+                    biggestName = mapped.name || t.merchant || t.note || 'Unknown';
                 }
             });
             const bigVal = document.getElementById('biggest-txn-val');
@@ -4921,7 +5022,7 @@
                 bigVal.dataset.raw = formatted;
                 bigVal.textContent = isHidden ? '******' : formatted;
             }
-            if (bigSub) bigSub.textContent = biggestName;
+            if (bigSub) bigSub.textContent = biggestName.toUpperCase();
 
             // --- MONTHLY SUMMARY ---
             const summaryTotal = document.getElementById('summary-total');
@@ -4930,7 +5031,7 @@
             const summaryCount = document.getElementById('summary-txn-count');
 
             if (summaryTotal) {
-                const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 summaryTotal.dataset.raw = formatted;
                 summaryTotal.textContent = isHidden ? '******' : formatted;
             }
@@ -5309,6 +5410,7 @@
                 const formatted = `PHP ${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                 summaryTotalEl.dataset.raw = formatted;
                 summaryTotalEl.classList.add('privacy-mask');
+                summaryTotalEl.style.color = 'var(--text-primary)';
                 summaryTotalEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
             }
 
@@ -5417,7 +5519,10 @@
                 // this_month or last_3_months or this_vs_prev
                 let weeksCount = 4;
                 if (filter === 'last_3_months') weeksCount = 12;
-                else {
+                else if (filter === 'this_vs_prev') {
+                    // Force 5 weeks for current vs previous comparison
+                    weeksCount = 5;
+                } else {
                     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
                     const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
                     weeksCount = Math.ceil((firstDay.getDay() + lastDay.getDate()) / 7);
@@ -5464,8 +5569,18 @@
                 });
 
                 // Labels
+                const mNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
                 for(let i=0; i<weeksCount; i++) {
-                    labels.push(filter === 'this_vs_prev' ? `Week ${i+1}` : `W${i+1}`);
+                    if (filter === 'last_3_months') {
+                        // Calculate specific month/week for the 12-week span
+                        const weekDate = new Date(limitDate.getTime() + (i * 7 * 86400000));
+                        const mName = mNamesShort[weekDate.getMonth()];
+                        const firstDayM = new Date(weekDate.getFullYear(), weekDate.getMonth(), 1);
+                        const wNum = Math.ceil((weekDate.getDate() + firstDayM.getDay()) / 7);
+                        labels.push(`${mName} W${wNum}`);
+                    } else {
+                        labels.push(filter === 'this_vs_prev' ? `Week ${i+1}` : `W${i+1}`);
+                    }
                 }
             }
 
@@ -5475,6 +5590,9 @@
                 labels.forEach((l, i) => {
                     const span = document.createElement('span');
                     span.className = 'trend-label';
+                    if (window.currentThemeTrend && document.body.classList.contains('dark-mode')) {
+                         span.style.color = '#94a3b8';
+                    }
                     span.innerText = l;
                     labelsContainer.appendChild(span);
                 });
@@ -5529,16 +5647,32 @@
                 if (pathEl) pathEl.setAttribute('d', d);
             };
 
+            let trendColor = window.currentThemeTrend || '#3b82f6';
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            
+            if (isDarkMode) {
+                // USER REQUEST: Fast track to white for dark mode visibility
+                trendColor = '#ffffff';
+            } else {
+                // USER REQUEST: Back to black for light mode
+                trendColor = '#1e293b';
+            }
+
             drawPath(dataPoints, path, area, dots, false);
             if (filter === 'this_vs_prev') {
                 drawPath(dataPointsCompare, pathCompare, areaCompare, dotsCompare, true);
+                // USER REQUEST: Sync legend indicator with theme
+                const legendIndicator = document.querySelector('#trend-legend div > div[style*="background"]');
+                if (legendIndicator) {
+                    legendIndicator.style.background = trendColor;
+                }
             } else {
                 if (pathCompare) pathCompare.setAttribute('d', '');
                 if (areaCompare) areaCompare.setAttribute('d', '');
             }
-                if (window.currentThemeTrend) {
-                    path.setAttribute('stroke', window.currentThemeTrend);
-                    totalEl.style.color = window.currentThemeTrend;
+                if (trendColor) {
+                    path.setAttribute('stroke', trendColor);
+                    totalEl.style.color = trendColor;
                 }
 
                 // Interaction Helper
@@ -5717,13 +5851,15 @@
             bgLayer.onclick = () => resetSelection();
             svgGroup.appendChild(bgLayer);
 
+            const isDarkMode = document.body.classList.contains('dark-mode');
+
             // 2. Track Ring
             const track = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
             track.setAttribute('cx', centerX);
             track.setAttribute('cy', centerY);
             track.setAttribute('r', radius);
             track.setAttribute('fill', 'none');
-            track.setAttribute('stroke', '#f1f5f9');
+            track.setAttribute('stroke', isDarkMode ? '#262626' : '#f1f5f9');
             track.setAttribute('stroke-width', strokeWidth);
             svgGroup.appendChild(track);
 
@@ -5741,7 +5877,7 @@
             svgGroup.appendChild(centerBtn);
             
             if (segments.length === 0 || total === 0) {
-                legend.innerHTML = '<div style="font-size:12px; color:#94a3b8; font-weight:600; grid-column: span 2; text-align:center;">No data for this period</div>';
+                legend.innerHTML = `<div style="font-size:12px; color:#94a3b8; font-weight:600; grid-column: span 2; text-align:center;">No data for this period</div>`;
                 return;
             }
 
@@ -5766,6 +5902,7 @@
                 circle.setAttribute('fill', 'none');
                 circle.setAttribute('stroke', seg.color);
                 circle.setAttribute('stroke-width', isSelected ? strokeWidth + 6 : strokeWidth);
+                if (selectedCategoryName && !isSelected) circle.setAttribute('opacity', '0.2');
                 
                 // Opening Animation Logic
                 if (!isUpdate) {
@@ -5867,6 +6004,9 @@
                 ].join(' ');
 
                 path.setAttribute('d', d);
+                // Ensure trend line is white in dark mode
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                path.setAttribute('stroke', isDarkMode ? '#ffffff' : '#3b82f6');
                 path.setAttribute('fill', seg.color);
                 path.setAttribute('fill-rule', 'evenodd');
                 path.classList.add('chart-segment'); 
@@ -6153,7 +6293,7 @@
                     contentHTML += `
                         <div class="txn-swipe-wrapper">
                             <div class="txn-swipe-bg left">DELETE</div>
-                            <div class="txn-swipe-bg right">EXCLUDE</div>
+                            <div class="txn-swipe-bg right" style="${t.excluded ? 'background: #3b82f6;' : 'background: #f59e0b;'}">${t.excluded ? 'INCLUDE' : 'EXCLUDE'}</div>
                             <div class="premium-txn ${excludedClass}" 
                                  data-txn-id="${t.id}" 
                                  data-merchant="${mapped.name.replace(/'/g, "\\'")}" 
@@ -6205,6 +6345,7 @@
                 const loadMoreWrap = document.createElement('div');
                 loadMoreWrap.style.cssText = 'padding: 10px 0 40px; text-align: center;';
                 const btn = document.createElement('button');
+                btn.className = 'load-more-btn'; // Hook for CSS
                 btn.style.cssText = 'display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: #000; font-weight: 800; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; background: #ebf5ff; border: none; border-radius: 25px; padding: 12px 32px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08);';
                 btn.innerHTML = '<span>Load More</span><i class="material-icons" style="font-size: 20px;">keyboard_arrow_down</i>';
                 
@@ -6566,6 +6707,15 @@
                 }
             }
         });
+ 
+        // HIDE CHART TOOLTIP ON SCROLL
+        document.querySelector('.mobile-wrapper')?.addEventListener('scroll', () => {
+            const tooltip = document.getElementById('chart-tooltip');
+            if (tooltip && tooltip.style.opacity === '1') {
+                tooltip.style.opacity = '0';
+                setTimeout(() => { tooltip.style.display = 'none'; }, 200);
+            }
+        }, { passive: true });
 
         window.handleSignout = async () => {
             if (confirm('Sign out?')) {
@@ -6705,12 +6855,13 @@
                     
                     if (res.status === 401) {
                         console.warn('🚫 Gmail Token expired. Auto-refreshing...');
+                        window.isSyncing = false;
                         
                         // ALWAYS auto-refresh on 401 (both manual and auto triggers)
                         if (tokenClient) {
                             window.pendingSyncLimit = limit;
                             window.pendingSyncManual = manualTrigger;
-                            tokenClient.requestAccessToken({ prompt: '' });
+                            tokenClient.requestAccessToken({ prompt: 'none' }); 
                         }
                         throw new Error('Unauthorized - Auto-Refreshing');
                     }
@@ -9175,8 +9326,9 @@
             if (rateEl) {
                 rateEl.innerText = `${Math.max(0, rate).toFixed(1)}%`;
                 const chip = rateEl.closest('.savings-chip');
-                if (chip) chip.style.background = rate > 0 ? '#dcfce7' : '#fee2e2';
-                if (chip) chip.style.color = rate > 0 ? '#166534' : '#991b1b';
+                const isDark = document.body.classList.contains('dark-mode');
+                if (chip) chip.style.background = rate > 0 ? (isDark ? 'rgba(16, 185, 129, 0.2)' : '#dcfce7') : (isDark ? 'rgba(239, 68, 68, 0.2)' : '#fee2e2');
+                if (chip) chip.style.color = rate > 0 ? (isDark ? '#34d399' : '#166534') : (isDark ? '#f87171' : '#991b1b');
             }
         };
 

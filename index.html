@@ -2773,12 +2773,15 @@
                         window.isSyncing = false;
                         if (resp.error) {
                             if (resp.error === 'immediate_failed') {
-                                log('🔒 Silent refresh failed (immediate_failed).');
+                                log('🔒 Gmail Sync paused (requires manual verification).');
                                 if (window.pendingSyncManual) {
                                     log('🔄 Retrying with user popup...');
                                     window.pendingSyncManual = false;
                                     tokenClient.requestAccessToken({ prompt: '' });
                                     return;
+                                } else {
+                                    // SILENT LOGGING for auto-sync: avoid annoying toasts
+                                    console.log('🔇 Silent sync refresh failed (immediate_failed). Nudge user on next manual sync.');
                                 }
                             } else {
                                 log('Google Auth failed: ' + resp.error, 'error');
@@ -2789,10 +2792,11 @@
                         }
 
                         accessToken = resp.access_token;
-                        const expMs = Date.now() + (365 * 24 * 60 * 60 * 1000);
+                        const ONE_HOUR_MS = 60 * 60 * 1000;
+                        const expMs = Date.now() + ONE_HOUR_MS;
                         localStorage.setItem('g_access_token', accessToken);
-                        localStorage.setItem('g_token_expiry', expMs);
-                        localStorage.setItem('g_token_issued_at', Date.now());
+                        localStorage.setItem('g_token_expiry', expMs.toString());
+                        localStorage.setItem('g_token_issued_at', Date.now().toString());
                         
                         fetchUserProfile(accessToken);
                         log('Google Session Secured (Token Refresh Success)');
@@ -2889,12 +2893,12 @@
             
             const credential = GoogleAuthProvider.credentialFromResult(result);
             if (credential) {
-                accessToken = credential.accessToken;
-                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                localStorage.setItem('g_access_token', accessToken);
-                localStorage.setItem('g_token_expiry', (Date.now() + ONE_YEAR_MS).toString());
-                localStorage.setItem('g_token_issued_at', Date.now().toString());
-            }
+        accessToken = credential.accessToken;
+        const ONE_HOUR_MS = 3600 * 1000;
+        localStorage.setItem('g_access_token', accessToken);
+        localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
+        localStorage.setItem('g_token_issued_at', Date.now().toString());
+    }
 
             if (result.user.displayName) {
                 const parts = result.user.displayName.split(' ');
@@ -3119,13 +3123,13 @@
                     if (lastAuthType === 'google' && !authWaitStarted) {
                         authWaitStarted = true;
                         log('Waiting for persistent Google session...');
-                        // Give it 2.5 seconds to restore
+                        // Give it 12 seconds to restore (increased from 10s for maximum stickiness)
                         setTimeout(() => {
                             if (!auth.currentUser) {
-                                log('Google session not found. Using local fallback.');
+                                log('Google session not found after timeout. Using local fallback.');
                                 signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                             }
-                        }, 2500);
+                        }, 12000);
                         return;
                     }
 
@@ -3292,7 +3296,8 @@
                                 window.gmailRefreshInterval = setInterval(() => {
                                     console.log('🔄 Proactive Gmail token refresh (45-min timer)...');
                                     try {
-                                        tokenClient.requestAccessToken({ prompt: '' });
+                                        // CRITICAL: Using prompt: 'none' for a truly silent background refresh
+                                        tokenClient.requestAccessToken({ prompt: 'none' });
                                     } catch (e) {
                                         console.warn('Proactive refresh failed:', e.message);
                                     }
@@ -3337,6 +3342,7 @@
                     
                     if (!lastIssued || (now - parseInt(lastIssued)) > filterAge) {
                         log('🔄 Session identified: Attempting silent token refresh...');
+                        // CRITICAL: prompt: 'none' for instant background refresh
                         tokenClient.requestAccessToken({ prompt: 'none' });
                     }
                 }
@@ -3594,12 +3600,11 @@
             // SHOW/HIDE GATE
             const gate = document.getElementById('guestGate');
             if (gate) {
-                // LOADING STATE: If we are a returning Google user but auth isn't back yet, keep gate hidden
-                if (isRedirectPending || (lastAuthType === 'google' && !isGoogleUser && !user?.isAnonymous)) {
-                    gate.style.display = 'none';
-                } else {
-                    gate.style.display = isGoogleUser ? 'none' : 'flex';
-                }
+                // REFINED PERSISTENCE: Only show gate if there is NO authenticated user at all.
+                // Anonymous users are still "users" and should NOT see the blocking login screen.
+                // Returning Google users are protected by the 12s timeout in onAuthStateChanged.
+                const hasAnyUser = user !== null;
+                gate.style.display = hasAnyUser ? 'none' : 'flex';
             }
 
             const scrollContainer = document.getElementById('cardCarouselScroll');
@@ -5570,14 +5575,17 @@
 
                 // Labels
                 const mNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                let lastMonthName = '';
                 for(let i=0; i<weeksCount; i++) {
                     if (filter === 'last_3_months') {
-                        // Calculate specific month/week for the 12-week span
                         const weekDate = new Date(limitDate.getTime() + (i * 7 * 86400000));
                         const mName = mNamesShort[weekDate.getMonth()];
-                        const firstDayM = new Date(weekDate.getFullYear(), weekDate.getMonth(), 1);
-                        const wNum = Math.ceil((weekDate.getDate() + firstDayM.getDay()) / 7);
-                        labels.push(`${mName} W${wNum}`);
+                        if (mName !== lastMonthName) {
+                            labels.push(mName);
+                            lastMonthName = mName;
+                        } else {
+                            labels.push(''); // Thin out: show month name only on change
+                        }
                     } else {
                         labels.push(filter === 'this_vs_prev' ? `Week ${i+1}` : `W${i+1}`);
                     }
@@ -5609,9 +5617,11 @@
             if (monthLabelEl) {
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                 if (filter === 'this_vs_prev') monthLabelEl.innerText = "Current vs Previous Month";
+                else if (filter === 'last_3_months') monthLabelEl.innerText = "Past 3 Months";
+                else if (filter === 'last_6_months') monthLabelEl.innerText = "Past 6 Months";
                 else if (filter === 'this_month') monthLabelEl.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
                 else if (filter === 'this_week') monthLabelEl.innerText = "This Week";
-                else monthLabelEl.innerText = filter.replace('_', ' ').toUpperCase();
+                else monthLabelEl.innerText = filter.replace(/_/g, ' ').toUpperCase();
             }
 
             // DRAWING
@@ -5650,12 +5660,19 @@
             let trendColor = window.currentThemeTrend || '#3b82f6';
             const isDarkMode = document.body.classList.contains('dark-mode');
             
-            if (isDarkMode) {
-                // USER REQUEST: Fast track to white for dark mode visibility
-                trendColor = '#ffffff';
+            // PRIORITY: If we have a distinctive theme color (like BPI Red #931B1B), use it.
+            // If it's a generic dark color or unset, use accessibility defaults.
+            const isGenericColor = !window.currentThemeTrend || window.currentThemeTrend === '#121212' || window.currentThemeTrend === '#1e293b';
+            
+            if (isGenericColor) {
+                if (isDarkMode) {
+                    trendColor = '#ffffff';
+                } else {
+                    trendColor = '#1e293b'; // Standard visibility
+                }
             } else {
-                // USER REQUEST: Back to black for light mode
-                trendColor = '#1e293b';
+                // Keep the account's vibrant theme color (e.g. BPI Red)
+                trendColor = window.currentThemeTrend;
             }
 
             drawPath(dataPoints, path, area, dots, false);
@@ -10411,14 +10428,15 @@
                 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
                 const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > ONE_YEAR_MS);
                 
-                if ((currentAcc === 'atome' || currentAcc === 'bpi') && gmailToken && !isActualExpired) {
-                    console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
-                    // Trigger quick sync (10 messages)
-                    if (typeof handleScan === 'function') {
-                        handleScan(10, false);
+                if ((currentAcc === 'atome' || currentAcc === 'bpi') && gmailToken) {
+                    if (!isActualExpired) {
+                        console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
+                        if (typeof handleScan === 'function') handleScan(10, false);
+                    } else if (tokenClient) {
+                        console.log('🔄 Auto-sync triggered for expired token: Attempting silent refresh...');
+                        // No toast here — let it happen in background
+                        handleScan(10, false); 
                     }
-                } else if (gmailToken && isActualExpired) {
-                    console.log('🔇 Auto-sync suppressed: Gmail session expired. User must sync manually.');
                 }
             }, 3000); // Increased to 3 seconds to wait for biometric
         });

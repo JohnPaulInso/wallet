@@ -5575,17 +5575,14 @@
 
                 // Labels
                 const mNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                let lastMonthName = '';
                 for(let i=0; i<weeksCount; i++) {
                     if (filter === 'last_3_months') {
+                        // Calculate specific month/week for the 12-week span
                         const weekDate = new Date(limitDate.getTime() + (i * 7 * 86400000));
                         const mName = mNamesShort[weekDate.getMonth()];
-                        if (mName !== lastMonthName) {
-                            labels.push(mName);
-                            lastMonthName = mName;
-                        } else {
-                            labels.push(''); // Thin out: show month name only on change
-                        }
+                        const firstDayM = new Date(weekDate.getFullYear(), weekDate.getMonth(), 1);
+                        const wNum = Math.ceil((weekDate.getDate() + firstDayM.getDay()) / 7);
+                        labels.push(`${mName} W${wNum}`);
                     } else {
                         labels.push(filter === 'this_vs_prev' ? `Week ${i+1}` : `W${i+1}`);
                     }
@@ -5617,8 +5614,6 @@
             if (monthLabelEl) {
                 const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
                 if (filter === 'this_vs_prev') monthLabelEl.innerText = "Current vs Previous Month";
-                else if (filter === 'last_3_months') monthLabelEl.innerText = "Past 3 Months";
-                else if (filter === 'last_6_months') monthLabelEl.innerText = "Past 6 Months";
                 else if (filter === 'this_month') monthLabelEl.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
                 else if (filter === 'this_week') monthLabelEl.innerText = "This Week";
                 else monthLabelEl.innerText = filter.replace(/_/g, ' ').toUpperCase();

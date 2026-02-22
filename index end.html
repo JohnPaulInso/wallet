@@ -33,9 +33,23 @@
     <!-- GOOGLE IDENTITY SERVICES (EAGER LOAD) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-<!-- <link rel="stylesheet" href="index.css"> -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.warn('SW registration failed:', err));
+            });
+        }
+    </script>
+
+<link rel="stylesheet" href="index.css">
 
    
+<style>
+
+</style>
+
 
 
 
@@ -106,8 +120,8 @@
                 };
             }
         </script>
-         <!-- GUEST LOGIN GATE -->
-         <div id="guestGate" class="guest-gate-overlay">
+         <!-- GUEST LOGIN GATE (hidden by default, shown only for confirmed guests) -->
+         <div id="guestGate" class="guest-gate-overlay" style="display:none">
              <div class="guest-gate-card">
                  <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
                      <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
@@ -122,6 +136,13 @@
                  </button>
              </div>
          </div>
+
+         <script>
+             // EARLY GATE CHECK: Show immediately for guests, hide for returning Google users
+             if (localStorage.getItem('wallet_auth_type') !== 'google') {
+                 document.getElementById('guestGate').style.display = 'flex';
+             }
+         </script>
 
         <div id="header">
             <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
@@ -364,6 +385,24 @@
                             <span class="s-value" id="summary-txn-count">0</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- OFFLINE QUEUE CARD -->
+            <div id="offline-queue-card" class="offline-queue-card">
+                <div class="offline-queue-row">
+                    <div class="offline-queue-icon">
+                        <i class="material-icons" id="offline-queue-icon-i">cloud_off</i>
+                    </div>
+                    <div class="offline-queue-info">
+                        <div class="offline-queue-title" id="offline-queue-title">Waiting for connection</div>
+                        <div class="offline-queue-sub" id="offline-queue-sub">Changes saved locally</div>
+                    </div>
+                    <div class="offline-queue-count" id="offline-queue-count">0</div>
+                </div>
+                <div id="offline-queue-list" class="offline-queue-list"></div>
+                <div class="offline-progress-bar">
+                    <div class="offline-progress-fill"></div>
                 </div>
             </div>
 
@@ -725,17 +764,18 @@
                     scope: SCOPES,
                     callback: async (resp) => {
                         window.isSyncing = false;
+                        const wasSilent = window.isSilentRefresh;
+                        window.isSilentRefresh = false;
                         if (resp.error) {
                             if (resp.error === 'immediate_failed') {
-                                log('🔒 Gmail Sync paused (requires manual verification).');
-                                if (window.pendingSyncManual) {
+                                if (window.pendingSyncManual && !wasSilent) {
                                     log('🔄 Retrying with user popup...');
                                     window.pendingSyncManual = false;
                                     tokenClient.requestAccessToken({ prompt: '' });
                                     return;
                                 } else {
-                                    // SILENT LOGGING for auto-sync: avoid annoying toasts
-                                    console.log('🔇 Silent sync refresh failed (immediate_failed). Nudge user on next manual sync.');
+                                    // Keep token stored — next attempt may succeed if Google session is restored
+                                    console.log('🔇 Silent refresh failed. Will retry on next sync attempt.');
                                 }
                             } else {
                                 log('Google Auth failed: ' + resp.error, 'error');
@@ -817,15 +857,16 @@
                 const provider = new GoogleAuthProvider();
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
-                // NO AWAIT HERE: Call popup immediately to preserve user gesture
+                // Mark that we just logged in — suppress automatic GIS popup after login
+                window.justLoggedIn = true;
+                
                 try {
                     const result = await signInWithPopup(auth, provider);
-                    log('Attempting signInWithPopup...');
+                    log('signInWithPopup success!');
                     handleAuthResult(result);
                 } catch (popupError) {
-                    // Check if popup was blocked or if error indicates redirect is needed
-                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        log('Popup blocked or mobile detected. Falling back to signInWithRedirect...');
+                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+                        log('Popup blocked. Falling back to redirect...');
                         localStorage.setItem('auth_redirect_pending', 'true');
                         await signInWithRedirect(auth, provider);
                     } else {
@@ -833,6 +874,7 @@
                     }
                 }
             } catch (e) {
+                window.justLoggedIn = false;
                 log('Google Sign-In Error: ' + e.message, 'error');
                 showToast('Login failed. Please try again.');
             } finally {
@@ -844,6 +886,10 @@
         function handleAuthResult(result) {
             log('Auth success! User: ' + result.user.email);
             localStorage.setItem('wallet_auth_type', 'google'); // Mark as Google user
+            
+            // IMMEDIATELY hide guest gate on login success
+            const gate = document.getElementById('guestGate');
+            if (gate) gate.style.display = 'none';
             
             const credential = GoogleAuthProvider.credentialFromResult(result);
             if (credential) {
@@ -874,7 +920,18 @@
 
             log('Loading user data...');
             loadData();
-            showToast('Signed in successfully!');
+            
+            // Show login modal INSTANTLY with user info from auth result
+            setTimeout(() => {
+                const userName = result.user.displayName ? result.user.displayName.split(' ')[0] : 'there';
+                const userPic = result.user.photoURL;
+                const modal = document.getElementById('login-modal');
+                const titleEl = modal?.querySelector('.login-modal-title');
+                const avatarEl = document.getElementById('login-modal-avatar');
+                
+                if (titleEl) titleEl.textContent = `Welcome, ${userName}!`;
+                if (typeof showLoginModal === 'function') showLoginModal();
+            }, 300);
         }
 
         // HANDLE REDIRECT RESULT (For Mobile)
@@ -1089,12 +1146,21 @@
 
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
+                    // Show guest gate after 2s delay — gives Firebase time to restore session
+                    setTimeout(() => {
+                        if (!auth.currentUser || auth.currentUser.isAnonymous) {
+                            const gate = document.getElementById('guestGate');
+                            if (gate) gate.style.display = 'flex';
+                        }
+                    }, 2000);
                     return;
                 }
 
-                // If logged in as Google, update flag
+                // If logged in as Google, update flag and IMMEDIATELY hide gate
                 if (!user.isAnonymous) {
                     localStorage.setItem('wallet_auth_type', 'google');
+                    const gate = document.getElementById('guestGate');
+                    if (gate) gate.style.display = 'none';
                 }
 
                 // Save UID for future instant loads
@@ -1110,26 +1176,7 @@
                 
                 log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
 
-                // Show login modal for non-anonymous users (only on fresh login)
-                // PREVENT SHOWING ON TOP OF BIOMETRICS
-                const bioOverlay = document.getElementById('biometricOverlay');
-                const isBioShowing = bioOverlay && bioOverlay.classList.contains('show');
-
-                if (!user.isAnonymous && !sessionStorage.getItem('login_modal_shown') && !isBioShowing) {
-                    sessionStorage.setItem('just_logged_in', 'true');
-                    sessionStorage.setItem('login_modal_shown', 'true');
-                } else if (isBioShowing) {
-                    // Check again after biometric is hidden
-                    const checkBioInterval = setInterval(() => {
-                        if (!bioOverlay.classList.contains('show')) {
-                            clearInterval(checkBioInterval);
-                            if (!sessionStorage.getItem('login_modal_shown')) {
-                                sessionStorage.setItem('just_logged_in', 'true');
-                                sessionStorage.setItem('login_modal_shown', 'true');
-                            }
-                        }
-                    }, 500);
-                }
+                // Login modal is now triggered from handleAuthResult, not here
 
                 // Update UI with full first name
                 const fullName = user.displayName || (user.isAnonymous ? 'Guest' : 'User');
@@ -1250,7 +1297,7 @@
                                 window.gmailRefreshInterval = setInterval(() => {
                                     console.log('🔄 Proactive Gmail token refresh (45-min timer)...');
                                     try {
-                                        // CRITICAL: Using prompt: 'none' for a truly silent background refresh
+                                        window.isSilentRefresh = true;
                                         tokenClient.requestAccessToken({ prompt: 'none' });
                                     } catch (e) {
                                         console.warn('Proactive refresh failed:', e.message);
@@ -1289,17 +1336,20 @@
                 applyUserView(user);
 
                 // SILENT TOKEN REFRESH ON LOAD (If Google user)
-                if (!user.isAnonymous && tokenClient) {
+                // Skip if we just logged in — handleAuthResult already saved the token
+                if (!user.isAnonymous && tokenClient && !window.justLoggedIn) {
                     const lastIssued = localStorage.getItem('g_token_issued_at');
                     const now = Date.now();
                     const filterAge = 50 * 60 * 1000; // 50 minutes
                     
                     if (!lastIssued || (now - parseInt(lastIssued)) > filterAge) {
                         log('🔄 Session identified: Attempting silent token refresh...');
-                        // CRITICAL: prompt: 'none' for instant background refresh
+                        window.isSilentRefresh = true;
                         tokenClient.requestAccessToken({ prompt: 'none' });
                     }
                 }
+                // Clear the flag after auth processing
+                window.justLoggedIn = false;
             });
         });
 
@@ -1405,16 +1455,12 @@
             if (id !== 'atome' && id !== 'bpi') return;
 
             const token = localStorage.getItem('g_access_token');
-            const issuedAt = localStorage.getItem('g_token_issued_at');
-            const isTokenValid = token && issuedAt && (Date.now() - parseInt(issuedAt) < 3500000);
 
-            if (isTokenValid) {
+            if (token) {
                 console.log(`🔄 Auto-syncing ${id} on load (10 emails)...`);
                 setTimeout(() => handleScan(10, false), 1500);
             } else {
-                console.log(`🔄 Attempting silent refresh for ${id} sync...`);
-                // If token invalid, handleScan will trigger silent refresh attempt
-                setTimeout(() => handleScan(10, false), 1500);
+                console.log(`⏭️ No Gmail token found for ${id}. Use manual Sync to authenticate.`);
             }
         }
 
@@ -1538,8 +1584,13 @@
 
             // AUTO-SYNC: Trigger background email sync for Atome/BPI
             if (id === 'atome' || id === 'bpi') {
-                log(`🔄 Auto-sync check for ${id} wallet on switch...`);
-                handleScan(5, false);
+                const token = localStorage.getItem('g_access_token');
+                if (token) {
+                    log(`🔄 Auto-sync check for ${id} wallet on switch...`);
+                    handleScan(5, false);
+                } else {
+                    console.log(`⏭️ No Gmail token for ${id}. Use manual Sync.`);
+                }
             }
 
             loadData();
@@ -1553,8 +1604,8 @@
                         // SHOW/HIDE GATE
              const gate = document.getElementById('guestGate');
              if (gate) {
-                 // MODIFIED: Strictly mandatory for Google users
                  const isGoogleUser = user && !user.isAnonymous;
+                 // Always hide for Google users, show for guests
                  gate.style.display = isGoogleUser ? 'none' : 'flex';
              }
 
@@ -4817,16 +4868,17 @@
                     const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                     
                     if (res.status === 401) {
-                        console.warn('🚫 Gmail Token expired. Auto-refreshing...');
+                        console.warn('🚫 Gmail Token expired. Attempting silent refresh...');
                         window.isSyncing = false;
                         
-                        // ALWAYS auto-refresh on 401 (both manual and auto triggers)
                         if (tokenClient) {
                             window.pendingSyncLimit = limit;
                             window.pendingSyncManual = manualTrigger;
-                            tokenClient.requestAccessToken({ prompt: 'none' }); 
+                            // Always try silent refresh first (no popup)
+                            window.isSilentRefresh = !manualTrigger;
+                            tokenClient.requestAccessToken({ prompt: 'none' });
                         }
-                        throw new Error('Unauthorized - Auto-Refreshing');
+                        throw new Error('Unauthorized - Silent refresh attempted');
                     }
                     
                     const data = await res.json();
@@ -6881,25 +6933,48 @@
                     const originalCol = getCollectionName(origAcc);
                     
                     if (selectedAccount !== origAcc) {
-                        // MOVE TRANSACTION: Delete from old, Add to new (Keep same ID for consistency)
-                        await deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
-                        await setDoc(doc(db, "users", uid, col, window.editingTxnId), {
-                            ...updateData,
-                            createdAt: serverTimestamp()
-                        });
-                        showToast('Transaction moved & updated');
+                        // MOVE TRANSACTION: Delete from old, Add to new
+                        if (!navigator.onLine) {
+                            // Fire-and-forget — Firestore IndexedDB will queue it
+                            deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
+                            setDoc(doc(db, "users", uid, col, window.editingTxnId), {
+                                ...updateData,
+                                createdAt: serverTimestamp()
+                            });
+                            addToOfflineQueue('edit', merchantName || (cat ? cat.label : 'Transaction'));
+                        } else {
+                            await deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
+                            await setDoc(doc(db, "users", uid, col, window.editingTxnId), {
+                                ...updateData,
+                                createdAt: serverTimestamp()
+                            });
+                            showToast('Transaction moved & updated');
+                        }
                     } else {
                         // Regular UPDATE
-                        await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
-                        showToast('Transaction updated');
+                        if (!navigator.onLine) {
+                            updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
+                            addToOfflineQueue('edit', merchantName || (cat ? cat.label : 'Transaction'));
+                        } else {
+                            await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
+                            showToast('Transaction updated');
+                        }
                     }
                 } else {
                     // NEW TRANSACTION
-                    await addDoc(collection(db, "users", uid, col), {
-                        ...updateData,
-                        createdAt: serverTimestamp()
-                    });
-                    showToast('Transaction saved');
+                    if (!navigator.onLine) {
+                        addDoc(collection(db, "users", uid, col), {
+                            ...updateData,
+                            createdAt: serverTimestamp()
+                        });
+                        addToOfflineQueue('add', merchantName || (cat ? cat.label : 'Transaction'));
+                    } else {
+                        await addDoc(collection(db, "users", uid, col), {
+                            ...updateData,
+                            createdAt: serverTimestamp()
+                        });
+                        showToast('Transaction saved');
+                    }
                 }
                 
                 closeModals();
@@ -6913,6 +6988,96 @@
                 btn.innerHTML = 'Done';
             }
         };
+
+        // ═══════ OFFLINE QUEUE SYSTEM ═══════
+        window.offlineQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+
+        function addToOfflineQueue(type, merchant) {
+            const entry = { type, merchant, timestamp: Date.now() };
+            window.offlineQueue.push(entry);
+            localStorage.setItem('offlineQueue', JSON.stringify(window.offlineQueue));
+            updateOfflineQueueCard();
+            showOfflineSnackbar(type, merchant);
+        }
+
+        function updateOfflineQueueCard() {
+            const card = document.getElementById('offline-queue-card');
+            const countEl = document.getElementById('offline-queue-count');
+            const titleEl = document.getElementById('offline-queue-title');
+            const subEl = document.getElementById('offline-queue-sub');
+            const iconEl = document.getElementById('offline-queue-icon-i');
+            const count = window.offlineQueue.length;
+
+            if (count === 0) {
+                card.classList.add('hiding');
+                setTimeout(() => {
+                    card.classList.remove('show', 'hiding', 'uploading');
+                }, 300);
+                return;
+            }
+
+            countEl.textContent = count;
+            card.classList.remove('hiding');
+            card.classList.add('show');
+
+            if (navigator.onLine) {
+                card.classList.add('uploading');
+                iconEl.textContent = 'cloud_upload';
+                titleEl.textContent = 'Uploading...';
+                subEl.textContent = `Syncing ${count} pending change${count > 1 ? 's' : ''}`;
+            } else {
+                card.classList.remove('uploading');
+                iconEl.textContent = 'cloud_off';
+                titleEl.textContent = 'Waiting for connection';
+                subEl.textContent = `${count} pending change${count > 1 ? 's' : ''} saved locally`;
+            }
+
+            // Render individual items
+            const listEl = document.getElementById('offline-queue-list');
+            listEl.innerHTML = window.offlineQueue.map(item => {
+                const badge = item.type === 'edit' 
+                    ? '<span class="oq-badge oq-badge-edit">Edited</span>'
+                    : '<span class="oq-badge oq-badge-add">Added</span>';
+                return `<div class="oq-item">${badge}<span class="oq-merchant">${item.merchant}</span></div>`;
+            }).join('');
+        }
+
+        function showOfflineSnackbar(type, merchant) {
+            const snackbar = document.getElementById('offline-snackbar');
+            const textEl = document.getElementById('offline-snackbar-text');
+            const label = type === 'edit' ? 'Edited' : 'Added';
+            textEl.textContent = `${label}: ${merchant}`;
+            snackbar.classList.add('show');
+            clearTimeout(window._offlineSnackTimer);
+            window._offlineSnackTimer = setTimeout(() => {
+                snackbar.classList.remove('show');
+            }, 3000);
+        }
+
+        // Listen for connectivity changes
+        window.addEventListener('online', () => {
+            if (window.offlineQueue.length > 0) {
+                updateOfflineQueueCard(); // Shows uploading state
+                // Firestore auto-syncs queued writes — we just clear the visual queue after a delay
+                setTimeout(() => {
+                    window.offlineQueue = [];
+                    localStorage.removeItem('offlineQueue');
+                    updateOfflineQueueCard(); // Hides card
+                    showToast('All changes synced!');
+                }, 3000);
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            if (window.offlineQueue.length > 0) {
+                updateOfflineQueueCard();
+            }
+        });
+
+        // Restore card on page load if there are pending items
+        if (window.offlineQueue.length > 0) {
+            updateOfflineQueueCard();
+        }
 
         // NEW: TRANSACTION FILTERS & LOGO TOGGLE
         let showLogos = true;
@@ -7964,14 +8129,24 @@
         <span id="toast-msg">Updated</span>
     </div>
 
+    <!-- OFFLINE SNACKBAR -->
+    <div id="offline-snackbar" class="offline-snackbar">
+        <i class="material-icons">cloud_off</i>
+        <span id="offline-snackbar-text">Saved offline</span>
+    </div>
+
     <!-- LOGIN SUCCESS MODAL -->
     <div id="login-modal" class="login-modal-overlay">
         <div class="login-modal-card">
-            <div class="login-modal-icon">
-                <i class="material-icons">check_circle</i>
+            <div class="login-modal-checkmark">
+                <svg viewBox="0 0 52 52" width="52" height="52">
+                    <circle class="login-check-circle" cx="26" cy="26" r="24" fill="none" stroke="#10b981" stroke-width="3"/>
+                    <path class="login-check-path" fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M14 27l7.8 7.8L38 17"/>
+                </svg>
             </div>
-            <div class="login-modal-title">Welcome Back!</div>
-            <div class="login-modal-message">You've successfully logged in to SmartWallet</div>
+
+            <div class="login-modal-title">Welcome!</div>
+            <div class="login-modal-message" id="login-modal-msg">You're signed in to SmartWallet</div>
             <div class="login-modal-close-hint">Tap anywhere to continue</div>
         </div>
     </div>
@@ -7993,6 +8168,20 @@
             const modal = document.getElementById('login-modal');
             if (!modal) return;
             
+            // Personalize with user info
+            const userName = localStorage.getItem('user_name') || 'there';
+            const userPic = localStorage.getItem('user_pic');
+            const msgEl = document.getElementById('login-modal-msg');
+            const avatarEl = document.getElementById('login-modal-avatar');
+            const titleEl = modal.querySelector('.login-modal-title');
+            
+            if (titleEl) titleEl.textContent = `Welcome, ${userName}!`;
+            if (msgEl) msgEl.textContent = "You're signed in to SmartWallet";
+            if (avatarEl && userPic) {
+                avatarEl.innerHTML = `<img src="${userPic}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                avatarEl.style.display = 'block';
+            }
+            
             // Show modal
             modal.classList.add('show');
             
@@ -8007,17 +8196,6 @@
                 modal.addEventListener('click', dismissModal);
             }, 300); // Small delay to prevent immediate dismissal
         };
-
-        // Check if user just logged in (you can trigger this from your auth flow)
-        window.addEventListener('load', () => {
-            const justLoggedIn = sessionStorage.getItem('just_logged_in');
-            if (justLoggedIn === 'true') {
-                setTimeout(() => {
-                    showLoginModal();
-                    sessionStorage.removeItem('just_logged_in');
-                }, 500);
-            }
-        });
     </script>
     <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()" async defer></script>
     <script>
@@ -8368,21 +8546,12 @@
                 
                 const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
                 
-                // POPUP PREVENTION: Check token persistence (Trusted for 1 year)
+                // PERSISTENT SYNC: Always try to sync if token exists (silent refresh on 401)
                 const gmailToken = localStorage.getItem('g_access_token');
-                const issuedAt = localStorage.getItem('g_token_issued_at');
-                const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-                const isActualExpired = !issuedAt || (Date.now() - parseInt(issuedAt) > ONE_YEAR_MS);
                 
                 if ((currentAcc === 'atome' || currentAcc === 'bpi') && gmailToken) {
-                    if (!isActualExpired) {
-                        console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
-                        if (typeof handleScan === 'function') handleScan(10, false);
-                    } else if (tokenClient) {
-                        console.log('🔄 Auto-sync triggered for expired token: Attempting silent refresh...');
-                        // No toast here — let it happen in background
-                        handleScan(10, false); 
-                    }
+                    console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
+                    if (typeof handleScan === 'function') handleScan(10, false);
                 }
             }, 3000); // Increased to 3 seconds to wait for biometric
         });

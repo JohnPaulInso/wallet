@@ -33,6 +33,16 @@
     <!-- GOOGLE IDENTITY SERVICES (EAGER LOAD) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.warn('SW registration failed:', err));
+            });
+        }
+    </script>
+
 <link rel="stylesheet" href="index.css">
 
    
@@ -375,6 +385,24 @@
                             <span class="s-value" id="summary-txn-count">0</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- OFFLINE QUEUE CARD -->
+            <div id="offline-queue-card" class="offline-queue-card">
+                <div class="offline-queue-row">
+                    <div class="offline-queue-icon">
+                        <i class="material-icons" id="offline-queue-icon-i">cloud_off</i>
+                    </div>
+                    <div class="offline-queue-info">
+                        <div class="offline-queue-title" id="offline-queue-title">Waiting for connection</div>
+                        <div class="offline-queue-sub" id="offline-queue-sub">Changes saved locally</div>
+                    </div>
+                    <div class="offline-queue-count" id="offline-queue-count">0</div>
+                </div>
+                <div id="offline-queue-list" class="offline-queue-list"></div>
+                <div class="offline-progress-bar">
+                    <div class="offline-progress-fill"></div>
                 </div>
             </div>
 
@@ -6905,25 +6933,48 @@
                     const originalCol = getCollectionName(origAcc);
                     
                     if (selectedAccount !== origAcc) {
-                        // MOVE TRANSACTION: Delete from old, Add to new (Keep same ID for consistency)
-                        await deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
-                        await setDoc(doc(db, "users", uid, col, window.editingTxnId), {
-                            ...updateData,
-                            createdAt: serverTimestamp()
-                        });
-                        showToast('Transaction moved & updated');
+                        // MOVE TRANSACTION: Delete from old, Add to new
+                        if (!navigator.onLine) {
+                            // Fire-and-forget — Firestore IndexedDB will queue it
+                            deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
+                            setDoc(doc(db, "users", uid, col, window.editingTxnId), {
+                                ...updateData,
+                                createdAt: serverTimestamp()
+                            });
+                            addToOfflineQueue('edit', merchantName || (cat ? cat.label : 'Transaction'));
+                        } else {
+                            await deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
+                            await setDoc(doc(db, "users", uid, col, window.editingTxnId), {
+                                ...updateData,
+                                createdAt: serverTimestamp()
+                            });
+                            showToast('Transaction moved & updated');
+                        }
                     } else {
                         // Regular UPDATE
-                        await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
-                        showToast('Transaction updated');
+                        if (!navigator.onLine) {
+                            updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
+                            addToOfflineQueue('edit', merchantName || (cat ? cat.label : 'Transaction'));
+                        } else {
+                            await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
+                            showToast('Transaction updated');
+                        }
                     }
                 } else {
                     // NEW TRANSACTION
-                    await addDoc(collection(db, "users", uid, col), {
-                        ...updateData,
-                        createdAt: serverTimestamp()
-                    });
-                    showToast('Transaction saved');
+                    if (!navigator.onLine) {
+                        addDoc(collection(db, "users", uid, col), {
+                            ...updateData,
+                            createdAt: serverTimestamp()
+                        });
+                        addToOfflineQueue('add', merchantName || (cat ? cat.label : 'Transaction'));
+                    } else {
+                        await addDoc(collection(db, "users", uid, col), {
+                            ...updateData,
+                            createdAt: serverTimestamp()
+                        });
+                        showToast('Transaction saved');
+                    }
                 }
                 
                 closeModals();
@@ -6937,6 +6988,96 @@
                 btn.innerHTML = 'Done';
             }
         };
+
+        // ═══════ OFFLINE QUEUE SYSTEM ═══════
+        window.offlineQueue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+
+        function addToOfflineQueue(type, merchant) {
+            const entry = { type, merchant, timestamp: Date.now() };
+            window.offlineQueue.push(entry);
+            localStorage.setItem('offlineQueue', JSON.stringify(window.offlineQueue));
+            updateOfflineQueueCard();
+            showOfflineSnackbar(type, merchant);
+        }
+
+        function updateOfflineQueueCard() {
+            const card = document.getElementById('offline-queue-card');
+            const countEl = document.getElementById('offline-queue-count');
+            const titleEl = document.getElementById('offline-queue-title');
+            const subEl = document.getElementById('offline-queue-sub');
+            const iconEl = document.getElementById('offline-queue-icon-i');
+            const count = window.offlineQueue.length;
+
+            if (count === 0) {
+                card.classList.add('hiding');
+                setTimeout(() => {
+                    card.classList.remove('show', 'hiding', 'uploading');
+                }, 300);
+                return;
+            }
+
+            countEl.textContent = count;
+            card.classList.remove('hiding');
+            card.classList.add('show');
+
+            if (navigator.onLine) {
+                card.classList.add('uploading');
+                iconEl.textContent = 'cloud_upload';
+                titleEl.textContent = 'Uploading...';
+                subEl.textContent = `Syncing ${count} pending change${count > 1 ? 's' : ''}`;
+            } else {
+                card.classList.remove('uploading');
+                iconEl.textContent = 'cloud_off';
+                titleEl.textContent = 'Waiting for connection';
+                subEl.textContent = `${count} pending change${count > 1 ? 's' : ''} saved locally`;
+            }
+
+            // Render individual items
+            const listEl = document.getElementById('offline-queue-list');
+            listEl.innerHTML = window.offlineQueue.map(item => {
+                const badge = item.type === 'edit' 
+                    ? '<span class="oq-badge oq-badge-edit">Edited</span>'
+                    : '<span class="oq-badge oq-badge-add">Added</span>';
+                return `<div class="oq-item">${badge}<span class="oq-merchant">${item.merchant}</span></div>`;
+            }).join('');
+        }
+
+        function showOfflineSnackbar(type, merchant) {
+            const snackbar = document.getElementById('offline-snackbar');
+            const textEl = document.getElementById('offline-snackbar-text');
+            const label = type === 'edit' ? 'Edited' : 'Added';
+            textEl.textContent = `${label}: ${merchant}`;
+            snackbar.classList.add('show');
+            clearTimeout(window._offlineSnackTimer);
+            window._offlineSnackTimer = setTimeout(() => {
+                snackbar.classList.remove('show');
+            }, 3000);
+        }
+
+        // Listen for connectivity changes
+        window.addEventListener('online', () => {
+            if (window.offlineQueue.length > 0) {
+                updateOfflineQueueCard(); // Shows uploading state
+                // Firestore auto-syncs queued writes — we just clear the visual queue after a delay
+                setTimeout(() => {
+                    window.offlineQueue = [];
+                    localStorage.removeItem('offlineQueue');
+                    updateOfflineQueueCard(); // Hides card
+                    showToast('All changes synced!');
+                }, 3000);
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            if (window.offlineQueue.length > 0) {
+                updateOfflineQueueCard();
+            }
+        });
+
+        // Restore card on page load if there are pending items
+        if (window.offlineQueue.length > 0) {
+            updateOfflineQueueCard();
+        }
 
         // NEW: TRANSACTION FILTERS & LOGO TOGGLE
         let showLogos = true;
@@ -7986,6 +8127,12 @@
     <div id="toast-box" class="toast-container">
         <i class="material-icons">check_circle</i>
         <span id="toast-msg">Updated</span>
+    </div>
+
+    <!-- OFFLINE SNACKBAR -->
+    <div id="offline-snackbar" class="offline-snackbar">
+        <i class="material-icons">cloud_off</i>
+        <span id="offline-snackbar-text">Saved offline</span>
     </div>
 
     <!-- LOGIN SUCCESS MODAL -->

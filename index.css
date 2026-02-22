@@ -2076,3 +2076,200 @@
             from { opacity: 1; transform: translateY(0) scale(1); }
             to { opacity: 0; transform: translateY(20px) scale(0.95); }
         }
+
+        /* ═══════ OFFLINE QUEUE CARD ═══════ */
+        .offline-queue-card {
+            display: none;
+            margin: 0 0 16px;
+            padding: 14px 16px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            animation: offlineCardIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            position: relative;
+        }
+        .offline-queue-card.show { display: block; }
+        .offline-queue-card.hiding {
+            animation: offlineCardOut 0.3s ease forwards;
+        }
+        @keyframes offlineCardIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes offlineCardOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95) translateY(-8px); }
+        }
+
+        .offline-queue-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .offline-queue-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: #fef3c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .offline-queue-icon i { font-size: 20px; color: #d97706; }
+        .offline-queue-card.uploading .offline-queue-icon {
+            background: #dbeafe;
+        }
+        .offline-queue-card.uploading .offline-queue-icon i {
+            color: #2563eb;
+            animation: spinRotate 1.5s linear infinite;
+        }
+        .offline-queue-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .offline-queue-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.2px;
+        }
+        .offline-queue-sub {
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        .offline-queue-count {
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 20px;
+            flex-shrink: 0;
+        }
+        .offline-queue-card.uploading .offline-queue-count {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Queue item list */
+        .offline-queue-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .offline-queue-list:empty { display: none; }
+        .oq-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            background: #f8fafc;
+            border-radius: 8px;
+            animation: oqItemIn 0.25s ease-out;
+        }
+        @keyframes oqItemIn {
+            from { opacity: 0; transform: translateX(-6px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .oq-badge {
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .oq-badge-add { background: #dcfce7; color: #15803d; }
+        .oq-badge-edit { background: #dbeafe; color: #1d4ed8; }
+        .oq-merchant {
+            font-size: 12px;
+            font-weight: 700;
+            color: #334155;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* Dark mode */
+        body.dark-mode .oq-item { background: rgba(255,255,255,0.04); }
+        body.dark-mode .oq-merchant { color: #cbd5e1; }
+        body.dark-mode .offline-queue-list { border-top-color: rgba(255,255,255,0.06); }
+
+        /* Progress bar */
+        .offline-progress-bar {
+            width: 100%;
+            height: 3px;
+            background: #f1f5f9;
+            border-radius: 4px;
+            margin-top: 12px;
+            overflow: hidden;
+            opacity: 1;
+        }
+        .offline-progress-fill {
+            height: 100%;
+            width: 30%;
+            background: linear-gradient(90deg, #cbd5e1, #94a3b8);
+            border-radius: 4px;
+            animation: offlineBarSlide 1.2s ease-in-out infinite;
+        }
+        .offline-queue-card.uploading .offline-progress-fill {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+        @keyframes offlineBarSlide {
+            0% { transform: translateX(-100%); width: 30%; }
+            50% { width: 60%; }
+            100% { transform: translateX(350%); width: 30%; }
+        }
+
+        /* Dark mode */
+        body.dark-mode .offline-queue-card {
+            background: #1e293b;
+            border-color: rgba(255,255,255,0.06);
+        }
+        body.dark-mode .offline-queue-title { color: #f1f5f9; }
+        body.dark-mode .offline-queue-sub { color: #64748b; }
+        body.dark-mode .offline-progress-bar { background: rgba(255,255,255,0.06); }
+
+        /* ═══════ OFFLINE SNACKBAR ═══════ */
+        .offline-snackbar {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1e293b;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-width: 340px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .offline-snackbar.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+        .offline-snackbar i {
+            font-size: 18px;
+            color: #fbbf24;
+            flex-shrink: 0;
+        }

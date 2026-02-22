@@ -829,15 +829,16 @@
                 const provider = new GoogleAuthProvider();
                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                 
-                // NO AWAIT HERE: Call popup immediately to preserve user gesture
+                // Mark that we just logged in — suppress automatic GIS popup after login
+                window.justLoggedIn = true;
+                
                 try {
                     const result = await signInWithPopup(auth, provider);
-                    log('Attempting signInWithPopup...');
+                    log('signInWithPopup success!');
                     handleAuthResult(result);
                 } catch (popupError) {
-                    // Check if popup was blocked or if error indicates redirect is needed
-                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-                        log('Popup blocked or mobile detected. Falling back to signInWithRedirect...');
+                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+                        log('Popup blocked. Falling back to redirect...');
                         localStorage.setItem('auth_redirect_pending', 'true');
                         await signInWithRedirect(auth, provider);
                     } else {
@@ -845,6 +846,7 @@
                     }
                 }
             } catch (e) {
+                window.justLoggedIn = false;
                 log('Google Sign-In Error: ' + e.message, 'error');
                 showToast('Login failed. Please try again.');
             } finally {
@@ -1306,7 +1308,8 @@
                 applyUserView(user);
 
                 // SILENT TOKEN REFRESH ON LOAD (If Google user)
-                if (!user.isAnonymous && tokenClient) {
+                // Skip if we just logged in — handleAuthResult already saved the token
+                if (!user.isAnonymous && tokenClient && !window.justLoggedIn) {
                     const lastIssued = localStorage.getItem('g_token_issued_at');
                     const now = Date.now();
                     const filterAge = 50 * 60 * 1000; // 50 minutes
@@ -1317,6 +1320,8 @@
                         tokenClient.requestAccessToken({ prompt: 'none' });
                     }
                 }
+                // Clear the flag after auth processing
+                window.justLoggedIn = false;
             });
         });
 

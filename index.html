@@ -1310,11 +1310,34 @@
                                         tokenRefreshInProgress = false;
                                         console.warn('Proactive refresh failed:', e.message);
                                     }
-                                }, 45 * 60 * 1000); // 45 minutes
-                                console.log('⏱️ Gmail auto-refresh timer started (every 45 min)');
+                                }, 20 * 60 * 1000); // 20 minutes
+                                console.log('⏱️ Gmail auto-refresh timer started (every 20 min)');
                             }
                         }
                         
+                        // WAKE-UP TOKEN REFRESH: When user returns to app after sleeping/inactivity
+                        // The 45-min timer doesn't run while the tab is inactive, so this catches
+                        // the case where the user opens the app after 8+ hours
+                        document.addEventListener('visibilitychange', () => {
+                            if (document.visibilityState !== 'visible') return;
+                            if (!tokenClient) return;
+                            
+                            const lastIssued = localStorage.getItem('g_token_issued_at');
+                            const now = Date.now();
+                            const tokenAge = lastIssued ? (now - parseInt(lastIssued)) : Infinity;
+                            
+                            // Only refresh if token is older than 50 minutes
+                            if (tokenAge > 50 * 60 * 1000) {
+                                if (!tokenRefreshInProgress && (now - lastTokenRefreshAttempt) >= TOKEN_REFRESH_COOLDOWN) {
+                                    console.log('☀️ App woke up — token stale. Silent refresh...');
+                                    tokenRefreshInProgress = true;
+                                    lastTokenRefreshAttempt = now;
+                                    window.isSilentRefresh = true;
+                                    tokenClient.requestAccessToken({ prompt: 'none' });
+                                }
+                            }
+                        });
+
                         // Adaptive Sync Trigger
                         triggerAdaptiveSync();
                         

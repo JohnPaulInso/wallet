@@ -753,6 +753,12 @@
         let accessToken = localStorage.getItem('g_access_token');
         let expiry = localStorage.getItem('g_token_expiry');
 
+        // TOKEN REFRESH LOCK: Prevent multiple simultaneous popup/refresh attempts
+        let tokenRefreshInProgress = false;
+        let lastTokenRefreshAttempt = 0;
+        const TOKEN_REFRESH_COOLDOWN = 30000; // 30 seconds minimum between refresh attempts
+        let switchSyncTimer = null; // Debounce timer for account-switch syncs
+
         // --- CORE AUTH HANDLERS (Moved early for reliability) ---
         
         // Identity Services Initialization
@@ -764,19 +770,13 @@
                     scope: SCOPES,
                     callback: async (resp) => {
                         window.isSyncing = false;
+                        tokenRefreshInProgress = false; // Release the lock
                         const wasSilent = window.isSilentRefresh;
                         window.isSilentRefresh = false;
                         if (resp.error) {
                             if (resp.error === 'immediate_failed') {
-                                if (window.pendingSyncManual && !wasSilent) {
-                                    log('🔄 Retrying with user popup...');
-                                    window.pendingSyncManual = false;
-                                    tokenClient.requestAccessToken({ prompt: '' });
-                                    return;
-                                } else {
-                                    // Keep token stored — next attempt may succeed if Google session is restored
-                                    console.log('🔇 Silent refresh failed. Will retry on next sync attempt.');
-                                }
+                                // NEVER escalate to visible popup — just fail silently
+                                console.log('🔇 Silent refresh failed. Will retry on next manual sync or auto-refresh cycle.');
                             } else {
                                 log('Google Auth failed: ' + resp.error, 'error');
                             }
@@ -1295,11 +1295,19 @@
                             if (gmailToken && tokenClient) {
                                 if (window.gmailRefreshInterval) clearInterval(window.gmailRefreshInterval);
                                 window.gmailRefreshInterval = setInterval(() => {
+                                    const now = Date.now();
+                                    if (tokenRefreshInProgress || (now - lastTokenRefreshAttempt) < TOKEN_REFRESH_COOLDOWN) {
+                                        console.log('🔇 45-min refresh skipped: lock active or cooldown.');
+                                        return;
+                                    }
                                     console.log('🔄 Proactive Gmail token refresh (45-min timer)...');
                                     try {
+                                        tokenRefreshInProgress = true;
+                                        lastTokenRefreshAttempt = now;
                                         window.isSilentRefresh = true;
                                         tokenClient.requestAccessToken({ prompt: 'none' });
                                     } catch (e) {
+                                        tokenRefreshInProgress = false;
                                         console.warn('Proactive refresh failed:', e.message);
                                     }
                                 }, 45 * 60 * 1000); // 45 minutes
@@ -1343,9 +1351,16 @@
                     const filterAge = 50 * 60 * 1000; // 50 minutes
                     
                     if (!lastIssued || (now - parseInt(lastIssued)) > filterAge) {
-                        log('🔄 Session identified: Attempting silent token refresh...');
-                        window.isSilentRefresh = true;
-                        tokenClient.requestAccessToken({ prompt: 'none' });
+                        // Respect the global refresh lock
+                        if (!tokenRefreshInProgress && (now - lastTokenRefreshAttempt) >= TOKEN_REFRESH_COOLDOWN) {
+                            log('🔄 Session identified: Attempting silent token refresh...');
+                            tokenRefreshInProgress = true;
+                            lastTokenRefreshAttempt = now;
+                            window.isSilentRefresh = true;
+                            tokenClient.requestAccessToken({ prompt: 'none' });
+                        } else {
+                            console.log('🔇 Token refresh on cooldown. Skipping load-time refresh.');
+                        }
                     }
                 }
                 // Clear the flag after auth processing
@@ -1582,12 +1597,16 @@
                 if (id === 'bpi' && isAdmin) updateSafeSpendUI();
             }
 
-            // AUTO-SYNC: Trigger background email sync for Atome/BPI
+            // AUTO-SYNC: Trigger background email sync for Atome/BPI (DEBOUNCED)
             if (id === 'atome' || id === 'bpi') {
                 const token = localStorage.getItem('g_access_token');
                 if (token) {
-                    log(`🔄 Auto-sync check for ${id} wallet on switch...`);
-                    handleScan(5, false);
+                    // Debounce: Cancel any pending sync and schedule a new one
+                    if (switchSyncTimer) clearTimeout(switchSyncTimer);
+                    switchSyncTimer = setTimeout(() => {
+                        log(`🔄 Auto-sync check for ${id} wallet on switch...`);
+                        handleScan(5, false);
+                    }, 800);
                 } else {
                     console.log(`⏭️ No Gmail token for ${id}. Use manual Sync.`);
                 }
@@ -1840,10 +1859,13 @@
                             
                             updateHeaderIcon(account); // Update sticky header icon
 
-                            // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe
+                            // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe (DEBOUNCED)
                             if (account === 'atome' || account === 'bpi') {
-                                log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
-                                handleScan(5, false);
+                                if (switchSyncTimer) clearTimeout(switchSyncTimer);
+                                switchSyncTimer = setTimeout(() => {
+                                    log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
+                                    handleScan(5, false);
+                                }, 800);
                             }
 
                             loadData(); 
@@ -4868,14 +4890,28 @@
                     const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` }});
                     
                     if (res.status === 401) {
-                        console.warn('🚫 Gmail Token expired. Attempting silent refresh...');
+                        console.warn('🚫 Gmail Token expired.');
                         window.isSyncing = false;
                         
+                        // Clear the expired token so we don't keep retrying with it
+                        localStorage.removeItem('g_access_token');
+                        accessToken = null;
+                        
+                        // TOKEN REFRESH LOCK: Prevent popup storms
+                        const now = Date.now();
+                        if (tokenRefreshInProgress || (now - lastTokenRefreshAttempt) < TOKEN_REFRESH_COOLDOWN) {
+                            console.log('🔇 Token refresh already in progress or on cooldown. Skipping.');
+                            throw new Error('Unauthorized - Refresh throttled');
+                        }
+                        
                         if (tokenClient) {
+                            tokenRefreshInProgress = true;
+                            lastTokenRefreshAttempt = now;
                             window.pendingSyncLimit = limit;
                             window.pendingSyncManual = manualTrigger;
-                            // Always try silent refresh first (no popup)
-                            window.isSilentRefresh = !manualTrigger;
+                            // ALWAYS silent — never open a visible popup automatically
+                            window.isSilentRefresh = true;
+                            console.log('🔄 Attempting ONE silent token refresh...');
                             tokenClient.requestAccessToken({ prompt: 'none' });
                         }
                         throw new Error('Unauthorized - Silent refresh attempted');
@@ -8534,28 +8570,7 @@
         });
     </script>
     
-    <script>
-        // Auto-sync for Atome and BPI wallets on app load (10 emails quick scan)
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                // Wait for biometric to finish if active
-                if (biometricOverlay && biometricOverlay.classList.contains('show')) {
-                    console.log('🔄 Auto-sync delayed: Waiting for biometric');
-                    return;
-                }
-                
-                const currentAcc = window.currentAccount || localStorage.getItem('wallet_current_account');
-                
-                // PERSISTENT SYNC: Always try to sync if token exists (silent refresh on 401)
-                const gmailToken = localStorage.getItem('g_access_token');
-                
-                if ((currentAcc === 'atome' || currentAcc === 'bpi') && gmailToken) {
-                    console.log('🔄 Auto-syncing', currentAcc, 'wallet on app load (10 emails)...');
-                    if (typeof handleScan === 'function') handleScan(10, false);
-                }
-            }, 3000); // Increased to 3 seconds to wait for biometric
-        });
-    </script>
+    <!-- REMOVED: Duplicate auto-sync on window load (triggerAdaptiveSync already handles this) -->
     
     <script>
         // MODERN MATERIAL DESIGN PULL-TO-REFRESH

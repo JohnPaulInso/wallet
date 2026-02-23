@@ -895,13 +895,16 @@
             if (gate) gate.style.display = 'none';
             
             const credential = GoogleAuthProvider.credentialFromResult(result);
+            
+            // ALWAYS mark session as refreshed on login — prevents GIS popup on navigation
+            sessionStorage.setItem('gis_session_refreshed', Date.now().toString());
+            
             if (credential) {
         accessToken = credential.accessToken;
         const ONE_HOUR_MS = 3600 * 1000;
         localStorage.setItem('g_access_token', accessToken);
         localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
         localStorage.setItem('g_token_issued_at', Date.now().toString());
-        sessionStorage.setItem('gis_session_refreshed', Date.now().toString());
     }
 
             if (result.user.displayName) {
@@ -1152,7 +1155,7 @@
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     // Show guest gate after 2s delay — gives Firebase time to restore session
                     setTimeout(() => {
-                        if (!auth.currentUser || auth.currentUser.isAnonymous) {
+                        if ((!auth.currentUser || auth.currentUser.isAnonymous) && !window.justLoggedIn) {
                             const gate = document.getElementById('guestGate');
                             if (gate) gate.style.display = 'flex';
                         }
@@ -1396,8 +1399,8 @@
                 } else if (hasValidSessionToken) {
                     console.log('✅ Token already refreshed this session. Skipping GIS popup.');
                 }
-                // Clear the flag after auth processing
-                window.justLoggedIn = false;
+                // Clear the flag after auth processing — with delay to cover multiple onAuthStateChanged fires
+                setTimeout(() => { window.justLoggedIn = false; }, 5000);
             });
         });
 
@@ -1498,6 +1501,12 @@
         function triggerAdaptiveSync() {
             const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
             if (!isAdmin || window.isSyncing) return;
+            
+            // Don't auto-sync right after login — let the session settle first
+            if (window.justLoggedIn) {
+                console.log('⏭️ Skipping auto-sync: just logged in.');
+                return;
+            }
 
             const id = window.currentAccount;
             if (id !== 'atome' && id !== 'bpi') return;
@@ -1657,8 +1666,12 @@
              const gate = document.getElementById('guestGate');
              if (gate) {
                  const isGoogleUser = user && !user.isAnonymous;
-                 // Always hide for Google users, show for guests
-                 gate.style.display = isGoogleUser ? 'none' : 'flex';
+                 // Never re-show gate during an active login flow
+                 if (window.justLoggedIn) {
+                     gate.style.display = 'none';
+                 } else {
+                     gate.style.display = isGoogleUser ? 'none' : 'flex';
+                 }
              }
 
             const scrollContainer = document.getElementById('cardCarouselScroll');

@@ -758,6 +758,8 @@
         let lastTokenRefreshAttempt = 0;
         const TOKEN_REFRESH_COOLDOWN = 30000; // 30 seconds minimum between refresh attempts
         let switchSyncTimer = null; // Debounce timer for account-switch syncs
+        let lastObserverLoadTime = 0; // Debounce guard for observer loadData calls
+        const OBSERVER_LOAD_DEBOUNCE = 500; // ms between observer-triggered loadData calls
 
         // --- CORE AUTH HANDLERS (Moved early for reliability) ---
         
@@ -809,7 +811,14 @@
                             log(`Moderate sync planned for ${window.currentAccount}...`);
                         }
 
-                        if (window.pendingSyncLimit) {
+                        // FIX 3: If refresh was triggered by a 401 during handleScan,
+                        // DON'T re-trigger handleScan — breaks the resync loop
+                        if (window.refreshTriggeredBy401) {
+                            console.log('🔇 Token refreshed after 401. Skipping auto-sync to prevent loop.');
+                            window.refreshTriggeredBy401 = false;
+                            window.pendingSyncLimit = null;
+                            window.pendingSyncManual = false;
+                        } else if (window.pendingSyncLimit) {
                             const limit = Math.max(window.pendingSyncLimit, syncLimit);
                             window.pendingSyncLimit = null;
                             window.pendingSyncManual = false;
@@ -1639,10 +1648,13 @@
                 if (id === 'bpi' && isAdmin) updateSafeSpendUI();
             }
 
-            // AUTO-SYNC: Trigger background email sync for Atome/BPI (DEBOUNCED)
+            // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
             if (id === 'atome' || id === 'bpi') {
                 const token = localStorage.getItem('g_access_token');
-                if (token) {
+                const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
+                const tokenAge = Date.now() - tokenIssuedAt;
+                const TOKEN_MAX_AGE = 50 * 60 * 1000; // 50 minutes
+                if (token && tokenAge < TOKEN_MAX_AGE) {
                     // Debounce: Cancel any pending sync and schedule a new one
                     if (switchSyncTimer) clearTimeout(switchSyncTimer);
                     switchSyncTimer = setTimeout(() => {
@@ -1650,7 +1662,7 @@
                         handleScan(5, false);
                     }, 800);
                 } else {
-                    console.log(`⏭️ No Gmail token for ${id}. Use manual Sync.`);
+                    console.log(`⏭️ Token expired/missing for ${id}. Skipping auto-sync on switch.`);
                 }
             }
 
@@ -1880,46 +1892,71 @@
                             // Reset Pagination
                             window.historyLimit = 6;
                             
-                            // CLEAR CHART DATA TO FIX PERSISTENCE BUGS
-                            window.allTxns = []; 
+                            // FIX 1: INSTANT CACHE LOAD — show cached balance/transactions immediately
+                            // instead of zeroing everything (which causes the 0-flash)
+                            const swipeCacheKey = `wallet_cache_${auth.currentUser?.uid}_${account}`;
+                            const swipeCachedData = localStorage.getItem(swipeCacheKey);
+                            let usedCache = false;
+                            if (swipeCachedData) {
+                                try {
+                                    const cache = JSON.parse(swipeCachedData);
+                                    if (cache.txns && (Date.now() - cache.timestamp < 86400000)) {
+                                        window.allTxns = cache.txns;
+                                        renderHistory(cache.txns);
+                                        updateBalanceToThisMonth(cache.txns, account);
+                                        usedCache = true;
+                                    }
+                                } catch(e) { /* fall through */ }
+                            }
+                            if (!usedCache) {
+                                window.allTxns = [];
+                                renderHistory([]);
+                            }
+                            
+                            // Clear charts (will be re-drawn by loadData)
                             const pieSvg = document.getElementById('pie-chart-svg');
                             const trendSvg = document.getElementById('trend-chart-svg');
                             if (pieSvg) pieSvg.innerHTML = '';
                             if (trendSvg) trendSvg.innerHTML = '';
-                            
-                            // Clear chart center labels
                             const chartTotalLabel = document.getElementById('chart-total-label');
                             const chartTotalVal = document.getElementById('chart-total-val');
                             if (chartTotalLabel) chartTotalLabel.innerText = 'TOTAL';
                             if (chartTotalVal) chartTotalVal.innerText = '₱0.00';
-                            
-                            // Clear legend
                             const legend = document.getElementById('chart-legend');
                             if (legend) legend.innerHTML = '';
                             
                             log(`Active: ${account.toUpperCase()}`);
                             
-                            // Reset UI for new account
-                            window.allTxns = [];
-                            renderHistory([]);
-                            
                             updateHeaderIcon(account); // Update sticky header icon
 
-                            // AUTO-SYNC: Trigger background email sync for Atome/BPI on swipe (DEBOUNCED)
+                            // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
                             if (account === 'atome' || account === 'bpi') {
-                                if (switchSyncTimer) clearTimeout(switchSyncTimer);
-                                switchSyncTimer = setTimeout(() => {
-                                    log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
-                                    handleScan(5, false);
-                                }, 800);
+                                const token = localStorage.getItem('g_access_token');
+                                const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
+                                const tokenAge = Date.now() - tokenIssuedAt;
+                                const TOKEN_MAX_AGE = 50 * 60 * 1000; // 50 minutes
+                                if (token && tokenAge < TOKEN_MAX_AGE) {
+                                    if (switchSyncTimer) clearTimeout(switchSyncTimer);
+                                    switchSyncTimer = setTimeout(() => {
+                                        log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
+                                        handleScan(5, false);
+                                    }, 800);
+                                } else {
+                                    console.log(`⏭️ Token expired/missing for ${account}. Skipping auto-sync on swipe.`);
+                                }
                             }
 
-                            loadData(); 
+                            // FIX 4: Debounced loadData from observer
+                            const now = Date.now();
+                            if (now - lastObserverLoadTime > OBSERVER_LOAD_DEBOUNCE) {
+                                lastObserverLoadTime = now;
+                                loadData();
+                            }
                         }
                     }
                 });
             }, { 
-                threshold: 0.7, // Lower threshold for better sensitivity without skipping
+                threshold: 0.55, // FIX 5: Lower threshold to prevent double-swipe requirement
                 root: viewport
             });
 
@@ -4955,6 +4992,9 @@
                             lastTokenRefreshAttempt = now;
                             window.pendingSyncLimit = limit;
                             window.pendingSyncManual = manualTrigger;
+                            // FIX 3: Mark that this refresh was triggered by a 401,
+                            // so the GIS callback doesn't re-trigger handleScan (breaking the loop)
+                            window.refreshTriggeredBy401 = true;
                             // ALWAYS silent — never open a visible popup automatically
                             window.isSilentRefresh = true;
                             console.log('🔄 Attempting ONE silent token refresh...');

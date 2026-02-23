@@ -792,6 +792,9 @@
                         localStorage.setItem('g_token_expiry', expMs.toString());
                         localStorage.setItem('g_token_issued_at', Date.now().toString());
                         
+                        // Mark this session as having a valid token — prevents re-popup on navigation
+                        sessionStorage.setItem('gis_session_refreshed', Date.now().toString());
+                        
                         fetchUserProfile(accessToken);
                         log('Google Session Secured (Token Refresh Success)');
                         
@@ -898,6 +901,7 @@
         localStorage.setItem('g_access_token', accessToken);
         localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
         localStorage.setItem('g_token_issued_at', Date.now().toString());
+        sessionStorage.setItem('gis_session_refreshed', Date.now().toString());
     }
 
             if (result.user.displayName) {
@@ -1368,7 +1372,11 @@
 
                 // SILENT TOKEN REFRESH ON LOAD (If Google user)
                 // Skip if we just logged in — handleAuthResult already saved the token
-                if (!user.isAnonymous && tokenClient && !window.justLoggedIn) {
+                // Skip if we already refreshed this session (prevents popup on page navigation)
+                const sessionRefreshed = sessionStorage.getItem('gis_session_refreshed');
+                const hasValidSessionToken = sessionRefreshed && localStorage.getItem('g_access_token');
+                
+                if (!user.isAnonymous && tokenClient && !window.justLoggedIn && !hasValidSessionToken) {
                     const lastIssued = localStorage.getItem('g_token_issued_at');
                     const now = Date.now();
                     const filterAge = 50 * 60 * 1000; // 50 minutes
@@ -1385,6 +1393,8 @@
                             console.log('🔇 Token refresh on cooldown. Skipping load-time refresh.');
                         }
                     }
+                } else if (hasValidSessionToken) {
+                    console.log('✅ Token already refreshed this session. Skipping GIS popup.');
                 }
                 // Clear the flag after auth processing
                 window.justLoggedIn = false;

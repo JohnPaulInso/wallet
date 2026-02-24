@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Smart Wallet</title>
+    <meta name="application-name" content="Smart Wallet">
+    <meta name="description" content="Smart Wallet — Your personal finance tracker. Track expenses, sync bank transactions from Gmail, set budgets, and visualize your spending.">
     <link rel="icon" type="image/png" href="applogo.png?v=4">
     <link rel="apple-touch-icon" href="applogo.png?v=4">
     
@@ -123,17 +125,19 @@
          <!-- GUEST LOGIN GATE (hidden by default, shown only for confirmed guests) -->
          <div id="guestGate" class="guest-gate-overlay" style="display:none">
              <div class="guest-gate-card">
-                 <div style="width: 64px; height: 64px; border-radius: 20px; background: #f8fafc; display: flex; align-items: center; justify-content: center;">
-                     <i class="material-icons" style="font-size: 32px; color: #121212;">lock</i>
-                 </div>
+                 <img src="applogo.png" alt="Smart Wallet" style="width: 64px; height: 64px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
                  <div>
-                     <h2 style="font-size: 22px; font-weight: 900; color: #121212; margin: 0 0 10px 0;">Sign in Required</h2>
-                     <p style="font-size: 14px; color: #64748b; margin: 0; line-height: 1.6;">To start tracking your expenses and sync across devices, please sign in with Google first.</p>
+                     <h1 style="font-size: 22px; font-weight: 900; color: #121212; margin: 0 0 6px 0;">Smart Wallet</h1>
+                     <p style="font-size: 13px; color: #64748b; margin: 0; line-height: 1.6;">Your personal finance tracker. Track expenses, sync bank transactions from Gmail, set budgets, and visualize your spending — all in one app.</p>
                  </div>
                  <button class="guest-gate-btn" onclick="handleAuthClick()">
                      <svg viewBox="0 0 48 48" width="20px" xmlns="http://www.w3.org/2000/svg"><path d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 4.1 29.6 2 24 2 11.8 2 2 11.8 2 24s9.8 22 22 22c11 0 21-8 21-22 0-1.3-.2-2.7-.5-4z" fill="#FFF"/></svg>
                      Continue with Google
                  </button>
+                 <div style="display: flex; gap: 16px; margin-top: 4px;">
+                     <a href="privacy.html" style="font-size: 11px; font-weight: 700; color: #94a3b8; text-decoration: none;">Privacy Policy</a>
+                     <a href="terms.html" style="font-size: 11px; font-weight: 700; color: #94a3b8; text-decoration: none;">Terms of Service</a>
+                 </div>
              </div>
          </div>
 

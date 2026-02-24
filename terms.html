@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - Smart Wallet</title>
+    <meta name="description" content="Terms of Service for Smart Wallet - Your personal finance tracking app.">
+    <link rel="icon" type="image/png" href="applogo.png?v=4">
+    <link rel="apple-touch-icon" href="applogo.png?v=4">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            background: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            max-width: 680px;
+            padding: 0 24px 80px;
+        }
+
+        /* HEADER */
+        .tos-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 32px 0 24px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 32px;
+        }
+        .tos-header img {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .header-text h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+        .header-text .subtitle {
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* LAST UPDATED BADGE */
+        .updated-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 28px;
+        }
+        .updated-badge i { font-size: 14px; }
+
+        /* INTRO */
+        .intro-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #475569;
+            font-weight: 500;
+            margin-bottom: 32px;
+        }
+
+        /* SECTION */
+        .tos-section {
+            margin-bottom: 28px;
+        }
+        .tos-section .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .section-header .icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .section-header .icon-box i { font-size: 18px; color: #fff; }
+        .section-header h2 {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+        }
+        .tos-section p,
+        .tos-section li {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #475569;
+            font-weight: 500;
+        }
+        .tos-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        .tos-section ul li {
+            padding: 6px 0 6px 20px;
+            position: relative;
+        }
+        .tos-section ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #cbd5e1;
+        }
+
+        /* COLOR VARIANTS */
+        .icon-blue { background: #3b82f6; }
+        .icon-emerald { background: #10b981; }
+        .icon-amber { background: #f59e0b; }
+        .icon-red { background: #ef4444; }
+        .icon-purple { background: #8b5cf6; }
+        .icon-slate { background: #475569; }
+        .icon-cyan { background: #06b6d4; }
+        .icon-indigo { background: #6366f1; }
+        .icon-rose { background: #f43f5e; }
+        .icon-teal { background: #14b8a6; }
+
+        /* DIVIDER */
+        .section-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 28px 0;
+        }
+
+        /* CONTACT CARD */
+        .contact-card {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 24px;
+            color: #fff;
+            margin-top: 32px;
+        }
+        .contact-card h3 {
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.3px;
+        }
+        .contact-card p {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.7;
+            font-weight: 500;
+        }
+        .contact-card a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .contact-card a:hover { text-decoration: underline; }
+
+        /* NAV LINKS */
+        .page-links {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+            flex-wrap: wrap;
+        }
+        .page-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+        .page-link:hover { background: #eff6ff; }
+        .page-link i { font-size: 18px; }
+
+        /* FOOTER */
+        .tos-footer {
+            text-align: center;
+            padding: 40px 0 20px;
+            font-size: 11px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 480px) {
+            .page-wrapper { padding: 0 20px 60px; }
+            .tos-header { padding: 24px 0 20px; }
+            .header-text h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- HEADER -->
+        <div class="tos-header">
+            <img src="applogo.png" alt="Smart Wallet Logo">
+            <div class="header-text">
+                <h1>Smart Wallet</h1>
+                <div class="subtitle">Terms of Service</div>
+            </div>
+        </div>
+
+        <!-- LAST UPDATED -->
+        <div class="updated-badge">
+            <i class="material-icons">update</i>
+            Last updated: February 24, 2026
+        </div>
+
+        <!-- INTRO -->
+        <p class="intro-text">
+            Welcome to Smart Wallet. By using this application, you agree to the following Terms of Service. 
+            Please read them carefully before using the app.
+        </p>
+
+        <!-- SECTION 1: ACCEPTANCE -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-blue">
+                    <i class="material-icons">handshake</i>
+                </div>
+                <h2>1. Acceptance of Terms</h2>
+            </div>
+            <p>
+                By accessing or using Smart Wallet, you agree to be bound by these Terms of Service and our 
+                <a href="privacy.html" style="color: #3b82f6; font-weight: 700;">Privacy Policy</a>.
+                If you do not agree to these terms, please do not use the app.
+            </p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 2: DESCRIPTION -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-emerald">
+                    <i class="material-icons">description</i>
+                </div>
+                <h2>2. Description of Service</h2>
+            </div>
+            <p>Smart Wallet is a personal finance tracking application that allows you to:</p>
+            <ul>
+                <li>Track expenses and income across multiple accounts</li>
+                <li>Automatically sync transactions from bank notification emails via Gmail</li>
+                <li>Visualize spending patterns through charts and analytics</li>
+                <li>Set savings goals, budgets, and category spending limits</li>
+                <li>Export and import your financial data</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 3: USER ACCOUNTS -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-purple">
+                    <i class="material-icons">account_circle</i>
+                </div>
+                <h2>3. User Accounts</h2>
+            </div>
+            <ul>
+                <li>You must sign in with a valid Google account to use cloud-synced features.</li>
+                <li>You are responsible for maintaining the security of your Google account credentials.</li>
+                <li>You must not share your account access or use another person's account without permission.</li>
+                <li>You must be at least 13 years of age to use Smart Wallet.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 4: ACCEPTABLE USE -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-amber">
+                    <i class="material-icons">gavel</i>
+                </div>
+                <h2>4. Acceptable Use</h2>
+            </div>
+            <p>You agree not to:</p>
+            <ul>
+                <li>Use the app for any unlawful or fraudulent purpose</li>
+                <li>Attempt to reverse engineer, modify, or tamper with the application code in a way that disrupts the service</li>
+                <li>Use automated systems or bots to access the app in a manner that exceeds normal usage</li>
+                <li>Interfere with or disrupt the app's infrastructure or other users' experience</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 5: DATA & CONTENT -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-cyan">
+                    <i class="material-icons">storage</i>
+                </div>
+                <h2>5. Your Data & Content</h2>
+            </div>
+            <ul>
+                <li><strong>Ownership</strong> — You retain full ownership of all financial data you input or sync into Smart Wallet.</li>
+                <li><strong>Backup</strong> — We recommend regularly exporting your data using the built-in backup feature. While we strive for reliability, we cannot guarantee against data loss.</li>
+                <li><strong>Deletion</strong> — You may delete your data at any time through the app or by contacting us.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 6: GMAIL INTEGRATION -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-red">
+                    <i class="material-icons">email</i>
+                </div>
+                <h2>6. Gmail Integration</h2>
+            </div>
+            <ul>
+                <li>Gmail Sync requires you to grant Smart Wallet read-only access to your Gmail account.</li>
+                <li>We only scan emails from recognized bank senders to extract transaction data.</li>
+                <li>Email content is processed locally in your browser and is <strong>not</strong> stored on any external server.</li>
+                <li>You can revoke Gmail access at any time through your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener" style="color: #3b82f6; font-weight: 700;">Google Account Permissions</a>.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 7: DISCLAIMER -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-rose">
+                    <i class="material-icons">warning</i>
+                </div>
+                <h2>7. Disclaimers</h2>
+            </div>
+            <ul>
+                <li>Smart Wallet is provided <strong>"as is"</strong> without warranties of any kind, express or implied.</li>
+                <li>We do not guarantee that the app will be error-free, uninterrupted, or that transaction syncing will capture every transaction accurately.</li>
+                <li>Smart Wallet is a <strong>personal tracking tool</strong>, not a financial advisor. We do not provide financial, investment, or tax advice.</li>
+                <li>We are not responsible for any financial decisions you make based on data displayed in the app.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 8: LIMITATION OF LIABILITY -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-slate">
+                    <i class="material-icons">security</i>
+                </div>
+                <h2>8. Limitation of Liability</h2>
+            </div>
+            <p>
+                To the maximum extent permitted by law, Smart Wallet and its developer shall not be liable for any indirect, 
+                incidental, special, or consequential damages arising from your use of the app, including but not limited to 
+                loss of data, loss of profits, or interruption of service.
+            </p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 9: CHANGES -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-indigo">
+                    <i class="material-icons">edit_note</i>
+                </div>
+                <h2>9. Changes to These Terms</h2>
+            </div>
+            <p>
+                We reserve the right to update these Terms of Service at any time. Changes will be posted on this page with 
+                an updated date. Continued use of Smart Wallet after changes are posted constitutes your acceptance of the revised terms.
+            </p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 10: TERMINATION -->
+        <div class="tos-section">
+            <div class="section-header">
+                <div class="icon-box icon-teal">
+                    <i class="material-icons">exit_to_app</i>
+                </div>
+                <h2>10. Termination</h2>
+            </div>
+            <p>
+                You may stop using Smart Wallet at any time by logging out and revoking Google access.
+                We reserve the right to suspend or terminate access to the app for users who violate these Terms of Service.
+            </p>
+        </div>
+
+        <!-- CONTACT CARD -->
+        <div class="contact-card">
+            <h3>Questions About These Terms?</h3>
+            <p>
+                If you have any questions about these Terms of Service, please contact:<br>
+                <strong>Developer:</strong> John Paul Inso<br>
+                <strong>Email:</strong> <a href="mailto:johnpaulinso123@gmail.com">johnpaulinso123@gmail.com</a>
+            </p>
+        </div>
+
+        <!-- NAV LINKS -->
+        <div class="page-links">
+            <a href="index.html" class="page-link">
+                <i class="material-icons">arrow_back</i>
+                Back to Smart Wallet
+            </a>
+            <a href="privacy.html" class="page-link">
+                <i class="material-icons">privacy_tip</i>
+                Privacy Policy
+            </a>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="tos-footer">
+            © 2026 Smart Wallet by John Paul Inso. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

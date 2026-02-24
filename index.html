@@ -122,8 +122,8 @@
                 };
             }
         </script>
-         <!-- GUEST LOGIN GATE (hidden by default, shown only for confirmed guests) -->
-         <div id="guestGate" class="guest-gate-overlay" style="display:none">
+         <!-- GUEST LOGIN GATE (visible by default for crawlers, hidden via JS for logged-in users) -->
+         <div id="guestGate" class="guest-gate-overlay" style="display:flex">
              <div class="guest-gate-card">
                  <img src="applogo.png" alt="Smart Wallet" style="width: 64px; height: 64px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
                  <div>
@@ -143,11 +143,11 @@
          </div>
 
          <script>
-             // EARLY GATE CHECK: Show immediately for guests, hide for returning Google users
-             if (localStorage.getItem('wallet_auth_type') !== 'google') {
-                 document.getElementById('guestGate').style.display = 'flex';
-             }
-         </script>
+              // EARLY GATE CHECK: Hide for returning Google users, visible by default for guests & crawlers
+              if (localStorage.getItem('wallet_auth_type') === 'google') {
+                  document.getElementById('guestGate').style.display = 'none';
+              }
+          </script>
 
         <div id="header">
             <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
@@ -649,6 +649,11 @@
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
                 <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.6</div>
+                <div style="margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 6px;">
+                    <a href="privacy.html" style="color: #cbd5e1; text-decoration: none; font-size: 9px; font-weight: 600;">Privacy</a>
+                    <span style="color: #e2e8f0;">·</span>
+                    <a href="terms.html" style="color: #cbd5e1; text-decoration: none; font-size: 9px; font-weight: 600;">Terms</a>
+                </div>
             </div>
         </div>
 

@@ -1716,8 +1716,25 @@
             font-weight: 800;
             cursor: pointer;
             transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
         }
         .obligation-btn:active { background: #e2e8f0; transform: scale(0.95); }
+
+        .click-pulse {
+            animation: clickPulse 0.4s ease-out;
+        }
+        @keyframes clickPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #ai-title-trigger:hover {
+            opacity: 0.7;
+        }
         .cash-in-badge {
             background: #dcfce7;
             color: #166534;
@@ -1921,7 +1938,7 @@
         .monthly-summary-body {
             overflow: hidden;
             transition: max-height 0.35s ease, opacity 0.25s ease;
-            max-height: 200px;
+            max-height: 1000px; /* Increased to avoid clipping */
             opacity: 1;
         }
         .monthly-summary-body.collapsed {
@@ -1957,6 +1974,61 @@
         body.dark-mode .monthly-summary-header h3 { color: var(--text-primary); }
         body.dark-mode .summary-item .s-value { color: var(--text-primary); }
         body.dark-mode .monthly-summary-toggle { background: var(--border-color); }
+
+        /* AI INSIGHT SECTION */
+        .ai-insight-section {
+            margin: 16px 0 8px 0; /* Added bottom margin */
+            padding: 16px;
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border-radius: 16px;
+            border: 1px solid #ddd6fe;
+        }
+        body.dark-mode .ai-insight-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+        .ai-insight-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .ai-insight-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #7c3aed;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        body.dark-mode .ai-insight-title { color: #a78bfa; }
+        .ai-summary-text {
+            font-size: 11.5px; /* Reduced font size */
+            line-height: 1.6;
+            color: #4c1d95;
+            font-weight: 500;
+        }
+        body.dark-mode .ai-summary-text { color: #ddd6fe; }
+        
+        /* Loading Animation */
+        .ai-loading-dots { display: flex; gap: 4px; }
+        .ai-loading-dots span {
+            width: 4px; height: 4px;
+            background: #7c3aed;
+            border-radius: 50%;
+            display: inline-block;
+            animation: aiBounce 1.4s infinite ease-in-out both;
+        }
+        .ai-loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .ai-loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes aiBounce {
+            0%, 80%, 100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .hover-rotate:hover {
+            opacity: 1 !important;
+            transform: rotate(180deg);
+        }
 
         /* SWIPE-TO-ACTION on Transaction Items */
         .txn-swipe-wrapper {

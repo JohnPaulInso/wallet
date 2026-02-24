@@ -142,12 +142,14 @@
              </div>
          </div>
 
-         <script>
-              // EARLY GATE CHECK: Hide for returning Google users, visible by default for guests & crawlers
-              if (localStorage.getItem('wallet_auth_type') === 'google') {
-                  document.getElementById('guestGate').style.display = 'none';
-              }
-          </script>
+          <script>
+               // EARLY GATE CHECK: Hide for returning Google users, visible by default for guests & crawlers
+               // SUPPRESS if a redirect is pending to prevent dual modal race condition
+               const isRedirectInProgress = localStorage.getItem('auth_redirect_pending') === 'true';
+               if (localStorage.getItem('wallet_auth_type') === 'google' || isRedirectInProgress) {
+                   document.getElementById('guestGate').style.display = 'none';
+               }
+           </script>
 
         <div id="header">
             <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
@@ -909,9 +911,11 @@
             log('Auth success! User: ' + result.user.email);
             localStorage.setItem('wallet_auth_type', 'google'); // Mark as Google user
             
-            // IMMEDIATELY hide guest gate on login success
+            // IMMEDIATELY hide guest gate and sync banner on login success
             const gate = document.getElementById('guestGate');
             if (gate) gate.style.display = 'none';
+            const banner = document.getElementById('local-banner');
+            if (banner) banner.style.display = 'none';
             
             const credential = GoogleAuthProvider.credentialFromResult(result);
             
@@ -1173,8 +1177,10 @@
                     log('Establishing secure local session...');
                     signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
                     // Show guest gate after 2s delay — gives Firebase time to restore session
+                    // Critical: Don't show if we are currently handling a redirect result
                     setTimeout(() => {
-                        if ((!auth.currentUser || auth.currentUser.isAnonymous) && !window.justLoggedIn) {
+                        const redirectActive = localStorage.getItem('auth_redirect_pending') === 'true';
+                        if ((!auth.currentUser || auth.currentUser.isAnonymous) && !window.justLoggedIn && !redirectActive) {
                             const gate = document.getElementById('guestGate');
                             if (gate) gate.style.display = 'flex';
                         }
@@ -1396,9 +1402,8 @@
                 // Skip if we just logged in — handleAuthResult already saved the token
                 // Skip if we already refreshed this session (prevents popup on page navigation)
                 const sessionRefreshed = sessionStorage.getItem('gis_session_refreshed');
-                const hasValidSessionToken = sessionRefreshed && localStorage.getItem('g_access_token');
                 
-                if (!user.isAnonymous && tokenClient && !window.justLoggedIn && !hasValidSessionToken) {
+                if (!user.isAnonymous && tokenClient && !window.justLoggedIn && !sessionRefreshed) {
                     const lastIssued = localStorage.getItem('g_token_issued_at');
                     const now = Date.now();
                     const filterAge = 50 * 60 * 1000; // 50 minutes
@@ -1415,11 +1420,11 @@
                             console.log('🔇 Token refresh on cooldown. Skipping load-time refresh.');
                         }
                     }
-                } else if (hasValidSessionToken) {
+                } else if (sessionRefreshed) {
                     console.log('✅ Token already refreshed this session. Skipping GIS popup.');
                 }
                 // Clear the flag after auth processing — with delay to cover multiple onAuthStateChanged fires
-                setTimeout(() => { window.justLoggedIn = false; }, 5000);
+                setTimeout(() => { window.justLoggedIn = false; }, 10000);
             });
         });
 
@@ -1487,6 +1492,8 @@
         }
 
         function handleLocalModeNudge(user) {
+            // Don't show sync nudge during an active login flow
+            if (window.justLoggedIn) return;
             if (user.isAnonymous) {
                  const profileBadge = document.getElementById('profile-badge');
                  profileBadge.style.border = '2px solid #f59e0b';

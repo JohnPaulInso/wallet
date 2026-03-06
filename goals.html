@@ -1144,12 +1144,12 @@
 
     <div class="modal-overlay" id="depositModal">
         <div class="modal-card">
-            <div class="modal-title">Deposit to Goal</div>
+            <div class="modal-title">New Transaction</div>
             <div class="form-group">
                 <label class="form-label">Amount (PHP)</label>
-                <input type="text" id="depositAmount" class="form-input" placeholder="1,000" oninput="window.formatCurrencyInput(this)">
+                <input type="text" id="depositAmount" class="form-input" placeholder="e.g. -1,000 for withdrawal" oninput="window.formatCurrencyInput(this)">
             </div>
-            <button class="modal-btn primary-btn" id="confirmDepositBtn">Confirm Deposit</button>
+            <button class="modal-btn primary-btn" id="confirmDepositBtn">Save Transaction</button>
             <button class="modal-btn ghost-btn" onclick="window.closeModals()">Cancel</button>
         </div>
     </div>
@@ -1239,12 +1239,34 @@
         window.formatCurrencyInput = function(input) {
             let selectionStart = input.selectionStart;
             let originalLength = input.value.length;
+            
+            // Detect if negative (anywhere in the string for robustness)
+            let isNegative = input.value.includes('-');
             let val = input.value.replace(/\D/g, '');
+            
+            // Dynamic UI Label Switching - BEFORE early return
+            const modalTitle = document.querySelector('#depositModal .modal-title');
+            const confirmBtn = document.getElementById('confirmDepositBtn');
+            const amountLabel = document.querySelector('#depositModal .form-label');
+
+            if (isNegative) {
+                if (modalTitle) modalTitle.innerText = 'Withdraw from Goal';
+                if (confirmBtn) confirmBtn.innerText = 'Confirm Withdrawal';
+                if (amountLabel) amountLabel.innerText = 'Withdrawal Amount';
+            } else {
+                if (modalTitle) modalTitle.innerText = 'Deposit to Goal';
+                if (confirmBtn) confirmBtn.innerText = 'Confirm Deposit';
+                if (amountLabel) amountLabel.innerText = 'Deposit Amount';
+            }
+
             if (val === '') {
-                input.value = '';
+                input.value = isNegative ? '-' : '';
                 return;
             }
+            
             let formatted = parseInt(val).toLocaleString();
+            if (isNegative) formatted = '-' + formatted;
+            
             input.value = formatted;
             let diff = formatted.length - originalLength;
             input.setSelectionRange(selectionStart + diff, selectionStart + diff);
@@ -1252,10 +1274,21 @@
 
         window.openDepositModal = function(id) {
             window.selectedGoalId = id;
+            
+            // Reset to default "Deposit" state
+            const modalTitle = document.querySelector('#depositModal .modal-title');
+            const confirmBtn = document.getElementById('confirmDepositBtn');
+            const amountLabel = document.querySelector('#depositModal .form-label');
+            const input = document.getElementById('depositAmount');
+
+            if (modalTitle) modalTitle.innerText = 'Deposit to Goal';
+            if (confirmBtn) confirmBtn.innerText = 'Confirm Deposit';
+            if (amountLabel) amountLabel.innerText = 'Deposit Amount';
+            if (input) input.value = '';
+
             const modal = document.getElementById('depositModal');
             modal.style.display = 'flex';
             if (nav) nav.pushModalState('depositModal', () => modal.style.display = 'none');
-            const input = document.getElementById('depositAmount');
             if (input) setTimeout(() => input.focus(), 100);
         }
 
@@ -1996,31 +2029,44 @@
         }
 
         document.getElementById('confirmDepositBtn').onclick = async () => {
-            const amount = parseFloat(document.getElementById('depositAmount').value.replace(/,/g, ''));
-            if (!amount || amount <= 0 || !currentUser || !selectedGoalId) return;
+            const rawValue = document.getElementById('depositAmount').value.replace(/,/g, '');
+            const amount = parseFloat(rawValue);
+            
+            if (!amount || amount === 0 || !currentUser || !selectedGoalId) return;
+            
             try {
                 const goalRef = doc(db, `users/${currentUser.uid}/goals`, selectedGoalId);
                 const goal = goals.find(g => g.id === selectedGoalId);
                 if (goal) {
-                    await updateDoc(goalRef, { currentAmount: (goal.currentAmount || 0) + amount });
+                    const newAmount = (goal.currentAmount || 0) + amount;
+                    await updateDoc(goalRef, { currentAmount: newAmount });
                     
+                    const isWithdrawal = amount < 0;
+                    const absAmount = Math.abs(amount);
+                    const type = isWithdrawal ? 'withdrawal' : 'deposit';
+
                     // Record Transaction History
                     await addDoc(collection(db, `users/${currentUser.uid}/goals/${selectedGoalId}/transactions`), {
                         amount: amount,
-                        type: 'deposit',
+                        type: type,
                         timestamp: serverTimestamp()
                     });
 
-                    if (window.confetti) {
+                    // Only show confetti for positive deposits
+                    if (!isWithdrawal && window.confetti) {
                         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#00851F', '#ffffff'] });
                     }
+                    
                     document.getElementById('depositAmount').value = '';
                     window.closeModals();
-                    window.showToast(`₱${amount.toLocaleString()} deposited!`);
+                    
+                    const actionWord = isWithdrawal ? 'withdrawn' : 'deposited';
+                    window.showToast(`₱${absAmount.toLocaleString()} ${actionWord}!`);
                     await loadGoals();
                 }
             } catch (error) {
-                console.error("Error updating deposit:", error);
+                console.error("Error saving transaction:", error);
+                window.showToast("Failed to save transaction");
             }
         };
 

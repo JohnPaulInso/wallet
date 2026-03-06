@@ -268,6 +268,53 @@
 
             <!-- SUBSCRIPTION CARD (MOVED BELOW HISTORY) -->
 
+            <!-- TRIPLE PROGRESS BAR WIDGET -->
+            <div id="triple-progress-widget" class="triple-progress-card">
+                <div class="triple-progress-header">
+                    <div class="triple-title-group">
+                        <div class="triple-progress-title">Monthly Budget</div>
+                        <div id="triple-month-display" class="triple-month-label">JANUARY 2026</div>
+                    </div>
+                    <button class="triple-edit-btn" onclick="promptSetMonthlySalary()">
+                        <i class="material-icons">edit</i>
+                    </button>
+                </div>
+
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span class="progress-label">Needs</span>
+                        <span id="needs-stats" class="progress-stats privacy-mask">PHP 0 / PHP 8,800</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="progress-item">
+                    <div class="progress-header">
+                        <span class="progress-label">Wants</span>
+                        <span id="wants-stats" class="progress-stats privacy-mask">PHP 0 / PHP 5,280</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="progress-item" style="margin-bottom: 0;">
+                    <div class="progress-header">
+                        <span class="progress-label">Savings</span>
+                        <span id="savings-stats" class="progress-stats privacy-mask">PHP 0 / PHP 3,520</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="wants-depleted-msg" class="overspending-msg">
+                    Wants budget depleted. Stop spending on luxuries to protect your savings and avoid new debt.
+                </div>
+            </div>
+
             <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
             <div id="safe-spend-widget" class="safe-spend-card">
                 <div class="safe-spend-header-v2">
@@ -1268,9 +1315,15 @@
                         } else if (!data.obligations) {
                             data.obligations = [];
                         }
-                        
                         window.safeToSpendConfig = data;
+                        
+                        // Sync salary target to localStorage for speed
+                        if (data.salaryAmount !== undefined) {
+                            localStorage.setItem('monthly_salary_target', data.salaryAmount);
+                        }
+                        
                         updateSafeSpendUI();
+                        if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                     });
 
                     const configRef = doc(db, "users", user.uid, "config", "accounts");
@@ -1396,9 +1449,10 @@
                             setTimeout(() => { window.isInitialLoading = false; }, 800);
                         }, 500);
 
-                        // START BACKGROUND ATOME WATCHER (Keep Safe To Spend accurate)
+                        // START BACKGROUND WATCHERS (Keep Triple Progress Bar & Safe To Spend accurate)
                         if (isAdmin) {
                             window.watchAtomeBalance();
+                            if (window.watchBpiTransactions) window.watchBpiTransactions();
                         }
                     });
                 } else {
@@ -2280,54 +2334,64 @@
         window.loadData = loadData;
 
         // BACKGROUND WATCHER: Keep Atome balance in sync even when on BPI account
-        window.watchAtomeBalance = () => {
+         window.walletTxns = { atome: [], bpi: [] };
+
+         window.watchAtomeBalance = () => {
+             const uid = auth.currentUser?.uid;
+             if (!uid) return;
+             
+             if (window.unsubscribeAtomeWatch) window.unsubscribeAtomeWatch();
+
+             const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
+             
+             window.unsubscribeAtomeWatch = onSnapshot(q, (snap) => {
+                 const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                 window.walletTxns.atome = txns;
+                 
+                 let incomeTotal = 0;
+                 let expenseTotal = 0;
+                 txns.forEach(t => {
+                     if (t.excluded || t.refund) return;
+                     const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                     const mapped = getMerchantDisplay(t.merchant, t);
+                     if (mapped.category === 'Income') incomeTotal += amt;
+                     else expenseTotal += amt;
+                 });
+
+                 const balance = incomeTotal - expenseTotal;
+                 window.atomeBalanceVal = balance;
+                 
+                 const atomeEl = document.getElementById('atome-balance') || document.querySelector('.balance-card[data-account="atome"] .balance-amount');
+                 if (atomeEl) {
+                     const formatted = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                     atomeEl.dataset.raw = formatted;
+                     atomeEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
+                 }
+                 updateSafeSpendUI();
+                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+             });
+         };
+
+         window.watchBpiTransactions = () => {
             const uid = auth.currentUser?.uid;
             if (!uid) return;
-            
-            // Avoid duplicate listeners
-            if (window.unsubscribeAtomeWatch) {
-                window.unsubscribeAtomeWatch();
-            }
+            if (window.unsubscribeBpiWatch) window.unsubscribeBpiWatch();
 
-            log('Background Atome Watcher: Starting...', 'ready');
-            const q = query(collection(db, "users", uid, "transactions"), orderBy("date", "desc"));
-            
-            window.unsubscribeAtomeWatch = onSnapshot(q, (snap) => {
-                let incomeTotal = 0;
-                let expenseTotal = 0;
-
-                snap.docs.forEach(d => {
-                    const t = d.data();
-                    if (t.deleted || t.excluded || t.refund) return;
-                    
-                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                    const mapped = getMerchantDisplay(t.merchant, t);
-
-                    if (mapped.category === 'Income') {
-                        incomeTotal += amt;
-                    } else {
-                        expenseTotal += amt;
-                    }
-                });
-
-                const balance = incomeTotal - expenseTotal;
-                window.atomeBalanceVal = balance;
+            const q = query(collection(db, "users", uid, "bpi_transactions"), orderBy("date", "desc"));
+            window.unsubscribeBpiWatch = onSnapshot(q, (snap) => {
+                const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                window.walletTxns.bpi = txns;
                 
-                // Update Atome specific elements if they exist in the DOM (even if hidden)
-                const atomeEl = document.getElementById('atome-balance') || document.querySelector('.balance-card[data-account="atome"] .balance-amount');
-                if (atomeEl) {
-                    const formatted = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                    atomeEl.dataset.raw = formatted;
-                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
-                    atomeEl.innerText = isHidden ? '******' : formatted;
-                }
+                // Only update window.bpiBalanceVal if we are on BPI account (to avoid conflicts with loadData listener)
+                // Actually, it's safer to always keep it in sync for global widgets
+                let balance = 0;
+                txns.forEach(t => { if(!t.excluded) balance += (t.amount || 0); });
+                window.bpiBalanceVal = balance;
 
-                log(`Background Atome Sync: ${balance.toFixed(2)}`, 'ready');
-                updateSafeSpendUI();
-            }, (err) => {
-                log('Atome Watcher Error: ' + err.message, 'error');
+                updateBPIInsight(); 
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
             });
-        };
+         };
 
         // BACKGROUND CACHE HYDRATION (Warm up all accounts)
         window.hydrateAllCaches = async () => {
@@ -2645,11 +2709,163 @@
                 footerBadge.dataset.raw = formattedCI;
                 footerBadge.innerText = isHidden ? '******' : formattedCI;
              }
-
              const paycheck = calculateNextPaycheck();
              document.getElementById('footer-paycheck-date').innerText = paycheck.date;
              document.getElementById('footer-countdown').innerText = `${paycheck.days} ${paycheck.days === 1 ? 'Day' : 'Days'}`;
              document.getElementById('budget-until-date').innerText = paycheck.date;
+
+             // Triple Progress Bar update
+            if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+         };
+
+         window.promptSetMonthlySalary = () => {
+            const current = localStorage.getItem('monthly_salary_target') || '17600';
+            showAppDialog({
+                title: 'Monthly Salary',
+                message: 'Enter your total monthly salary (PHP). We will divide it into Needs (50%), Wants (30%), and Savings (20%).',
+                input: true,
+                value: current,
+                callback: (val) => {
+                    if (val !== null && val !== false && !isNaN(val)) {
+                        const amount = parseFloat(val);
+                        localStorage.setItem('monthly_salary_target', amount);
+                        
+                        // Save to Firestore for sync
+                        const uid = auth.currentUser?.uid;
+                        if (uid) {
+                            const safeSpendRef = doc(db, "users", uid, "config", "safe_to_spend");
+                            updateDoc(safeSpendRef, { salaryAmount: amount })
+                                .catch(err => console.error("Error saving salary target:", err));
+                        }
+                        
+                        updateTripleProgressBar();
+                        showToast('Salary updated! Targets recalculated.');
+                    }
+                }
+            });
+         };
+
+         window.updateTripleProgressBar = () => {
+            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            const widget = document.getElementById('triple-progress-widget');
+            if (!widget || !isAdmin) {
+                if (widget) widget.style.display = 'none';
+                return;
+            }
+            widget.style.display = 'block';
+
+            // Filter & Month Label sync
+            const now = new Date();
+            const filterEl = document.getElementById('chart-filter');
+            const currentFilter = filterEl ? filterEl.value : 'this_month';
+            
+            const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+            const monthDisplay = document.getElementById('triple-month-display');
+            
+            if (monthDisplay) {
+                if (currentFilter === 'this_month') {
+                    monthDisplay.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+                } else if (currentFilter === 'today') {
+                    monthDisplay.innerText = 'TODAY';
+                } else if (currentFilter === 'this_week') {
+                    monthDisplay.innerText = 'THIS WEEK';
+                } else if (currentFilter === 'last_7_days') {
+                    monthDisplay.innerText = 'LAST 7 DAYS';
+                } else if (currentFilter.match(/^\d{4}-\d{2}$/)) {
+                    // Handle dynamic months (YYYY-MM)
+                    const [year, month] = currentFilter.split('-').map(Number);
+                    monthDisplay.innerText = `${monthNames[month - 1]} ${year}`;
+                } else {
+                    // Fallback to capitalizing the filter value (e.g. "last_3_months" -> "LAST 3 MONTHS")
+                    monthDisplay.innerText = currentFilter.replace(/_/g, ' ').toUpperCase();
+                }
+            }
+
+            // Salary Target from LocalStorage
+            const salaryTarget = parseFloat(localStorage.getItem('monthly_salary_target') || '17600');
+
+            // 50/30/20 Rule Calculation
+            const needsLimit = salaryTarget * 0.50;
+            const wantsLimit = salaryTarget * 0.30;
+            const savingsLimit = salaryTarget * 0.20;
+
+            let needsTotal = 0;
+            let wantsTotal = 0;
+            let savingsTotal = 0;
+
+            const aggregateFrom = (txns, account) => {
+                txns.forEach(t => {
+                    if (t.excluded) return;
+                    
+                    // Use shared checkPeriod helper to sync with chart
+                    if (!window.checkPeriod(t, currentFilter, 0, now)) return;
+
+                    const display = getMerchantDisplay(t.name || t.merchant, t);
+                    const amt = Math.abs(t.amount || 0);
+
+                    if (account === 'atome') {
+                        if (display.category === 'Education' || display.category === 'Service' || display.category === 'Financial expenses' || display.category === 'Vehicle' || display.category === 'Transportation') {
+                            needsTotal += amt;
+                        } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport') {
+                            wantsTotal += amt;
+                        }
+                    } else if (account === 'bpi') {
+                        if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
+                            savingsTotal += amt;
+                        }
+                    }
+                });
+            };
+
+            // Aggregate from all known transactions
+            if (window.walletTxns) {
+                aggregateFrom(window.walletTxns.atome || [], 'atome');
+                aggregateFrom(window.walletTxns.bpi || [], 'bpi');
+            } else {
+                // Fallback to window.allTxns if background watchers hasn't fired yet
+                aggregateFrom(window.allTxns || [], window.currentAccount);
+            }
+
+            // Update UI
+            const needsPct = Math.min((needsTotal / needsLimit) * 100, 100);
+            const wantsPct = (wantsTotal / wantsLimit) * 100;
+            const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
+
+            const isHidden = localStorage.getItem('balance_hidden') === 'true';
+            const formatVal = (val) => isHidden ? '******' : `PHP ${Math.floor(val).toLocaleString()}`;
+
+            const needsValue = `${formatVal(needsTotal)} / PHP ${needsLimit.toLocaleString()}`;
+            const needsEl = document.getElementById('needs-stats');
+            needsEl.innerText = needsValue;
+            needsEl.dataset.raw = needsValue;
+            document.getElementById('needs-bar').style.width = `${needsPct}%`;
+
+            const wantsValue = `${formatVal(wantsTotal)} / PHP ${wantsLimit.toLocaleString()}`;
+            const wantsEl = document.getElementById('wants-stats');
+            wantsEl.innerText = wantsValue;
+            wantsEl.dataset.raw = wantsValue;
+            const wantsBar = document.getElementById('wants-bar');
+            wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
+
+            // Wants color logic
+            wantsBar.classList.remove('fill-wants', 'fill-wants-orange', 'fill-wants-red');
+            const alertMsg = document.getElementById('wants-depleted-msg');
+            if (wantsPct >= 100) {
+                wantsBar.classList.add('fill-wants-red');
+                if (alertMsg) alertMsg.style.display = 'block';
+            } else if (wantsPct >= 80) {
+                wantsBar.classList.add('fill-wants-orange');
+                if (alertMsg) alertMsg.style.display = 'none';
+            } else {
+                wantsBar.classList.add('fill-wants');
+                if (alertMsg) alertMsg.style.display = 'none';
+            }
+
+            const savingsValue = `${formatVal(savingsTotal)} / PHP ${savingsLimit.toLocaleString()}`;
+            const savingsEl = document.getElementById('savings-stats');
+            savingsEl.innerText = savingsValue;
+            savingsEl.dataset.raw = savingsValue;
+            document.getElementById('savings-bar').style.width = `${savingsPct}%`;
         };
 
         function calculateNextPaycheck() {
@@ -3502,142 +3718,127 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
              window.location.reload();
         };
 
+        // SHARED FILTER HELPERS
+        window.getWeek = (d) => {
+            const onejan = new Date(d.getFullYear(), 0, 1);
+            return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+        };
+
+        window.checkPeriod = (t, periodType, shift = 0, referenceDate = new Date()) => {
+            const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
+            if (isNaN(d.getTime())) return false;
+            
+            const now = referenceDate;
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const date = now.getDate();
+
+            const dYear = d.getFullYear();
+            const dMonth = d.getMonth();
+            const dDate = d.getDate();
+            const dWeek = window.getWeek(d);
+            const currentWeek = window.getWeek(now);
+
+            // Handle dynamic month values (YYYY-MM format)
+            if (typeof periodType === 'string' && periodType.match(/^\d{4}-\d{2}$/)) {
+                const [targetYear, targetMonth] = periodType.split('-').map(Number);
+                if (shift === 0) {
+                    return dYear === targetYear && dMonth === targetMonth - 1;
+                } else if (shift === 1) {
+                    const prevDate = new Date(targetYear, targetMonth - 1 - 1, 1);
+                    return dYear === prevDate.getFullYear() && dMonth === prevDate.getMonth();
+                }
+            }
+
+            // Handle "all_time" filter
+            if (periodType === 'all_time') {
+                return shift === 0;
+            }
+
+            if (periodType === 'today') {
+                const target = new Date(now);
+                target.setDate(date - shift);
+                return dYear === target.getFullYear() && dMonth === target.getMonth() && dDate === target.getDate();
+            }
+
+            if (periodType === 'this_month') {
+                const targetD = new Date(year, month - shift, 1);
+                return dMonth === targetD.getMonth() && dYear === targetD.getFullYear();
+            }
+            
+            if (periodType === 'last_7_days') {
+                const limit = new Date(now);
+                limit.setDate(now.getDate() - (7 * (shift + 1)) + 1);
+                limit.setHours(0,0,0,0);
+                
+                const upper = new Date(now);
+                upper.setDate(now.getDate() - (7 * shift));
+                upper.setHours(23,59,59,999);
+                
+                return d >= limit && d <= upper;
+            }
+
+            if (periodType === 'this_week') {
+                 if (shift === 0) return dWeek === currentWeek && dYear === year;
+                 if (shift === 1) return dWeek === currentWeek - 1 && dYear === year;
+            }
+            
+            if (periodType === 'last_week') {
+                 if (shift === 0) return dWeek === currentWeek - 1 && dYear === year;
+                 if (shift === 1) return dWeek === currentWeek - 2 && dYear === year;
+            }
+
+            if (periodType === 'first_15') {
+                if (shift === 0) return dDate <= 15 && dMonth === month && dYear === year;
+                if (shift === 1) {
+                    const prevMonthDate = new Date(year, month - 1, 1);
+                    return dDate > 15 && dMonth === prevMonthDate.getMonth() && dYear === prevMonthDate.getFullYear();
+                }
+            }
+            
+            if (periodType === 'last_15') {
+                if (shift === 0) return dDate > 15 && dMonth === month && dYear === year;
+                if (shift === 1) return dDate <= 15 && dMonth === month && dYear === year;
+            }
+            
+            if (periodType === 'last_month') {
+                const targetDate = new Date(year, month - 1 - shift, 1);
+                 return dMonth === targetDate.getMonth() && dYear === targetDate.getFullYear();
+            }
+            
+            if (periodType === 'last_3_months') {
+                const limit = new Date(now);
+                limit.setMonth(limit.getMonth() - 3 - (shift * 3));
+                const upper = new Date(now);
+                if (shift > 0) upper.setMonth(upper.getMonth() - 3);
+                
+                return d >= limit && (shift === 0 || d < upper);
+            }
+            
+            if (periodType === 'last_6_months') {
+                const limit = new Date(now);
+                limit.setMonth(limit.getMonth() - 6 - (shift * 6));
+                const upper = new Date(now);
+                if (shift > 0) upper.setMonth(upper.getMonth() - 6);
+                return d >= limit && (shift === 0 || d < upper);
+            }
+            
+            if (periodType === 'this_year') {
+                return dYear === (year - shift);
+            }
+            
+            return false;
+        };
+
         // FILTERING LOGIC
         window.filterChart = () => {
             const filterEl = document.getElementById('chart-filter');
             const filter = filterEl.value;
 
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const date = now.getDate();
-            
             if (!window.allTxns) return;
 
-            // Helper for week numbers
-            const getWeek = (d) => {
-                const onejan = new Date(d.getFullYear(), 0, 1);
-                return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
-            };
-
-            const checkPeriod = (t, periodType, shift = 0) => {
-                const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
-                if (isNaN(d.getTime())) return false;
-                
-                const dYear = d.getFullYear();
-                const dMonth = d.getMonth();
-                const dDate = d.getDate();
-                const dWeek = getWeek(d);
-                const currentWeek = getWeek(now);
-
-                // Handle dynamic month values (YYYY-MM format)
-                if (typeof periodType === 'string' && periodType.match(/^\d{4}-\d{2}$/)) {
-                    const [targetYear, targetMonth] = periodType.split('-').map(Number);
-                    if (shift === 0) {
-                        return dYear === targetYear && dMonth === targetMonth - 1;
-                    } else if (shift === 1) {
-                        const prevDate = new Date(targetYear, targetMonth - 1 - 1, 1);
-                        return dYear === prevDate.getFullYear() && dMonth === prevDate.getMonth();
-                    }
-                }
-
-                // Handle "all_time" filter
-                if (periodType === 'all_time') {
-                    return shift === 0;
-                }
-
-                if (periodType === 'today') {
-                    // Current: Today (shift 0), Past: Yesterday (shift 1)
-                    const target = new Date(now);
-                    target.setDate(date - shift);
-                    return dYear === target.getFullYear() && dMonth === target.getMonth() && dDate === target.getDate();
-                }
-
-                if (periodType === 'this_month') {
-                    // Current (0): This Month, Past (1): Last Month
-                    const targetMonth = (month - shift + 12) % 12;
-                    const targetYear = year - Math.floor((12 - (month - shift) - 1) / 12); // Handle year wrap roughly, or simplified:
-                    // Better:
-                    const targetD = new Date(year, month - shift, 1);
-                    return dMonth === targetD.getMonth() && dYear === targetD.getFullYear();
-                }
-                
-                if (periodType === 'last_7_days') {
-                    // Rolling 7 days from now (Shift 0: 0-6 days ago, Shift 1: 7-13 days ago)
-                    const limit = new Date(now);
-                    limit.setDate(now.getDate() - (7 * (shift + 1)) + 1);
-                    limit.setHours(0,0,0,0);
-                    
-                    const upper = new Date(now);
-                    upper.setDate(now.getDate() - (7 * shift));
-                    upper.setHours(23,59,59,999);
-                    
-                    return d >= limit && d <= upper;
-                }
-
-                if (periodType === 'this_week') {
-                     // Current (0): This week, Past (1): Last week
-                     // Note: Simple logic assuming same year for simplicity or handling close year boundaries
-                     if (shift === 0) return dWeek === currentWeek && dYear === year;
-                     if (shift === 1) return dWeek === currentWeek - 1 && dYear === year;
-                }
-                
-                if (periodType === 'last_week') {
-                     // Current (0): Last week, Past (1): 2 weeks ago
-                     if (shift === 0) return dWeek === currentWeek - 1 && dYear === year;
-                     if (shift === 1) return dWeek === currentWeek - 2 && dYear === year;
-                }
-
-                if (periodType === 'first_15') {
-                    // Current (0): <= 15th of THIS month
-                    // Past (1): > 15th of PREVIOUS month
-                    if (shift === 0) return dDate <= 15 && dMonth === month && dYear === year;
-                    if (shift === 1) {
-                        const prevMonthDate = new Date(year, month - 1, 1);
-                        return dDate > 15 && dMonth === prevMonthDate.getMonth() && dYear === prevMonthDate.getFullYear();
-                    }
-                }
-                
-                if (periodType === 'last_15') {
-                    // Current (0): > 15th of THIS month
-                    // Past (1): <= 15th of THIS month
-                    if (shift === 0) return dDate > 15 && dMonth === month && dYear === year;
-                    if (shift === 1) return dDate <= 15 && dMonth === month && dYear === year;
-                }
-                
-                if (periodType === 'last_month') {
-                    // Current (0): Last month
-                    // Past (1): 2 months ago
-                    const targetDate = new Date(year, month - 1 - shift, 1);
-                     return dMonth === targetDate.getMonth() && dYear === targetDate.getFullYear();
-                }
-                
-                if (periodType === 'last_3_months') {
-                    const limit = new Date(now);
-                    limit.setMonth(limit.getMonth() - 3 - (shift * 3));
-                    const upper = new Date(now);
-                    if (shift > 0) upper.setMonth(upper.getMonth() - 3);
-                    
-                    return d >= limit && (shift === 0 || d < upper);
-                }
-                
-                if (periodType === 'last_6_months') {
-                    const limit = new Date(now);
-                    limit.setMonth(limit.getMonth() - 6 - (shift * 6));
-                    const upper = new Date(now);
-                    if (shift > 0) upper.setMonth(upper.getMonth() - 6);
-                    return d >= limit && (shift === 0 || d < upper);
-                }
-                
-                if (periodType === 'this_year') {
-                    return dYear === (year - shift);
-                }
-                
-                return false;
-            };
-
-            const filtered = window.allTxns.filter(t => checkPeriod(t, filter, 0));
-            const past = window.allTxns.filter(t => checkPeriod(t, filter, 1));
+            const filtered = window.allTxns.filter(t => window.checkPeriod(t, filter, 0));
+            const past = window.allTxns.filter(t => window.checkPeriod(t, filter, 1));
             
             const pastTotal = past.reduce((sum, t) => {
                  if (t.excluded || t.refund || t.reimbursed) return sum;
@@ -3650,6 +3851,11 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             
             // Re-render history to apply highlights if needed
             renderHistory(window.allTxns);
+            
+            // Sync Triple Progress Bar with current filter
+            if (typeof updateTripleProgressBar === 'function') {
+                updateTripleProgressBar();
+            }
         };
 
         // CHART LOGIC
@@ -4476,6 +4682,10 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         // RENDER ACCORDIONS (OPTIMIZED)
         window.historyLimit = 6;
         function renderHistory(txns) {
+            window.allTxns = txns;
+            
+            // Update Triple Progress Bar when data is rendered
+            if (window.updateTripleProgressBar) window.updateTripleProgressBar();
             const container = document.getElementById('history-container');
             const fragment = document.createDocumentFragment();
             

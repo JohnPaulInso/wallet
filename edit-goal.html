@@ -1106,9 +1106,19 @@
         window.openDepositModal = function() {
             const modal = document.getElementById('depositModal');
             if (modal) {
-                modal.style.display = 'flex';
+                // Reset to default "Deposit" state
+                const modalTitle = modal.querySelector('.modal-title');
+                const confirmBtn = modal.querySelector('.primary-btn');
+                const amountLabel = modal.querySelector('.form-group label');
                 const input = document.getElementById('depositAmountInput');
-                if (input) input.focus();
+
+                if (modalTitle) modalTitle.innerText = 'Deposit to Goal';
+                if (confirmBtn) confirmBtn.innerText = 'Confirm Deposit';
+                if (amountLabel) amountLabel.innerText = 'Deposit Amount';
+                if (input) input.value = '';
+
+                modal.style.display = 'flex';
+                if (input) setTimeout(() => input.focus(), 100);
             }
         };
 
@@ -1120,10 +1130,11 @@
         };
 
         window.confirmDepositActual = async function() {
-            const amountStr = document.getElementById('depositAmountInput').value.replace(/,/g, '');
+            const amountInput = document.getElementById('depositAmountInput');
+            const amountStr = amountInput.value.replace(/,/g, '');
             const amount = parseFloat(amountStr);
             
-            if (!amount || amount <= 0) {
+            if (!amount || amount === 0) {
                 alert("Please enter a valid amount");
                 return;
             }
@@ -1136,11 +1147,14 @@
                 btn.disabled = true;
                 btn.innerText = "Processing...";
 
+                const isWithdrawal = amount < 0;
+                const type = isWithdrawal ? 'withdrawal' : 'deposit';
+
                 // 1. Add to transactions sub-collection
                 const txnRef = collection(db, `users/${currentUser.uid}/goals/${goalId}/transactions`);
                 await addDoc(txnRef, {
                     amount: amount,
-                    type: 'deposit',
+                    type: type,
                     timestamp: serverTimestamp()
                 });
 
@@ -1148,11 +1162,13 @@
                 const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
                 const newTotal = (currentGoalData.currentAmount || 0) + amount;
                 await updateDoc(goalRef, {
-                    currentAmount: newTotal
+                    currentAmount: Math.max(0, newTotal)
                 });
 
                 window.closeDepositModal();
-                window.showToast(`₱${amount.toLocaleString()} deposited!`);
+                const absAmount = Math.abs(amount);
+                const actionWord = isWithdrawal ? 'withdrawn' : 'deposited';
+                window.showToast(`₱${absAmount.toLocaleString()} ${actionWord}!`);
                 
                 // Refresh data
                 await loadGoalData();
@@ -1160,9 +1176,9 @@
 
             } catch (error) {
                 console.error("Error confirming deposit:", error);
-                alert("Error saving deposit. Please try again.");
+                alert("Error saving transaction. Please try again.");
             } finally {
-                const btn = document.querySelector('#depositModal button.modal-btn');
+                const btn = document.querySelector('#depositModal button.modal-btn.primary-btn');
                 if (btn) {
                     btn.disabled = false;
                     btn.innerText = "Confirm Deposit";
@@ -1385,6 +1401,14 @@
             container.innerHTML = visibleTxns.map(data => {
                 const dateStr = data.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
                 const timeStr = data.date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+                
+                const isWithdrawal = data.amount < 0;
+                const icon = isWithdrawal ? 'remove' : 'add';
+                const iconBg = isWithdrawal ? '#fee2e2' : '#f0fdf4';
+                const iconColor = isWithdrawal ? '#ef4444' : '#22c55e';
+                const typeName = isWithdrawal ? 'Withdrawal' : 'Deposit';
+                const amountPrefix = isWithdrawal ? '-₱' : '+₱';
+                const absAmount = Math.abs(data.amount);
 
                 return `
                     <div class="history-item" 
@@ -1394,12 +1418,12 @@
                          onmouseup="window.cancelTxnPress()"
                          ontouchend="window.cancelTxnPress()"
                          onmouseleave="window.cancelTxnPress()">
-                        <div class="history-icon" style="background: #f0fdf4; color: #22c55e;"><i class="material-icons">add</i></div>
+                        <div class="history-icon" style="background: ${iconBg}; color: ${iconColor};"><i class="material-icons">${icon}</i></div>
                         <div class="history-info">
-                            <div class="history-name">Deposit</div>
+                            <div class="history-name">${typeName}</div>
                             <div class="history-time">${dateStr} • ${timeStr}</div>
                         </div>
-                        <div class="history-amt">+₱${data.amount.toLocaleString()}</div>
+                        <div class="history-amt">${amountPrefix}${absAmount.toLocaleString()}</div>
                     </div>
                 `;
             }).join('');
@@ -1666,12 +1690,36 @@
         window.formatCurrencyInput = function(input) {
             let selectionStart = input.selectionStart;
             let originalLength = input.value.length;
+            
+            // Detect if negative
+            let isNegative = input.value.includes('-');
             let val = input.value.replace(/\D/g, '');
+            
+            // Dynamic UI Label Switching for BOTH modals
+            const isDepositModal = input.id === 'depositAmountInput';
+            const modalId = isDepositModal ? 'depositModal' : 'editAmountModal';
+            const modalTitle = document.querySelector(`#${modalId} .modal-title`);
+            const confirmBtn = document.querySelector(`#${modalId} .modal-btn.primary-btn, #${modalId} .btn-primary`);
+            const amountLabel = document.querySelector(`#${modalId} .form-group label, #${modalId} .modal-subtitle`);
+
+            if (isNegative) {
+                if (modalTitle) modalTitle.innerText = isDepositModal ? 'Withdraw from Goal' : 'Edit Withdrawal';
+                if (confirmBtn) confirmBtn.innerText = isDepositModal ? 'Confirm Withdrawal' : 'Save Changes';
+                if (amountLabel && isDepositModal) amountLabel.innerText = 'Withdrawal Amount';
+            } else {
+                if (modalTitle) modalTitle.innerText = isDepositModal ? 'Deposit to Goal' : 'Edit Deposit';
+                if (confirmBtn) confirmBtn.innerText = isDepositModal ? 'Confirm Deposit' : 'Save Changes';
+                if (amountLabel && isDepositModal) amountLabel.innerText = 'Deposit Amount';
+            }
+
             if (val === '') {
-                input.value = '';
+                input.value = isNegative ? '-' : '';
                 return;
             }
+            
             let formatted = parseInt(val).toLocaleString();
+            if (isNegative) formatted = '-' + formatted;
+            
             input.value = formatted;
             let diff = formatted.length - originalLength;
             input.setSelectionRange(selectionStart + diff, selectionStart + diff);
@@ -1706,8 +1754,14 @@
         window.openEditModal = function() {
             window.closeOptionsModal();
             const input = document.getElementById('newAmountInput');
+            const isNegative = (selectedTxn.amount || 0) < 0;
             input.value = (selectedTxn.amount || 0).toLocaleString();
+            
+            // Set correct labels for edit modal
             const modal = document.getElementById('editAmountModal');
+            const modalTitle = modal.querySelector('.modal-title');
+            if (modalTitle) modalTitle.innerText = isNegative ? 'Edit Withdrawal' : 'Edit Deposit';
+            
             modal.style.display = 'flex';
             if (nav) nav.pushModalState('editAmountModal', () => modal.style.display = 'none');
         };
@@ -1730,22 +1784,27 @@
         };
 
         window.saveNewAmount = async function() {
-            const newAmount = parseFloat(document.getElementById('newAmountInput').value.replace(/,/g, ''));
-            if (isNaN(newAmount) || newAmount < 0) return alert("Invalid amount");
+            const rawValue = document.getElementById('newAmountInput').value.replace(/,/g, '');
+            const newAmount = parseFloat(rawValue);
+            if (isNaN(newAmount) || newAmount === 0) return alert("Invalid amount");
             
             try {
                 document.getElementById('loadingOverlay').style.display = 'flex';
                 const diff = newAmount - selectedTxn.amount;
+                const isWithdrawal = newAmount < 0;
+                const type = isWithdrawal ? 'withdrawal' : 'deposit';
                 
                 // Update Transaction
                 await updateDoc(doc(db, `users/${currentUser.uid}/goals/${goalId}/transactions`, selectedTxn.id), {
                     amount: newAmount,
+                    type: type,
                     updatedAt: serverTimestamp()
                 });
 
                 // Update Goal Total
                 const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
-                const newTotal = (currentGoalData.currentAmount || 0) + diff;
+                const currentBalance = currentGoalData.currentAmount || 0;
+                const newTotal = currentBalance + diff;
                 await updateDoc(goalRef, { currentAmount: Math.max(0, newTotal) });
 
                 currentGoalData.currentAmount = Math.max(0, newTotal);
@@ -1755,7 +1814,6 @@
             } catch (e) {
                 console.error(e);
             } finally {
-                // Overlay loading is only for async ops after initial load
                 const overlay = document.getElementById('loadingOverlay');
                 if (overlay) overlay.style.display = 'none';
             }

@@ -643,9 +643,8 @@
 
         onAuthStateChanged(auth, (user) => {
             const isAnon = !user || user.isAnonymous;
-            const gate = document.getElementById('guestGate');
-            if (gate) gate.style.display = isAnon ? 'flex' : 'none';
-
+            // Removed guestGate overlay logic to allow anonymous access
+            
             if (user) {
                 // Save UID for future instant loads
                 localStorage.setItem('wallet_last_uid', user.uid);

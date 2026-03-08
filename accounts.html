@@ -484,19 +484,9 @@
 
         onAuthStateChanged(auth, async (user) => {
             const isAnon = !user || user.isAnonymous;
-            const gate = document.getElementById('guestGate');
-            const lastAuthType = localStorage.getItem('wallet_auth_type');
-
-            if (gate) {
-                // LOADING STATE: If we are a returning Google user but auth isn't back yet, keep gate hidden
-                if (lastAuthType === 'google' && isAnon && !user?.isAnonymous) {
-                    gate.style.display = 'none';
-                } else {
-                    gate.style.display = isAnon ? 'flex' : 'none';
-                }
-            }
-
-            if (user && !user.isAnonymous) {
+            // Removed guestGate overlay logic to allow anonymous access
+            
+            if (user) {
                 localStorage.setItem('wallet_auth_type', 'google');
                 // UI Updates - save full name to NavState for full first name extraction
                 if (user.displayName) {

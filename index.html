@@ -268,52 +268,7 @@
 
             <!-- SUBSCRIPTION CARD (MOVED BELOW HISTORY) -->
 
-            <!-- TRIPLE PROGRESS BAR WIDGET -->
-            <div id="triple-progress-widget" class="triple-progress-card">
-                <div class="triple-progress-header">
-                    <div class="triple-title-group">
-                        <div class="triple-progress-title">Monthly Budget</div>
-                        <div id="triple-month-display" class="triple-month-label">JANUARY 2026</div>
-                    </div>
-                    <button class="triple-edit-btn" onclick="promptSetMonthlySalary()">
-                        <i class="material-icons">edit</i>
-                    </button>
-                </div>
-
-                <div class="progress-item" onclick="showBudgetTransactions('needs')">
-                    <div class="progress-header">
-                        <span class="progress-label">Needs</span>
-                        <span id="needs-stats" class="progress-stats privacy-mask">PHP 0 / PHP 8,800</span>
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="progress-item" onclick="showBudgetTransactions('wants')">
-                    <div class="progress-header">
-                        <span class="progress-label">Wants</span>
-                        <span id="wants-stats" class="progress-stats privacy-mask">PHP 0 / PHP 5,280</span>
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="progress-item" style="margin-bottom: 0;" onclick="showBudgetTransactions('savings')">
-                    <div class="progress-header">
-                        <span class="progress-label">Savings</span>
-                        <span id="savings-stats" class="progress-stats privacy-mask">PHP 0 / PHP 3,520</span>
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div id="wants-depleted-msg" class="overspending-msg">
-                    Wants budget depleted. Stop spending on luxuries to protect your savings and avoid new debt.
-                </div>
-            </div>
+           
 
             <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
             <div id="safe-spend-widget" class="safe-spend-card">
@@ -397,6 +352,55 @@
                     </div>
                 </div>
             </div>
+
+
+ <!-- TRIPLE PROGRESS BAR WIDGET -->
+            <div id="triple-progress-widget" class="triple-progress-card">
+                <div class="triple-progress-header">
+                    <div class="triple-title-group">
+                        <div class="triple-progress-title">Monthly Budget</div>
+                        <div id="triple-month-display" class="triple-month-label">JANUARY 2026</div>
+                    </div>
+                    <button class="triple-edit-btn" onclick="promptSetMonthlySalary()">
+                        <i class="material-icons">edit</i>
+                    </button>
+                </div>
+
+                <div class="progress-item" onclick="showBudgetTransactions('needs')">
+                    <div class="progress-header">
+                        <span class="progress-label">Needs</span>
+                        <span id="needs-stats" class="progress-stats privacy-mask">PHP 0 / PHP 8,800</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="progress-item" onclick="showBudgetTransactions('wants')">
+                    <div class="progress-header">
+                        <span class="progress-label">Wants</span>
+                        <span id="wants-stats" class="progress-stats privacy-mask">PHP 0 / PHP 5,280</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div class="progress-item" style="margin-bottom: 0;" onclick="showBudgetTransactions('savings')">
+                    <div class="progress-header">
+                        <span class="progress-label">Savings</span>
+                        <span id="savings-stats" class="progress-stats privacy-mask">PHP 0 / PHP 3,520</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <div id="wants-depleted-msg" class="overspending-msg">
+                    Wants budget depleted. Stop spending on luxuries to protect your savings and avoid new debt.
+                </div>
+            </div>
+
 
             <!-- DAILY AVERAGE + TOP CATEGORY INSIGHT ROW -->
             <div class="insight-row">
@@ -713,7 +717,7 @@
             <div id="log-container" style="display: none; margin-bottom: 80px; padding-bottom: 40px;"></div>
             
             <div class="footer-credits" style="text-align: center; padding: 20px 20px 40px; color: #cbd5e1; font-size: 10px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8;">
-                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.3.6</div>
+                <div onclick="toggleAdminMode()" style="cursor: default; -webkit-tap-highlight-color: transparent;">Developed by John Paul Inso | v1.89</div>
                 <div style="margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 6px;">
                     <a href="privacy.html" style="color: #cbd5e1; text-decoration: none; font-size: 9px; font-weight: 600;">Privacy</a>
                     <span style="color: #e2e8f0;">·</span>
@@ -791,6 +795,7 @@
     </script>
 
     <script type="module">
+        import { AI_CONFIG } from "./ai-config.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -1331,12 +1336,16 @@
                         }
                         window.safeToSpendConfig = data;
                         
-                        // Sync salary targets to localStorage for speed
+                        // Sync salary targets and rule to localStorage for speed
                         // Priority: budgetSalaryTarget (New) -> salaryAmount (Legacy)
                         if (data.budgetSalaryTarget !== undefined) {
                             localStorage.setItem('monthly_salary_target', data.budgetSalaryTarget);
                         } else if (data.salaryAmount !== undefined) {
                             localStorage.setItem('monthly_salary_target', data.salaryAmount);
+                        }
+
+                        if (data.budgetRule !== undefined) {
+                            localStorage.setItem('budget_rule', data.budgetRule);
                         }
                         
                         updateSafeSpendUI();
@@ -3564,9 +3573,12 @@
                 summaryTopCat.textContent = topCat ? topCat[0] : '—';
             }
 
-            // Trigger AI Summary
+            // Trigger AI Summary with DEBOUNCE
             window.thisMonthTxns = thisMonthTxns;
-            updateAISummary(thisMonthTxns);
+            clearTimeout(window.aiSummaryTimeout);
+            window.aiSummaryTimeout = setTimeout(() => {
+                updateAISummary(thisMonthTxns);
+            }, 2000); // 2s debounce
         }
 
         // --- AI SUMMARY GENERATION ---
@@ -3582,7 +3594,15 @@
         };
 
         // --- AI SUMMARY GENERATION ---
-        async function updateAISummary(thisMonthTxns) {
+        async function updateAISummary(thisMonthTxns, force = false) {
+            // COOLDOWN GUARD: Prevent rapid requests (60s cooldown)
+            const lastUpdate = parseInt(localStorage.getItem('last_ai_request_time') || '0');
+            const cooldownPeriod = 60000; // 60 seconds
+            if (!force && (Date.now() - lastUpdate < cooldownPeriod)) {
+                console.log('❄️ AI Summary cooling down...');
+                return;
+            }
+
             const box = document.getElementById('ai-insight-box');
             const textEl = document.getElementById('ai-summary-container');
             const loading = document.getElementById('ai-loading');
@@ -3598,13 +3618,12 @@
 
             // Show container & setup title trigger
             box.style.display = 'block';
-            const trigger = document.getElementById('ai-title-trigger');
             if (trigger) {
                 trigger.onclick = () => {
                    trigger.classList.add('click-pulse');
                    setTimeout(() => trigger.classList.remove('click-pulse'), 400);
                    localStorage.removeItem(cacheKey);
-                   updateAISummary(window.thisMonthTxns);
+                   updateAISummary(window.thisMonthTxns, true); // Force update on click
                 };
             }
 
@@ -3620,8 +3639,12 @@
                 if (!data || data.count === undefined) return false;
                 const countDiff = Math.abs(data.count - thisMonthTxns.length);
                 const ageHrs = (Date.now() - (data.timestamp || 0)) / (1000 * 60 * 60);
-                // SKIP if: Count changed by < 2 transactions AND summary is < 24 hours old
-                return countDiff < 2 && ageHrs < 24;
+                
+                // OPTIMIZED: If we have > 20 txns, allow a larger diff (10%) before refreshing
+                const threshold = thisMonthTxns.length > 20 ? Math.max(3, Math.floor(thisMonthTxns.length * 0.1)) : 2;
+                
+                // SKIP if: Count changed by < threshold AND summary is < 24 hours old
+                return countDiff < threshold && ageHrs < 24;
             };
 
             // 2. Try Local Cache (Fastest)
@@ -3658,7 +3681,7 @@
             textEl.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Analyzing your spending patterns...</span>';
 
             try {
-                const apiKey = 'AIzaSyCUY4K7VxS0A066MovuF6XJxmD5PN1w-PI';
+                const apiKey = AI_CONFIG.GEMINI_API_KEY;
                 
                 // Aggregation for prompt
                 const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
@@ -3709,6 +3732,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 }
 
                 // 5. Success: Persistence & UI Update
+                localStorage.setItem('last_ai_request_time', Date.now());
                 const result = {
                     text: aiText,
                     count: thisMonthTxns.length,

@@ -2,7 +2,7 @@
  * Data management and synchronization for the Wallet App
  */
 import { db, auth, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, writeBatch } from "./firebase-config.js";
-import { log, showToast, getMerchantDisplay, formatLocalDate, stripTags } from "./app-utils.js";
+import { log, showToast, getMerchantDisplay, formatLocalDate, stripTags, triggerHaptic } from "./app-utils.js";
 
 // Global data state
 window.allTxns = [];
@@ -466,6 +466,7 @@ export async function handleScan(limit, manualTrigger = false) {
             if (limit >= 400) localStorage.setItem(`last_deep_sync_${syncAccount}`, now);
             
             log(`Sync complete! +${savedCount} transactions found.`, 'success');
+            triggerHaptic('success');
             await loadData();
         } else {
             log('Sync complete. No new transactions found.');

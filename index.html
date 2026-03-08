@@ -2393,10 +2393,11 @@
                      atomeEl.dataset.raw = formatted;
                      atomeEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
                  }
-                 updateSafeSpendUI();
-                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
-             });
-         };
+                  window.atomeDataLoaded = true;
+                  updateSafeSpendUI();
+                  if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+              });
+          };
 
          window.watchBpiTransactions = () => {
             const uid = auth.currentUser?.uid;
@@ -2408,12 +2409,19 @@
                 const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
                 window.walletTxns.bpi = txns;
                 
-                // Only update window.bpiBalanceVal if we are on BPI account (to avoid conflicts with loadData listener)
-                // Actually, it's safer to always keep it in sync for global widgets
-                let balance = 0;
-                txns.forEach(t => { if(!t.excluded) balance += (t.amount || 0); });
+                let incomeTotal = 0;
+                let expenseTotal = 0;
+                txns.forEach(t => { 
+                    if (t.excluded || t.refund) return;
+                    const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    if (mapped.category === 'Income') incomeTotal += amt;
+                    else expenseTotal += amt;
+                });
+                const balance = incomeTotal - expenseTotal;
                 window.bpiBalanceVal = balance;
 
+                window.bpiDataLoaded = true;
                 updateBPIInsight(); 
                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
             });
@@ -2468,6 +2476,17 @@
             }
             localStorage.setItem('wallet_cached_balances', JSON.stringify(balances));
             console.log('💰 Saved balance cache:', balances);
+        };
+
+        window.atomeDataLoaded = false;
+        window.bpiDataLoaded = false;
+
+        window.saveSafeSpendConfig = async (update) => {
+            const uid = auth.currentUser?.uid;
+            if (!uid) return;
+            try {
+                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), update, { merge: true });
+            } catch (e) { console.error('Failed to save safe focus config', e); }
         };
 
         function updateBPIInsight() {
@@ -2566,8 +2585,29 @@
              const effectiveAtome = isAtomeExcluded ? 0 : ccPayment;
              const effectiveSalary = isSalaryIncluded ? salaryValue : 0;
 
-             const safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
+             // PERSISTENCE LOGIC: Use cached value if data not yet loaded
              const safeEl = document.getElementById('safe-spend-val');
+             let safeAmount = 0;
+             let isLoading = !window.bpiDataLoaded || !window.atomeDataLoaded;
+             
+             if (isLoading) {
+                 if (config.lastSafeAmount !== undefined) {
+                     safeAmount = config.lastSafeAmount;
+                 } else {
+                     safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
+                 }
+                 // Add a visual indicator or keep it simple
+                 safeEl.style.opacity = '0.7'; 
+             } else {
+                 safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
+                 safeEl.style.opacity = '1';
+                 
+                 // Save stable value to Firestore (throttle updates)
+                 if (window.saveSafeSpendConfig && Math.abs((config.lastSafeAmount || 0) - safeAmount) > 0.01) {
+                     window.saveSafeSpendConfig({ lastSafeAmount: safeAmount });
+                 }
+             }
+
              const formatted = `PHP ${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
              
              safeEl.dataset.raw = formatted;

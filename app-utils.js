@@ -227,6 +227,44 @@ export function getMerchantDisplay(name = '', t = {}) {
     return display;
 }
 
+/**
+ * Identify if a merchant is a recurring subscription
+ * @param {string} merchantName 
+ * @returns {boolean}
+ */
+export function isSubscriptionMerchant(merchantName) {
+    const name = merchantName.toUpperCase();
+    const subs = [
+        'SPOTIFY', 'NETFLIX', 'YOUTUBE', 'DISNEY', 'APPLE.COM/BILL', 
+        'GOOGLE *', 'ICLOUD', 'PRIME VIDEO', 'ADOBE', 'MICROSOFT',
+        'CANVA', 'TIKTOK', 'TRADERS CONNECT', 'EQUITY EDGE'
+    ];
+    return subs.some(s => name.includes(s));
+}
+
+// Haptic Feedback Utility
+export function triggerHaptic(type = 'light') {
+    if (!navigator.vibrate) return;
+    
+    switch(type) {
+        case 'light':
+            navigator.vibrate(10);
+            break;
+        case 'medium':
+            navigator.vibrate(30);
+            break;
+        case 'success':
+            navigator.vibrate([10, 30, 10]);
+            break;
+        case 'error':
+            navigator.vibrate([50, 100, 50]);
+            break;
+        case 'bump':
+            navigator.vibrate(15);
+            break;
+    }
+}
+
 // Strip HTML tags
 export const stripTags = (html) => {
     if (!html) return "";

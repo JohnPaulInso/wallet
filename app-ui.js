@@ -2,8 +2,9 @@
  * UI Rendering and Management for the Wallet App
  */
 import { db, auth, doc, setDoc, onSnapshot } from "./firebase-config.js";
-import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log } from "./app-utils.js";
+import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, isSubscriptionMerchant, triggerHaptic } from "./app-utils.js";
 import { handleAuthClick } from "./app-auth.js";
+import { AI_CONFIG } from "./ai-config.js";
 
 let switchSyncTimer = null;
 
@@ -130,6 +131,9 @@ export function renderHistory(txns) {
             
             const logoHTML = logo ? `<div class="brand-badge" style="display: ${window.showLogos ? 'flex' : 'none'}"><img src="${logo}"></div>` : '';
 
+            const isSubscription = isSubscriptionMerchant(mapped.name);
+            const subChip = isSubscription ? '<span class="sub-badge" style="display: inline-block; background: #e0f2fe; color: #0284c7; font-size: 8px; font-weight: 800; padding: 2px 5px; border-radius: 4px; margin-left: 6px; border: 1px solid #bae6fd;">RECURRING</span>' : '';
+
             const noteSafe = (t.note || '').replace(/"/g, '&quot;');
             contentHTML += `
                 <div class="txn-swipe-wrapper">
@@ -151,7 +155,7 @@ export function renderHistory(txns) {
                             ${logoHTML}
                         </div>
                         <div class="txn-details">
-                            <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
+                            <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}${subChip}</div>
                             <div class="txn-sub">
                                 <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
                             </div>
@@ -458,6 +462,67 @@ export function drawTrendChart(txns) {
     areaD += ` L ${padding + ((dataPoints.length-1) * step)} ${h} Z`;
     area.setAttribute('d', areaD);
     path.setAttribute('d', d);
+
+    // Add Interactive Data Points
+    const pointsContainer = document.getElementById('trendPoints') || document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    if (!document.getElementById('trendPoints')) {
+        pointsContainer.id = 'trendPoints';
+        path.parentNode.appendChild(pointsContainer);
+    }
+    pointsContainer.innerHTML = '';
+
+    for (let i = 0; i < dataPoints.length; i++) {
+        const x = padding + (i * step);
+        const y = h - (dataPoints[i] / max) * h;
+        
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', x);
+        circle.setAttribute('cy', y);
+        circle.setAttribute('r', '6');
+        circle.setAttribute('fill', '#3b82f6');
+        circle.setAttribute('stroke', '#fff');
+        circle.setAttribute('stroke-width', '2');
+        circle.style.cursor = 'pointer';
+        circle.style.transition = 'all 0.2s';
+
+        circle.onclick = (e) => {
+            e.stopPropagation();
+            triggerHaptic('light');
+            filterHistoryByWeek(i);
+        };
+        pointsContainer.appendChild(circle);
+    }
+}
+
+function filterHistoryByWeek(weekIndex) {
+    const txns = window.allTxns || [];
+    const now = new Date();
+    const filtered = txns.filter(t => {
+        const d = new Date(t.date);
+        const week = Math.floor((d.getDate() - 1) / 7);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && week === weekIndex;
+    });
+    
+    // Temporarily override renderHistory to show only this week
+    const container = document.getElementById('history-container');
+    const originalContent = container.innerHTML;
+    
+    renderHistory(filtered);
+    
+    // Add a "Clear Filter" floating pill if it doesn't exist
+    let clearBtn = document.getElementById('clear-week-filter');
+    if (!clearBtn) {
+        clearBtn = document.createElement('div');
+        clearBtn.id = 'clear-week-filter';
+        clearBtn.innerHTML = `<span>Week ${weekIndex + 1} Filtered</span> <i class="material-icons" style="font-size:14px;">close</i>`;
+        clearBtn.style.cssText = 'position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); z-index: 2000; cursor: pointer;';
+        clearBtn.onclick = () => {
+            renderHistory(window.allTxns);
+            clearBtn.remove();
+            triggerHaptic('light');
+        };
+        document.body.appendChild(clearBtn);
+    }
 }
 
 // Insight and AI Summary
@@ -473,7 +538,34 @@ export async function updateAISummary(txns) {
     }
 
     summaryEl.innerText = 'Analyzing your spending patterns...';
-    summaryEl.innerText = 'Restoring AI insights. Please sync your transactions to refresh analysis.';
+    
+    try {
+        const recentTxns = txns.slice(0, 50).map(t => ({
+            merchant: t.merchant,
+            amount: t.manualAmount || t.amount,
+            category: getMerchantDisplay(t.merchant, t).category,
+            date: t.date
+        }));
+
+        const prompt = `Analyze these recent transactions and provide a concise (max 2 sentences) financial insight. Focus on trends, anomalies, or a quick savings tip. Transactions: ${JSON.stringify(recentTxns)}`;
+        
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.MODEL}:generateContent?key=${AI_CONFIG.GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No insights available at the moment.";
+        
+        summaryEl.innerText = text;
+        localStorage.setItem(cacheKey, text);
+    } catch (err) {
+        console.error("AI Insight Error:", err);
+        summaryEl.innerText = 'Restoring AI insights. Please sync your transactions to refresh analysis.';
+    }
 }
 
 
@@ -759,6 +851,7 @@ export function scrollToActiveCard(accId) {
 export function switchAccount(id) {
     localStorage.setItem('wallet_current_account', id);
     window.currentAccount = id;
+    triggerHaptic('bump');
     if (window.walletAccounts) applyAccountTheme(id, window.walletAccounts);
     
     // Toggle Safe to Spend Widget Visibility

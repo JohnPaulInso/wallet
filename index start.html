@@ -369,7 +369,7 @@
                 <div class="progress-item" onclick="showBudgetTransactions('needs')">
                     <div class="progress-header">
                         <span class="progress-label">Needs</span>
-                        <span id="needs-stats" class="progress-stats privacy-mask">PHP 0 / PHP 8,800</span>
+                        <span id="needs-stats" class="progress-stats privacy-mask">₱0 / ₱8,800</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
@@ -379,7 +379,7 @@
                 <div class="progress-item" onclick="showBudgetTransactions('wants')">
                     <div class="progress-header">
                         <span class="progress-label">Wants</span>
-                        <span id="wants-stats" class="progress-stats privacy-mask">PHP 0 / PHP 5,280</span>
+                        <span id="wants-stats" class="progress-stats privacy-mask">₱0 / ₱5,280</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
@@ -389,7 +389,7 @@
                 <div class="progress-item" style="margin-bottom: 0;" onclick="showBudgetTransactions('savings')">
                     <div class="progress-header">
                         <span class="progress-label">Savings</span>
-                        <span id="savings-stats" class="progress-stats privacy-mask">PHP 0 / PHP 3,520</span>
+                        <span id="savings-stats" class="progress-stats privacy-mask">₱0 / ₱3,520</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
@@ -2608,7 +2608,7 @@
                  }
              }
 
-             const formatted = `PHP ${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+             const formatted = `₱${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
              
              safeEl.dataset.raw = formatted;
              safeEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
@@ -2939,15 +2939,15 @@
             const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
 
             const isHidden = localStorage.getItem('balance_hidden') === 'true';
-            const formatVal = (val) => isHidden ? '******' : `PHP ${Math.floor(val).toLocaleString()}`;
+            const formatVal = (val) => isHidden ? '******' : `₱${Math.floor(val).toLocaleString()}`;
 
-            const needsValue = `${formatVal(needsTotal)} / PHP ${needsLimit.toLocaleString()}`;
+            const needsValue = `${formatVal(needsTotal)} / ₱${needsLimit.toLocaleString()}`;
             const needsEl = document.getElementById('needs-stats');
             needsEl.innerText = needsValue;
             needsEl.dataset.raw = needsValue;
             document.getElementById('needs-bar').style.width = `${needsPct}%`;
 
-            const wantsValue = `${formatVal(wantsTotal)} / PHP ${wantsLimit.toLocaleString()}`;
+            const wantsValue = `${formatVal(wantsTotal)} / ₱${wantsLimit.toLocaleString()}`;
             const wantsEl = document.getElementById('wants-stats');
             wantsEl.innerText = wantsValue;
             wantsEl.dataset.raw = wantsValue;
@@ -2968,7 +2968,7 @@
                 if (alertMsg) alertMsg.style.display = 'none';
             }
 
-            const savingsValue = `${formatVal(savingsTotal)} / PHP ${savingsLimit.toLocaleString()}`;
+            const savingsValue = `${formatVal(savingsTotal)} / ₱${savingsLimit.toLocaleString()}`;
             const savingsEl = document.getElementById('savings-stats');
             savingsEl.innerText = savingsValue;
             savingsEl.dataset.raw = savingsValue;
@@ -3046,7 +3046,7 @@
                                 <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">${display.name}</div>
                                 <div style="font-size: 11px; color: #64748b; font-weight: 600;">${dateStr} • ${display.category}</div>
                             </div>
-                            <div style="font-size: 15px; font-weight: 800; color: #1e293b;">PHP ${amt.toLocaleString()}</div>
+                             <div style="font-size: 15px; font-weight: 800; color: #1e293b;">₱${amt.toLocaleString()}</div>
                         </div>
                     `;
                 });
@@ -3098,7 +3098,7 @@
             const current = localStorage.getItem('bpi_obligations') || '0';
             showAppDialog({
                 title: 'Upcoming Obligations',
-                message: 'Enter total amount of upcoming fixed payments, bills, or debts (PHP).',
+                 message: 'Enter total amount of upcoming fixed payments, bills, or debts (₱).',
                 input: true,
                 value: current,
                 callback: (val) => {
@@ -3115,7 +3115,7 @@
             const current = localStorage.getItem('bpi_expected_cashin') || '8800';
             showAppDialog({
                 title: 'Expected Cash In',
-                message: 'Enter your expected paycheck amount (e.g. 8800).',
+                 message: 'Enter your expected salary amount (₱).',
                 input: true,
                 value: current,
                 callback: (val) => {
@@ -3245,7 +3245,7 @@
             const currentAmount = window.safeToSpendConfig?.salaryAmount || 8800;
             const res = await showAppDialog({
                 title: 'Upcoming Salary Amount',
-                message: 'Enter your expected salary amount (PHP).',
+                message: 'Enter your expected salary amount (₱).',
                 input: true,
                 value: currentAmount
             });
@@ -3263,7 +3263,7 @@
             const currentAmount = window.safeToSpendConfig?.savingsAmount || 3000;
             const res = await showAppDialog({
                 title: 'Monthly Savings Goal',
-                message: 'Enter your monthly savings target (PHP).',
+                message: 'Enter your monthly savings target (₱).',
                 input: true,
                 value: currentAmount
             });

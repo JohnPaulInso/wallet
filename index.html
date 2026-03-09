@@ -1357,7 +1357,7 @@
                     const configRef = doc(db, "users", user.uid, "config", "accounts");
                     onSnapshot(configRef, (docSnap) => {
                         const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
-                        const isAdmin = user.email === 'johnpaulinso123@gmail.com';
+                        const isAdmin = true; // Relaxed check
                         
                         // Scenario Check: Admin must have all 3 specific cards
                         const hasAtome = accounts.find(a => a.id === 'atome');
@@ -1407,8 +1407,8 @@
                         }
                         window.fastPathTriggered = false; // Reset for future changes
                         
-                        // AUTO-LOGIN GMAIL: Check token validity for admin users
-                        if (isAdmin) {
+                        // AUTO-LOGIN GMAIL: Check token validity for users
+                        if (true) { // Relaxed check
                             const gmailToken = localStorage.getItem('g_access_token');
                             const gmailExpiry = localStorage.getItem('g_token_expiry');
                             
@@ -1478,7 +1478,7 @@
                         }, 500);
 
                         // START BACKGROUND WATCHERS (Keep Triple Progress Bar & Safe To Spend accurate)
-                        if (isAdmin) {
+                        if (true) { // Relaxed check
                             window.watchAtomeBalance();
                             if (window.watchBpiTransactions) window.watchBpiTransactions();
                         }
@@ -1623,7 +1623,8 @@
         }
 
         function triggerAdaptiveSync() {
-            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            // const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            const isAdmin = true; // Relaxed check
             if (!isAdmin || window.isSyncing) return;
             
             // Don't auto-sync right after login — let the session settle first
@@ -1757,10 +1758,9 @@
             // Toggle Safe to Spend Widget Visibility
             const safeSpendWidget = document.getElementById('safe-spend-widget');
             if (safeSpendWidget) {
-                const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-                // USER REQUEST: Only visible for BPI wallet
-                safeSpendWidget.style.display = (id === 'bpi' && isAdmin) ? 'block' : 'none';
-                if (id === 'bpi' && isAdmin) updateSafeSpendUI();
+                // Safe to Spend is specifically for BPI account
+                safeSpendWidget.style.display = (id === 'bpi') ? 'block' : 'none';
+                if (id === 'bpi') updateSafeSpendUI();
             }
 
             // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
@@ -1787,12 +1787,18 @@
         function applyUserView(user) {
             const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
             const isGoogleUser = user && !user.isAnonymous;
-            const isAdmin = user && user.email === 'johnpaulinso123@gmail.com';
             const lastAuthType = localStorage.getItem('wallet_auth_type');
-                        // SHOW/HIDE GATE
+            
+            // Safe to Spend Widget Visibility
+            const safeSpendWidget = document.getElementById('safe-spend-widget');
+            if (safeSpendWidget) {
+                const isBPI = window.currentAccount === 'bpi';
+                safeSpendWidget.style.display = isBPI ? 'block' : 'none';
+            }
+
+            // SHOW/HIDE GATE
              const gate = document.getElementById('guestGate');
              if (gate) {
-                 const isGoogleUser = user && !user.isAnonymous;
                  // Never re-show gate during an active login flow
                  if (window.justLoggedIn) {
                      gate.style.display = 'none';
@@ -1804,27 +1810,13 @@
             const scrollContainer = document.getElementById('cardCarouselScroll');
             const placeholder = document.querySelector('.add-card-placeholder');
 
-            if (!isAdmin) {
-                if (placeholder) placeholder.style.display = 'flex';
-                
-                if (scrollContainer) {
-                    scrollContainer.style.overflowX = 'auto';
-                    scrollContainer.style.scrollSnapType = 'x mandatory';
-                    scrollContainer.style.padding = '30px 35px 25px 35px';
-                    scrollContainer.style.justifyContent = 'flex-start';
-                }
-                
-                // FORCE THEME TO DARK
-                applyTheme('atome');
-                updateHeaderIcon('atome');
-            } else {
-                if (placeholder) placeholder.style.display = 'flex';
-                if (scrollContainer) {
-                    scrollContainer.style.overflowX = 'auto';
-                    scrollContainer.style.scrollSnapType = 'x mandatory';
-                    scrollContainer.style.padding = '30px 35px 25px 35px';
-                    scrollContainer.style.justifyContent = 'flex-start';
-                }
+            // For all logged in users, we show the full experience
+            if (placeholder) placeholder.style.display = 'flex';
+            if (scrollContainer) {
+                scrollContainer.style.overflowX = 'auto';
+                scrollContainer.style.scrollSnapType = 'x mandatory';
+                scrollContainer.style.padding = '30px 35px 25px 35px';
+                scrollContainer.style.justifyContent = 'flex-start';
             }
         }
 
@@ -2044,6 +2036,13 @@
                             
                             updateHeaderIcon(account); // Update sticky header icon
 
+                            // Toggle Safe to Spend Widget Visibility
+                            const safeSpendWidget = document.getElementById('safe-spend-widget');
+                            if (safeSpendWidget) {
+                                safeSpendWidget.style.display = (account === 'bpi') ? 'block' : 'none';
+                                if (account === 'bpi') updateSafeSpendUI();
+                            }
+
                             // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
                             if (account === 'atome' || account === 'bpi') {
                                 const token = localStorage.getItem('g_access_token');
@@ -2091,8 +2090,7 @@
         function updateHeaderIcon(account) {
             const cardBg = document.getElementById('card-bg');
             if (cardBg) {
-                const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-                if (account === 'bpi' && isAdmin) {
+                if (account === 'bpi') {
                     cardBg.setAttribute('fill', '#8b0000'); // BPI red
                 } else {
                     cardBg.setAttribute('fill', '#1a1a1a'); // Atome black (Default)
@@ -2491,7 +2489,7 @@
             } catch (e) { console.error('Failed to save safe focus config', e); }
         };
 
-        function updateBPIInsight() {
+        window.updateBPIInsight = () => {
             const insightEl = document.getElementById('bpi-remaining-insight');
             if (!insightEl) return;
 
@@ -2533,8 +2531,7 @@
         }
 
         window.updateSafeSpendUI = () => {
-             // Only for Admin on BPI account
-             const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+             const isAdmin = true; // Relaxed check
              const isBPI = window.currentAccount === 'bpi';
              const widget = document.getElementById('safe-spend-widget');
              
@@ -2552,7 +2549,7 @@
              };
 
              // 1. Get Balance
-             let balance = window.bpiBalanceVal;
+             let balance = window.bpiBalanceVal || 0;
              if (balance === 0) {
                  const bpiEl = document.getElementById('bpi-balance');
                  if (bpiEl) balance = parseFloat(bpiEl.innerText.replace(/[^\d.-]/g, '')) || 0;
@@ -2989,7 +2986,8 @@
          };
 
          window.updateTripleProgressBar = () => {
-            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            // const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            const isAdmin = true; // Relaxed check
             const widget = document.getElementById('triple-progress-widget');
             if (!widget || !isAdmin) {
                 if (widget) widget.style.display = 'none';
@@ -3533,6 +3531,10 @@
                     obligations: updatedObligations
                 }, { merge: true });
 
+                // Synchronize local state
+                window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+                updateSafeSpendUI();
+
                 closeObligationModal();
                 showToast('Obligation added!');
             };
@@ -3952,8 +3954,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
 
         window.toggleAdminMode = () => {
             const user = auth.currentUser;
-            const adminEmail = 'johnpaulinso123@gmail.com';
-            if (user && user.email && user.email.toLowerCase().trim() === adminEmail) {
+            if (user) {
                 const adminDiv = document.getElementById('admin-controls');
                 const logDiv = document.getElementById('log-container');
                 if (!adminDiv || !logDiv) return showToast('Admin elements missing');

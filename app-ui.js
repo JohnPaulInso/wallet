@@ -2,11 +2,35 @@
  * UI Rendering and Management for the Wallet App
  */
 import { db, auth, doc, setDoc, onSnapshot } from "./firebase-config.js";
-import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, isSubscriptionMerchant, triggerHaptic } from "./app-utils.js";
+import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, isSubscriptionMerchant, triggerHaptic, createNotification } from "./app-utils.js";
 import { handleAuthClick } from "./app-auth.js";
 import { AI_CONFIG } from "./ai-config.js";
 
 let switchSyncTimer = null;
+
+// LEGACY BRIDGING (Immediate)
+window.updateAccountSwitcherUI = updateAccountSwitcherUI;
+window.updateBalanceCardsUI = updateBalanceCardsUI;
+window.scrollToActiveCard = scrollToActiveCard;
+window.updateProfileUI = updateProfileUI;
+window.handleLocalModeNudge = handleLocalModeNudge;
+window.switchAccount = switchAccount;
+window.applyAccountTheme = applyAccountTheme;
+window.applyUserView = applyUserView;
+window.updateBPIInsight = updateBPIInsight;
+window.updateSafeSpendUI = updateSafeSpendUI;
+window.applyTheme = applyTheme;
+window.setupAccountSwitcher = setupAccountSwitcher;
+window.updateHeaderIcon = updateHeaderIcon;
+window.updateBalanceToThisMonth = updateBalanceToThisMonth;
+window.updateInsightCards = updateInsightCards;
+window.initPrivacyLock = initPrivacyLock;
+window.tryBiometricUnlock = tryBiometricUnlock;
+window.drawCashFlowChart = drawCashFlowChart;
+window.detectSubscriptions = detectSubscriptions;
+window.toggleNotificationCenter = toggleNotificationCenter;
+window.clearAllNotifications = clearAllNotifications;
+window.updateUnreadCount = updateUnreadCount;
 
 // Render Transaction History
 export function renderHistory(txns) {
@@ -276,13 +300,26 @@ export function updateTripleProgressBar() {
         prog3.style.width = pct + '%';
         prog3.style.left = (parseFloat(prog1?.style.width || 0) + parseFloat(prog2?.style.width || 0)) + '%';
         label3.innerText = `SPENT: ₱${Math.round(totalSpent).toLocaleString()}`;
-        
-        // Color warning if overspend
-        if (totalSpent > (remainingForSpend > 0 ? remainingForSpend : 0)) {
-            prog3.style.backgroundColor = '#ef4444';
-        } else {
-            prog3.style.backgroundColor = '#3b82f6';
+        // Budget Alerts
+        if (remainingForSpend > 0) {
+            const spendPct = (totalSpent / remainingForSpend) * 100;
+            if (spendPct >= 100) {
+                checkAndTriggerAlert('main_budget_100', 'Budget Depleted!', `You've spent your entire monthly budget of ₱${Math.round(remainingForSpend).toLocaleString()}.`, 'error');
+            } else if (spendPct >= 80) {
+                checkAndTriggerAlert('main_budget_80', 'Budget Warning', `You've used 80% of your monthly budget.`, 'warning');
+            }
         }
+    }
+}
+
+function checkAndTriggerAlert(alertKey, title, message, type) {
+    const today = new Date().toDateString();
+    const lastAlert = localStorage.getItem(`alert_${alertKey}_last`);
+    
+    // Only trigger once per day to avoid spamming
+    if (lastAlert !== today) {
+        createNotification(title, message, type);
+        localStorage.setItem(`alert_${alertKey}_last`, today);
     }
 }
 
@@ -606,17 +643,27 @@ export async function updateCategoryBudgetsUI() {
                 if (d.getFullYear() === year && d.getMonth() === month && !t.excluded) {
                     const mapped = getMerchantDisplay(t.merchant, t);
                     if (mapped.category === cat) {
-                        spent += Math.abs(t.amount || 0);
+                        spent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                     }
                 }
             });
         }
-
-        const percent = Math.min((spent / limit) * 100, 100);
+        
+        const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
+        
+        // Category Alert Triggers
+        if (limit > 0) {
+            const catLabel = displayCategoryName(cat);
+            if (pct >= 100) {
+                checkAndTriggerAlert(`cat_budget_${cat}_100`, `${catLabel} Limit Reached`, `You've maxed out your ₱${limit.toLocaleString()} budget for ${catLabel}.`, 'error');
+            } else if (pct >= 80) {
+                checkAndTriggerAlert(`cat_budget_${cat}_80`, `${catLabel} Warning`, `You've used 80% of your ${catLabel} budget.`, 'warning');
+            }
+        }
         return `
             <div class="cat-budget-item">
                 <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>₱${Math.round(spent).toLocaleString()} / ₱${limit.toLocaleString()}</span></div>
-                <div class="cat-budget-bar-wrap"><div class="cat-budget-bar" style="width: ${percent}%; background: ${percent > 90 ? '#ef4444' : '#3b82f6'};"></div></div>
+                <div class="cat-budget-bar-wrap"><div class="cat-budget-bar" style="width: ${pct}%; background: ${pct > 90 ? '#ef4444' : '#3b82f6'};"></div></div>
             </div>
         `;
     }).join('');
@@ -1274,6 +1321,30 @@ export function drawCashFlowChart() {
     }).join('');
 }
 
+function checkDailySummary() {
+    const lastSummary = localStorage.getItem('last_daily_summary_date');
+    const today = new Date().toDateString();
+    
+    if (lastSummary === today || !window.allTxns) return;
+    
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toDateString();
+    
+    let ySpent = 0;
+    window.allTxns.forEach(t => {
+        const d = new Date(t.date);
+        if (d.toDateString() === yStr && !t.excluded && !t.refund) {
+            ySpent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+        }
+    });
+    
+    if (ySpent > 0) {
+        createNotification('Daily Summary', `Yesterday you spent ₱${Math.round(ySpent).toLocaleString()}. Check your trends to see how you're doing!`, 'info');
+        localStorage.setItem('last_daily_summary_date', today);
+    }
+}
+
 export function detectSubscriptions() {
     const container = document.getElementById('subscription-grid');
     const section = document.getElementById('subscription-insights');
@@ -1382,33 +1453,141 @@ export function detectSubscriptions() {
             </div>
         `;
     }).join('');
+
+    // Subscription Reminder Trigger
+    subs.forEach(s => {
+        if (s.currentMonthSpend === 0 && s.averageSpend > 0) {
+            // Predict if due soon (heuristic: if middle of month and not paid)
+            const day = new Date().getDate();
+            if (day >= 10 && day <= 25) {
+                checkAndTriggerAlert(`sub_${s.name.replace(/\s+/g, '_')}`, 'Upcoming Bill', `${s.name} is usually paid around this time (Avg: ₱${Math.round(s.averageSpend).toLocaleString()}).`, 'info');
+            }
+        }
+    });
 }
+
+// Notification Center Management
+export function toggleNotificationCenter(e) {
+    if (e) e.stopPropagation();
+    const sidebar = document.getElementById('notification-center');
+    
+    if (!sidebar) return;
+    
+    const isActive = sidebar.classList.toggle('active');
+    
+    if (isActive) {
+        renderNotifications();
+        triggerHaptic('light');
+        
+        // Push modal state for universal back button
+        if (window.NavState) {
+            window.NavState.pushModalState('notification-center', () => {
+                sidebar.classList.remove('active');
+            });
+        }
+    } else {
+        if (window.NavState) {
+            window.NavState.popModalState('notification-center');
+        }
+    }
+}
+
+export function renderNotifications() {
+    const list = document.getElementById('notification-list');
+    if (!list) return;
+    
+    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    
+    if (notifications.length === 0) {
+        list.innerHTML = `
+            <div class="empty-notifications">
+                <i class="material-icons" style="font-size: 48px; color: #e2e8f0; margin-bottom: 12px;">notifications_none</i>
+                <p>Everything is up to date!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    list.innerHTML = notifications.map(n => `
+        <div class="notification-item ${n.unread ? 'unread' : ''}" onclick="handleNotificationClick(${n.id})">
+            <div class="notification-item-icon notif-${n.type}">
+                <i class="material-icons">${n.type === 'warning' ? 'warning' : n.type === 'success' ? 'check_circle' : 'info'}</i>
+            </div>
+            <div class="notif-content">
+                <div class="notif-title">${n.title}</div>
+                <div class="notif-message">${n.message}</div>
+                <div class="notif-time">${new Date(n.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+            </div>
+        </div>
+    `).join('');
+
+    // Mark all as read when opening
+    updateUnreadCount(true);
+}
+
+export function updateUnreadCount(markRead = false) {
+    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    if (markRead) {
+        notifications.forEach(n => n.unread = false);
+        localStorage.setItem('smartwallet_notifications', JSON.stringify(notifications));
+    }
+    
+    const unreadCount = notifications.filter(n => n.unread).length;
+    const badge = document.getElementById('unread-count');
+    
+    if (badge) {
+        if (unreadCount > 0) {
+            badge.innerText = unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+}
+
+export function clearAllNotifications() {
+    localStorage.setItem('smartwallet_notifications', '[]');
+    renderNotifications();
+    updateUnreadCount();
+    triggerHaptic('medium');
+}
+
+window.handleNotificationClick = function(id) {
+    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    const notif = notifications.find(n => n.id === id);
+    if (notif && notif.action && notif.action.callbackString) {
+        try {
+            eval(notif.action.callbackString);
+        } catch(e) { console.error('Notification action failed', e); }
+    }
+    toggleNotificationCenter();
+};
 
 // Global UI Initialization
 export function initUI() {
     log('Initializing UI Engine...');
     
-    // Bridging for legacy onclick handlers
-    window.updateAccountSwitcherUI = updateAccountSwitcherUI;
-    window.updateBalanceCardsUI = updateBalanceCardsUI;
-    window.scrollToActiveCard = scrollToActiveCard;
-    window.updateProfileUI = updateProfileUI;
-    window.handleLocalModeNudge = handleLocalModeNudge;
-    window.switchAccount = switchAccount;
-    window.applyAccountTheme = applyAccountTheme;
-    window.applyUserView = applyUserView;
-    window.updateBPIInsight = updateBPIInsight;
-    window.updateSafeSpendUI = updateSafeSpendUI;
-    window.applyTheme = applyTheme;
-    window.setupAccountSwitcher = setupAccountSwitcher;
-    window.updateHeaderIcon = updateHeaderIcon;
-    window.updateBalanceToThisMonth = updateBalanceToThisMonth;
-    window.updateInsightCards = updateInsightCards;
-    window.initPrivacyLock = initPrivacyLock;
-    window.tryBiometricUnlock = tryBiometricUnlock;
-    window.drawCashFlowChart = drawCashFlowChart;
-    window.detectSubscriptions = detectSubscriptions;
     
+    // Notifications Bridging (Internal - initUI still handles some setup)
+    updateUnreadCount();
+
+    // Listen for new notifications
+    window.addEventListener('notification-created', () => {
+        updateUnreadCount();
+        const bell = document.getElementById('notification-bell');
+        if (bell) {
+            bell.style.animation = 'none';
+            void bell.offsetWidth; 
+            bell.style.animation = 'ptrSpin 0.5s ease'; // Quick scale/viggle
+        }
+    });
+
+    // Initial unread check
+    updateUnreadCount();
+
+    // Check Daily Summary
+    checkDailySummary();
+
     // 1. Restore Profile from Cache (Instant UI)
     if (window.NavState) {
         window.NavState.loadProfile();
@@ -1480,9 +1659,4 @@ function setupFastPath() {
             });
         } catch(e) { console.warn('Fast path failed', e); }
     }
-}
-
-function log(msg, type = 'info') {
-    if (window.log) window.log(msg, type);
-    else console.log(`[UI] ${type.toUpperCase()}: ${msg}`);
 }

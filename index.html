@@ -25,6 +25,9 @@
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js">
+    <link rel="modulepreload" href="app-auth.js">
+    <link rel="modulepreload" href="app-ui.js">
+    <link rel="modulepreload" href="ai-config.js">
     
     <!-- SPEED UP FIREBASE AUTH POPUP -->
     <link rel="preconnect" href="https://accounts.google.com">
@@ -91,11 +94,8 @@
     <!-- CHART TOOLTIP -->
     <div id="chart-tooltip"></div>
 
-    <!-- BLUR OVERLAY FOR LONG-PRESS MENU -->
-    <div id="blur-overlay" class="blur-overlay" onclick="closeIOSMenu()"></div>
-    
-    <!-- IOS-STYLE ACTION MENU -->
-    <div id="ios-menu" class="ios-action-menu"></div>
+    <!-- IOs-STYLE ACTION MENU -->
+    <div id="ios-menu-top" class="ios-action-menu"></div>
 
     <!-- BIOMETRIC LOCK SCREEN -->
     <div class="biometric-overlay" id="biometricOverlay">
@@ -142,14 +142,13 @@
              </div>
          </div>
 
-          <script>
-               // EARLY GATE CHECK: Hide for returning Google users, visible by default for guests & crawlers
-               // SUPPRESS if a redirect is pending to prevent dual modal race condition
-               const isRedirectInProgress = localStorage.getItem('auth_redirect_pending') === 'true';
-               if (localStorage.getItem('wallet_auth_type') === 'google' || isRedirectInProgress) {
-                   document.getElementById('guestGate').style.display = 'none';
-               }
-           </script>
+           <script>
+                // EARLY GATE CHECK: Hide for returning Google users or if a redirect is currently in progress
+                const isRedirectInProgress = localStorage.getItem('auth_redirect_pending') === 'true';
+                if (localStorage.getItem('wallet_auth_type') === 'google' || isRedirectInProgress) {
+                    document.getElementById('guestGate').style.display = 'none';
+                }
+            </script>
 
         <div id="header">
             <div class="header-logo-box" style="display: flex; align-items: center; gap: 12px;">
@@ -170,14 +169,21 @@
                 
                 <div class="greeting-section">
                     <div class="greeting-text">Hello,</div>
-                    <div class="user-name" id="user-display-name">Guest</div>
+                    <div class="user-name" id="user-display-name">...</div>
                 </div>
             </div>
             <div class="profile-container">
-            <div id="profile-badge" onclick="toggleProfileDropdown(event)">
-                <i class="material-icons">person</i>
-                <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
-            </div>
+                    <div class="notification-trigger" id="notification-bell" onclick="toggleNotificationCenter(event)">
+                        <i class="material-icons">notifications</i>
+                        <span class="notification-badge" id="unread-count" style="display: none;">0</span>
+                    </div>
+                    
+                    <div id="profile-badge">
+                        <div class="profile-pic-container" onclick="toggleProfileDropdown(event)">
+                            <i class="material-icons">person</i>
+                            <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
+                        </div>
+                    </div>
             <div id="profile-dropdown" class="profile-dropdown">
                  <div class="dropdown-item" onclick="handleAuthClick()">
                     <i class="material-icons">sync</i>
@@ -797,7 +803,7 @@
     <script type="module">
         import { AI_CONFIG } from "./ai-config.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // HELPER: Format date to YYYY-MM-DD based on LOCAL time
@@ -941,16 +947,19 @@
 
          window.handleAuthClick = async () => {
             log('Starting Google Sign-In Flow...');
-            // Zero-latency UI feedback
-            const btn = event?.currentTarget || document.activeElement;
-            if (btn && btn.classList) btn.style.opacity = '0.5';
-
-            try {
-                const provider = new GoogleAuthProvider();
-                provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-                
-                // Mark that we just logged in — suppress automatic GIS popup after login
-                window.justLoggedIn = true;
+             // Zero-latency UI feedback
+             const btn = event?.currentTarget || document.activeElement;
+             if (btn && btn.classList && btn.classList.contains('guest-gate-btn')) {
+                 btn.classList.add('loading');
+             }
+             window.isAuthInProgress = true;
+ 
+             try {
+                 const provider = new GoogleAuthProvider();
+                 provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+                 
+                 // Mark that we just logged in — suppress automatic GIS popup after login
+                 window.justLoggedIn = true;
                 
                 try {
                     const result = await signInWithPopup(auth, provider);
@@ -967,10 +976,15 @@
                 }
             } catch (e) {
                 window.justLoggedIn = false;
+                window.isAuthInProgress = false;
+                const btn = document.querySelector('.guest-gate-btn');
+                if (btn) btn.classList.remove('loading');
+                
                 log('Google Sign-In Error: ' + e.message, 'error');
                 showToast('Login failed. Please try again.');
             } finally {
-                if (btn && btn.classList) btn.style.opacity = '1';
+                // We don't remove loading in finally if success, because we want the spinner 
+                // to stay until the gate is completely removed by handleAuthResult
             }
         };
 
@@ -979,6 +993,10 @@
             log('Auth success! User: ' + result.user.email);
             localStorage.setItem('wallet_auth_type', 'google'); // Mark as Google user
             
+            // Clear progress flags
+            window.isAuthInProgress = false;
+            localStorage.removeItem('auth_redirect_pending');
+
             // IMMEDIATELY hide guest gate and sync banner on login success
             const gate = document.getElementById('guestGate');
             if (gate) gate.style.display = 'none';
@@ -1237,36 +1255,14 @@
                 const lastAuthType = localStorage.getItem('wallet_auth_type');
 
                 if (!user) {
-                    if (isRedirectPending) {
-                        log('Redirect pending detected. Holding anonymous fallback...');
-                        return; // Wait for getRedirectResult to finish
-                    }
-
-                    // PERSISTENCE FIX: If we previously had a google session, wait before falling back to guest
-                    if (lastAuthType === 'google' && !authWaitStarted) {
-                        authWaitStarted = true;
-                        log('Waiting for persistent Google session...');
-                        // Give it 12 seconds to restore (increased from 10s for maximum stickiness)
-                        setTimeout(() => {
-                            if (!auth.currentUser) {
-                                log('Google session not found after timeout. Using local fallback.');
-                                signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
-                            }
-                        }, 12000);
+                    if (isRedirectPending || window.isAuthInProgress) {
+                        log('Auth in progress (Redirect/Popup). Holding gate...');
                         return;
                     }
 
-                    log('Establishing secure local session...');
-                    signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
-                    // Show guest gate after 2s delay — gives Firebase time to restore session
-                    // Critical: Don't show if we are currently handling a redirect result
-                    setTimeout(() => {
-                        const redirectActive = localStorage.getItem('auth_redirect_pending') === 'true';
-                        if ((!auth.currentUser || auth.currentUser.isAnonymous) && !window.justLoggedIn && !redirectActive) {
-                            const gate = document.getElementById('guestGate');
-                            if (gate) gate.style.display = 'flex';
-                        }
-                    }, 2000);
+                    log('No active session. Showing login gate.');
+                    const gate = document.getElementById('guestGate');
+                    if (gate) gate.style.display = 'flex';
                     return;
                 }
 
@@ -1346,6 +1342,12 @@
 
                         if (data.budgetRule !== undefined) {
                             localStorage.setItem('budget_rule', data.budgetRule);
+                        }
+
+                        if (data.customRuleWeights) {
+                            localStorage.setItem('custom_rule_needs', data.customRuleWeights.needs);
+                            localStorage.setItem('custom_rule_wants', data.customRuleWeights.wants);
+                            localStorage.setItem('custom_rule_savings', data.customRuleWeights.savings);
                         }
                         
                         updateSafeSpendUI();
@@ -2784,33 +2786,153 @@
             if (window.updateTripleProgressBar) window.updateTripleProgressBar();
          };
 
-         window.promptSetMonthlySalary = () => {
-            const currentSalary = localStorage.getItem('monthly_salary_target') || '17600';
-            const currentRule = localStorage.getItem('budget_rule') || '50/30/20';
+          window.adjustCustomRuleWeights = (changedId) => {
+             const nEl = document.getElementById('custom-weight-needs');
+             const wEl = document.getElementById('custom-weight-wants');
+             const sEl = document.getElementById('custom-weight-savings');
+             if(!nEl || !wEl || !sEl) return;
+
+             let n = parseInt(nEl.value) || 0;
+             let w = parseInt(wEl.value) || 0;
+             let s = parseInt(sEl.value) || 0;
+
+             // Ensure values are within 0-100
+             n = Math.max(0, Math.min(100, n));
+             w = Math.max(0, Math.min(100, w));
+             s = Math.max(0, Math.min(100, s));
+
+             if (changedId === 'needs') {
+                w = 100 - n - s;
+                if (w < 0) { w = 0; s = 100 - n; }
+             } else if (changedId === 'wants') {
+                s = 100 - n - w;
+                if (s < 0) { s = 0; n = 100 - w; }
+             } else if (changedId === 'savings') {
+                w = 100 - n - s;
+                if (w < 0) { w = 0; n = 100 - s; }
+             }
+
+             nEl.value = n;
+             wEl.value = w;
+             sEl.value = s;
+          };
+
+          window.selectBudgetPhilosophy = (val) => {
+             // Update radio
+             const radio = document.getElementById('rule-radio-' + val.replace(/\//g, '-'));
+             if (radio) radio.checked = true;
+             
+             // Rule color mapping
+             const themes = {
+                 '50/30/20': { border: '#3b82f6', bg: '#eff6ff', icon: '#3b82f6' },
+                 '40/30/30': { border: '#ef4444', bg: '#fef2f2', icon: '#ef4444' },
+                 '50/20/30': { border: '#10b981', bg: '#f0fdf4', icon: '#10b981' },
+                 'custom':   { border: '#8b5cf6', bg: '#f5f3ff', icon: '#8b5cf6' }
+             };
+
+             // Reset and Apply UI visually
+             document.querySelectorAll('.rule-card-premium').forEach(c => {
+                 c.style.borderColor = '#f1f5f9';
+                 c.style.background = '#f8fafc';
+                 const checkIcon = c.querySelector('.rule-check-icon');
+                 if (checkIcon) {
+                    checkIcon.style.opacity = '0';
+                 }
+             });
+             
+             const card = document.getElementById('rule-card-' + val.replace(/\//g, '-'));
+             if (card && themes[val]) {
+                card.style.borderColor = themes[val].border;
+                card.style.background = themes[val].bg;
+                const checkIcon = card.querySelector('.rule-check-icon');
+                if (checkIcon) {
+                   checkIcon.style.opacity = '1';
+                   checkIcon.style.color = themes[val].icon;
+                }
+             }
+
+             // Handle Custom inputs box style
+             const customBox = document.getElementById('custom-rule-box');
+             if (customBox) {
+                customBox.style.borderColor = (val === 'custom') ? '#ddd6fe' : '#f1f5f9';
+                customBox.style.background = (val === 'custom') ? '#fff' : '#f8fafc';
+             }
+          };
+
+          window.promptSetMonthlySalary = () => {
+             const currentSalary = localStorage.getItem('monthly_salary_target') || '17600';
+             const currentRule = localStorage.getItem('budget_rule') || '50/30/20';
             
-            const extraHtml = `
-                <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; margin-bottom: 24px;">
-                    <div style="font-size: 11px; font-weight: 800; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Budget Rule</div>
-                    <div style="display: flex; gap: 10px;">
-                        <div onclick="document.getElementById('rule-50').checked = true" style="flex: 1; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 16px; cursor: pointer; transition: all 0.2s; background: #f8fafc;">
-                            <label style="display: flex; align-items: center; cursor: pointer; width: 100%; margin: 0;">
-                                <input type="radio" name="budget_rule" id="rule-50" value="50/30/20" ${currentRule === '50/30/20' ? 'checked' : ''} style="margin-right: 12px; accent-color: #000; width: 18px; height: 18px;">
-                                <div style="line-height: 1.2;">
-                                    <div style="font-size: 14px; font-weight: 800; color: #1e293b;">50/30/20</div>
-                                    <div style="font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Standard</div>
-                                </div>
-                            </label>
+             const extraHtml = `
+                <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-bottom: 24px;">
+                    <style>
+                        /* Hide spin buttons for number inputs in the custom box */
+                        #custom-rule-box input::-webkit-outer-spin-button,
+                        #custom-rule-box input::-webkit-inner-spin-button {
+                            -webkit-appearance: none;
+                            margin: 0;
+                        }
+                        #custom-rule-box input[type=number] {
+                            -moz-appearance: textfield;
+                        }
+                    </style>
+                    <div style="font-size: 11px; font-weight: 800; color: #94a3b8; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.8px;">Budgeting Rule</div>
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <!-- Standard Card -->
+                        <div id="rule-card-50-30-20" onclick="selectBudgetPhilosophy('50/30/20')" class="rule-card-premium" style="flex: 1; padding: 12px 2px; border: 2px solid ${currentRule === '50/30/20' ? '#3b82f6' : '#f1f5f9'}; border-radius: 12px; cursor: pointer; transition: all 0.2s; background: ${currentRule === '50/30/20' ? '#eff6ff' : '#f8fafc'}; text-align: center; position: relative;">
+                            <div style="font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 2px;">50/30/20</div>
+                            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Standard</div>
+                            <input type="radio" name="budget_rule" id="rule-radio-50-30-20" value="50/30/20" ${currentRule === '50/30/20' ? 'checked' : ''} style="display: none;">
+                            <i class="material-icons rule-check-icon" style="position: absolute; top: -5px; right: -5px; color: #3b82f6; font-size: 16px; background: white; border-radius: 50%; opacity: ${currentRule === '50/30/20' ? '1' : '0'}; transition: opacity 0.2s;">check_circle</i>
                         </div>
-                        <div onclick="document.getElementById('rule-40').checked = true" style="flex: 1; padding: 14px; border: 1.5px solid #f1f5f9; border-radius: 16px; cursor: pointer; transition: all 0.2s; background: #f8fafc;">
-                            <label style="display: flex; align-items: center; cursor: pointer; width: 100%; margin: 0;">
-                                <input type="radio" name="budget_rule" id="rule-40" value="40/30/30" ${currentRule === '40/30/30' ? 'checked' : ''} style="margin-right: 12px; accent-color: #000; width: 18px; height: 18px;">
-                                <div style="line-height: 1.2;">
-                                    <div style="font-size: 14px; font-weight: 800; color: #1e293b;">40/30/30</div>
-                                    <div style="font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase;">Aggressive</div>
-                                </div>
-                            </label>
+
+                        <!-- Aggressive Card -->
+                        <div id="rule-card-40-30-30" onclick="selectBudgetPhilosophy('40/30/30')" class="rule-card-premium" style="flex: 1; padding: 12px 2px; border: 2px solid ${currentRule === '40/30/30' ? '#ef4444' : '#f1f5f9'}; border-radius: 12px; cursor: pointer; transition: all 0.2s; background: ${currentRule === '40/30/30' ? '#fef2f2' : '#f8fafc'}; text-align: center; position: relative;">
+                            <div style="font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 2px;">40/30/30</div>
+                            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Aggressive</div>
+                            <input type="radio" name="budget_rule" id="rule-radio-40-30-30" value="40/30/30" ${currentRule === '40/30/30' ? 'checked' : ''} style="display: none;">
+                            <i class="material-icons rule-check-icon" style="position: absolute; top: -5px; right: -5px; color: #ef4444; font-size: 16px; background: white; border-radius: 50%; opacity: ${currentRule === '40/30/30' ? '1' : '0'}; transition: opacity 0.2s;">check_circle</i>
+                        </div>
+
+                        <!-- Savings Card -->
+                        <div id="rule-card-50-20-30" onclick="selectBudgetPhilosophy('50/20/30')" class="rule-card-premium" style="flex: 1; padding: 12px 2px; border: 2px solid ${currentRule === '50/20/30' ? '#10b981' : '#f1f5f9'}; border-radius: 12px; cursor: pointer; transition: all 0.2s; background: ${currentRule === '50/20/30' ? '#f0fdf4' : '#f8fafc'}; text-align: center; position: relative;">
+                            <div style="font-size: 13px; font-weight: 800; color: #1e293b; margin-bottom: 2px;">50/20/30</div>
+                            <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Savings</div>
+                            <input type="radio" name="budget_rule" id="rule-radio-50-20-30" value="50/20/30" ${currentRule === '50/20/30' ? 'checked' : ''} style="display: none;">
+                            <i class="material-icons rule-check-icon" style="position: absolute; top: -5px; right: -5px; color: #10b981; font-size: 16px; background: white; border-radius: 50%; opacity: ${currentRule === '50/20/30' ? '1' : '0'}; transition: opacity 0.2s;">check_circle</i>
                         </div>
                     </div>
+
+                    <!-- Custom Weight Box -->
+                    <div id="custom-rule-box" style="margin-top: 12px; padding: 10px 14px; background: ${currentRule === 'custom' ? '#fff' : '#f8fafc'}; border-radius: 16px; border: 1.5px dashed ${currentRule === 'custom' ? '#ddd6fe' : '#e2e8f0'}; display: flex; align-items: stretch; gap: 14px; transition: all 0.2s;">
+                        <!-- Custom Select Card (Compact) -->
+                        <div id="rule-card-custom" onclick="selectBudgetPhilosophy('custom')" class="rule-card-premium" style="width: 72px; padding: 10px 0; border: 2px solid ${currentRule === 'custom' ? '#8b5cf6' : '#f1f5f9'}; border-radius: 12px; cursor: pointer; transition: all 0.2s; background: ${currentRule === 'custom' ? '#f5f3ff' : 'white'}; text-align: center; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 48px;">
+                            <div style="font-size: 11px; font-weight: 800; color: #1e293b; line-height: 1;">CUSTOM</div>
+                            <div style="font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-top: 2px;">My Rule</div>
+                            <input type="radio" name="budget_rule" id="rule-radio-custom" value="custom" ${currentRule === 'custom' ? 'checked' : ''} style="display: none;">
+                            <i class="material-icons rule-check-icon" style="position: absolute; top: -6px; right: -6px; color: #8b5cf6; font-size: 15px; background: white; border-radius: 50%; opacity: ${currentRule === 'custom' ? '1' : '0'}; transition: opacity 0.2s;">check_circle</i>
+                        </div>
+
+                        <!-- Input Fields -->
+                        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                           <div style="display: flex; gap: 8px;">
+                               <div style="flex: 1;">
+                                   <label style="display: block; font-size: 9px; color: #94a3b8; margin-bottom: 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;">Needs</label>
+                                   <input type="number" id="custom-weight-needs" oninput="adjustCustomRuleWeights('needs')" value="${localStorage.getItem('custom_rule_needs') || '50'}" style="width: 100%; padding: 6px 4px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 800; text-align: center; color: #1e293b; background: white;">
+                               </div>
+                               <div style="flex: 1;">
+                                   <label style="display: block; font-size: 9px; color: #94a3b8; margin-bottom: 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;">Wants</label>
+                                   <input type="number" id="custom-weight-wants" oninput="adjustCustomRuleWeights('wants')" value="${localStorage.getItem('custom_rule_wants') || '30'}" style="width: 100%; padding: 6px 4px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 800; text-align: center; color: #1e293b; background: white;">
+                               </div>
+                               <div style="flex: 1;">
+                                   <label style="display: block; font-size: 9px; color: #94a3b8; margin-bottom: 2px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;">Savings</label>
+                                   <input type="number" id="custom-weight-savings" oninput="adjustCustomRuleWeights('savings')" value="${localStorage.getItem('custom_rule_savings') || '20'}" style="width: 100%; padding: 6px 4px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 800; text-align: center; color: #1e293b; background: white;">
+                               </div>
+                           </div>
+                        </div>
+                    </div>
+                </div>
                 </div>
             `;
 
@@ -2825,6 +2947,22 @@
                         const amount = parseFloat(val);
                         const selectedRule = document.querySelector('input[name="budget_rule"]:checked')?.value || '50/30/20';
                         
+                        // Handle Custom Weights
+                        if (selectedRule === 'custom') {
+                            const n = parseInt(document.getElementById('custom-weight-needs').value) || 0;
+                            const w = parseInt(document.getElementById('custom-weight-wants').value) || 0;
+                            const s = parseInt(document.getElementById('custom-weight-savings').value) || 0;
+                            
+                            if (n + w + s !== 100) {
+                                showToast('Custom percentages must total 100%!', 3000, true);
+                                return; // This will close anyway due to appDialog but user gets warned.
+                            }
+                            
+                            localStorage.setItem('custom_rule_needs', n);
+                            localStorage.setItem('custom_rule_wants', w);
+                            localStorage.setItem('custom_rule_savings', s);
+                        }
+
                         localStorage.setItem('monthly_salary_target', amount);
                         localStorage.setItem('budget_rule', selectedRule);
                         
@@ -2834,7 +2972,12 @@
                             const safeSpendRef = doc(db, "users", uid, "config", "safe_to_spend");
                             updateDoc(safeSpendRef, { 
                                 budgetSalaryTarget: amount,
-                                budgetRule: selectedRule
+                                budgetRule: selectedRule,
+                                customRuleWeights: selectedRule === 'custom' ? {
+                                    needs: parseInt(document.getElementById('custom-weight-needs').value),
+                                    wants: parseInt(document.getElementById('custom-weight-wants').value),
+                                    savings: parseInt(document.getElementById('custom-weight-savings').value)
+                                } : null
                             }).catch(err => console.error("Error saving budget salary target:", err));
                         }
                         
@@ -2889,6 +3032,14 @@
             let weights = { needs: 0.50, wants: 0.30, savings: 0.20 };
             if (budgetRule === '40/30/30') {
                 weights = { needs: 0.40, wants: 0.30, savings: 0.30 };
+            } else if (budgetRule === '50/20/30') {
+                weights = { needs: 0.50, wants: 0.20, savings: 0.30 };
+            } else if (budgetRule === 'custom') {
+                weights = {
+                    needs: (parseInt(localStorage.getItem('custom_rule_needs')) || 50) / 100,
+                    wants: (parseInt(localStorage.getItem('custom_rule_wants')) || 30) / 100,
+                    savings: (parseInt(localStorage.getItem('custom_rule_savings')) || 20) / 100
+                };
             }
 
             // Calculate Limits
@@ -6935,7 +7086,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
-            if (window.pushModalState) pushModalState('change-cat');
+            if (window.NavState) window.NavState.pushModalState('change-cat', () => closeModals(true));
         };
 
         window.saveCategory = async (catId) => {
@@ -7005,6 +7156,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            
+            if (window.NavState) window.NavState.pushModalState('edit-note', () => closeModals(true));
         };
 
         // Enforce Title Case Helper
@@ -7061,7 +7214,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
-            if (window.pushModalState) pushModalState('edit-price');
+            if (window.NavState) window.NavState.pushModalState('edit-price', () => closeModals(true));
             setTimeout(() => input.focus(), 100);
 
             input.onkeydown = (e) => {
@@ -7457,7 +7610,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             window.modalOpen = true;
             
             // Push history state for back button handling
-            if (window.NavState) window.NavState.pushModalState('manual-txn', () => window.closeModals());
+            if (window.NavState) window.NavState.pushModalState('manual-txn', () => window.closeModals(true));
             
             // Remove global blur to fix blurry modal content issues
             // document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
@@ -7546,7 +7699,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             
             // Push history state if not already handled by replaceModalState
             if (!window.modalOpen) {
-                if (window.NavState) window.NavState.pushModalState('edit-txn', () => window.closeModals());
+                if (window.NavState) window.NavState.pushModalState('edit-txn', () => window.closeModals(true));
             }
             
             // Removed global blurring to match manual modal fix
@@ -8998,7 +9151,9 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         
         // Check if user is logged in
         const isUserLoggedIn = () => {
-            return localStorage.getItem('g_access_token') || localStorage.getItem('user_name');
+            // Strictly check for Google auth type to prevent guest-mode bypass
+            const authType = localStorage.getItem('wallet_auth_type');
+            return authType === 'google' && (localStorage.getItem('g_access_token') || localStorage.getItem('user_name'));
         };
         
         // Check if biometric is already set up
@@ -9203,9 +9358,15 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         
         // Initialize biometric on app load
         const initBiometric = async () => {
-            // Only proceed if user is logged in
+            // Only proceed if user is logged in with Google
             if (!isUserLoggedIn()) {
-                console.log('🔐 Biometric: User not logged in, skipping');
+                console.log('🔐 Biometric: User not authenticated with Google, skipping');
+                return;
+            }
+            
+            // NEW: Wait for Firebase Auth to confirm non-anonymous status to prevent lockout during redirect
+            if (auth.currentUser && auth.currentUser.isAnonymous) {
+                console.log('🔐 Biometric: Anonymous session detected, skipping security check');
                 return;
             }
             
@@ -9413,6 +9574,35 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 });
             }
         });
+    </script>
+    <!-- NOTIFICATION CENTER (SLIDE-OVER) -->
+    <div id="notification-center" class="notification-sidebar">
+        <div class="notification-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <i class="material-icons" onclick="toggleNotificationCenter()" style="cursor: pointer; color: #64748b;">arrow_back</i>
+                <h2 style="margin: 0; font-size: 1.25rem; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">Notifications</h2>
+            </div>
+            <button class="mui-btn mui-btn--flat" onclick="clearAllNotifications()" style="min-width: auto; padding: 0 8px; color: #64748b; font-size: 11px; font-weight: 800;">CLEAR ALL</button>
+        </div>
+        <div id="notification-list" class="notification-scroll-area">
+            <!-- Notifications will be injected here -->
+            <div class="empty-notifications">
+                <i class="material-icons" style="font-size: 48px; color: #e2e8f0; margin-bottom: 12px;">notifications_none</i>
+                <p>Everything is up to date!</p>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { initUI } from './app-ui.js';
+        const runInit = () => {
+            console.log('🚀 Initializing UI...');
+            initUI();
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runInit);
+        } else {
+            runInit();
+        }
     </script>
 </body>
 </html>

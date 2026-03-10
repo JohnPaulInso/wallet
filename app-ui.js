@@ -1511,10 +1511,8 @@ export function updateUnreadCount(markRead = false) {
 }
 
 export function clearAllNotifications() {
-    localStorage.setItem('smartwallet_notifications', '[]');
-    renderNotifications();
-    updateUnreadCount();
-    triggerHaptic('medium');
+    // Persistent notifications: disable clear all
+    console.log('📢 clearAllNotifications is disabled.');
 }
 
 window.handleNotificationClick = function(id) {

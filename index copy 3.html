@@ -79,8 +79,8 @@
         .is-native .insight-value, .is-native .chart-center-value { /* font-size: 18px; */ font-size: 16.2px !important; }
         .is-native .insight-sub, .is-native .trend-label, .is-native .chart-center-label { /* font-size: 10px; */ font-size: 9px !important; }
         .is-native .savings-chip, .is-native .chart-center-pct, .is-native .progress-label, .is-native .progress-stats { /* font-size: 11px; */ font-size: 9.9px !important; }
-        .is-native .triple-progress-title { /* font-size: 14px; */ font-size: 13px !important; }
-        .is-native .triple-month-label { /* font-size: 9px; */ font-size: 8.7px !important; }
+        .is-native .triple-progress-title { /* font-size: 14px; */ font-size: 12.6px !important; }
+        .is-native .triple-month-label { /* font-size: 9px; */ font-size: 8.1px !important; }
         
         .is-native .safe-spend-amount-v2 { /* font-size: 26px; */ font-size: 23.4px !important; }
         .is-native .safe-spend-subtitle-v2, .is-native .breakdown-name { /* font-size: 9px; */ font-size: 8.1px !important; }
@@ -88,7 +88,7 @@
         .is-native .breakdown-val { /* font-size: 12px; */ font-size: 10.8px !important; }
         .is-native .cat-budget-title { /* font-size: 11px; */ font-size: 9.9px !important; }
         .is-native .cat-budget-add-btn { /* font-size: 12px; */ font-size: 10.8px !important; }
-        .is-native .sub-name { /* font-size: 12px; */ font-size: 9.5px !important; }
+        .is-native .sub-name { /* font-size: 12px; */ font-size: 9px !important; }
         .is-native .sub-meta, .is-native .sub-avg-label { /* font-size: 9px; */ font-size: 8px !important; }
         .is-native .sub-current-vs-avg { /* font-size: 11px; */ font-size: 9.9px !important; }
         .is-native .dropdown-item { /* font-size: 13.5px; */ font-size: 12.15px !important; }
@@ -97,7 +97,7 @@
         .is-native .summary-item .s-value { /* font-size: 14px; */ font-size: 12.6px !important; }
         
         /* Modals and Overlays covering whole screen */
-        .is-native #manual-modal-content {
+        .is-native .custom-modal, .is-native .modal-overlay .modal-content {
             width: 100% !important; max-width: 100% !important; margin: 0 !important;
             max-height: 98vh !important; border-radius: 28px 28px 0 0 !important;
         }
@@ -120,21 +120,9 @@
 <link rel="stylesheet" href="index.css">
 
    
-    <style>
-        /* NUCLEAR DARK MODE OVERRIDES */
-        body.dark-mode #triple-progress-widget.triple-progress-card,
-        body.dark-mode #safe-spend-widget.safe-spend-card {
-            background: #1a1a1a !important;
-            border-color: #262626 !important;
-            color: #f8fafc !important;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
-        }
-        body.dark-mode .progress-bar-bg { background: #262626 !important; }
-        body.dark-mode .triple-progress-header { border-bottom-color: #262626 !important; }
-        body.dark-mode .safe-spend-header-v2 { border-bottom-color: #262626 !important; }
-        body.dark-mode .breakdown-item { border-top-color: #262626 !important; }
-        body.dark-mode .breakdown-item:hover { background: #262626 !important; }
-    </style>
+<style>
+
+</style>
 
 
 
@@ -486,14 +474,6 @@
                 <div id="wants-depleted-msg" class="overspending-msg">
                     Wants budget depleted. Stop spending on luxuries to protect your savings and avoid new debt.
                 </div>
-
-                <div id="triple-summary-footer" class="triple-summary-footer">
-                    <div class="triple-summary-left">
-                        <span class="triple-summary-label">Available to Spend</span>
-                        <span id="triple-usage-sub" class="triple-summary-sub">0% BUDGET UTILIZED</span>
-                    </div>
-                    <span id="triple-remaining-val" style="font-size:11px !important;" class="triple-summary-value remaining privacy-mask">₱0.00</span>
-                </div>
             </div>
 
 
@@ -705,10 +685,10 @@
 
             <div id="history-container"></div>
 
-            <div style="margin: 20px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
+            <div style="margin: 24px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
 
             <!-- CATEGORY BUDGET LIMITER WIDGET -->
-            <div id="cat-budget-widget" class="cat-budget-card" style="display: none;margin: 40px 0px 20px;">
+            <div id="cat-budget-widget" class="cat-budget-card" style="margin: 24px 0 16px; display: none;">
                 <div class="cat-budget-header">
                     <h3 class="cat-budget-title">Category Limits</h3>
                     <button class="cat-budget-add-btn" onclick="promptAddCategoryBudget()">
@@ -724,7 +704,7 @@
             <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
-            <div class="analytics-card" id="analytics-section" style="margin: 20px 0px 20px; padding: 15px; border-radius: 16px;">
+            <div class="analytics-card" id="analytics-section" style="margin: 20px 0px 10px; padding: 15px; border-radius: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h3 class="dash-section-title" style="margin:0; font-size: 0.95rem;">Cash Flow</h3>
                     <div class="savings-chip">Savings Rate: <span id="savings-rate-val">0%</span></div>
@@ -746,7 +726,7 @@
             </div>
 
             <!-- RECURRING ITEMS SUBSCRIPTION SECTION -->
-            <div class="analytics-card" id="subscription-section" style="display: none; margin: 30px 0px 20px; padding: 15px; border-radius: 16px;">
+            <div class="analytics-card" id="subscription-section" style="display: none; margin: 20px 0px 20px; padding: 11px; border-radius: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h3 class="dash-section-title" style="margin:0; font-size: 0.8rem;">Recurring Items</h3>
@@ -1503,7 +1483,7 @@
                     const configRef = doc(db, "users", user.uid, "config", "accounts");
                     onSnapshot(configRef, (docSnap) => {
                         const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
-                        const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+                        const isAdmin = true; // Relaxed check
                         
                         // Scenario Check: Admin must have all 3 specific cards
                         const hasAtome = accounts.find(a => a.id === 'atome');
@@ -2677,7 +2657,7 @@
         }
 
         window.updateSafeSpendUI = () => {
-             const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+             const isAdmin = true; // Relaxed check
              const isBPI = window.currentAccount === 'bpi';
              const widget = document.getElementById('safe-spend-widget');
              
@@ -3132,7 +3112,8 @@
          };
 
          window.updateTripleProgressBar = () => {
-            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            // const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+            const isAdmin = true; // Relaxed check
             const widget = document.getElementById('triple-progress-widget');
             if (!widget || !isAdmin) {
                 if (widget) widget.style.display = 'none';
@@ -3205,9 +3186,9 @@
                     const amt = Math.abs(t.amount || 0);
 
                     if (account === 'atome') {
-                        if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
+                        if (display.category === 'Education' || display.category === 'Service' || display.category === 'Financial expenses' || display.category === 'Vehicle' || display.category === 'Transportation') {
                             needsTotal += amt;
-                        } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses') {
+                        } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport') {
                             wantsTotal += amt;
                         }
                     } else if (account === 'bpi') {
@@ -3267,25 +3248,6 @@
             savingsEl.innerText = savingsValue;
             savingsEl.dataset.raw = savingsValue;
             document.getElementById('savings-bar').style.width = `${savingsPct}%`;
-
-            // Update Minimalist Indicators
-            const remaining = salaryTarget - (needsTotal + wantsTotal + savingsTotal);
-            const usedPct = Math.min(((needsTotal + wantsTotal + savingsTotal) / salaryTarget) * 100, 100);
-            const remainingPct = 100 - usedPct;
-
-            let statusKey = 'remaining';
-            if (remaining < 0) statusKey = 'negative';
-            else if (remainingPct < 15) statusKey = 'warning';
-
-            const footer = document.getElementById('triple-summary-footer');
-            if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
-
-            const remainingEl = document.getElementById('triple-remaining-val');
-            remainingEl.innerText = formatVal(remaining);
-            remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
-
-            const usageSub = document.getElementById('triple-usage-sub');
-            if (usageSub) usageSub.innerText = `${Math.round(usedPct)}% BUDGET UTILIZED`;
         };
 
         window.showBudgetTransactions = (type) => {
@@ -3315,11 +3277,11 @@
                     const amt = Math.abs(t.amount || 0);
                     
                     if (type === 'needs') {
-                        if (account === 'atome' && (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation')) {
+                        if (account === 'atome' && (display.category === 'Education' || display.category === 'Service' || display.category === 'Financial expenses' || display.category === 'Vehicle' || display.category === 'Transportation')) {
                             filtered.push(t);
                         }
                     } else if (type === 'wants') {
-                        if (account === 'atome' && (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses')) {
+                        if (account === 'atome' && (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport')) {
                             filtered.push(t);
                         }
                     } else if (type === 'savings') {
@@ -8693,8 +8655,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <div class="sub-icon">
                             ${g.icon.includes('logos/') || /\.(png|jpg|jpeg|svg|gif)$/i.test(g.icon) ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
                         </div>
-                             <div class="sub-info" style="font-size: 9.5px !important;">
-                            <div class="sub-name" style="font-size: 9.5px !important;">${g.name}</div>
+                             <div class="sub-info" style="font-size: 8px !important;">
+                            <div class="sub-name" style="font-size: 8px !important;">${g.name}</div>
                             <div class="sub-meta">Avg: ₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})} / mo</div>
                         </div>
                         <div class="sub-stats">
@@ -8991,10 +8953,10 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
 
     <!-- MANUAL TRANSACTION MODAL -->
     <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(10px); background: rgba(0,0,0,0.5);">
-        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); height: 98vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
+        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); height: 98vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
             
             <!-- Swipe Handle Area (includes title) -->
-            <div id="modal-drag-handle" style="width: 100%; padding: max(45px, env(safe-area-inset-top)) 0 8px 0; background: white; border-radius: 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
+            <div id="modal-drag-handle" style="width: 100%; padding: max(45px, env(safe-area-inset-top)) 0 8px 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
                 <div style="display: flex; justify-content: center; margin-bottom: 12px;">
                     <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                 </div>
@@ -9754,6 +9716,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 <i class="material-icons" onclick="toggleNotificationCenter()" style="cursor: pointer; color: #64748b;">arrow_back</i>
                 <h2 style="margin: 0; font-size: 1.25rem; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">Notifications</h2>
             </div>
+            <button class="mui-btn mui-btn--flat" onclick="clearAllNotifications()" style="min-width: auto; padding: 0 8px; color: #64748b; font-size: 11px; font-weight: 800;">CLEAR ALL</button>
         </div>
         <div id="notification-list" class="notification-scroll-area">
             <!-- Notifications will be injected here -->

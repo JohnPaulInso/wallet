@@ -290,50 +290,42 @@
         .notification-sidebar {
             position: fixed;
             top: 0;
-            right: -100%; /* Hide completely off-screen */
+            right: 0;
             width: 100%;
+            max-width: 430px;
             height: 100vh;
             background: #ffffff;
-            z-index: 9999; /* Highest priority */
-            box-shadow: none;
+            z-index: 9999;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             display: flex;
             flex-direction: column;
+            transform: translateX(105%);
             pointer-events: none;
             opacity: 0;
-        }
-        .notification-sidebar.active { 
-            right: 0; 
-            pointer-events: auto;
-            opacity: 1;
-        }
-        
-        /* Full screen even on desktop */
-        @media (min-width: 431px) {
-            .notification-sidebar { 
-                 width: 100%;
-                 max-width: 430px; /* Keep consistent with mobile wrapper width on desktop if desired, or set to 100% */
-                 right: -430px;
-                 left: 50%;
-                 transform: translateX(-50%);
-                 margin-left: 215px; /* Offset to hide */
-                 transition: margin-left 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
-            }
-            .notification-sidebar.active { 
-                margin-left: 0;
-                right: auto;
-            }
+            visibility: hidden;
         }
 
-        /* Mobile specific adjustment */
-        @media (max-width: 430px) {
-            .notification-sidebar {
-                right: -100%;
-                width: 100%;
-                max-width: 100%;
+        .notification-sidebar.active { 
+            transform: translateX(0);
+            pointer-events: auto;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Centered Overlay on Desktop */
+        @media (min-width: 431px) {
+            .notification-sidebar { 
+                 left: 50%;
+                 right: auto;
+                 transform: translateX(-50%) translateY(30px);
+                 opacity: 0;
+                 visibility: hidden;
             }
-            .notification-sidebar.active {
-                right: 0;
+            .notification-sidebar.active { 
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+                visibility: visible;
             }
         }
 

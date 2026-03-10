@@ -1,36 +1,11 @@
 /**
  * UI Rendering and Management for the Wallet App
  */
-import { db, auth, doc, setDoc, onSnapshot } from "./firebase-config.js";
+import { db, auth, doc, setDoc, onSnapshot, getDoc } from "./firebase-config.js";
 import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, isSubscriptionMerchant, triggerHaptic, createNotification } from "./app-utils.js";
-import { handleAuthClick } from "./app-auth.js";
 import { AI_CONFIG } from "./ai-config.js";
 
 let switchSyncTimer = null;
-
-// LEGACY BRIDGING (Immediate)
-window.updateAccountSwitcherUI = updateAccountSwitcherUI;
-window.updateBalanceCardsUI = updateBalanceCardsUI;
-window.scrollToActiveCard = scrollToActiveCard;
-window.updateProfileUI = updateProfileUI;
-window.handleLocalModeNudge = handleLocalModeNudge;
-window.switchAccount = switchAccount;
-window.applyAccountTheme = applyAccountTheme;
-window.applyUserView = applyUserView;
-window.updateBPIInsight = updateBPIInsight;
-window.updateSafeSpendUI = updateSafeSpendUI;
-window.applyTheme = applyTheme;
-window.setupAccountSwitcher = setupAccountSwitcher;
-window.updateHeaderIcon = updateHeaderIcon;
-window.updateBalanceToThisMonth = updateBalanceToThisMonth;
-window.updateInsightCards = updateInsightCards;
-window.initPrivacyLock = initPrivacyLock;
-window.tryBiometricUnlock = tryBiometricUnlock;
-window.drawCashFlowChart = drawCashFlowChart;
-window.detectSubscriptions = detectSubscriptions;
-window.toggleNotificationCenter = toggleNotificationCenter;
-window.clearAllNotifications = clearAllNotifications;
-window.updateUnreadCount = updateUnreadCount;
 
 // Render Transaction History
 export function renderHistory(txns) {
@@ -798,8 +773,10 @@ export function triggerAdaptiveSync() {
 
     if (token) {
         console.log(`🔄 Auto-syncing ${id} on load (10 emails)...`);
-        const { handleScan } = import('./app-data.js').then(m => {
-            setTimeout(() => m.handleScan(10, false), 1500);
+        import('./app-data.js').then(m => {
+            if (m.handleScan) {
+                setTimeout(() => m.handleScan(10, false), 1500);
+            }
         });
     } else {
         console.log(`⏭️ No Gmail token found for ${id}. Use manual Sync to authenticate.`);
@@ -904,10 +881,9 @@ export function switchAccount(id) {
     // Toggle Safe to Spend Widget Visibility
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
-        const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-        // USER REQUEST: Only visible for BPI wallet
-        safeSpendWidget.style.display = (id === 'bpi' && isAdmin) ? 'block' : 'none';
-        if (id === 'bpi' && isAdmin) updateSafeSpendUI();
+        // Safe to Spend is specifically for BPI account
+        safeSpendWidget.style.display = (id === 'bpi') ? 'block' : 'none';
+        if (id === 'bpi') updateSafeSpendUI();
     }
 
     // Auto-sync if token is fresh
@@ -941,47 +917,15 @@ export function applyAccountTheme(accId, accounts) {
 export function applyUserView(user) {
     if (!user) return;
     const isBPI = window.currentAccount === 'bpi';
-    const isAdmin = !user.isAnonymous && user.email === 'johnpaulinso123@gmail.com';
     
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
-        safeSpendWidget.style.display = (isBPI && isAdmin) ? 'block' : 'none';
+        safeSpendWidget.style.display = isBPI ? 'block' : 'none';
     }
 }
 
 // Balance and Insight
-export function updateBPIInsight(totalSpentThisMonth) {
-    const insightEl = document.getElementById('bpi-remaining-insight');
-    if (!insightEl) return;
-    
-    const config = window.safeToSpendConfig || { savingsAmount: 3000 };
-    const monthlySalary = parseFloat(localStorage.getItem('monthly_salary_target') || '0');
-    
-    const remaining = monthlySalary - totalSpentThisMonth - config.savingsAmount;
-    const isHidden = localStorage.getItem('balance_hidden') === 'true';
-    
-    if (isHidden) {
-        insightEl.innerText = 'PHP ****** (******)';
-        return;
-    }
-    
-    const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' });
-    insightEl.innerHTML = `REMAINING: <span style="color:${remaining < 0 ? '#ef4444' : '#fff'}">${currency.format(remaining)}</span> 
-        <span style="opacity:0.6; font-weight:400;">(Budget: ${currency.format(monthlySalary)})</span>`;
-}
 
-export function updateSafeSpendUI() {
-    const container = document.getElementById('safe-spend-obligations');
-    if (!container) return;
-    
-    const config = window.safeToSpendConfig || { obligations: [] };
-    container.innerHTML = config.obligations.map(ob => `
-        <div class="obligation-item">
-            <span>${ob.title}</span>
-            <span class="privacy-mask">${formatLocalDate(ob.date)}: PHP ${ob.amount.toLocaleString()}</span>
-        </div>
-    `).join('');
-}
 
 // Theme Applicator
 export function applyTheme(accountOrColor) {
@@ -1096,8 +1040,7 @@ export function setupAccountSwitcher() {
 export function updateHeaderIcon(account) {
     const cardBg = document.getElementById('card-bg');
     if (cardBg) {
-        const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
-        if (account === 'bpi' && isAdmin) {
+        if (account === 'bpi') {
             cardBg.setAttribute('fill', '#8b0000'); // BPI red
         } else {
             cardBg.setAttribute('fill', '#1a1a1a'); // Atome black (Default)
@@ -1295,7 +1238,7 @@ export function drawCashFlowChart() {
         const d = new Date(t.date);
         const mIdx = months.findIndex(m => m.month === d.getMonth() && m.year === d.getFullYear());
         if (mIdx > -1) {
-            const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : { category: 'Other' };
+            const mapped = getMerchantDisplay(t.merchant, t);
             const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
             if (!t.excluded && !t.refund && !t.reimbursed) {
                 if (mapped.category === 'Income') months[mIdx].income += amt;
@@ -1306,19 +1249,21 @@ export function drawCashFlowChart() {
 
     const maxVal = Math.max(...months.map(m => Math.max(m.income, m.expense)), 1000);
     
-    container.innerHTML = months.map(m => {
-        const iH = (m.income / maxVal) * 100;
-        const eH = (m.expense / maxVal) * 100;
-        return `
-            <div class="cashflow-col">
-                <div class="bars-container">
-                    <div class="bar bar-income" style="height: ${iH}%"></div>
-                    <div class="bar bar-expense" style="height: ${eH}%"></div>
+    let html = '';
+    months.forEach(m => {
+        const incH = (m.income / maxVal) * 80;
+        const expH = (m.expense / maxVal) * 80;
+        html += `
+            <div class="bar-group">
+                <div class="bars-pair">
+                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ₱${m.income.toLocaleString()}"></div>
+                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ₱${m.expense.toLocaleString()}"></div>
                 </div>
-                <span class="bar-label">${m.name}</span>
+                <div class="bar-label">${m.name}</div>
             </div>
         `;
-    }).join('');
+    });
+    container.innerHTML = html;
 }
 
 function checkDailySummary() {
@@ -1466,12 +1411,26 @@ export function detectSubscriptions() {
     });
 }
 
+// Profile Dropdown Management
+export function toggleProfileDropdown(e) {
+    if (e) e.stopPropagation();
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) {
+        const isActive = dropdown.classList.toggle('active');
+        if (isActive) triggerHaptic('light');
+    }
+}
+
 // Notification Center Management
 export function toggleNotificationCenter(e) {
     if (e) e.stopPropagation();
     const sidebar = document.getElementById('notification-center');
+    console.log('🔔 toggleNotificationCenter called. Sidebar found:', !!sidebar);
     
-    if (!sidebar) return;
+    if (!sidebar) {
+        console.error('❌ Notification sidebar element (#notification-center) NOT FOUND in DOM');
+        return;
+    }
     
     const isActive = sidebar.classList.toggle('active');
     
@@ -1496,7 +1455,13 @@ export function renderNotifications() {
     const list = document.getElementById('notification-list');
     if (!list) return;
     
-    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    let notifications = [];
+    try {
+        notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    } catch (e) {
+        console.error('Failed to parse notifications from localStorage', e);
+        notifications = [];
+    }
     
     if (notifications.length === 0) {
         list.innerHTML = `
@@ -1653,10 +1618,44 @@ function setupFastPath() {
             if (window.updateBalanceCardsUI) window.updateBalanceCardsUI(accounts);
             if (window.applyAccountTheme) window.applyAccountTheme(cachedCurrent, accounts);
             
-            const { loadData } = import('./app-data.js').then(m => {
+            import('./app-data.js').then(m => {
                 window.fastPathTriggered = true;
-                m.loadData(lastUid);
+                if (m.loadData) m.loadData(lastUid);
             });
         } catch(e) { console.warn('Fast path failed', e); }
     }
 }
+
+// LEGACY BRIDGING (Final Export to Global Scope)
+function bridgeGlobals() {
+    console.log('🌐 Bridging exports to global scope...');
+    window.updateAccountSwitcherUI = updateAccountSwitcherUI;
+    window.updateBalanceCardsUI = updateBalanceCardsUI;
+    window.scrollToActiveCard = scrollToActiveCard;
+    window.updateProfileUI = updateProfileUI;
+    window.handleLocalModeNudge = handleLocalModeNudge;
+    window.switchAccount = switchAccount;
+    window.updateUnreadCount = updateUnreadCount;
+    window.toggleNotificationCenter = toggleNotificationCenter;
+    window.clearAllNotifications = clearAllNotifications;
+    window.applyAccountTheme = applyAccountTheme;
+    window.applyUserView = applyUserView;
+    window.applyTheme = applyTheme;
+    window.setupAccountSwitcher = setupAccountSwitcher;
+    window.updateHeaderIcon = updateHeaderIcon;
+    window.updateBalanceToThisMonth = updateBalanceToThisMonth;
+    window.updateInsightCards = updateInsightCards;
+    window.initPrivacyLock = initPrivacyLock;
+    window.tryBiometricUnlock = tryBiometricUnlock;
+    window.drawCashFlowChart = drawCashFlowChart;
+    window.toggleProfileDropdown = toggleProfileDropdown;
+    window.getMerchantDisplay = getMerchantDisplay;
+    window.displayCategoryName = displayCategoryName;
+    window.renderHistory = renderHistory;
+    window.drawPieChart = drawPieChart;
+    window.updateAISummary = updateAISummary;
+    console.log('✅ Global bridge complete.');
+}
+
+// Run bridging immediately
+bridgeGlobals();

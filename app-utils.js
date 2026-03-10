@@ -265,6 +265,40 @@ export function triggerHaptic(type = 'light') {
     }
 }
 
+/**
+ * Create and store a notification locally
+ * @param {string} title - Notification title
+ * @param {string} message - Notification message
+ * @param {string} type - 'info', 'warning', 'success', 'error'
+ * @param {object} action - Optional action object { label, callback }
+ */
+export function createNotification(title, message, type = 'info', action = null) {
+    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    const newNotif = {
+        id: Date.now(),
+        title,
+        message,
+        type,
+        time: new Date().toISOString(),
+        unread: true,
+        action: action ? { label: action.label, callbackString: action.callbackString } : null
+    };
+
+    notifications.unshift(newNotif);
+    // Keep only last 50 notifications
+    if (notifications.length > 50) notifications.pop();
+    
+    localStorage.setItem('smartwallet_notifications', JSON.stringify(notifications));
+
+    // Update unread count and UI if event listeners are active
+    window.dispatchEvent(new CustomEvent('notification-created', { detail: newNotif }));
+    
+    // Also show a toast for immediate feedback if it's high priority
+    if (type === 'warning' || type === 'error') {
+        showToast(`🔔 ${title}`);
+    }
+}
+
 // Strip HTML tags
 export const stripTags = (html) => {
     if (!html) return "";

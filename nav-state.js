@@ -336,8 +336,8 @@ const NavState = {
      * Initialize global back button listener
      */
     initBackNavigation(currentPage) {
+        // Standard Web History Listener
         window.addEventListener('popstate', (event) => {
-            // 1. Check if a modal is open
             if (this.modalStack.length > 0) {
                 const modal = this.modalStack.pop();
                 if (modal && typeof modal.closeFn === 'function') {
@@ -347,15 +347,99 @@ const NavState = {
                 }
             }
             
-            // 2. Hierarchical Navigation: If not on index.html, go to index.html
             const isMainPage = currentPage === 'index.html' || currentPage === '/' || currentPage === '';
             if (!isMainPage) {
                 console.log(` Back button: Navigating to Wallet (index.html)`);
                 window.location.href = 'index.html';
-            } else {
-                console.log(' Back button: At Wallet page, default behavior');
             }
         });
+
+        // NATIVE CAPACITOR BACK BUTTON
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            const { App } = window.Capacitor.Plugins;
+            if (App) {
+                console.log('📱 App plugin found, registering backButton listener');
+                let lastBackPress = 0;
+                App.addListener('backButton', ({ canGoBack }) => {
+                    console.log('📱 Native Back Button Pressed');
+                    
+                    // 1. Check Modals in Stack (managed by NavState)
+                    if (this.modalStack.length > 0) {
+                        const modal = this.modalStack.pop();
+                        if (modal && typeof modal.closeFn === 'function') {
+                            console.log(`🔙 Closing modal from stack: ${modal.id}`);
+                            modal.closeFn();
+                            // If history state exists for this modal, we might need to go back 
+                            // but usually closeFn (e.g. closeModals(true)) handles it.
+                            return;
+                        }
+                    }
+
+                    // 2. Check for common UI modals using global flags or .show class
+                    const iosMenu = document.getElementById('ios-menu');
+                    const hasVisibleModal = window.modalOpen || 
+                                          document.querySelector('.modal-overlay.show, .dialog-overlay.show, .custom-modal.show, .login-modal-overlay.show, .notification-sidebar.active') ||
+                                          (iosMenu && iosMenu.classList.contains('show'));
+                    
+                    if (hasVisibleModal) {
+                        console.log('📱 Visible modal detected via .show or window.modalOpen');
+                        
+                        // Handle iOS Context Menu specifically if open
+                        if (iosMenu && iosMenu.classList.contains('show')) {
+                            if (window.closeIOSMenu) {
+                                window.closeIOSMenu(true);
+                                return;
+                            }
+                        }
+
+                        if (window.closeModals) {
+                            window.closeModals(true); // true = fromPopState, avoid double history.back()
+                            return;
+                        }
+                        // Backup for notification center
+                        if (window.toggleNotificationCenter && document.getElementById('notification-center')?.classList.contains('active')) {
+                            window.toggleNotificationCenter();
+                            return;
+                        }
+                    }
+
+                    // 2.5 Check for Highlighted Transactions (Pie chart selection)
+                    if (document.querySelector('.highlight-txn')) {
+                        console.log('📱 Highlighted transactions detected, clearing');
+                        if (window.highlightTransactions) {
+                            window.highlightTransactions(null);
+                            return;
+                        }
+                    }
+
+                    // 3. Page Navigation Logic
+                    const path = window.location.pathname;
+                    const isMainPage = path.endsWith('index.html') || path === '/' || path === '' || currentPage === 'index.html';
+                    
+                    if (!isMainPage) {
+                        console.log('🔙 Navigating back to home');
+                        window.location.href = 'index.html';
+                    } else {
+                        // 4. Double-tap to exit logic for Home Page
+                        const now = Date.now();
+                        if (now - lastBackPress < 2000) {
+                            console.log('📱 Exiting app');
+                            App.exitApp();
+                        } else {
+                            lastBackPress = now;
+                            console.log('📱 Press back again to exit');
+                            if (window.showToast) {
+                                window.showToast('Press back again to exit');
+                            } else {
+                                alert('Press back again to exit');
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.warn('⚠️ Capacitor App plugin not found in window.Capacitor.Plugins');
+            }
+        }
         
         console.log(` Hierarchical back navigation initialized for ${currentPage}`);
     },

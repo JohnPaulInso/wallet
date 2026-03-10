@@ -1,10 +1,8 @@
 /**
  * Authentication management for the Wallet App
  */
-import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, GoogleAuthProvider as FirebaseGoogleProvider, signInWithCredential } from "./firebase-config.js";
+import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "./firebase-config.js";
 import { log, showToast } from "./app-utils.js";
-import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 // Global variables (now managed by this module)
 export let tokenClient = null;
@@ -66,34 +64,43 @@ export async function handleAuthClick() {
         // Mark that we just logged in — suppress automatic GIS popup after login
         window.justLoggedIn = true;
         
-        if (Capacitor.isNativePlatform()) {
-            log('Native platform detected. Using GoogleAuth plugin...');
-            const user = await GoogleAuth.signIn();
-            log('Native sign-in success!');
-            
-            // Convert to Firebase credential
-            const credential = FirebaseGoogleProvider.credential(user.authentication.idToken);
-            const result = await signInWithCredential(auth, credential);
-            handleAuthResult(result.user);
-            
-            // Handle Gmail Access Token if available from native auth
-            if (user.authentication.accessToken) {
-                accessToken = user.authentication.accessToken;
-                localStorage.setItem('g_access_token', accessToken);
-            }
-        } else {
+        // 🚀 NATIVE CAPACITOR SIGN-IN
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            log('📱 Native platform detected, using Capacitor GoogleAuth plugin');
+            const { GoogleAuth } = window.Capacitor.Plugins;
             try {
-                const result = await signInWithPopup(auth, provider);
-                log('signInWithPopup success!');
+                const user = await GoogleAuth.signIn();
+                log('📱 Native Google Sign-In success!');
+                
+                const { signInWithCredential } = await import("./firebase-config.js");
+                const credential = GoogleAuthProvider.credential(user.authentication.idToken);
+                
+                const result = await signInWithCredential(auth, credential);
+                log('📱 Firebase auth with native credential success!');
                 handleAuthResult(result.user);
-            } catch (popupError) {
-                if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                    log('Popup blocked. Falling back to redirect...');
-                    localStorage.setItem('auth_redirect_pending', 'true');
-                    await signInWithRedirect(auth, provider);
-                } else {
-                    throw popupError;
+                return;
+            } catch (nativeError) {
+                log('📱 Native Sign-In Error: ' + nativeError.message, 'error');
+                // If it was cancelled, just stop
+                if (nativeError.message?.includes('cancel') || nativeError.code === 'CHOSE_NO_ACCOUNT') {
+                    throw new Error('Sign-in cancelled');
                 }
+                // Fallback to popup if native fails but isn't a cancellation
+                log('📱 Falling back to web popup...');
+            }
+        }
+        
+        try {
+            const result = await signInWithPopup(auth, provider);
+            log('signInWithPopup success!');
+            handleAuthResult(result.user);
+        } catch (popupError) {
+            if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+                log('Popup blocked. Falling back to redirect...');
+                localStorage.setItem('auth_redirect_pending', 'true');
+                await signInWithRedirect(auth, provider);
+            } else {
+                throw popupError;
             }
         }
     } catch (e) {

@@ -285,8 +285,6 @@ export function createNotification(title, message, type = 'info', action = null)
     };
 
     notifications.unshift(newNotif);
-    // Keep only last 50 notifications
-    if (notifications.length > 50) notifications.pop();
     
     localStorage.setItem('smartwallet_notifications', JSON.stringify(notifications));
 

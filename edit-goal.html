@@ -1118,13 +1118,17 @@
                 if (input) input.value = '';
 
                 modal.style.display = 'flex';
+                if (nav) nav.pushModalState('depositModal', () => modal.style.display = 'none');
                 if (input) setTimeout(() => input.focus(), 100);
             }
         };
 
         window.closeDepositModal = function() {
             const modal = document.getElementById('depositModal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                if (nav) nav.popModalState('depositModal');
+                modal.style.display = 'none';
+            }
             const input = document.getElementById('depositAmountInput');
             if (input) input.value = '';
         };

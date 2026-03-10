@@ -8,6 +8,37 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="manifest" href="manifest.json?v=1">
+
+    <script>
+        // Robust APK/Native Detection
+        const isNative = () => {
+            return (window.Capacitor && window.Capacitor.isNativePlatform()) || 
+                   window.location.href.includes('capacitor://') || 
+                   window.location.href.includes('http://localhost');
+        };
+        if (isNative()) document.documentElement.classList.add('is-native');
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isNative()) document.documentElement.classList.add('is-native');
+        });
+    </script>
+    <style>
+        /* APK specific styling: -10% font sizes ONLY */
+        .is-native { --base-font-scale: 0.9; }
+        .is-native body { /* font-size: 16px; */ font-size: 14.4px !important; }
+        .is-native .user-name { /* font-size: 18px; */ font-size: 16.2px !important; }
+        .is-native .greeting-text { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .nav-item span { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .nav-item i { /* font-size: 24px; */ font-size: 21.6px !important; }
+        .is-native .summary-value { /* font-size: 28px; */ font-size: 25.2px !important; }
+        .is-native .goal-title { /* font-size: 12px; */ font-size: 10.8px !important; }
+        .is-native .goal-amount { /* font-size: 13px; */ font-size: 11.7px !important; }
+        
+        /* Modal scaling for APK - Full Coverage */
+        .is-native .modal-card {
+            width: 100% !important; max-width: 100% !important;
+            max-height: 98vh !important; border-radius: 28px 28px 0 0 !important;
+        }
+    </style>
     <title>Financial Goals - Smart Wallet</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
@@ -1156,6 +1187,14 @@
 
     <!-- UI & Firebase Logic -->
     <script src="nav-state.js"></script>
+    <script>
+        // Hierarchical Back Navigation
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.NavState) {
+                window.NavState.initBackNavigation('goals.html');
+            }
+        });
+    </script>
     <script type="module">
         import { 
             auth, db, onAuthStateChanged, 
@@ -1285,12 +1324,15 @@
             if (modalTitle) modalTitle.innerText = 'Deposit to Goal';
             if (confirmBtn) confirmBtn.innerText = 'Confirm Deposit';
             if (amountLabel) amountLabel.innerText = 'Deposit Amount';
+            
             if (input) input.value = '';
-
+            
             const modal = document.getElementById('depositModal');
-            modal.style.display = 'flex';
-            if (nav) nav.pushModalState('depositModal', () => modal.style.display = 'none');
-            if (input) setTimeout(() => input.focus(), 100);
+            if (modal) {
+                modal.style.display = 'flex';
+                if (nav) nav.pushModalState('depositModal', () => modal.style.display = 'none');
+            }
+            if (input) setTimeout(() => input.focus(), 300);
         }
 
         window.openContextMenu = function(e, id) {

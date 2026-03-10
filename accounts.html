@@ -11,6 +11,37 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <script>
+        // Robust APK/Native Detection
+        const isNative = () => {
+            return (window.Capacitor && window.Capacitor.isNativePlatform()) || 
+                   window.location.href.includes('capacitor://') || 
+                   window.location.href.includes('http://localhost');
+        };
+        if (isNative()) document.documentElement.classList.add('is-native');
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isNative()) document.documentElement.classList.add('is-native');
+        });
+    </script>
+    <style>
+        /* APK specific styling: -10% font sizes ONLY */
+        .is-native { --base-font-scale: 0.9; }
+        .is-native body { /* font-size: 16px; */ font-size: 14.4px !important; }
+        .is-native .balance-amount { /* font-size: 32px; */ font-size: 28.8px !important; }
+        .is-native .user-name { /* font-size: 18px; */ font-size: 16.2px !important; }
+        .is-native .dash-section-title { /* font-size: 1rem; */ font-size: 0.9rem !important; }
+        .is-native .txn-amount { /* font-size: 13px; */ font-size: 11.7px !important; }
+        .is-native .nav-item span { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .nav-item i { /* font-size: 24px; */ font-size: 21.6px !important; }
+        .is-native .insight-val { /* font-size: 18px; */ font-size: 16.2px !important; }
+        
+        /* Modal scaling for APK - Full Coverage */
+        .is-native .custom-modal, .is-native .modal-overlay .modal-content {
+            width: 100% !important; max-width: 100% !important;
+            max-height: 98vh !important; border-radius: 28px 28px 0 0 !important;
+        }
+    </style>
     
     <!-- Material UI CSS & Premium Fonts -->
     <link href="https://cdn.muicss.com/mui-0.10.3/css/mui.min.css" rel="stylesheet" type="text/css" />
@@ -438,6 +469,14 @@
     </div>
 
     <script src="nav-state.js"></script>
+    <script>
+        // Hierarchical Back Navigation
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.NavState) {
+                window.NavState.initBackNavigation('accounts.html');
+            }
+        });
+    </script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";

@@ -1144,7 +1144,7 @@
                 };
 
                 overlay.classList.add('show');
-                if (window.NavState) window.NavState.pushModalState('app-dialog', () => overlay.classList.remove('show'));
+                if (window.NavState) window.NavState.pushModalState('app-dialog', () => close(null));
             });
         };
 

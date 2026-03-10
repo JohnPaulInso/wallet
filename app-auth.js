@@ -1,8 +1,10 @@
 /**
  * Authentication management for the Wallet App
  */
-import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signInAnonymously } from "./firebase-config.js";
+import { auth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, GoogleAuthProvider as FirebaseGoogleProvider, signInWithCredential } from "./firebase-config.js";
 import { log, showToast } from "./app-utils.js";
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 // Global variables (now managed by this module)
 export let tokenClient = null;
@@ -10,6 +12,8 @@ export let accessToken = null;
 export let tokenRefreshInProgress = false;
 export let lastTokenRefreshAttempt = 0;
 export const TOKEN_REFRESH_COOLDOWN = 60000; // 1 minute
+export let isAuthInProgress = false; // Guard for gate flicker
+window.isAuthInProgress = false; // Expose to window for index.html
 
 // Initialize Google Identity Services (GIS)
 export function initGIS() {
@@ -49,7 +53,11 @@ export async function handleAuthClick() {
     
     // Zero-latency UI feedback
     const btn = event?.currentTarget || document.activeElement;
-    if (btn && btn.classList) btn.style.opacity = '0.5';
+    if (btn && btn.classList && btn.classList.contains('guest-gate-btn')) {
+        btn.classList.add('loading');
+    }
+    isAuthInProgress = true;
+    window.isAuthInProgress = true;
 
     try {
         const provider = new GoogleAuthProvider();
@@ -58,25 +66,48 @@ export async function handleAuthClick() {
         // Mark that we just logged in — suppress automatic GIS popup after login
         window.justLoggedIn = true;
         
-        try {
-            const result = await signInWithPopup(auth, provider);
-            log('signInWithPopup success!');
+        if (Capacitor.isNativePlatform()) {
+            log('Native platform detected. Using GoogleAuth plugin...');
+            const user = await GoogleAuth.signIn();
+            log('Native sign-in success!');
+            
+            // Convert to Firebase credential
+            const credential = FirebaseGoogleProvider.credential(user.authentication.idToken);
+            const result = await signInWithCredential(auth, credential);
             handleAuthResult(result.user);
-        } catch (popupError) {
-            if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                log('Popup blocked. Falling back to redirect...');
-                localStorage.setItem('auth_redirect_pending', 'true');
-                await signInWithRedirect(auth, provider);
-            } else {
-                throw popupError;
+            
+            // Handle Gmail Access Token if available from native auth
+            if (user.authentication.accessToken) {
+                accessToken = user.authentication.accessToken;
+                localStorage.setItem('g_access_token', accessToken);
+            }
+        } else {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                log('signInWithPopup success!');
+                handleAuthResult(result.user);
+            } catch (popupError) {
+                if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+                    log('Popup blocked. Falling back to redirect...');
+                    localStorage.setItem('auth_redirect_pending', 'true');
+                    await signInWithRedirect(auth, provider);
+                } else {
+                    throw popupError;
+                }
             }
         }
     } catch (e) {
         window.justLoggedIn = false;
+        isAuthInProgress = false;
+        window.isAuthInProgress = false;
+        const btn = document.querySelector('.guest-gate-btn');
+        if (btn) btn.classList.remove('loading');
+        
         log('Google Sign-In Error: ' + e.message, 'error');
         showToast('Login failed. Please try again.');
     } finally {
-        if (btn && btn.classList) btn.style.opacity = '1';
+        // We don't remove loading in finally if success, because we want the spinner 
+        // to stay until the gate is completely removed by handleAuthResult
     }
 }
 
@@ -84,13 +115,18 @@ export async function handleAuthClick() {
 export function handleAuthResult(user) {
     if (!user) return;
 
-    log('Auth Detected: ' + (user.isAnonymous ? 'Guest' : user.email) + ' [UID: ' + user.uid + ']');
+    log('Auth Detected: ' + user.email + ' [UID: ' + user.uid + ']');
     
     // IMMEDIATELY hide guest gate and sync banner on login success
     const gate = document.getElementById('guestGate');
     if (gate) gate.style.display = 'none';
     const banner = document.getElementById('local-banner');
     if (banner) banner.style.display = 'none';
+    
+    // Clear progress flags
+    isAuthInProgress = false;
+    window.isAuthInProgress = false;
+    localStorage.removeItem('auth_redirect_pending');
 
     if (!user.isAnonymous) {
         localStorage.setItem('wallet_auth_type', 'google');
@@ -105,12 +141,12 @@ export function handleAuthResult(user) {
     const dbBadge = document.getElementById('mode-status');
     const emailDisplay = document.getElementById('admin-email-display');
     if (dbBadge) {
-       dbBadge.className = 'status-chip ' + (user.isAnonymous ? 'status-local' : 'status-ready');
-       if (emailDisplay) emailDisplay.innerText = user.isAnonymous ? '(UNSYNCED)' : `(${user.email.toUpperCase()})`;
+       dbBadge.className = 'status-chip status-ready';
+       if (emailDisplay) emailDisplay.innerText = `(${user.email.toUpperCase()})`;
     }
 
     // Update UI with full first name
-    const fullName = user.displayName || (user.isAnonymous ? 'Guest' : 'User');
+    const fullName = user.displayName || 'User';
     const parts = fullName.trim().split(/\s+/);
     const firstName = parts.length > 1 ? parts.slice(0, 2).join(' ') : parts[0];
     
@@ -138,7 +174,7 @@ export function handleAuthResult(user) {
     if (user.email) localStorage.setItem('user_email', user.email);
 
     // Save to NavState for other pages
-    if (window.NavState && !user.isAnonymous) {
+    if (window.NavState) {
         window.NavState.saveProfile(fullName, user.photoURL || '', user.email);
     }
 
@@ -184,8 +220,10 @@ export async function handleSignout() {
 export function initAuth() {
     // Check for redirect result
     getRedirectResult(auth).then((result) => {
+        localStorage.removeItem('auth_redirect_pending');
         if (result?.user) handleAuthResult(result.user);
     }).catch((error) => {
+        localStorage.removeItem('auth_redirect_pending');
         log('Redirect Auth Error: ' + error.message, 'error');
     });
 
@@ -193,38 +231,31 @@ export function initAuth() {
     let authWaitStarted = false;
     onAuthStateChanged(auth, async (user) => {
         const isRedirectPending = localStorage.getItem('auth_redirect_pending') === 'true';
-        const lastAuthType = localStorage.getItem('wallet_auth_type');
 
         if (!user) {
             if (isRedirectPending) {
-                log('Redirect pending detected. Holding anonymous fallback...');
-                return; // Wait for getRedirectResult to finish
-            }
-
-            // PERSISTENCE FIX: If we previously had a google session, wait before falling back to guest
-            if (lastAuthType === 'google' && !authWaitStarted) {
-                authWaitStarted = true;
-                log('Waiting for persistent Google session...');
-                setTimeout(() => {
-                    if (!auth.currentUser) {
-                        log('Google session not found after timeout. Using local fallback.');
-                        signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
-                    }
-                }, 12000);
+                log('Redirect pending detected. Waiting for result...');
                 return;
             }
 
-            log('Establishing secure local session...');
-            signInAnonymously(auth).catch(e => log('Local session error: ' + e.message, 'error'));
+            if (isAuthInProgress) {
+                log('Auth is in progress... holding gate.');
+                return;
+            }
+
+            log('No active session. Showing login gate.');
+            const gate = document.getElementById('guestGate');
+            if (gate) gate.style.display = 'flex';
             
-            // Show guest gate after delay
-            setTimeout(() => {
-                const redirectActive = localStorage.getItem('auth_redirect_pending') === 'true';
-                if ((!auth.currentUser || auth.currentUser.isAnonymous) && !window.justLoggedIn && !redirectActive) {
-                    const gate = document.getElementById('guestGate');
-                    if (gate) gate.style.display = 'flex';
-                }
-            }, 2000);
+            // Clear any stale local state
+            localStorage.removeItem('wallet_auth_type');
+            return;
+        }
+
+        // If for some reason we have an anonymous user (legacy), sign them out to force Google login
+        if (user.isAnonymous) {
+            log('Anonymous session detected (Legacy). Signing out to enforce Google login...');
+            await auth.signOut();
             return;
         }
 

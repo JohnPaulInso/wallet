@@ -612,31 +612,54 @@
         });
 
         window.handleAuthClick = async () => {
+            const btn = event?.currentTarget || document.activeElement;
+            if (btn && btn.classList && btn.classList.contains('guest-gate-btn')) {
+                btn.classList.add('loading');
+            }
+            window.isAuthInProgress = true;
+
             const provider = new GoogleAuthProvider();
             provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
             
             // DETECT MOBILE FOR REDIRECT
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
             if (isMobile) {
-                try { await signInWithRedirect(auth, provider); } catch (e) { console.error(e); }
+                try { 
+                    localStorage.setItem('auth_redirect_pending', 'true');
+                    await signInWithRedirect(auth, provider); 
+                } catch (e) { console.error(e); }
                 return;
             }
 
             try { 
                 const result = await signInWithPopup(auth, provider); 
                 const credential = GoogleAuthProvider.credentialFromResult(result);
+                
+                window.isAuthInProgress = false;
+                const gate = document.getElementById('guestGate');
+                if (gate) gate.style.display = 'none';
+
                 if (credential) {
                     localStorage.setItem('g_access_token', credential.accessToken);
                     localStorage.setItem('g_token_issued_at', Date.now().toString());
                     localStorage.setItem('g_token_expiry', (Date.now() + 365 * 24 * 60 * 60 * 1000).toString());
                     console.log('✅ Gmail token saved from Popup');
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                window.isAuthInProgress = false;
+                const gateBtn = document.querySelector('.guest-gate-btn');
+                if (gateBtn) gateBtn.classList.remove('loading');
+                console.error(e); 
+            }
         };
 
         // HANDLE REDIRECT RESULT
         getRedirectResult(auth).then(result => {
+            localStorage.removeItem('auth_redirect_pending');
             if (result) {
+                const gate = document.getElementById('guestGate');
+                if (gate) gate.style.display = 'none';
+                
                 const credential = GoogleAuthProvider.credentialFromResult(result);
                 if (credential) {
                     localStorage.setItem('g_access_token', credential.accessToken);
@@ -645,7 +668,10 @@
                     console.log('✅ Gmail token saved from Redirect');
                 }
             }
-        }).catch(e => console.error('Redirect error:', e));
+        }).catch(e => {
+            localStorage.removeItem('auth_redirect_pending');
+            console.error('Redirect error:', e);
+        });
 
         window.handleSignout = async () => {
             if (confirm('Sign out?')) {

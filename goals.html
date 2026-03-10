@@ -1162,6 +1162,7 @@
             collection, addDoc, getDocs, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp,
             getDoc
         } from "./firebase-config.js";
+        import { createNotification } from "./app-utils.js";
 
         // Global check for NavState
         const nav = window.NavState;
@@ -1800,8 +1801,27 @@
                 circle.style.strokeDashoffset = circumference - (Math.min(100, overallPercent) / 100 * circumference);
             }
 
+            // Goal Milestone Alerts
+            includedGoals.forEach(g => {
+                const pct = g.targetAmount > 0 ? (g.currentAmount || 0) / g.targetAmount : 0;
+                if (pct >= 1) {
+                    checkAndTriggerGoalAlert(g.id, 'Goal Completed! 🏆', `Congratulations! You've reached your ₱${g.targetAmount.toLocaleString()} goal for ${g.title}.`, 'success', '100');
+                } else if (pct >= 0.5) {
+                    checkAndTriggerGoalAlert(g.id, 'Halfway There!', `You're 50% through your goal for ${g.title}. Keep it up!`, 'success', '50');
+                }
+            });
+
             const remaining = includedGoals.reduce((sum, g) => sum + Math.max(0, g.targetAmount - (g.currentAmount || 0)), 0);
             updateForecast(remaining);
+        }
+
+        function checkAndTriggerGoalAlert(goalId, title, message, type, milestone) {
+            const alertKey = `goal_${goalId}_${milestone}`;
+            const alreadySent = localStorage.getItem(alertKey);
+            if (!alreadySent) {
+                createNotification(title, message, type);
+                localStorage.setItem(alertKey, 'true');
+            }
         }
 
         function initSortable() {

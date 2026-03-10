@@ -798,11 +798,22 @@
         });
 
         window.handleAuthClick = async () => {
+            const btn = event?.currentTarget || document.activeElement;
+            if (btn && btn.classList && btn.classList.contains('guest-gate-btn')) {
+                btn.classList.add('loading');
+            }
+            window.isAuthInProgress = true;
+
             const provider = new GoogleAuthProvider();
             provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
             try {
                 const result = await signInWithPopup(auth, provider);
                 const credential = GoogleAuthProvider.credentialFromResult(result);
+                
+                window.isAuthInProgress = false;
+                const gate = document.getElementById('guestGate');
+                if (gate) gate.style.display = 'none';
+
                 if (credential) {
                     localStorage.setItem('g_access_token', credential.accessToken);
                     localStorage.setItem('g_token_issued_at', Date.now().toString());
@@ -810,6 +821,9 @@
                     console.log('✅ Gmail token saved from Popup');
                 }
             } catch (error) {
+                window.isAuthInProgress = false;
+                const gateBtn = document.querySelector('.guest-gate-btn');
+                if (gateBtn) gateBtn.classList.remove('loading');
                 console.error('Auth Failure:', error);
             }
         };

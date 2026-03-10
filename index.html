@@ -37,6 +37,76 @@
     <!-- GOOGLE IDENTITY SERVICES (EAGER LOAD) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+    <!-- CAPACITOR CORE (REQUIRED FOR NATIVE PLUGINS) -->
+    <script src="capacitor.js"></script>
+
+    <script>
+        // High-priority detection for APK/Native Scaling
+        const isNative = () => {
+            return (window.Capacitor && window.Capacitor.isNativePlatform()) || 
+                   window.location.href.includes('capacitor://') || 
+                   window.location.href.includes('http://localhost');
+        };
+        
+        if (isNative()) {
+            document.documentElement.classList.add('is-native');
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isNative()) document.documentElement.classList.add('is-native');
+        });
+    </script>
+    <!-- Consolidate ALL APK styling after original CSS -->
+    <style>
+        .is-native { --base-font-scale: 0.9; }
+        .is-native body { /* font-size: 16px; */ font-size: 14.4px !important; }
+        
+        .is-native .user-name { /* font-size: 18px; */ font-size: 16.2px !important; }
+        .is-native .greeting-text { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .dash-section-title { /* font-size: 1rem; */ font-size: 1rem !important; }
+        .is-native .balance-amount { /* font-size: 32px; */ font-size: 28.8px !important; }
+        .is-native .card-label, .is-native .card-type-label { /* font-size: 10px; */ font-size: 9px !important; }
+        .is-native .card-number-label, .is-native .status-text, .is-native .integrated-sync-btn { /* font-size: 8px; */ font-size: 7.2px !important; }
+        .is-native .card-number { /* font-size: 13.5px; */ font-size: 12.15px !important; }
+        .is-native .nav-item span { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .nav-item i { /* font-size: 24px; */ font-size: 21.6px !important; }
+        .is-native .txn-amount { /* font-size: 13px; */ font-size: 11.7px !important; }
+        .is-native .txn-merch { /* font-size: 12px; */ font-size: 10.8px !important; }
+        .is-native .txn-sub, .is-native .txn-note { /* font-size: 9.5px; */ font-size: 8.55px !important; }
+        .is-native .month-title, .is-native .month-total { /* font-size: 0.8rem; */ font-size: 0.72rem !important; }
+        .is-native .recent-header h3, .is-native .recent-header .see-all { /* font-size: 13px; */ font-size: 10px !important; }
+        .is-native .insight-label, .is-native .bar-label { /* font-size: 9px; */ font-size: 8.1px !important; }
+        .is-native .insight-value, .is-native .chart-center-value { /* font-size: 18px; */ font-size: 16.2px !important; }
+        .is-native .insight-sub, .is-native .trend-label, .is-native .chart-center-label { /* font-size: 10px; */ font-size: 9px !important; }
+        .is-native .savings-chip, .is-native .chart-center-pct, .is-native .progress-label, .is-native .progress-stats { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .triple-progress-title { /* font-size: 14px; */ font-size: 12.6px !important; }
+        .is-native .triple-month-label { /* font-size: 9px; */ font-size: 8.1px !important; }
+        
+        .is-native .safe-spend-amount-v2 { /* font-size: 26px; */ font-size: 23.4px !important; }
+        .is-native .safe-spend-subtitle-v2, .is-native .breakdown-name { /* font-size: 9px; */ font-size: 8.1px !important; }
+        .is-native .breakdown-meta { /* font-size: 8.5px; */ font-size: 7.65px !important; }
+        .is-native .breakdown-val { /* font-size: 12px; */ font-size: 10.8px !important; }
+        .is-native .cat-budget-title { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .cat-budget-add-btn { /* font-size: 12px; */ font-size: 10.8px !important; }
+        .is-native .sub-name { /* font-size: 12px; */ font-size: 9.5px !important; }
+        .is-native .sub-meta, .is-native .sub-avg-label { /* font-size: 9px; */ font-size: 8px !important; }
+        .is-native .sub-current-vs-avg { /* font-size: 11px; */ font-size: 9.9px !important; }
+        .is-native .dropdown-item { /* font-size: 13.5px; */ font-size: 12.15px !important; }
+        .is-native .monthly-summary-header h3 { /* font-size: 1rem; */ font-size: 0.9rem !important; }
+        .is-native .summary-item .s-label { /* font-size: 9px; */ font-size: 8.1px !important; }
+        .is-native .summary-item .s-value { /* font-size: 14px; */ font-size: 12.6px !important; }
+        
+        /* Modals and Overlays covering whole screen */
+        .is-native #manual-modal-content {
+            width: 100% !important; max-width: 100% !important; margin: 0 !important;
+            max-height: 98vh !important; border-radius: 28px 28px 0 0 !important;
+        }
+        .is-native .custom-modal * { font-size: 0.9em; }
+        .is-native .manual-cat-circle i { font-size: 20px !important; }
+        .is-native #manual-txn-modal .custom-modal { height: 98vh !important; }
+        #manual-txn-modal { backdrop-filter: blur(10px) !important; background: rgba(0,0,0,0.5) !important; }
+    </style>
+
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -278,7 +348,7 @@
             <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
             <div id="safe-spend-widget" class="safe-spend-card">
                 <div class="safe-spend-header-v2">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Safe To Spend</h3>
+                    <h3 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px;">Safe To Spend</h3>
                     <button class="obligation-btn" onclick="promptSetObligations()">
                         <i class="material-icons" style="font-size: 14px;">add</i> ADD
                     </button>
@@ -506,12 +576,12 @@
 
                 <div style="display: flex; margin-bottom: 20px;">
                     <div style="flex: 1;">
-                        <div style="font-size: 11px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.9;">Total Expenses</div>
-                        <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);" id="expenses-total-summary" class="dash-total-val">PHP 0.00</div>
+                        <div style="font-size: 10px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.9;">Total Expenses</div>
+                        <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);" id="expenses-total-summary" class="dash-total-val">PHP 0.00</div>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-size: 11px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.8;">vs past period</div>
-                        <div id="mom-growth-box" style="font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);"><span id="mom-growth"></span></div>
+                        <div style="font-size: 10px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.8;">vs past period</div>
+                        <div id="mom-growth-box" style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);"><span id="mom-growth"></span></div>
                     </div>
                 </div>
 
@@ -533,7 +603,7 @@
             <!-- TREND SECTION -->
             <div class="trend-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--text-primary); text-decoration: none;">Spending Trends</h3>
+                    <h3 style="margin: 0; font-size: 0.9rem; font-weight: 800; color: var(--text-primary); text-decoration: none;">Spending Trends</h3>
                     <select id="trend-filter" onchange="refreshTrendChart()" class="mui-btn mui-btn--flat dash-filter-select">
                         <option value="this_month" selected>This Month</option>
                         <option value="this_vs_prev">This vs Prev Month</option>
@@ -583,13 +653,13 @@
 
                 <div style="border-top: 1px dashed var(--border-color); padding-top: 16px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 13px; color: var(--text-primary); font-weight: 600;">Period Total</span>
-                    <span style="font-size: 1.1rem; font-weight: 800; color: #10b981;" id="trend-period-total">PHP 0.00</span>
+                    <span style="font-size: 0.85rem; font-weight: 800; color: #10b981;" id="trend-period-total">PHP 0.00</span>
                 </div>
             </div>
 
 
             <div class="recent-header">
-                <h3>Recent Transactions</h3>
+                <h3 style="font-size: 0.6rem !important;">Recent Transactions</h3>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="logo-toggle-wrapper" title="Toggle Brand Logos" onclick="toggleLogos()" style="background: var(--bg-secondary); padding: 4px 8px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; border: .5px solid #e0e0e0">
                         <i class="material-icons" id="logo-toggle-icon" style="font-size: 16px; color: var(--nav-active);">visibility</i>
@@ -615,10 +685,10 @@
 
             <div id="history-container"></div>
 
-            <div style="margin: 24px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
+            <div style="margin: 20px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
 
             <!-- CATEGORY BUDGET LIMITER WIDGET -->
-            <div id="cat-budget-widget" class="cat-budget-card" style="display: none;">
+            <div id="cat-budget-widget" class="cat-budget-card" style="display: none;margin: 40px 0px 20px;">
                 <div class="cat-budget-header">
                     <h3 class="cat-budget-title">Category Limits</h3>
                     <button class="cat-budget-add-btn" onclick="promptAddCategoryBudget()">
@@ -634,7 +704,7 @@
             <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
-            <div class="analytics-card" id="analytics-section" style="margin: 20px 16px 10px; padding: 15px; border-radius: 16px;">
+            <div class="analytics-card" id="analytics-section" style="margin: 20px 0px 20px; padding: 15px; border-radius: 16px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h3 class="dash-section-title" style="margin:0; font-size: 0.95rem;">Cash Flow</h3>
                     <div class="savings-chip">Savings Rate: <span id="savings-rate-val">0%</span></div>
@@ -656,15 +726,15 @@
             </div>
 
             <!-- RECURRING ITEMS SUBSCRIPTION SECTION -->
-            <div class="analytics-card" id="subscription-section" style="display: none; margin: 10px 16px 20px; padding: 15px; border-radius: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="analytics-card" id="subscription-section" style="display: none; margin: 20px 0px 20px; padding: 15px; border-radius: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <h3 class="dash-section-title" style="margin:0; font-size: 0.95rem;">Recurring Items</h3>
+                        <h3 class="dash-section-title" style="margin:0; font-size: 0.8rem;">Recurring Items</h3>
                         <span id="sub-count-badge" style="background:#f1f5f9; color:#64748b; font-size:9px; font-weight:800; padding:2px 6px; border-radius:10px;">0</span>
                     </div>
                     <div style="text-align: right;">
                         <div id="sub-limit-label" class="privacy-mask" onclick="promptSetSubLimit()" style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; cursor: pointer;">Limit: ₱0</div>
-                        <div id="sub-total-label" class="privacy-mask" style="font-size: 11px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
+                        <div id="sub-total-label" class="privacy-mask" style="font-size: 9px; font-weight: 800; color: #1e293b;">₱0.00 / mo</div>
                     </div>
                 </div>
                 <div class="sub-limit-bar">
@@ -765,7 +835,7 @@
     <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
         <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
             <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
-                <h3 id="cat-budget-modal-title" style="margin: 0; font-size: 1.1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
+                <h3 id="cat-budget-modal-title" style="margin: 0; font-size: 0.9rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
             </div>
             
             <div class="modal-body">
@@ -944,9 +1014,8 @@
             } catch (e) { log('Profile refresh fail: ' + e.message, 'error'); }
         }
 
-         window.handleAuthClick = async () => {
-            log('Starting Google Sign-In Flow...');
-             // Zero-latency UI feedback
+        window.handleAuthClick = async () => {
+             log('Starting Google Sign-In Flow...');
              const btn = event?.currentTarget || document.activeElement;
              if (btn && btn.classList && btn.classList.contains('guest-gate-btn')) {
                  btn.classList.add('loading');
@@ -956,34 +1025,74 @@
              try {
                  const provider = new GoogleAuthProvider();
                  provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
-                 
-                 // Mark that we just logged in — suppress automatic GIS popup after login
                  window.justLoggedIn = true;
                 
-                try {
-                    const result = await signInWithPopup(auth, provider);
-                    log('signInWithPopup success!');
-                    handleAuthResult(result);
-                } catch (popupError) {
-                    if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                        log('Popup blocked. Falling back to redirect...');
-                        localStorage.setItem('auth_redirect_pending', 'true');
-                        await signInWithRedirect(auth, provider);
-                    } else {
-                        throw popupError;
-                    }
-                }
+                 if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                     log('Native platform detected. Using Capacitor GoogleAuth...');
+                     const GoogleAuth = window.Capacitor.Plugins.GoogleAuth;
+                     
+                     if (!GoogleAuth) {
+                         throw new Error('GoogleAuth plugin not available');
+                     }
+
+                     try {
+                         // Safe initialize check for Capacitor GoogleAuth 3.x+
+                         if (typeof GoogleAuth.initialize === 'function') {
+                             await GoogleAuth.initialize({
+                                 clientId: CLIENT_ID,
+                                 scopes: ['profile', 'email'],
+                                 grantOfflineAccess: true
+                             });
+                         }
+                         
+                         log('Calling GoogleAuth.signIn()...');
+                         const user = await GoogleAuth.signIn();
+                         log('Native sign-in success!');
+                         
+                         const { signInWithCredential, GoogleAuthProvider: FirebaseProvider } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                         const credential = FirebaseProvider.credential(user.authentication.idToken);
+                         const result = await signInWithCredential(auth, credential);
+                         handleAuthResult(result);
+                         
+                         if (user.authentication.accessToken) {
+                             localStorage.setItem('g_access_token', user.authentication.accessToken);
+                         }
+                     } catch (nativeError) {
+                         log('Native Auth Error: ' + (nativeError.message || JSON.stringify(nativeError)), 'error');
+                         // Fallback to browser flow if native plugin fails/crashes
+                         log('Falling back to platform-default sign-in...');
+                         const { signInWithPopup, signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                         try {
+                             await signInWithPopup(auth, provider);
+                         } catch (popupErr) {
+                             await signInWithRedirect(auth, provider);
+                         }
+                     }
+                 } else {
+                     try {
+                         const { signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                         const result = await signInWithPopup(auth, provider);
+                         log('signInWithPopup success!');
+                         handleAuthResult(result);
+                     } catch (popupError) {
+                         if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
+                             log('Popup blocked. Falling back to redirect...');
+                             localStorage.setItem('auth_redirect_pending', 'true');
+                             const { signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                             await signInWithRedirect(auth, provider);
+                         } else {
+                             throw popupError;
+                         }
+                     }
+                 }
             } catch (e) {
                 window.justLoggedIn = false;
                 window.isAuthInProgress = false;
                 const btn = document.querySelector('.guest-gate-btn');
                 if (btn) btn.classList.remove('loading');
                 
-                log('Google Sign-In Error: ' + e.message, 'error');
-                showToast('Login failed. Please try again.');
-            } finally {
-                // We don't remove loading in finally if success, because we want the spinner 
-                // to stay until the gate is completely removed by handleAuthResult
+                log('Google Sign-In Error: ' + (e.message || JSON.stringify(e)), 'error');
+                showToast('Login failed: ' + (e.message || 'Check config'));
             }
         };
 
@@ -1119,6 +1228,8 @@
                 } else {
                     inputCont.style.display = 'none';
                 }
+
+                if (window.NavState) window.NavState.pushModalState('app-dialog', () => close(null));
 
                 okBtn.innerText = (confirm || input) ? 'CONFIRM' : 'OK';
 
@@ -1259,10 +1370,21 @@
                         return;
                     }
 
-                    log('No active session. Showing login gate.');
-                    const gate = document.getElementById('guestGate');
-                    if (gate) gate.style.display = 'flex';
+                    // DEBOUNCE GATE SHOWING (Prevents flicker during token rotate or network hiccup)
+                    if (window.gateTimeout) clearTimeout(window.gateTimeout);
+                    window.gateTimeout = setTimeout(() => {
+                        if (!auth.currentUser) {
+                            log('No active session confirmed. Showing login gate.');
+                            const gate = document.getElementById('guestGate');
+                            if (gate) gate.style.display = 'flex';
+                        }
+                    }, 2000); // 2 second grace period
                     return;
+                }
+
+                if (window.gateTimeout) {
+                    clearTimeout(window.gateTimeout);
+                    window.gateTimeout = null;
                 }
 
                 // If logged in as Google, update flag and IMMEDIATELY hide gate
@@ -1270,6 +1392,11 @@
                     localStorage.setItem('wallet_auth_type', 'google');
                     const gate = document.getElementById('guestGate');
                     if (gate) gate.style.display = 'none';
+                } else {
+                    // LEGACY PROTECTION: If somehow we end up anonymous, sign out to force Google login
+                    log('Anonymous session detected. Signing out to enforce Google login...');
+                    auth.signOut();
+                    return;
                 }
 
                 // Save UID for future instant loads
@@ -5023,8 +5150,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 const lItem = document.createElement('div');
                 lItem.className = 'legend-item';
                 lItem.innerHTML = `
-                    <div class="legend-color" style="background: ${seg.color}"></div>
-                    <span>${seg.name}</span>
+                    <div class="legend-color" style="background: ${seg.color};"></div>
+                    <span style="font-size: 0.2rem !important;">${seg.name}</span>
                 `;
                 legend.appendChild(lItem);
 
@@ -5477,6 +5604,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 
                 document.getElementById('cat-budget-modal').classList.add('show');
                 document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
+                if (window.NavState) window.NavState.pushModalState('cat-budget', () => closeModals(true));
                 
                 saveBtn.onclick = async () => {
                     const limit = parseFloat(amountInput.value);
@@ -5525,6 +5653,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
+            if (window.NavState) window.NavState.pushModalState('cat-budget', () => closeModals(true));
             setTimeout(() => amountInput.focus(), 300);
 
             saveBtn.onclick = async () => {
@@ -5793,9 +5922,12 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                                     txn = parseBPIEmail(cleanText, d.internalDate, subject);
                                 }
 
-                                if (txn) {
-                                    if (!auth.currentUser) await signInAnonymously(auth);
-                                    const uid = auth.currentUser.uid;
+                                 if (txn) {
+                                     if (!auth.currentUser) {
+                                         log('Sync attempt without user. Skipping.', 'warning');
+                                         return null;
+                                     }
+                                     const uid = auth.currentUser.uid;
                                     const collectionName = getCollectionName(syncAccount);
                                     const docRef = doc(db, "users", uid, collectionName, txn.id);
                                     
@@ -7609,8 +7741,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             }
             window.modalOpen = true;
             
-            // Push history state for back button handling
-            if (window.NavState) window.NavState.pushModalState('manual-txn', () => window.closeModals(true));
+            if (window.NavState) window.NavState.pushModalState('manual-txn', () => closeModals(true));
             
             // Remove global blur to fix blurry modal content issues
             // document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
@@ -8524,8 +8655,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <div class="sub-icon">
                             ${g.icon.includes('logos/') || /\.(png|jpg|jpeg|svg|gif)$/i.test(g.icon) ? `<img src="${g.icon}" style="width:20px; border-radius:5px;">` : `<i class="material-icons">${g.icon}</i>`}
                         </div>
-                        <div class="sub-info">
-                            <div class="sub-name">${g.name}</div>
+                             <div class="sub-info" style="font-size: 9.5px !important;">
+                            <div class="sub-name" style="font-size: 9.5px !important;">${g.name}</div>
                             <div class="sub-meta">Avg: ₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})} / mo</div>
                         </div>
                         <div class="sub-stats">
@@ -8821,19 +8952,19 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
     </div>
 
     <!-- MANUAL TRANSACTION MODAL -->
-    <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
-        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 96vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
+    <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(10px); background: rgba(0,0,0,0.5);">
+        <div class="custom-modal" id="manual-modal-content" style="width: 100%; max-width: 100%; border-radius: 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); height: 98vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
             
             <!-- Swipe Handle Area (includes title) -->
-            <div id="modal-drag-handle" style="width: 100%; padding: max(45px, env(safe-area-inset-top)) 0 8px 0; background: white; border-radius: 24px 24px 0 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
+            <div id="modal-drag-handle" style="width: 100%; padding: max(45px, env(safe-area-inset-top)) 0 8px 0; background: white; border-radius: 0; position: sticky; top: 0; z-index: 100; cursor: grab; border-bottom: 1px solid #f1f5f9;">
                 <div style="display: flex; justify-content: center; margin-bottom: 12px;">
                     <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                 </div>
                 <div style="padding: 0 20px 16px 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
-                        <div id="modal-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">New Transaction</div>
-                        <div id="done-btn" style="font-weight: 800; font-size: 16px; color: #10b981; cursor: pointer; text-transform: uppercase;" onclick="saveManualTxn()">Done</div>
+                        <div id="modal-title" style="font-weight: 800; font-size: 16.2px; color: #1e293b;">New Transaction</div>
+                        <div id="done-btn" style="font-weight: 800; font-size: 14.4px; color: #10b981; cursor: pointer; text-transform: uppercase;" onclick="saveManualTxn()">Done</div>
                     </div>
                 </div>
             </div>
@@ -8841,17 +8972,17 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             <div style="padding: 0 20px 20px 20px;">
             <!-- Toggler -->
             <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 30px;">
-                <div id="btn-expense" onclick="setTxnType('expense')" style="flex: 1; padding: 8px; text-align: center; background: #ef4444; color: #fff; font-weight: 700; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: all 0.2s; cursor: pointer;">Expense</div>
-                <div id="btn-income" onclick="setTxnType('income')" style="flex: 1; padding: 8px; text-align: center; color: #64748b; font-weight: 600; font-size: 13px; border-radius: 8px; transition: all 0.2s; cursor: pointer;">Income</div>
+                <div id="btn-expense" onclick="setTxnType('expense')" style="flex: 1; padding: 8px; text-align: center; background: #ef4444; color: #fff; font-weight: 700; border-radius: 8px; font-size: 11.7px; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); transition: all 0.2s; cursor: pointer;">Expense</div>
+                <div id="btn-income" onclick="setTxnType('income')" style="flex: 1; padding: 8px; text-align: center; color: #64748b; font-weight: 600; font-size: 11.7px; border-radius: 8px; transition: all 0.2s; cursor: pointer;">Income</div>
             </div>
 
             <!-- Amount Input -->
             <!-- Amount Input -->
             <div style="text-align: center; margin-bottom: 20px;">
-                <div style="font-size: 12px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">AMOUNT</div>
+                <div style="font-size: 10.8px; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">AMOUNT</div>
                 <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                    <span style="font-size: 24px; font-weight: 700; color: #cbd5e1;">PHP</span>
-                    <input type="number" id="manual-amt" placeholder="0.00" style="font-size: 48px; font-weight: 800; color: #1e293b; border: none; outline: none; width: 220px; text-align: center; background: transparent;" step="0.01">
+                    <span style="font-size: 21.6px; font-weight: 700; color: #cbd5e1;">PHP</span>
+                    <input type="number" id="manual-amt" placeholder="0.00" style="font-size: 43.2px; font-weight: 800; color: #1e293b; border: none; outline: none; width: 220px; text-align: center; background: transparent;" step="0.01">
                 </div>
             </div>
 
@@ -8872,13 +9003,13 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <i class="material-icons" style="font-size: 20px;">account_balance_wallet</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Account</div>
-                        <select id="manual-account" onchange="updateManualAccountUI(this.value)" style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 700; color: #1e293b; background: transparent; padding: 0; appearance: none; -webkit-appearance: none; cursor: pointer;">
+                        <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Account</div>
+                        <select id="manual-account" onchange="updateManualAccountUI(this.value)" style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 700; color: #1e293b; background: transparent; padding: 0; appearance: none; -webkit-appearance: none; cursor: pointer;">
                             <option value="atome">Atome Account</option>
                             <option value="bpi">BPI Account</option>
                         </select>
                     </div>
-                    <i class="material-icons" style="color: #cbd5e1; font-size: 20px;">unfold_more</i>
+                    <i class="material-icons" style="color: #cbd5e1; font-size: 20px !important;">unfold_more</i>
                 </div>
 
                 <!-- Date Row -->
@@ -8887,8 +9018,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <i class="material-icons" style="font-size: 20px;">calendar_today</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Date</div>
-                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 14px; font-weight: 700; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%; padding: 0;">
+                        <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Date</div>
+                        <input type="date" id="manual-date" style="border: none; outline: none; font-size: 12.6px; font-weight: 700; color: #1e293b; font-family: inherit; background: transparent; cursor: pointer; text-align: left; width: 100%; padding: 0;">
                     </div>
                 </div>
 
@@ -8898,8 +9029,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <i class="material-icons" style="font-size: 20px;">store</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Merchant Name</div>
-                        <input type="text" id="manual-merchant" maxlength="50" placeholder="Enter merchant name..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                        <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Merchant Name</div>
+                        <input type="text" id="manual-merchant" maxlength="50" placeholder="Enter merchant name..." style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                     </div>
                 </div>
 
@@ -8909,8 +9040,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <i class="material-icons" style="font-size: 20px;">notes</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Notes</div>
-                        <input type="text" id="manual-note" maxlength="30" placeholder="Add notes..." style="width: 100%; border: none; outline: none; font-size: 14px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                        <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Notes</div>
+                        <input type="text" id="manual-note" maxlength="30" placeholder="Add notes..." style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                     </div>
                 </div>
 
@@ -8920,8 +9051,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         <i id="manual-exclude-icon" class="material-icons" style="font-size: 20px;">check_circle</i>
                     </div>
                     <div style="flex: 1;">
-                        <div style="font-size: 9px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Budget Status</div>
-                        <div id="manual-exclude-text" style="font-size: 14px; font-weight: 700; color: #1e293b;">Included in Calculations</div>
+                        <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Budget Status</div>
+                        <div id="manual-exclude-text" style="font-size: 12.6px; font-weight: 700; color: #1e293b;">Included in Calculations</div>
                     </div>
                     <div class="toggle-switch">
                         <input type="checkbox" id="manual-exclude-toggle" style="display: none;">
@@ -8944,7 +9075,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         .manual-cat-item.selected { opacity: 1; transform: scale(1.05); }
         .manual-cat-circle { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; border: 2px solid transparent; }
         .manual-cat-item.selected .manual-cat-circle { box-shadow: 0 8px 16px rgba(0,0,0,0.05); }
-        .manual-cat-item span { font-size: 10px !important; }
+        .manual-cat-item span { font-size: 9px !important; }
         /* AUTH FEEDBACK */
         .banner-pill-btn:active, .mui-btn:active { transform: scale(0.96); opacity: 0.8; transition: transform 0.1s, opacity 0.1s; }
 
@@ -9572,6 +9703,9 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         refreshUIForAccount(currentAcc);
                     }
                 });
+
+                // APK Universal Back Button (Confirm to exit)
+                window.NavState.initBackNavigation('index.html');
             }
         });
     </script>
@@ -9593,15 +9727,12 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         </div>
     </div>
     <script type="module">
-        import { initUI } from './app-ui.js';
-        const runInit = () => {
+        try {
+            const { initUI } = await import('./app-ui.js');
             console.log('🚀 Initializing UI...');
             initUI();
-        };
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', runInit);
-        } else {
-            runInit();
+        } catch (e) {
+            console.error('⚠️ Module load failed (non-fatal):', e);
         }
     </script>
 </body>

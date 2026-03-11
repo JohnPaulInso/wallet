@@ -96,6 +96,12 @@ const NavState = {
                 iconEl.style.display = 'block';
             }
             
+            // Update email header if element exists
+            const emailEl = document.getElementById('dropdown-user-email');
+            if (emailEl && email) {
+                emailEl.textContent = email.toUpperCase();
+            }
+            
             console.log('📥 Profile loaded:', { displayName, pic, email });
             return { name: displayName, pic, email };
         } catch (error) {
@@ -336,6 +342,13 @@ const NavState = {
      * Initialize global back button listener
      */
     initBackNavigation(currentPage) {
+        const parentMap = {
+            'calendar.html': 'index.html',
+            'accounts.html': 'index.html',
+            'goals.html': 'index.html',
+            'edit-goal.html': 'goals.html'
+        };
+
         // Standard Web History Listener
         window.addEventListener('popstate', (event) => {
             if (this.modalStack.length > 0) {
@@ -349,8 +362,9 @@ const NavState = {
             
             const isMainPage = currentPage === 'index.html' || currentPage === '/' || currentPage === '';
             if (!isMainPage) {
-                console.log(` Back button: Navigating to Wallet (index.html)`);
-                window.location.href = 'index.html';
+                const target = parentMap[currentPage] || 'index.html';
+                console.log(` Back button: Navigating to parent: ${target}`);
+                window.location.href = target;
             }
         });
 
@@ -360,25 +374,41 @@ const NavState = {
             if (App) {
                 console.log('📱 App plugin found, registering backButton listener');
                 let lastBackPress = 0;
+                let lastPopStateHandled = 0;
+
+                // Listen for popstate to coordinate with native listener
+                window.addEventListener('popstate', () => {
+                    lastPopStateHandled = Date.now();
+                });
+
                 App.addListener('backButton', ({ canGoBack }) => {
+                    const now = Date.now();
                     console.log('📱 Native Back Button Pressed');
                     
+                    // If popstate just fired (within 300ms), ignore this native event 
+                    // to prevent double-navigation or double-closing
+                    if (now - lastPopStateHandled < 300) {
+                        console.log('📱 Ignoring native back press: already handled by popstate');
+                        return;
+                    }
+
                     // 1. Check Modals in Stack (managed by NavState)
                     if (this.modalStack.length > 0) {
                         const modal = this.modalStack.pop();
                         if (modal && typeof modal.closeFn === 'function') {
                             console.log(`🔙 Closing modal from stack: ${modal.id}`);
                             modal.closeFn();
-                            // If history state exists for this modal, we might need to go back 
-                            // but usually closeFn (e.g. closeModals(true)) handles it.
+                            // Prevent native behavior if we are closing a modal
                             return;
                         }
                     }
 
                     // 2. Check for common UI modals using global flags or .show class
                     const iosMenu = document.getElementById('ios-menu');
+                    const notificationSidebar = document.querySelector('.notification-sidebar.active') || document.getElementById('notification-center');
                     const hasVisibleModal = window.modalOpen || 
-                                          document.querySelector('.modal-overlay.show, .dialog-overlay.show, .custom-modal.show, .login-modal-overlay.show, .notification-sidebar.active') ||
+                                          document.querySelector('.modal-overlay.show, .dialog-overlay.show, .custom-modal.show, .login-modal-overlay.show') ||
+                                          (notificationSidebar && notificationSidebar.classList.contains('active')) ||
                                           (iosMenu && iosMenu.classList.contains('show'));
                     
                     if (hasVisibleModal) {
@@ -417,8 +447,9 @@ const NavState = {
                     const isMainPage = path.endsWith('index.html') || path === '/' || path === '' || currentPage === 'index.html';
                     
                     if (!isMainPage) {
-                        console.log('🔙 Navigating back to home');
-                        window.location.href = 'index.html';
+                        const target = parentMap[currentPage] || 'index.html';
+                        console.log(`🔙 Navigating back to parent: ${target}`);
+                        window.location.href = target;
                     } else {
                         // 4. Double-tap to exit logic for Home Page
                         const now = Date.now();
@@ -427,11 +458,21 @@ const NavState = {
                             App.exitApp();
                         } else {
                             lastBackPress = now;
-                            console.log('📱 Press back again to exit');
-                            if (window.showToast) {
-                                window.showToast('Press back again to exit');
+                            const msg = 'Press back again to exit';
+                            console.log(`📱 ${msg}`);
+                            
+                            // Try native toast first, then custom, then alert
+                            if (window.Capacitor && window.Capacitor.Plugins.Toast) {
+                                window.Capacitor.Plugins.Toast.show({ text: msg, duration: 'short', position: 'bottom' });
+                            } else if (window.showToast) {
+                                window.showToast(msg);
                             } else {
-                                alert('Press back again to exit');
+                                // Create a temporary UI toast if nothing matches
+                                const toast = document.createElement('div');
+                                toast.style.cssText = "position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:white;padding:10px 20px;border-radius:20px;font-size:12px;z-index:99999;font-weight:700;";
+                                toast.textContent = msg;
+                                document.body.appendChild(toast);
+                                setTimeout(() => toast.remove(), 2000);
                             }
                         }
                     }

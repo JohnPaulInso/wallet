@@ -364,12 +364,31 @@ export async function handleScan(limit, manualTrigger = false) {
                 window.isSyncing = false;
                 localStorage.removeItem('g_access_token');
                 
+                // 📱 NATIVE APP FIX: Try silent refresh using Capacitor GoogleAuth
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    log('📱 Attempting native token refresh...');
+                    try {
+                        const { GoogleAuth } = window.Capacitor.Plugins;
+                        const authRes = await GoogleAuth.refresh();
+                        if (authRes && authRes.authentication.accessToken) {
+                            localStorage.setItem('g_access_token', authRes.authentication.accessToken);
+                            log('📱 Native token refreshed. Retrying sync...');
+                            // Recursively retry the scan with the new token
+                            return handleScan(limit, manualTrigger);
+                        }
+                    } catch (refreshErr) {
+                        log('📱 Native refresh failed: ' + refreshErr.message, 'error');
+                    }
+                }
+                
+                // 🌐 WEB FALLBACK: Request fresh token
                 if (window.tokenClient) {
                     window.pendingSyncLimit = limit;
                     window.pendingSyncManual = manualTrigger;
-                    window.tokenClient.requestAccessToken({ prompt: 'none' });
+                    log('Refreshing session... Please wait.');
+                    window.tokenClient.requestAccessToken({ prompt: '' });
                 }
-                throw new Error('Unauthorized - Silent refresh attempted');
+                throw new Error('Unauthorized - Refresh triggered');
             }
             
             const data = await res.json();

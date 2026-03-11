@@ -86,7 +86,7 @@
         .is-native .safe-spend-subtitle-v2, .is-native .breakdown-name { /* font-size: 9px; */ font-size: 8.1px !important; }
         .is-native .breakdown-meta { /* font-size: 8.5px; */ font-size: 7.65px !important; }
         .is-native .breakdown-val { /* font-size: 12px; */ font-size: 10.8px !important; }
-        .is-native .cat-budget-title { /* font-size: 11px; */ font-size: 0.9rem !important; }
+        .is-native .cat-budget-title { /* font-size: 11px; */ font-size: 9.9px !important; }
         .is-native .cat-budget-add-btn { /* font-size: 12px; */ font-size: 10.8px !important; }
         .is-native .sub-name { /* font-size: 12px; */ font-size: 9.5px !important; }
         .is-native .sub-meta, .is-native .sub-avg-label { /* font-size: 9px; */ font-size: 8px !important; }
@@ -490,7 +490,7 @@
                     Wants budget depleted. Stop spending on luxuries to protect your savings and avoid new debt.
                 </div>
 
-                <div id="triple-summary-footer" class="triple-summary-footer" style="margin-top:20px">
+                <div id="triple-summary-footer" class="triple-summary-footer">
                     <div class="triple-summary-left">
                         <span class="triple-summary-label">Available to Spend</span>
                         <span id="triple-usage-sub" class="triple-summary-sub">0% BUDGET UTILIZED</span>
@@ -715,7 +715,7 @@
                 <div class="cat-budget-header">
                     <h3 class="cat-budget-title">Category Limits</h3>
                     <button class="cat-budget-add-btn" onclick="promptAddCategoryBudget()">
-                        <i class="material-icons" style="font-size: 12px;">add</i> ADD
+                        <i class="material-icons" style="font-size: 16px;">add</i> ADD
                     </button>
                 </div>
                 <div id="cat-budget-list">
@@ -775,7 +775,7 @@
                         <i class="material-icons" style="font-size: 16px;">storage</i>
                     </div>
                     <div style="text-align: left;">
-                        <div style="font-size: 0.9rem; font-weight: 800; letter-spacing: -0.2px;" class="cat-budget-title">Account Backup</div>
+                        <div style="font-size: 11px; font-weight: 800; letter-spacing: -0.2px;" class="cat-budget-title">Account Backup</div>
                         <div style="font-size: 9px; color: #64748b; font-weight: 600;">Secure your data locally</div>
                     </div>
                 </div>
@@ -3112,7 +3112,7 @@
 
             const aggregateFrom = (txns, account) => {
                 txns.forEach(t => {
-                    if (t.excluded || t.reimbursed) return;
+                    if (t.excluded) return;
                     
                     // Use shared checkPeriod helper to sync with chart
                     if (!window.checkPeriod(t, currentFilter, 0, now)) return;
@@ -3224,7 +3224,7 @@
             let filtered = [];
             const collectFrom = (txns, account) => {
                 txns.forEach(t => {
-                    if (t.excluded || t.reimbursed) return;
+                    if (t.excluded) return;
                     if (!window.checkPeriod(t, currentFilter, 0, now)) return;
                     
                     const display = getMerchantDisplay(t.name || t.merchant, t);
@@ -5391,7 +5391,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             }
 
             if (!budgets || Object.keys(budgets).length === 0) {
-                listContainer.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:10px; font-weight:600; border: 1px dashed #e2e8f0; border-radius: 5px;">No category limits set.<br>Click ADD to start budgeting.</div>';
+                listContainer.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:12px; font-weight:600; border: 1px dashed #e2e8f0; border-radius: 16px;">No category limits set.<br>Click ADD to start budgeting.</div>';
                 return;
             }
 
@@ -6326,10 +6326,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             
             // 6. Position menu
             menu.classList.add('show');
-            window.modalOpen = true; // Track modal state
-            if (window.NavState) {
-                window.NavState.pushModalState('ios-menu', () => closeIOSMenu(true));
-            }
+            if (window.pushModalState) pushModalState('ios-menu');
             const menuHeight = menu.offsetHeight || 180;
             const menuWidth = menu.offsetWidth || 200;
             
@@ -6426,11 +6423,6 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 currentElevatedItem = null;
             }
 
-            window.modalOpen = false;
-            if (wasMenuOpen && window.NavState) {
-                window.NavState.popModalState('ios-menu');
-            }
-
             // Sync history
             if (wasMenuOpen && !fromPopState) {
                 history.back();
@@ -6445,10 +6437,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             // This converts [home -> menu] history into [home -> modal]
             const openWithReplace = (modalType) => {
                 window.modalOpen = true;
-                history.replaceState({ modalId: modalType }, '');
-                if (window.NavState) {
-                    window.NavState.modalStack.push({ id: modalType, closeFn: () => { window.closeModals(true); } });
-                }
+                window.replaceModalState(modalType);
             };
 
             switch(action) {
@@ -6632,7 +6621,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             if (window.modalOpen) {
                 // Handled by replaceModalState in handleIOSAction
             } else {
-                if (window.NavState) window.NavState.pushModalState('duplicate-txn', () => closeModals(true));
+                if (window.pushModalState) pushModalState('duplicate-txn');
             }
         };
 
@@ -6838,7 +6827,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 fab.classList.add('clicked');
                 setTimeout(() => fab.classList.remove('clicked'), 300);
             }
-            if (window.NavState) window.NavState.pushModalState('delete-txn', () => closeModals(true));
+            if (window.pushModalState) pushModalState('delete-txn');
         };
 
         // UNDO SNACKBAR STACK SYSTEM (max 3)
@@ -8196,8 +8185,8 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                     const d = new Date(t.date);
                     if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
                         const mapped = getMerchantDisplay(t.merchant, t);
-                        // Only count non-income, non-refunded, non-excluded, non-reimbursed expenses
-                        if (!t.excluded && !t.refund && !t.reimbursed && mapped.category !== 'Income') {
+                        // Only count non-income, non-refunded, non-excluded expenses
+                        if (!t.excluded && !t.refund && mapped.category !== 'Income') {
                             const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
                             totalSpent += Math.abs(amt);
                         }

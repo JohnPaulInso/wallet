@@ -668,13 +668,13 @@ export function updateProfileUI(user) {
         if (badge) badge.classList.remove('has-pic');
     } else {
         dropdown.innerHTML = `
-            <div class="dropdown-header">${user.email}</div>
+            <div class="dropdown-header" id="dropdown-user-email">${user.email.toUpperCase()}</div>
             <div class="dropdown-item" onclick="toggleDarkMode()">
-                <i class="material-icons" id="theme-icon">dark_mode</i>
-                <span id="theme-text">Dark Mode</span>
+                <i class="material-icons" id="dark-mode-icon">dark_mode</i>
+                <span id="dark-mode-text">Dark Mode</span>
             </div>
             <div class="dropdown-item" onclick="handleAuthClick()">
-                <i class="material-icons">swap_horiz</i>
+                <i class="material-icons">sync</i>
                 <span>Switch Account</span>
             </div>
             <div class="dropdown-item" id="biometric-menu-item" onclick="toggleBiometricSetting()">
@@ -1417,7 +1417,16 @@ export function toggleProfileDropdown(e) {
     const dropdown = document.getElementById('profile-dropdown');
     if (dropdown) {
         const isActive = dropdown.classList.toggle('active');
-        if (isActive) triggerHaptic('light');
+        if (isActive) {
+            triggerHaptic('light');
+            if (window.NavState) {
+                window.NavState.pushModalState('profile-dropdown', () => {
+                    dropdown.classList.remove('active');
+                });
+            }
+        } else {
+            if (window.NavState) window.NavState.popModalState('profile-dropdown');
+        }
     }
 }
 

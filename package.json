@@ -4,14 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "sync-www": "robocopy . www *.html index.css *.js *.Snippet *.json *.png /S /XD node_modules android .git .vscode .gemini /NFL /NDL /NJH /NJS /nc /ns /np || exit 0",
+    "build": "npm run sync-www"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@capacitor/android": "^8.2.0",
+    "@capacitor/app": "^8.0.1",
     "@capacitor/cli": "^8.2.0",
-    "@capacitor/core": "^8.2.0"
+    "@capacitor/core": "^8.2.0",
+    "@codetrix-studio/capacitor-google-auth": "^3.4.0-rc.4"
   }
 }

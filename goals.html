@@ -29,15 +29,17 @@
         .is-native .greeting-text { /* font-size: 11px; */ font-size: 9.9px !important; }
         .is-native .nav-item span { /* font-size: 11px; */ font-size: 9.9px !important; }
         .is-native .nav-item i { /* font-size: 24px; */ font-size: 21.6px !important; }
-        .is-native .summary-value { /* font-size: 28px; */ font-size: 25.2px !important; }
+        .is-native .summary-value { /* font-size: 28px; */ font-size: 17px !important; }
         .is-native .goal-title { /* font-size: 12px; */ font-size: 10.8px !important; }
         .is-native .goal-amount { /* font-size: 13px; */ font-size: 11.7px !important; }
         
         /* Modal scaling for APK - Full Coverage */
         .is-native .modal-card {
             width: 100% !important; max-width: 100% !important;
-            max-height: 98vh !important; border-radius: 28px 28px 0 0 !important;
+            max-height: 98vh !important; border-radius: 28px !important;
         }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
     </style>
     <title>Financial Goals - Smart Wallet</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
@@ -121,7 +123,7 @@
 
         .goals-list {
             width: 100%;
-            height: 400px;
+            height: 150%;
             display: flex;
             flex-direction: column;
             align-items: stretch;
@@ -281,7 +283,7 @@
         }
 
         .summary-value {
-            font-size: 28px;
+            font-size: 17px;
             font-weight: 900;
             color: #000;
             letter-spacing: -1.2px;
@@ -583,7 +585,7 @@
 
         .ios-menu {
             position: absolute;
-            width: 180px; 
+            width: 150px; 
             background: #ffffff;
             border-radius: 16px; 
             overflow: hidden;
@@ -630,7 +632,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 13.5px;
+            font-size: 11.475px;
             font-weight: 700;
             color: #000;
             cursor: pointer;
@@ -641,7 +643,7 @@
         .ios-menu-item:active { background: #f8fafc; }
         
         /* Specific action colors as requested */
-        .ios-menu-item i { font-size: 20px; }
+        .ios-menu-item i { font-size: 17px; }
         .ios-menu-item.edit { color: #2563eb; }
         .ios-menu-item.edit i { color: #2563eb; }
         .ios-menu-item.danger { color: #ef4444; }
@@ -993,14 +995,14 @@
         </div>
 
         <!-- Title Section (Since header is now uniform) -->
-        <div style="background: var(--bg-secondary); padding: 30px 24px 12px; border-bottom: 1px solid rgba(0,0,0,0.02);"> 
+        <div style="background: var(--bg-secondary); padding: 30px 24px 0px;"> 
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h1 style="margin: 0; font-size: 26px; font-weight: 900; color: #000; letter-spacing: -1.2px;">Financial Goals</h1>
+                <h1 style="margin: 0; font-size: 20px; font-weight: 900; color: #000; letter-spacing: -1.2px;">Financial Goals</h1>
             </div>
         </div>
 
         <!-- Summary Card Skeleton (Initially Shown) -->
-        <div class="summary-card" id="totalSummary" style="margin: 20px 24px 20px; height: 150px; display: none;">
+        <div class="summary-card" id="totalSummary" style="margin: 15px 24px 20px; height: 150px; display: none;">
             <!-- Content will be injected but we need it wide -->
         </div>
 
@@ -1199,7 +1201,7 @@
         import { 
             auth, db, onAuthStateChanged, 
             collection, addDoc, getDocs, query, orderBy, doc, updateDoc, deleteDoc, serverTimestamp,
-            getDoc
+            getDoc, increment
         } from "./firebase-config.js";
         import { createNotification } from "./app-utils.js";
 
@@ -1374,7 +1376,7 @@
             
             // Positioning Logic
             const rect = card.getBoundingClientRect();
-            const menuWidth = 180;
+            const menuWidth = 150;
             const menuHeight = 150; 
 
             let topPos, leftPos;
@@ -2090,45 +2092,62 @@
             }
         }
 
-        document.getElementById('confirmDepositBtn').onclick = async () => {
+        document.getElementById('confirmDepositBtn').onclick = async (e) => {
             const rawValue = document.getElementById('depositAmount').value.replace(/,/g, '');
             const amount = parseFloat(rawValue);
             
-            if (!amount || amount === 0 || !currentUser || !selectedGoalId) return;
+            if (!amount || amount === 0 || !currentUser || !window.selectedGoalId) return;
+            
+            const btn = e.currentTarget;
+            const originalText = btn.innerText;
             
             try {
-                const goalRef = doc(db, `users/${currentUser.uid}/goals`, selectedGoalId);
-                const goal = goals.find(g => g.id === selectedGoalId);
-                if (goal) {
-                    const newAmount = (goal.currentAmount || 0) + amount;
-                    await updateDoc(goalRef, { currentAmount: newAmount });
-                    
-                    const isWithdrawal = amount < 0;
-                    const absAmount = Math.abs(amount);
-                    const type = isWithdrawal ? 'withdrawal' : 'deposit';
+                // UI: Disable & Loading
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                btn.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i class="material-icons spin" style="font-size: 18px;">sync</i> Saving...
+                </span>`;
 
-                    // Record Transaction History
-                    await addDoc(collection(db, `users/${currentUser.uid}/goals/${selectedGoalId}/transactions`), {
-                        amount: amount,
-                        type: type,
-                        timestamp: serverTimestamp()
-                    });
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, window.selectedGoalId);
+                const isWithdrawal = amount < 0;
+                const absAmount = Math.abs(amount);
+                const type = isWithdrawal ? 'withdrawal' : 'deposit';
 
-                    // Only show confetti for positive deposits
-                    if (!isWithdrawal && window.confetti) {
-                        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#00851F', '#ffffff'] });
-                    }
-                    
-                    document.getElementById('depositAmount').value = '';
-                    window.closeModals();
-                    
-                    const actionWord = isWithdrawal ? 'withdrawn' : 'deposited';
-                    window.showToast(`₱${absAmount.toLocaleString()} ${actionWord}!`);
-                    await loadGoals();
+                // MULTI-OP ATOMIC SYNC
+                // 1. Update goal's currentAmount atomically
+                await updateDoc(goalRef, { 
+                    currentAmount: increment(amount) 
+                });
+                
+                // 2. Record Transaction History
+                await addDoc(collection(db, `users/${currentUser.uid}/goals/${window.selectedGoalId}/transactions`), {
+                    amount: amount,
+                    type: type,
+                    timestamp: serverTimestamp()
+                });
+
+                // Success UI sequence
+                if (!isWithdrawal && window.confetti) {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#00851F', '#ffffff'] });
                 }
+                
+                document.getElementById('depositAmount').value = '';
+                window.closeModals();
+                
+                const actionWord = isWithdrawal ? 'withdrawn' : 'deposited';
+                window.showToast(`₱${absAmount.toLocaleString()} ${actionWord}!`);
+                
+                // Refresh list to see new totals
+                await loadGoals();
+                
             } catch (error) {
                 console.error("Error saving transaction:", error);
-                window.showToast("Failed to save transaction");
+                window.showToast("Failed to save. Check your connection.");
+            } finally {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerText = originalText;
             }
         };
 
@@ -2258,4 +2277,5 @@
     </div> <!-- Close mobile-wrapper -->
 </body>
 </html>
+
 

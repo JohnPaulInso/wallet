@@ -77,6 +77,13 @@ export async function handleAuthClick() {
                 
                 const result = await signInWithCredential(auth, credential);
                 log('📱 Firebase auth with native credential success!');
+                
+                // Save access token for Gmail Sync
+                if (user.authentication && user.authentication.accessToken) {
+                    localStorage.setItem('g_access_token', user.authentication.accessToken);
+                    log('📱 Saved native access token for Gmail sync.');
+                }
+                
                 handleAuthResult(result.user);
                 return;
             } catch (nativeError) {
@@ -93,6 +100,14 @@ export async function handleAuthClick() {
         try {
             const result = await signInWithPopup(auth, provider);
             log('signInWithPopup success!');
+            
+            // Extract and save Access Token for Gmail Sync (Web/Simulator)
+            const credential = GoogleAuthProvider.credentialFromResult(result);
+            if (credential && credential.accessToken) {
+                localStorage.setItem('g_access_token', credential.accessToken);
+                log('🌐 Saved web access token for Gmail sync.');
+            }
+
             handleAuthResult(result.user);
         } catch (popupError) {
             if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
@@ -150,6 +165,11 @@ export function handleAuthResult(user) {
     if (dbBadge) {
        dbBadge.className = 'status-chip status-ready';
        if (emailDisplay) emailDisplay.innerText = `(${user.email.toUpperCase()})`;
+    }
+    
+    const dropdownEmailEl = document.getElementById('dropdown-user-email');
+    if (dropdownEmailEl && user.email) {
+        dropdownEmailEl.textContent = user.email.toUpperCase();
     }
 
     // Update UI with full first name

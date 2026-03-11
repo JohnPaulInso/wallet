@@ -25,6 +25,52 @@
         });
     </script>
     <style>
+        
+        /* PROFILE DROPDOWN MENU - CENTRALIZED */
+        .profile-container { position: relative; }
+        .profile-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            min-width: 200px;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 2000;
+            border: 1px solid #f1f5f9;
+            padding: 6px;
+        }
+        .profile-dropdown.active { display: flex; animation: dropIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes dropIn { from { opacity: 0; transform: translateY(-10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .dropdown-item {
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px; 
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+        .dropdown-item:hover { background: #f8fafc; color: #1e293b; }
+        .dropdown-item i { font-size: 20px; color: #94a3b8; } 
+        .dropdown-item.logout { color: #ef4444; margin-top: 4px; border-top: 1px solid #f1f5f9; border-radius: 0 0 10px 10px; }
+        .dropdown-item.logout i { color: #ef4444; }
+        .dropdown-header { padding: 10px 14px 6px; font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+
+        body.dark-mode .profile-dropdown { background: #1a1a1a; box-shadow: 0 20px 40px rgba(0,0,0,0.5); border-color: rgba(255,255,255,0.05); }
+        body.dark-mode .dropdown-item { color: #d1d5db; }
+        body.dark-mode .dropdown-item:hover { background: #262626; color: #fff; }
+        body.dark-mode .dropdown-item.logout { border-top-color: rgba(255,255,255,0.05); }
+
+
+
         /* APK specific styling: -10% font sizes ONLY */
         .is-native { --base-font-scale: 0.9; }
         .is-native body { /* font-size: 16px; */ font-size: 14.4px !important; }
@@ -63,7 +109,7 @@
         ::selection { background: transparent; }
         ::-moz-selection { background: transparent; }
 
-        html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; overscroll-behavior-y: contain; }
+        html, body { background: #ffffff; width: 100%; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; overscroll-behavior-y: contain; }
         
         /* HIDE ALL SCROLLBARS - Native App Feel */
         * { scrollbar-width: none; -ms-overflow-style: none; }
@@ -71,7 +117,7 @@
         
         .mobile-wrapper { 
             width: 100%; 
-            max-width: 430px; 
+            max-width: 100%; 
             background: #f8fafc; 
             height: 100vh;
             position: relative; 
@@ -103,103 +149,78 @@
             transition: all 0.3s ease; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.03); 
         }
-        .header-spacer { height: 75px; flex-shrink: 0; }
-        #header.shrunk { padding: 12px 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .greeting-section { line-height: 1.1; transition: all 0.3s ease; }
-        .greeting-text { font-size: 9.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; transition: all 0.3s ease; opacity: 0.8; }
-        #header.shrunk .greeting-text { font-size: 8.5px; letter-spacing: 1.5px; }
-        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; letter-spacing: -0.5px; }
+        .header-spacer { height: 70px; flex-shrink: 0; }
+        #header.shrunk { padding: 12px 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .greeting-section { line-height: 1.2; transition: all 0.3s ease; }
+        .greeting-text { font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; transition: all 0.3s ease; }
+        #header.shrunk .greeting-text { font-size: 9px; letter-spacing: 1px; }
+        .user-name { font-size: 18px; font-weight: 800; color: #1e293b; transition: all 0.3s ease; }
         #header.shrunk .user-name { font-size: 15px; }
         
-        .header-logo { width: 48px; border-radius: 8px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-        #header.shrunk .header-logo { width: 40px; }
+        .header-logo { width: 48px; height: 30px; border-radius: 4px; object-fit: cover; transition: all 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #header.shrunk .header-logo { width: 40px; height: 25px; }
         
-        #profile-badge { transition: all 0.3s ease; cursor: pointer; width: 44px; height: 44px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 2.5px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        #header.shrunk #profile-badge { width: 36px; height: 36px; border-width: 2px; }
+        #profile-badge { transition: all 0.3s ease; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; border: 2px solid #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #header.shrunk #profile-badge { width: 36px; height: 36px; border-width: 1.5px; }
         
-        #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; }
-        #profile-badge i { font-size: 26px; color: #cbd5e1; display: block; }
+        #profile-badge img { width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top: 0; left: 0; }
+        #profile-badge i { font-size: 24px; color: #94a3b8; display: block; }
         #profile-badge.has-pic i { display: none; }
         #profile-badge.has-pic img { display: block; }
 
-        /* PROFILE DROPDOWN MENU */
-        .profile-container { position: relative; }
-        .profile-dropdown {
-            position: absolute;
-            top: 55px;
-            right: 0;
-            background: #fff;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-            min-width: 220px;
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            z-index: 2000;
-            border: 1px solid #f1f5f9;
-            padding: 8px;
-        }
-        .profile-dropdown.active { display: flex; animation: dropIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        @keyframes dropIn { from { opacity: 0; transform: translateY(-12px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        .dropdown-item {
-            padding: 14px 16px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            font-size: 14px;
-            font-weight: 700;
-            color: #475569;
-            cursor: pointer;
-            border-radius: 12px;
-            transition: all 0.2s;
-        }
-        .dropdown-item:hover { background: #f8fafc; color: #1e293b; }
-        .dropdown-item i { font-size: 22px; color: #94a3b8; }
-        .dropdown-item.logout { color: #ef4444; margin-top: 6px; border-top: 1px solid #f1f5f9; border-radius: 0 0 12px 12px; }
-        .dropdown-item.logout i { color: #ef4444; }
+        .main-content { padding: 0px 30px 330px; margin: 0px 0px ;width: 100%; background: #fff; }
+        
 
-        .main-content { padding: 0 24px 100px; width: 100%; }
         
         /* SECTION TITLE */
-        .section-header { text-align: left; margin: 28px 0 20px; }
-        .section-header h2 { font-size: 22px; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.8px; }
-        .section-header p { color: #94a3b8; font-size: 13.5px; margin-top: 6px; font-weight: 500; }
+        .section-header { text-align: left; margin: 0; padding: 24px 0px 16px; background: #fff; border-bottom: 2px solid #f1f5f9; }
+        .section-header h2 { font-size: 19.2px; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.8px; }
+        .section-header p { color: #94a3b8; font-size: 11.2px; margin-top: 4px; font-weight: 500; }
 
         /* ACCOUNT CARD - PREMIUM REDESIGN */
         .account-card { 
             background: #fff; 
-            border-radius: 24px; 
-            padding: 14px 18px; 
-            margin-bottom: 16px; 
+            border-radius: 20px; 
+            padding: 16px; 
+            margin: 12px 0px; 
             display: flex; 
             align-items: center; 
             gap: 16px; 
-            border: 1px solid #f8fafc; 
-            box-shadow: 0 8px 24px rgba(148, 163, 184, 0.08); 
+            border: 1px solid rgba(0,0,0,0.03);
+            border-left: 4px solid transparent;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
+        .account-card.accent-atome { border-left-color: #facc15; }
+        .account-card.accent-bpi { border-left-color: #ef4444; }
+        .account-card.accent-gcash { border-left-color: #2563eb; }
+        .account-card.accent-maya { border-left-color: #10b981; }
+        .account-card.accent-bank { border-left-color: #64748b; }
+        
+        .account-card:last-child { border-bottom: none; }
         .account-card:active { transform: scale(0.98); }
         .account-card.dragging { opacity: 0.5; transform: scale(0.98); box-shadow: 0 20px 40px rgba(0,0,0,0.1); border-color: #3b82f6; z-index: 1001; }
         
         .account-icon { 
-            width: 52px; 
-            height: 52px; 
-            border-radius: 14px; 
+            width: 36px; 
+            height: 36px; 
+            border-radius: 10px; 
             display: flex; 
             align-items: center; 
             justify-content: center; 
             color: #fff; 
             flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
         }
+        .account-icon i { font-size: 18px; }
         .account-icon i { font-size: 28px; }
         
         .account-info { flex: 1; min-width: 0; }
         .account-name-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
-        .account-name { font-size: 15px; font-weight: 800; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px; }
+        .account-name { font-size: 12px; font-weight: 800; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.3px; }
         
-        .account-type-row { display: flex; align-items: center; gap: 6px; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .account-type-row { display: flex; align-items: center; gap: 6px; color: #94a3b8; font-size: 8.8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* SHIMMER ANIMATION */
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -210,17 +231,17 @@
         }
 
         /* STATUS CHIPS */
-        .status-chip { font-size: 8.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.8px; text-transform: uppercase; }
+        .status-chip { font-size: 6.8px; font-weight: 800; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.8px; text-transform: uppercase; }
         .status-default { background: #eff6ff; color: #2563eb; }
         .status-active { color: #10b981; display: flex; align-items: center; gap: 3px; }
-        .status-active i { font-size: 13px; }
+        .status-active i { font-size: 10.4px; }
         
         .set-default-btn { 
             background: #eff6ff; 
             border: none; 
             padding: 6px 12px; 
             border-radius: 8px; 
-            font-size: 9.5px; 
+            font-size: 7.6px; 
             font-weight: 800; 
             color: #2563eb; 
             cursor: pointer; 
@@ -229,75 +250,49 @@
         }
         .set-default-btn:hover { background: #dbeafe; }
 
-        .drag-handle { color: #e2e8f0; cursor: grab; padding: 4px; transition: color 0.2s; }
-        .drag-handle:active { cursor: grabbing; color: #94a3b8; }
+        .drag-handle { display: none; }
         .drag-handle i { font-size: 22px; }
 
-        /* REDESIGNED ADD ACCOUNT CARD */
-        .add-account-container { margin-top: 32px; }
-        .add-account-card {
-            background: #fff;
-            padding: 40px 24px;
-            border-radius: 32px;
-            border: 2px dashed #f1f5f9;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
-            position: relative;
-            overflow: hidden;
-        }
-        .add-account-card:hover {
-            border-color: #dbeafe;
-            background: #fcfdfe;
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.05);
-        }
-        .add-account-icon-box {
-            width: 72px;
-            height: 72px;
-            border-radius: 22px;
-            background: #f8fafc;
-            display: flex;
-            align-items: center;
+        /* REFINED ADD ACCOUNT CARD - Minimalist Bar */
+        .add-account-card { 
+            margin: 12px 0px;
+            padding: 16px; 
+            border-radius: 20px; 
+            border: 2px dashed #e2e8f0; 
+            background: rgba(248, 250, 252, 0.5);
+            display: flex; 
+            align-items: center; 
             justify-content: center;
-            color: #94a3b8;
-            transition: all 0.4s;
+            gap: 12px; 
+            cursor: pointer; 
+            transition: all 0.2s; 
         }
-        .add-account-card:hover .add-account-icon-box {
-            background: #eff6ff;
-            color: #2563eb;
-            transform: rotate(90deg) scale(1.1);
+        .add-account-card:active { transform: scale(0.98); background: #f1f5f9; border-color: #cbd5e1; }
+        .add-account-icon-box { 
+            width: 32px; height: 32px; 
+            border-radius: 10px; 
+            background: #fff; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: #64748b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
-        .add-account-title { font-size: 20px; font-weight: 800; color: #1e293b; margin: 0; letter-spacing: -0.5px; }
-        .add-account-desc { font-size: 14px; color: #94a3b8; font-weight: 500; margin: 0; max-width: 260px; line-height: 1.6; }
-        
-        .get-started-btn {
-            background: #2563eb;
-            color: #fff;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 16px;
-            font-weight: 800;
-            font-size: 15px;
-            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
-            transition: all 0.2s;
-            cursor: pointer;
-            letter-spacing: -0.2px;
-        }
-        .get-started-btn:active { transform: scale(0.96); box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2); }
+        .add-account-title { font-size: 14px; font-weight: 800; color: #475569; margin: 0; }
+        .add-account-desc, .get-started-btn { display: none; }
 
         /* SKELETON LOADERS */
-        .skeleton-account { background: #fff; border-radius: 24px; padding: 14px 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 16px; border: 1px solid #f8fafc; }
-        .skeleton-icon { width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0; }
-        .skeleton-info { flex: 1; }
-        .skeleton-name { width: 120px; height: 18px; border-radius: 4px; margin-bottom: 8px; }
-        .skeleton-type { width: 80px; height: 12px; border-radius: 3px; }
-        .skeleton-action { width: 60px; height: 24px; border-radius: 8px; }
+        .skeleton-account { background: #fff; border-radius: 20px; padding: 16px; margin: 12px 0px; display: flex; align-items: center; gap: 16px; border: 1px solid rgba(0,0,0,0.03); border-left: 4px solid #f1f5f9; }
+        .skeleton-account:last-child { border-bottom: none; }
+        .skeleton-icon { width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; }
+        .skeleton-info { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .skeleton-name-row { display: flex; align-items: center; gap: 8px; }
+        .skeleton-name { width: 100px; height: 12px; border-radius: 4px; }
+        .skeleton-status { width: 40px; height: 12px; border-radius: 4px; }
+        .skeleton-type { width: 60px; height: 8px; border-radius: 3px; }
+        .skeleton-actions { display: flex; align-items: center; gap: 12px; }
+        .skeleton-button { width: 65px; height: 24px; border-radius: 8px; }
+        .skeleton-drag { display: none; }
 
         .loading-only { display: block; }
         .loaded-only { display: none; }
@@ -320,12 +315,13 @@
         .guest-gate-btn:active { transform: scale(0.96); }
 
         /* MODERN PULL-TO-REFRESH */
-        .ptr-container { position: fixed; top: 85px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 60px; display: flex; align-items: center; justify-content: center; z-index: 100; pointer-events: none; }
-        .ptr-spinner { width: 32px; height: 32px; opacity: 0; transition: opacity 0.3s; }
+        .ptr-container { position: fixed; top: 75px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 80px; display: flex; align-items: flex-start; justify-content: center; z-index: 400; pointer-events: none; padding-top: 5px; }
+        .ptr-spinner { width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 3px 12px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; transform: translateY(-60px) scale(0.6); opacity: 0; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease; }
         .ptr-spinner.visible { opacity: 1; }
-        .ptr-circle { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 62; stroke-dashoffset: 62; transition: stroke-dashoffset 0.1s linear; }
-        .ptr-spinner.refreshing .ptr-circle { animation: ptrDash 1.2s ease-in-out infinite; }
-        @keyframes ptrDash { 0% { stroke-dashoffset: 62; transform: rotate(0deg); } 50% { stroke-dashoffset: 15; } 100% { stroke-dashoffset: 62; transform: rotate(360deg); } }
+        .ptr-spinner.refreshing { transform: translateY(0) scale(1) !important; opacity: 1; }
+        .ptr-circle { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-dasharray: 60; stroke-dashoffset: 60; transition: stroke-dashoffset 0.2s ease; }
+        .ptr-spinner.refreshing .ptr-circle { stroke-dashoffset: 15; animation: ptrDash 1.2s ease-in-out infinite; }
+        @keyframes ptrDash { 0% { stroke-dashoffset: 55; transform: rotate(0deg); } 50% { stroke-dashoffset: 15; } 100% { stroke-dashoffset: 55; transform: rotate(360deg); } }
 
     </style>
 </head>
@@ -385,9 +381,23 @@
                 <img id="user-pic" src="" alt="Profile" referrerpolicy="no-referrer">
             </div>
             <div id="profile-dropdown" class="profile-dropdown">
+                <div class="dropdown-header" id="dropdown-user-email">...</div>
+                <div class="dropdown-item" onclick="toggleDarkMode()">
+                    <i class="material-icons" id="dark-mode-icon">dark_mode</i>
+                    <span id="dark-mode-text">Dark Mode</span>
+                </div>
                 <div class="dropdown-item" onclick="handleAuthClick()">
                     <i class="material-icons">sync</i>
-                    <span>Google Sync</span>
+                    <span>Switch Account</span>
+                </div>
+                <div class="dropdown-item" id="biometric-menu-item" onclick="toggleBiometricSetting()">
+                    <i class="material-icons">fingerprint</i>
+                    <span>Biometric Login</span>
+                    <div class="biometric-status-dot" id="biometric-status-dot"></div>
+                </div>
+                <div class="dropdown-item" onclick="promptSetPin()">
+                    <i class="material-icons">lock</i>
+                    <span>Privacy PIN</span>
                 </div>
                 <div class="dropdown-item logout" onclick="handleSignout()">
                     <i class="material-icons">logout</i>
@@ -408,36 +418,50 @@
             
             <!-- Skeleton Loader (Visible by default) -->
             <div id="loadingSkeletons" class="loading-only">
+                <!-- Template Skeleton -->
                 <div class="skeleton-account">
                     <div class="skeleton-icon shimmer"></div>
                     <div class="skeleton-info">
-                        <div class="skeleton-name shimmer"></div>
+                        <div class="skeleton-name-row">
+                            <div class="skeleton-name shimmer"></div>
+                            <div class="skeleton-status shimmer"></div>
+                        </div>
                         <div class="skeleton-type shimmer"></div>
                     </div>
-                    <div class="skeleton-action shimmer"></div>
+                    <div class="skeleton-actions">
+                        <div class="skeleton-button shimmer"></div>
+                    </div>
                 </div>
                 <div class="skeleton-account">
                     <div class="skeleton-icon shimmer"></div>
                     <div class="skeleton-info">
-                        <div class="skeleton-name shimmer"></div>
+                        <div class="skeleton-name-row">
+                            <div class="skeleton-name shimmer"></div>
+                        </div>
                         <div class="skeleton-type shimmer"></div>
                     </div>
-                    <div class="skeleton-action shimmer"></div>
+                    <div class="skeleton-actions">
+                        <div class="skeleton-button shimmer"></div>
+                    </div>
                 </div>
                 <div class="skeleton-account">
                     <div class="skeleton-icon shimmer"></div>
                     <div class="skeleton-info">
-                        <div class="skeleton-name shimmer"></div>
+                        <div class="skeleton-name-row">
+                            <div class="skeleton-name shimmer"></div>
+                        </div>
                         <div class="skeleton-type shimmer"></div>
                     </div>
-                    <div class="skeleton-action shimmer"></div>
+                    <div class="skeleton-actions">
+                        <div class="skeleton-button shimmer"></div>
+                    </div>
                 </div>
             </div>
 
             <!-- DYNAMICALLY LOADED CARDS -->
             <div id="accountsWrapper" class="loaded-only">
                 <div id="accountsList">
-                    <div id="dynamic-cards" style="padding: 0;"></div>
+                    <div id="dynamic-cards" style="padding: 5px 0px 0px 0px;"></div>
                 </div>
 
                 <div id="add-account-placeholder" class="add-account-container">
@@ -525,31 +549,17 @@
             const isAnon = !user || user.isAnonymous;
             // Removed guestGate overlay logic to allow anonymous access
             
-            if (user) {
+            if (user && !user.isAnonymous) {
                 localStorage.setItem('wallet_auth_type', 'google');
-                // UI Updates - save full name to NavState for full first name extraction
-                if (user.displayName) {
-                    const fullName = user.displayName;
-                    const parts = fullName.split(' ');
-                    const displayName = parts.length >= 2 ? `${parts[0]} ${parts[1]}` : parts[0];
-                    
-                    document.getElementById('user-display-name').innerText = displayName;
-                    
-                    // Save full name to NavState (it will extract full first name when loading)
-                    if (window.NavState) {
-                        window.NavState.saveProfile(fullName, user.photoURL || '', user.email);
-                    }
-                }
-                if (user.photoURL) {
-                    const badge = document.getElementById('profile-badge');
-                    const pic = document.getElementById('user-pic');
-                    let photoUrl = user.photoURL;
-                    if (photoUrl.includes('googleusercontent.com') && !photoUrl.includes('s96-c')) {
-                        photoUrl = photoUrl.split('=')[0] + '=s96-c';
-                    }
-                    pic.src = photoUrl;
-                    pic.style.display = 'block';
-                    badge.classList.add('has-pic');
+                
+                // Extract full first name (first 2 words if available, e.g., "John Paul")
+                const name = user.displayName || 'User';
+                const fullName = name;
+
+                // Save to NavState for persistence across pages
+                if (window.NavState) {
+                    window.NavState.saveProfile(fullName, user.photoURL || '', user.email);
+                    window.NavState.loadProfile(); // This will update the UI with displayName
                 }
 
                 // FETCH ACCOUNTS
@@ -638,17 +648,16 @@
         });
 
         window.toggleProfileDropdown = (e) => {
-            e.stopPropagation();
-            document.getElementById('profile-dropdown').classList.toggle('active');
-        };
-
-        window.addEventListener('click', (e) => {
+            if (e) e.stopPropagation();
             const dropdown = document.getElementById('profile-dropdown');
-            if (dropdown && dropdown.classList.contains('active')) {
-                const badge = document.getElementById('profile-badge');
-                if (!badge.contains(e.target)) dropdown.classList.remove('active');
+            if (!dropdown) return;
+            const isActive = dropdown.classList.toggle('active');
+            if (isActive && window.NavState) {
+                window.NavState.pushModalState('profile-dropdown', () => dropdown.classList.remove('active'));
+            } else if (!isActive && window.NavState) {
+                window.NavState.popModalState('profile-dropdown');
             }
-        });
+        };
 
         window.handleAuthClick = async () => {
             const btn = event?.currentTarget || document.activeElement;
@@ -712,15 +721,7 @@
             console.error('Redirect error:', e);
         });
 
-        window.handleSignout = async () => {
-            if (confirm('Sign out?')) {
-                try { 
-                    localStorage.clear();
-                    await auth.signOut(); 
-                    window.location.reload(); 
-                } catch (e) { console.error(e); }
-            }
-        };
+
 
         window.renderAccounts = (accounts) => {
             const container = document.getElementById('dynamic-cards');
@@ -731,7 +732,7 @@
             if (wrapper) wrapper.classList.add('loaded');
 
             if (accounts.length === 0) {
-                if (container) container.innerHTML = '<p style="padding: 20px; color: #94a3b8;">No accounts found.</p>';
+                if (container) container.innerHTML = '<p style="padding: 15px; color: #94a3b8;">No accounts found.</p>';
                 return;
             }
 
@@ -747,13 +748,9 @@
                     placeholderTarget.innerHTML = `
                         <div class="add-account-card" onclick="window.location.href='account_setup.html'">
                             <div class="add-account-icon-box">
-                                <i class="material-icons" style="font-size: 36px;">add</i>
+                                <i class="material-icons" style="font-size: 20px;">add</i>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 8px;">
-                                <h3 class="add-account-title">Connect New Account</h3>
-                                <p class="add-account-desc">Link your banks or wallets to see all your finances in one place.</p>
-                            </div>
-                            <button class="get-started-btn">Get Started</button>
+                            <h3 class="add-account-title">Connect New Account</h3>
                         </div>
                     `;
                 }
@@ -763,8 +760,17 @@
             // If we want a specific initial sort (like built-ins first), we should do it only once during creation
             // For now, we just render as-is from Firestore (which will be updated by drag-and-drop)
             
+            const getAccentClass = (name) => {
+                const lowName = name.toLowerCase();
+                if (lowName.includes('atome')) return 'accent-atome';
+                if (lowName.includes('bpi')) return 'accent-bpi';
+                if (lowName.includes('gcash')) return 'accent-gcash';
+                if (lowName.includes('maya')) return 'accent-maya';
+                return 'accent-bank';
+            };
+
             container.innerHTML = accounts.map((acc, index) => `
-                <div class="account-card" draggable="true" data-id="${acc.id}" data-index="${index}">
+                <div class="account-card ${getAccentClass(acc.name)}" draggable="true" data-id="${acc.id}" data-index="${index}">
                     <div class="account-icon" style="background: ${acc.color};">
                         <i class="material-icons">${acc.type === 'wallet' ? 'account_balance_wallet' : (acc.type === 'debit' ? 'account_balance' : 'credit_card')}</i>
                     </div>
@@ -788,10 +794,6 @@
                         ` : `
                             <button class="set-default-btn" onclick="setDefault('${acc.id}')">SET DEFAULT</button>
                         `}
-                        
-                        <div class="drag-handle">
-                            <i class="material-icons">drag_indicator</i>
-                        </div>
                         
                         ${!acc.isBuiltIn ? `
                             <button onclick="deleteAccount('${acc.id}')" style="background: transparent; border: none; color: #ef4444; padding: 4px; cursor: pointer; display: flex; align-items: center;">
@@ -969,13 +971,10 @@
                     // Trigger sync
                     console.log('🔄 Pull-to-refresh: Syncing accounts');
                     
-                    // Force a fresh fetch from Firestore
-                    if (window.loadAccountsData) {
-                        window.loadAccountsData();
-                    } else {
-                        // Fallback: reload the page if function not exposed
+                    // Force a reload for a "hard refresh" effect
+                    setTimeout(() => {
                         window.location.reload();
-                    }
+                    }, 500);
                     
                     // Hide after delay
                     setTimeout(() => {

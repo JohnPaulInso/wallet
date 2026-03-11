@@ -557,8 +557,8 @@
             display: none; align-items: center; justify-content: center; padding: 24px;
         }
         .modal-card {
-            background: #fff; width: 100%; max-width: 400px; /* Slightly wider */
-            border-radius: 32px; padding: 24px;
+            background: #fff; width: 1  0%; max-width: 440px; /* Slightly wider */
+            border-radius: 32px; padding: 20px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.1);
             animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -638,6 +638,9 @@
         .icon-item-box i { font-size: 20px; }
         .icon-item-label { font-size: 9px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; text-align: center; }
         .icon-item.active .icon-item-label { color: var(--accent-color); }
+        
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
 
         .upload-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
         .upload-btn {
@@ -1034,7 +1037,7 @@
             auth, db, onAuthStateChanged, 
             doc, getDoc, updateDoc, serverTimestamp,
             collection, getDocs, query, orderBy, deleteDoc,
-            addDoc
+            addDoc, increment
         } from "./firebase-config.js";
 
         // Navigation & State
@@ -1145,28 +1148,34 @@
 
             if (!currentUser || !goalId) return;
 
+            // UI: Find the button and show loading
+            const btn = document.querySelector('#depositModal button.modal-btn.primary-btn');
+            const originalText = btn ? btn.innerText : 'Confirm Deposit';
+
             try {
-                // Disable button to prevent double-click
-                const btn = event.target;
-                btn.disabled = true;
-                btn.innerText = "Processing...";
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.7';
+                    btn.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="material-icons spin" style="font-size: 18px;">sync</i> Saving...
+                    </span>`;
+                }
 
                 const isWithdrawal = amount < 0;
                 const type = isWithdrawal ? 'withdrawal' : 'deposit';
 
-                // 1. Add to transactions sub-collection
+                // 1. Update goal's currentAmount atomically
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                await updateDoc(goalRef, {
+                    currentAmount: increment(amount)
+                });
+
+                // 2. Add to transactions sub-collection
                 const txnRef = collection(db, `users/${currentUser.uid}/goals/${goalId}/transactions`);
                 await addDoc(txnRef, {
                     amount: amount,
                     type: type,
                     timestamp: serverTimestamp()
-                });
-
-                // 2. Update goal's currentAmount
-                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
-                const newTotal = (currentGoalData.currentAmount || 0) + amount;
-                await updateDoc(goalRef, {
-                    currentAmount: Math.max(0, newTotal)
                 });
 
                 window.closeDepositModal();
@@ -1182,10 +1191,10 @@
                 console.error("Error confirming deposit:", error);
                 alert("Error saving transaction. Please try again.");
             } finally {
-                const btn = document.querySelector('#depositModal button.modal-btn.primary-btn');
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerText = "Confirm Deposit";
+                    btn.style.opacity = '1';
+                    btn.innerText = originalText;
                 }
             }
         };
@@ -2040,6 +2049,11 @@
                 loadTransactionHistory();
             });
         }
+
+        window.goBack = () => {
+            if (window.NavState) window.NavState.goBack();
+            else window.history.back();
+        };
 
         // Wait for page to be "ready" after data load to fade in
         window.addEventListener('load', () => {

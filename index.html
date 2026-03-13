@@ -1089,15 +1089,17 @@
                              localStorage.setItem('g_access_token', user.authentication.accessToken);
                          }
                      } catch (nativeError) {
-                         log('Native Auth Error: ' + (nativeError.message || JSON.stringify(nativeError)), 'error');
-                         // Fallback to browser flow if native plugin fails/crashes
-                         log('Falling back to platform-default sign-in...');
-                         const { signInWithPopup, signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                         try {
-                             await signInWithPopup(auth, provider);
-                         } catch (popupErr) {
-                             await signInWithRedirect(auth, provider);
+                         const errMsg = nativeError.message || JSON.stringify(nativeError);
+                         log('Native Auth Error: ' + errMsg, 'error');
+                         
+                         // If it's a cancellation, don't show scary error
+                         if (errMsg.includes('cancel') || errMsg.includes('user') || nativeError.name === 'AbortError') {
+                             showToast('Sign-in cancelled.');
+                         } else {
+                             showToast('Native sign-in error. Check connection.');
                          }
+                         // STRICT: No fallback to browser redirects on APK.
+                         // This keeps the user inside the app even if login fails.
                      }
                  } else {
                      try {
@@ -1615,8 +1617,9 @@
 
                         // START BACKGROUND WATCHERS (Keep Triple Progress Bar & Safe To Spend accurate)
                         if (true) { // Relaxed check
-                            window.watchAtomeBalance();
+                            if (window.watchAtomeBalance) window.watchAtomeBalance();
                             if (window.watchBpiTransactions) window.watchBpiTransactions();
+                            if (window.watchBudgetManual) window.watchBudgetManual();
                         }
                     });
                 } else {
@@ -2435,10 +2438,34 @@
 
         // BACKGROUND WATCHER: Keep Atome balance in sync even when on BPI account
          window.walletTxns = { atome: [], bpi: [] };
+         window.budgetManualTxns = [];
+
+         window.watchBudgetManual = () => {
+             const uid = auth.currentUser?.uid;
+             if (!uid) return;
+             if (window.unsubscribeBudgetManual) window.unsubscribeBudgetManual();
+             
+             const q = query(collection(db, "users", uid, "budget_manual_txns"), orderBy("date", "desc"));
+             window.unsubscribeBudgetManual = onSnapshot(q, (snap) => {
+                 window.budgetManualTxns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                 
+                 const modal = document.getElementById('budget-txn-modal');
+                 if (modal && modal.style.display !== 'none') {
+                     const titleEl = document.getElementById('budget-modal-title');
+                     if (titleEl) {
+                        const titleText = titleEl.innerText.split(' ')[0].toLowerCase();
+                        const typeMap = { 'needs': 'needs', 'wants': 'wants', 'savings': 'savings' };
+                        if (typeMap[titleText]) window.showBudgetTransactions(typeMap[titleText]);
+                     }
+                 }
+             });
+         };
 
          window.watchAtomeBalance = () => {
              const uid = auth.currentUser?.uid;
              if (!uid) return;
+
              
              if (window.unsubscribeAtomeWatch) window.unsubscribeAtomeWatch();
 
@@ -2511,6 +2538,19 @@
             const allAccountIds = [...new Set([...defaultAccounts, ...savedAccounts.map(a => a.id)])];
             
             log(`Warming up cache for ${allAccountIds.length} accounts...`);
+
+            // Also hydrate manual budget transactions
+            try {
+                const q = query(collection(db, "users", uid, "budget_manual_txns"), orderBy("date", "desc"), limit(100));
+                const snap = await getDocs(q);
+                const txns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                localStorage.setItem(`wallet_cache_${uid}_budget_manual`, JSON.stringify({
+                    txns: txns,
+                    timestamp: Date.now()
+                }));
+                window.budgetManualTxns = txns;
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+            } catch (e) { console.warn('Manual budget hydration failed', e); }
             
             for (const accId of allAccountIds) {
                 if (accId === window.currentAccount) continue; // Current already handled
@@ -2802,12 +2842,15 @@
                  salaryEl.innerText = isHidden ? '******' : val;
              }
 
-             // 5. Dynamic Obligations rendering
+             // 5. Dynamic Obligations & Receipts rendering
              const obContainer = document.getElementById('dynamic-obligations-container');
              if (obContainer) {
+                 let combinedHTML = '';
+                 
+                 // Process Obligations
                  if (config.obligations && config.obligations.length > 0) {
-                     obContainer.innerHTML = config.obligations.map(ob => {
-                         const isIncluded = ob.included !== false; // Default to true
+                     combinedHTML += config.obligations.map(ob => {
+                         const isIncluded = ob.included !== false;
                          const excludedStyle = isIncluded ? '' : 'opacity: 0.4; filter: grayscale(1);';
                          const toggleIcon = isIncluded ? 'check_circle' : 'remove_circle_outline';
                          const toggleColor = isIncluded ? '#64748b' : '#cbd5e1';
@@ -2832,9 +2875,8 @@
                          </div>
                          `;
                      }).join('');
-                 } else {
-                     obContainer.innerHTML = '';
                  }
+                 obContainer.innerHTML = combinedHTML;
              }
 
 
@@ -3059,10 +3101,10 @@
             });
          };
 
-         window.updateTripleProgressBar = () => {
-            const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
+        window.updateTripleProgressBar = () => {
+            const user = auth.currentUser;
             const widget = document.getElementById('triple-progress-widget');
-            if (!widget || !isAdmin) {
+            if (!widget || !user) {
                 if (widget) widget.style.display = 'none';
                 return;
             }
@@ -3130,7 +3172,7 @@
                     if (!window.checkPeriod(t, currentFilter, 0, now)) return;
 
                     const display = getMerchantDisplay(t.name || t.merchant, t);
-                    const amt = Math.abs(t.amount || 0);
+                    const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
 
                     if (account === 'atome') {
                         if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
@@ -3142,6 +3184,15 @@
                         if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
                             savingsTotal += amt;
                         }
+                    } else if (account === 'budget_manual') {
+                        // Include our custom manual collections
+                        if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
+                            needsTotal += amt;
+                        } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses') {
+                            wantsTotal += amt;
+                        } else if (display.category === 'Savings') {
+                            savingsTotal += amt;
+                        }
                     }
                 });
             };
@@ -3150,10 +3201,12 @@
             if (window.walletTxns) {
                 aggregateFrom(window.walletTxns.atome || [], 'atome');
                 aggregateFrom(window.walletTxns.bpi || [], 'bpi');
+                aggregateFrom(window.budgetManualTxns || [], 'budget_manual');
             } else {
-                // Fallback to window.allTxns if background watchers hasn't fired yet
+                // Fallback to window.allTxns
                 aggregateFrom(window.allTxns || [], window.currentAccount);
             }
+
 
             // Update UI
             const needsPct = Math.min((needsTotal / needsLimit) * 100, 100);
@@ -3221,12 +3274,19 @@
             const modal = document.getElementById('budget-txn-modal');
             const list = document.getElementById('budget-txn-list');
             const title = document.getElementById('budget-modal-title');
+            const addBtn = document.getElementById('budget-modal-add-btn');
             if (!modal || !list) return;
 
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('show'), 10);
             list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading transactions...</div>';
-            title.innerText = type.charAt(0).toUpperCase() + type.slice(1) + ' Transactions';
+            
+            const displayType = type === 'needs' ? 'Needs' : (type === 'wants' ? 'Wants' : 'Savings');
+            title.innerText = displayType + ' Transactions';
+            
+            if (addBtn) {
+                addBtn.onclick = () => window.openBudgetManualEntryModal(type);
+            }
             
             if (window.NavState) window.NavState.pushModalState('budget-txn-modal', () => closeModals(true));
 
@@ -3241,20 +3301,25 @@
                     if (!window.checkPeriod(t, currentFilter, 0, now)) return;
                     
                     const display = getMerchantDisplay(t.name || t.merchant, t);
-                    const amt = Math.abs(t.amount || 0);
+                    const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                     
+                    let match = false;
                     if (type === 'needs') {
-                        if (account === 'atome' && (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation')) {
-                            filtered.push(t);
+                        if ((account === 'atome' || account === 'budget_manual') && (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation')) {
+                            match = true;
                         }
                     } else if (type === 'wants') {
-                        if (account === 'atome' && (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses')) {
-                            filtered.push(t);
+                        if ((account === 'atome' || account === 'budget_manual') && (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses')) {
+                            match = true;
                         }
                     } else if (type === 'savings') {
-                        if (account === 'bpi' && (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS')))) {
-                            filtered.push(t);
+                        if ((account === 'bpi' || account === 'budget_manual') && (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS')))) {
+                            match = true;
                         }
+                    }
+                    
+                    if (match) {
+                        filtered.push({ ...t, account });
                     }
                 });
             };
@@ -3262,6 +3327,7 @@
             if (window.walletTxns) {
                 collectFrom(window.walletTxns.atome || [], 'atome');
                 collectFrom(window.walletTxns.bpi || [], 'bpi');
+                collectFrom(window.budgetManualTxns || [], 'budget_manual');
             } else {
                 collectFrom(window.allTxns || [], window.currentAccount);
             }
@@ -3275,29 +3341,271 @@
                 let html = '';
                 filtered.forEach(t => {
                     const display = getMerchantDisplay(t.name || t.merchant, t);
-                    const amt = Math.abs(t.amount || 0);
-                    const dateObj = t.date?.seconds ? new Date(t.date.seconds * 1000) : new Date(t.date);
+                    const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                    const dateObj = t.date?.seconds ? new Date(t.date.seconds * 1000) : (typeof t.date === 'string' ? new Date(t.date) : new Date());
                     const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     
+                    // Only manual entries from our new collection are editable
+                    const isEditable = t.account === 'budget_manual';
+
                     html += `
-                        <div style="display: flex; align-items: center; padding: 16px; background: #ffffff; border-radius: 16px; margin-bottom: 12px; border: 1px solid #f1f5f9;">
+                        <div style="display: flex; align-items: center; padding: 14px 16px; background: #ffffff; border-radius: 16px; margin-bottom: 12px; border: 1px solid #f1f5f9; position: relative;">
                             <div style="width: 40px; height: 40px; border-radius: 12px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #1e293b;">
                                 <i class="material-icons" style="font-size: 20px;">${display.icon}</i>
                             </div>
-                            <div style="flex: 1;">
-                                <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">${display.name}</div>
-                                <div style="font-size: 11px; color: #64748b; font-weight: 600;">${dateStr} • ${display.category}</div>
+                            <div style="flex: 1; overflow: hidden;">
+                                <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${display.name}</div>
+                                <div style="font-size: 11px; color: #64748b; font-weight: 600;">${dateStr}${isEditable ? ' • CASH LOG' : ''}</div>
                             </div>
-                             <div style="font-size: 15px; font-weight: 800; color: #1e293b;">₱${amt.toLocaleString()}</div>
+                            <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                                <div style="font-size: 15px; font-weight: 800; color: #1e293b;">₱${amt.toLocaleString()}</div>
+                                ${isEditable ? `
+                                <div style="display: flex; gap: 4px;">
+                                    <i class="material-icons" onclick="event.stopPropagation(); window.openBudgetManualEditModal(\`${JSON.stringify({...t, name: display.name}).replace(/"/g, '&quot;')}\`)" style="font-size: 18px; color: #3b82f6; cursor: pointer; padding: 4px;">edit</i>
+                                    <i class="material-icons" onclick="event.stopPropagation(); window.deleteBudgetManualTxn('${t.id}')" style="font-size: 18px; color: #ef4444; cursor: pointer; padding: 4px;">delete</i>
+                                </div>
+                                ` : ''}
+                            </div>
                         </div>
                     `;
                 });
                 list.innerHTML = html;
             }
             
-            // Re-sync swipe logic
             if (window.updateBudgetModalSwipe) window.updateBudgetModalSwipe();
         };
+
+        window.openBudgetManualEntryModal = (type) => {
+            window.editingBudgetManualId = null;
+            document.getElementById('budget-manual-title').innerText = 'Add Cash Log';
+            document.getElementById('budget-manual-amt').value = '';
+            document.getElementById('budget-manual-name').value = '';
+            
+            // Set category based on type
+            let catId = 'Service';
+            if (type === 'wants') catId = 'Shopping';
+            else if (type === 'savings') catId = 'Savings';
+            
+            window.selectedBudgetManualCat = catId;
+            updateBudgetManualCatUI(catId);
+            
+            const modal = document.getElementById('budget-manual-entry-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                modal.classList.add('show');
+                document.getElementById('budget-manual-amt').focus();
+            }, 10);
+            if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => window.closeBudgetManualModal());
+        };
+
+        window.openBudgetManualEditModal = (txnJson) => {
+            const t = JSON.parse(txnJson.replace(/&quot;/g, '"'));
+            window.editingBudgetManualId = t.id;
+            document.getElementById('budget-manual-title').innerText = 'Edit Cash Log';
+            document.getElementById('budget-manual-amt').value = t.manualAmount || t.amount;
+            document.getElementById('budget-manual-name').value = t.merchant || t.name;
+            
+            const display = getMerchantDisplay(t.name || t.merchant, t);
+            window.selectedBudgetManualCat = display.category;
+            updateBudgetManualCatUI(display.category);
+            
+            document.getElementById('budget-manual-entry-modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('budget-manual-entry-modal').classList.add('show'), 10);
+            if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => window.closeBudgetManualModal());
+        };
+
+        function updateBudgetManualCatUI(catId) {
+            const cat = CATEGORIES.find(c => c.id === catId) || CATEGORIES[1];
+            document.getElementById('budget-manual-cat-label').innerText = cat.label;
+            document.getElementById('budget-manual-icon').innerText = cat.icon;
+            
+            const iconBox = document.getElementById('budget-manual-icon-box');
+            const displayBox = document.getElementById('budget-manual-cat-display');
+            
+            // Map category IDs to their specific colors
+            const colorMap = {
+                'Online shopping': { bg: '#fff7ed', color: '#ea580c' },
+                'Shopping': { bg: '#dbeafe', color: '#3b82f6' },
+                'Vehicle': { bg: '#ede9fe', color: '#8b5cf6' },
+                'Food & Drinks': { bg: '#fef9c3', color: '#eab308' },
+                'Life & Entertainment': { bg: '#d1fae5', color: '#10b981' },
+                'Service': { bg: '#fce7f3', color: '#d946ef' },
+                'Trade Copier': { bg: '#cffafe', color: '#06b6d4' },
+                'Trading Expenses': { bg: '#fee2e2', color: '#ef4444' },
+                'Financial expenses': { bg: '#fee2e2', color: '#ef4444' },
+                'Education': { bg: '#eff6ff', color: '#1d4ed8' },
+                'Savings': { bg: '#dcfce7', color: '#16a34a' },
+                'Transportation': { bg: '#ede9fe', color: '#8b5cf6' }
+            };
+
+            const colors = colorMap[catId] || { bg: '#f8fafc', color: '#64748b' };
+            
+            iconBox.style.background = colors.bg;
+            iconBox.style.color = colors.color;
+            displayBox.style.background = colors.bg + '40'; // Low opacity background for the whole bar
+            displayBox.style.borderColor = colors.color + '60';
+        }
+
+        window.closeBudgetManualModal = () => {
+            const modal = document.getElementById('budget-manual-entry-modal');
+            if (!modal) return;
+            modal.classList.add('closing');
+            if (window.NavState) window.NavState.popModalState('budget-manual-entry-modal');
+            setTimeout(() => {
+                modal.classList.remove('show', 'closing');
+                modal.style.display = 'none';
+            }, 300);
+        };
+
+        window.openBudgetManualCategoryPicker = async () => {
+            // Find relevant categories for budget (Needs, Wants, Savings)
+            const budgetCats = [
+                'Education', 'Service', 'Vehicle', 'Transportation', // Needs
+                'Shopping', 'Online shopping', 'Food & Drinks', 'Life & Entertainment', 'Sport', 'Financial expenses', // Wants
+                'Savings' // Savings
+            ];
+            
+            const colorMap = {
+                'Online shopping': { bg: '#fff7ed', color: '#ea580c' },
+                'Shopping': { bg: '#dbeafe', color: '#3b82f6' },
+                'Vehicle': { bg: '#ede9fe', color: '#8b5cf6' },
+                'Food & Drinks': { bg: '#fef9c3', color: '#eab308' },
+                'Life & Entertainment': { bg: '#d1fae5', color: '#10b981' },
+                'Service': { bg: '#fce7f3', color: '#d946ef' },
+                'Trade Copier': { bg: '#cffafe', color: '#06b6d4' },
+                'Trading Expenses': { bg: '#fee2e2', color: '#ef4444' },
+                'Financial expenses': { bg: '#fee2e2', color: '#ef4444' },
+                'Education': { bg: '#eff6ff', color: '#1d4ed8' },
+                'Savings': { bg: '#dcfce7', color: '#16a34a' },
+                'Transportation': { bg: '#ede9fe', color: '#8b5cf6' }
+            };
+
+            const options = CATEGORIES.filter(c => budgetCats.includes(c.id)).map(c => ({
+                id: c.id,
+                label: c.label,
+                icon: c.icon,
+                colors: colorMap[c.id] || { bg: '#f1f5f9', color: '#64748b' }
+            }));
+
+            let pickerContent = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px 0; width: 100%; box-sizing: border-box;">';
+            options.forEach(opt => {
+                const isActive = window.selectedBudgetManualCat === opt.id;
+                pickerContent += `
+                    <div onclick="window.setBudgetManualCategory('${opt.id}')" style="display: flex; align-items: center; gap: 8px; padding: 10px; border-radius: 12px; border: 2.5px solid ${isActive ? opt.colors.color : opt.colors.bg}; background: ${isActive ? opt.colors.bg : '#fff'}; cursor: pointer; transition: all 0.2s; min-width: 0;">
+                        <i class="material-icons" style="font-size: 20px; color: ${opt.colors.color}; flex-shrink: 0;">${opt.icon}</i>
+                        <span style="font-size: 12px; font-weight: 800; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${opt.label}</span>
+                    </div>
+                `;
+            });
+            pickerContent += '</div>';
+
+            const selected = await showAppDialog({
+                title: 'Select Category',
+                extraContent: pickerContent,
+                confirm: false
+            });
+        };
+
+        window.setBudgetManualCategory = (catId) => {
+            window.selectedBudgetManualCat = catId;
+            updateBudgetManualCatUI(catId);
+            
+            // Close the dialog immediately
+            const overlay = document.getElementById('app-dialog');
+            if (overlay && overlay.classList.contains('show')) {
+                // Find the close function from showAppDialog promise
+                const okBtn = document.getElementById('dialog-ok-btn');
+                if (okBtn) okBtn.click();
+            }
+        };
+
+        window.saveBudgetManualTxn = async () => {
+            const amtVal = document.getElementById('budget-manual-amt').value;
+            const amt = parseFloat(amtVal);
+            const name = document.getElementById('budget-manual-name').value.trim();
+            const btn = document.getElementById('budget-manual-save-btn');
+            
+            if (!amtVal || isNaN(amt) || amt <= 0) { showToast('Enter valid amount'); return; }
+            if (!name) { showToast('Enter merchant/remarks'); return; }
+            
+            try {
+                const uid = auth.currentUser?.uid;
+                if (!uid) return;
+                
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+                btn.innerText = 'SAVING...';
+
+                const filterEl = document.getElementById('chart-filter');
+                const currentFilter = filterEl ? filterEl.value : 'this_month';
+                let dateToUse = new Date();
+                if (currentFilter.match(/^\d{4}-\d{2}$/)) {
+                    const [year, month] = currentFilter.split('-').map(Number);
+                    dateToUse = new Date(year, month - 1, 1);
+                }
+
+                const data = {
+                    amount: amt,
+                    manualAmount: amt,
+                    merchant: name,
+                    category: window.selectedBudgetManualCat,
+                    manualCategory: window.selectedBudgetManualCat,
+                    date: formatLocalDate(dateToUse),
+                    updatedAt: serverTimestamp()
+                };
+
+                if (window.editingBudgetManualId) {
+                    await updateDoc(doc(db, "users", uid, "budget_manual_txns", window.editingBudgetManualId), data);
+                    showToast('Log updated');
+                } else {
+                    data.createdAt = serverTimestamp();
+                    await addDoc(collection(db, "users", uid, "budget_manual_txns"), data);
+                    showToast('Cash log saved');
+                }
+                
+                window.closeBudgetManualModal();
+                
+                const titleText = document.getElementById('budget-modal-title').innerText.split(' ')[0].toLowerCase();
+                const typeMap = { 'needs': 'needs', 'wants': 'wants', 'savings': 'savings' };
+                if (typeMap[titleText]) window.showBudgetTransactions(typeMap[titleText]);
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                
+            } catch (err) {
+                log('Save manual budget error: ' + err.message, 'error');
+                showToast('Failed to save log');
+            } finally {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerText = 'SAVE LOG';
+            }
+        };
+
+        window.deleteBudgetManualTxn = async (id) => {
+            const confirmed = await showAppDialog({
+                title: 'Delete Cash Log?',
+                message: 'Are you sure you want to remove this transaction? This cannot be undone.',
+                confirm: true
+            });
+            
+            if (!confirmed) return;
+            
+            try {
+                const uid = auth.currentUser?.uid;
+                if (!uid) return;
+                await deleteDoc(doc(db, "users", uid, "budget_manual_txns", id));
+                showToast('Log deleted');
+                
+                const titleText = document.getElementById('budget-modal-title').innerText.split(' ')[0].toLowerCase();
+                const typeMap = { 'needs': 'needs', 'wants': 'wants', 'savings': 'savings' };
+                if (typeMap[titleText]) window.showBudgetTransactions(typeMap[titleText]);
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+            } catch (e) {
+                console.error(e);
+                showToast('Error deleting');
+            }
+        };
+
+
 
         function calculateNextPaycheck() {
             const now = new Date();
@@ -3523,9 +3831,12 @@
             }
         };
 
-        window.closeObligationModal = () => {
+        window.closeObligationModal = (fromPopState = false) => {
             const modal = document.getElementById('obligation-modal');
             modal.classList.remove('show');
+            if (window.NavState && !fromPopState) {
+                window.NavState.popModalState('obligation-modal');
+            }
         };
 
         window.deleteObligation = async (id) => {
@@ -3607,6 +3918,7 @@
             amountInput.value = '';
 
             const modal = document.getElementById('obligation-modal');
+            document.getElementById('ob-type-selector').style.display = 'none'; // Hide type selector for standard obligations
             modal.classList.add('show');
 
             saveBtn.onclick = async () => {
@@ -5351,7 +5663,10 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 filterTxnList();
             }
 
-            setTimeout(() => setupLongPressHandlers(), 50);
+            setTimeout(() => {
+                setupLongPressHandlers();
+                if (window.setupBalanceLongPress) window.setupBalanceLongPress();
+            }, 50);
 
             // CRITICAL FIX: Force update all privacy-masked elements after rendering
             // This ensures that when switching wallets, the privacy state is respected
@@ -5681,13 +5996,25 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             }
         };
 
-        // Close dropdown when clicking elsewhere
+        // Close dropdown when clicking elsewhere or clicking outside modals
         window.addEventListener('click', (e) => {
             const dropdown = document.getElementById('profile-dropdown');
             if (dropdown && dropdown.classList.contains('active')) {
                 const badge = document.getElementById('profile-badge');
-                if (!badge.contains(e.target)) {
+                if (badge && !badge.contains(e.target)) {
                     dropdown.classList.remove('active');
+                    if (window.NavState) window.NavState.popModalState('profile-dropdown');
+                }
+            }
+            
+            // CLICK OUTSIDE TO CLOSE MODALS
+            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('dialog-overlay')) {
+                if (e.target.id === 'receipts-modal') {
+                    window.closeReceiptsModal();
+                } else if (e.target.id === 'obligation-modal') {
+                    window.closeObligationModal();
+                } else if (typeof window.closeModals === 'function') {
+                    window.closeModals();
                 }
             }
             
@@ -6148,6 +6475,410 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 date: dateVal,
                 manualCategory: category
             };
+        }
+
+        // --- RECEIPTS & CALCULATOR FEATURE ---
+        let currentCalcInput = "0";
+        let calcHistory = "";
+        let receiptsModalAccount = null;
+
+        window.setupBalanceLongPress = () => {
+            document.querySelectorAll('.balance-amount').forEach(el => {
+                let timer = null;
+                const card = el.closest('.balance-card');
+                const accountId = card ? card.dataset.account : 'default_wallet';
+                
+                const start = (e) => {
+                    if (timer) clearTimeout(timer);
+                    timer = setTimeout(() => {
+                        window.openReceiptsModal(accountId);
+                        if (navigator.vibrate) navigator.vibrate(50);
+                        timer = null;
+                    }, 600); // 600ms for balance long-press to distinguish from accidental touch
+                };
+                
+                const end = () => {
+                    if (timer) {
+                        clearTimeout(timer);
+                        timer = null;
+                    }
+                };
+
+                // Remove existing to prevent duplicates
+                el.removeEventListener('mousedown', start);
+                el.removeEventListener('touchstart', start);
+                el.removeEventListener('mouseup', end);
+                el.removeEventListener('touchend', end);
+
+                el.addEventListener('mousedown', start);
+                el.addEventListener('touchstart', start, { passive: true });
+                el.addEventListener('mouseup', end);
+                el.addEventListener('touchend', end);
+                el.addEventListener('mouseleave', end);
+                el.addEventListener('touchmove', end);
+                
+                // Also prevent context menu on balance
+                el.oncontextmenu = (e) => {
+                    if (window.isNative && window.isNative()) e.preventDefault();
+                };
+            });
+        };
+
+        window.openReceiptsModal = (accId) => {
+            receiptsModalAccount = accId;
+            const modal = document.getElementById('receipts-modal');
+            const accName = document.getElementById('receipts-acc-name');
+            
+            // Map account ID to readable name
+            let name = "My Wallet";
+            if (accId === 'bpi') name = "BPI Account";
+            else if (accId === 'atome') name = "Atome Card";
+            
+            if (accName) accName.innerText = name;
+            if (modal) {
+                modal.style.display = 'flex';
+                setTimeout(() => modal.classList.add('show'), 10);
+            }
+            
+            // Reset calculator
+            currentCalcInput = "0";
+            calcHistory = "";
+            updateCalcUI();
+            
+            // Update receipts list
+            updateReceiptsUI();
+            
+            window.modalOpen = true;
+            if (window.NavState) {
+                window.NavState.pushModalState('receipts-modal', () => closeReceiptsModal(true));
+            }
+            
+            // Disable body scroll
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeReceiptsModal = (fromPopState = false) => {
+            const modal = document.getElementById('receipts-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+            window.modalOpen = false;
+            document.body.style.overflow = '';
+            
+            if (!fromPopState && window.NavState) {
+                window.NavState.popModalState('receipts-modal');
+            }
+        };
+
+        // Calculator Logic
+        function updateCalcUI() {
+            const display = document.getElementById('calc-display');
+            const history = document.getElementById('calc-history');
+            if (display) display.innerText = currentCalcInput;
+            if (history) history.innerText = calcHistory;
+        }
+
+        window.calcInput = (val) => {
+            if (val === 'C') {
+                currentCalcInput = "0";
+                calcHistory = "";
+            } else if (val === 'back') {
+                if (currentCalcInput.length > 1) {
+                    currentCalcInput = currentCalcInput.slice(0, -1);
+                } else {
+                    currentCalcInput = "0";
+                }
+            } else if (val === '=') {
+                try {
+                    // Replace visual operators with JS operators
+                    let expr = currentCalcInput.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+                    // Basic security: only allow digits and operators
+                    if (!/^[0-9+\-*/.%() ]+$/.test(expr)) throw new Error("Invalid");
+                    
+                    const result = Function('"use strict";return (' + expr + ')')();
+                    calcHistory = currentCalcInput + " =";
+                    currentCalcInput = String(Number(result.toFixed(2)));
+                } catch(e) {
+                    currentCalcInput = "Error";
+                }
+            } else if (['+', '-', '*', '/', '%'].includes(val)) {
+                let displayVal = val;
+                if (val === '*') displayVal = '×';
+                if (val === '/') displayVal = '÷';
+                if (val === '-') displayVal = '−';
+                
+                const lastChar = currentCalcInput.slice(-1);
+                if (['+', '−', '×', '÷'].includes(lastChar)) {
+                    currentCalcInput = currentCalcInput.slice(0, -1) + displayVal;
+                } else {
+                    currentCalcInput += displayVal;
+                }
+            } else {
+                if (currentCalcInput === "0" && val !== '.') currentCalcInput = val;
+                else if (currentCalcInput === "Error") currentCalcInput = val;
+                else currentCalcInput += val;
+            }
+            updateCalcUI();
+            if (navigator.vibrate) navigator.vibrate(10);
+        };
+
+        let currentObType = 'expense';
+        window.setObType = (type) => {
+            currentObType = type;
+            const expBtn = document.getElementById('ob-type-expense');
+            const incBtn = document.getElementById('ob-type-income');
+            if (!expBtn || !incBtn) return;
+            
+            if (type === 'income') {
+                incBtn.style.borderColor = '#10b981';
+                incBtn.style.background = 'rgba(16, 185, 129, 0.05)';
+                incBtn.style.color = '#10b981';
+                expBtn.style.borderColor = '#e2e8f0';
+                expBtn.style.background = '#fff';
+                expBtn.style.color = '#64748b';
+            } else {
+                expBtn.style.borderColor = '#f63b3b';
+                expBtn.style.background = 'rgba(246, 59, 59, 0.05)';
+                expBtn.style.color = '#f63b3b';
+                incBtn.style.borderColor = '#e2e8f0';
+                incBtn.style.background = '#fff';
+                incBtn.style.color = '#64748b';
+            }
+        };
+
+        window.addReceiptFromCalc = () => {
+            const amount = parseFloat(currentCalcInput);
+            if (isNaN(amount) || amount <= 0) {
+                showToast("Enter a valid amount");
+                return;
+            }
+            
+            // Repurpose the obligation-modal style for Receipts
+            const titleInput = document.getElementById('ob-input-title');
+            const amountInput = document.getElementById('ob-input-amount');
+            const modal = document.getElementById('obligation-modal');
+            const saveBtn = document.getElementById('ob-save-btn');
+            const titleDisplay = document.getElementById('ob-modal-title');
+            const msgDisplay = modal ? modal.querySelector('.dialog-msg') : null;
+
+            if (!modal || !titleInput || !amountInput) {
+                // Fallback to simple dialog if modal elements not found
+                showAppDialog({
+                    title: 'Receipt Name',
+                    message: 'Enter a title for this receipt:',
+                    input: true,
+                    placeholder: 'e.g. Grocery, Lunch',
+                    callback: (title) => {
+                        if (title === false) return;
+                        addReceipt(title || "New Receipt", amount);
+                        currentCalcInput = "0";
+                        calcHistory = "";
+                        updateCalcUI();
+                        showToast("Receipt added");
+                    }
+                });
+                return;
+            }
+
+            titleDisplay.innerText = "New Payment";
+            if (msgDisplay) msgDisplay.innerText = "Mark this payment as income or expense.";
+            titleInput.value = "";
+            amountInput.value = amount.toFixed(2);
+            document.getElementById('ob-type-selector').style.display = 'flex';
+            setObType('expense'); // Default for calc
+            modal.classList.add('show');
+
+            saveBtn.onclick = () => {
+                const title = titleInput.value.trim() || "New Receipt";
+                const finalAmount = parseFloat(amountInput.value) || amount;
+                addReceipt(title, finalAmount, currentObType);
+                modal.classList.remove('show');
+                currentCalcInput = "0";
+                calcHistory = "";
+                updateCalcUI();
+                showToast("Receipt added");
+            };
+        };
+
+        window.addManualReceipt = () => {
+            const titleInput = document.getElementById('ob-input-title');
+            const amountInput = document.getElementById('ob-input-amount');
+            const modal = document.getElementById('obligation-modal');
+            const saveBtn = document.getElementById('ob-save-btn');
+            const titleDisplay = document.getElementById('ob-modal-title');
+            const msgDisplay = modal ? modal.querySelector('.dialog-msg') : null;
+
+            if (!modal) return;
+
+            titleDisplay.innerText = "Add Item";
+            if (msgDisplay) msgDisplay.innerText = "Enter details and select a type.";
+            titleInput.value = "";
+            amountInput.value = "";
+            document.getElementById('ob-type-selector').style.display = 'flex';
+            modal.classList.add('show');
+            if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
+
+            saveBtn.onclick = () => {
+                const title = titleInput.value.trim() || "New Item";
+                const amount = parseFloat(amountInput.value);
+                if (isNaN(amount) || amount <= 0) {
+                    showToast("Please enter a valid amount");
+                    return;
+                }
+                addReceipt(title, amount, currentObType);
+                modal.classList.remove('show');
+                showToast(currentObType.toUpperCase() + " added");
+            };
+        };
+
+        // Receipts CRUD
+        function addReceipt(title, amount, type = 'expense') {
+            if (!window.safeToSpendConfig) window.safeToSpendConfig = { receipts: [] };
+            if (!window.safeToSpendConfig.receipts) window.safeToSpendConfig.receipts = [];
+            
+            const newReceipt = {
+                id: 'rcpt_' + Date.now(),
+                title: title,
+                amount: amount,
+                type: type, // 'income' or 'expense'
+                included: true,
+                timestamp: Date.now()
+            };
+            
+            window.safeToSpendConfig.receipts.push(newReceipt);
+            saveReceiptsData();
+            updateReceiptsUI();
+        }
+
+        window.toggleReceiptInclusion = (id) => {
+            const rcpt = window.safeToSpendConfig.receipts.find(r => r.id === id);
+            if (rcpt) {
+                rcpt.included = !rcpt.included;
+                saveReceiptsData();
+                updateReceiptsUI();
+                if (navigator.vibrate) navigator.vibrate(20);
+            }
+        };
+
+        window.deleteReceipt = (id) => {
+            window.safeToSpendConfig.receipts = window.safeToSpendConfig.receipts.filter(r => r.id !== id);
+            saveReceiptsData();
+            updateReceiptsUI();
+            showToast("Receipt deleted");
+        };
+
+        window.editReceipt = (id) => {
+            const rcpt = window.safeToSpendConfig.receipts.find(r => r.id === id);
+            if (!rcpt) return;
+            
+            const titleInput = document.getElementById('ob-input-title');
+            const amountInput = document.getElementById('ob-input-amount');
+            const modal = document.getElementById('obligation-modal');
+            const saveBtn = document.getElementById('ob-save-btn');
+            const titleDisplay = document.getElementById('ob-modal-title');
+            const msgDisplay = modal ? modal.querySelector('.dialog-msg') : null;
+
+            if (!modal) return;
+
+            titleDisplay.innerText = "Edit Item";
+            if (msgDisplay) msgDisplay.innerText = "Update the title, amount or type.";
+            titleInput.value = rcpt.title;
+            amountInput.value = rcpt.amount;
+            document.getElementById('ob-type-selector').style.display = 'flex';
+            modal.classList.add('show');
+            if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
+
+            saveBtn.onclick = () => {
+                const title = titleInput.value.trim() || "Edited Item";
+                const amount = parseFloat(amountInput.value);
+                if (isNaN(amount)) {
+                    showToast("Please enter a valid amount");
+                    return;
+                }
+                rcpt.title = title;
+                rcpt.amount = amount;
+                rcpt.type = currentObType;
+                
+                saveReceiptsData();
+                updateReceiptsUI();
+                modal.classList.remove('show');
+                showToast("Updated");
+            };
+        };
+
+        function saveReceiptsData() {
+            localStorage.setItem('wallet_receipts_backup', JSON.stringify(window.safeToSpendConfig.receipts));
+            
+            const uid = auth.currentUser?.uid;
+            if (uid) {
+                setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { 
+                    receipts: window.safeToSpendConfig.receipts 
+                }, { merge: true })
+                .then(() => console.log("Receipts synced to cloud"))
+                .catch(e => console.error("Sync error:", e));
+            }
+            if (typeof window.saveSafeSpendConfig === 'function') {
+                window.saveSafeSpendConfig();
+            }
+        }
+
+        function updateReceiptsUI() {
+            const container = document.getElementById('receipts-items-list');
+            const totalEl = document.getElementById('receipts-total');
+            const summaryNetEl = document.getElementById('summary-total-net');
+            if (!container) return;
+            
+            const receipts = window.safeToSpendConfig.receipts || [];
+            
+            if (receipts.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-receipts">
+                        <i class="material-icons">inventory_2</i>
+                        <p>No budget items yet. Use the calculator or add manually.</p>
+                    </div>`;
+                if (totalEl) totalEl.innerText = "₱0.00";
+                if (summaryNetEl) summaryNetEl.innerText = "₱0.00";
+                return;
+            }
+            
+            let totalIncome = 0;
+            let totalExpenses = 0;
+            
+            // Sort by timestamp newest first
+            receipts.sort((a,b) => b.timestamp - a.timestamp);
+            
+            container.innerHTML = receipts.map(rcpt => {
+                const isExcluded = !rcpt.included;
+                const isIncome = rcpt.type === 'income';
+                
+                if (!isExcluded) {
+                    if (isIncome) totalIncome += rcpt.amount;
+                    else totalExpenses += rcpt.amount;
+                }
+
+                return `
+                    <div class="receipt-item ${rcpt.type || 'expense'} ${isExcluded ? 'excluded' : ''}">
+                        <div class="receipt-check" onclick="toggleReceiptInclusion('${rcpt.id}')">
+                            <i class="material-icons">${!isExcluded ? (isIncome ? 'add_circle' : 'remove_circle') : 'remove_circle_outline'}</i>
+                        </div>
+                        <div class="receipt-item-info" onclick="toggleReceiptInclusion('${rcpt.id}')">
+                            <div class="receipt-item-title">${rcpt.title}</div>
+                            <div class="receipt-item-meta">${isIncome ? 'Income' : 'Expense'}</div>
+                        </div>
+                        <div class="receipt-item-amount" onclick="editReceipt('${rcpt.id}')">₱${rcpt.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                        <i class="material-icons receipt-delete-btn" onclick="deleteReceipt('${rcpt.id}')">delete_outline</i>
+                    </div>
+                `;
+            }).join('');
+            
+            const netTotal = totalIncome - totalExpenses;
+            const formattedTotal = `₱${netTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+            
+            if (summaryNetEl) {
+                summaryNetEl.innerText = formattedTotal;
+                summaryNetEl.style.color = netTotal >= 0 ? '#10b981' : '#ef4444';
+            }
         }
 
         // iOS-STYLE LONG-PRESS MENU
@@ -7955,6 +8686,20 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 }
                 
                 closeModals();
+
+                // Refresh budget modal if it was open (logic derived from current state)
+                const budgetModal = document.getElementById('budget-txn-modal');
+                if (budgetModal && budgetModal.style.display !== 'none') {
+                     const titleText = document.getElementById('budget-modal-title').innerText.split(' ')[0].toLowerCase();
+                     const typeMap = { 'needs': 'needs', 'wants': 'wants', 'savings': 'savings' };
+                     if (typeMap[titleText]) {
+                         window.showBudgetTransactions(typeMap[titleText]);
+                     }
+                }
+                
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (window.refreshApp) window.refreshApp();
+
             } catch (e) {
                 console.error(e);
                 showToast('Error saving');
@@ -8823,9 +9568,23 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
     <!-- PREMIUM OBLIGATION MODAL -->
     <div id="obligation-modal" class="dialog-overlay">
         <div class="dialog-card">
-            <div id="ob-modal-title" class="dialog-title">New Obligation</div>
-            <div class="dialog-msg">Enter a title and amount for this fixed obligation.</div>
+            <div id="ob-modal-title" class="dialog-title" style="font-weight: 900; font-size: 20px;">AddItem</div>
+            <div class="dialog-msg" style="margin-bottom: 24px;">Enter details and select a type.</div>
             
+            <div id="ob-type-selector" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #f1f5f9;">
+                <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Select Type</div>
+                <div style="display: flex; gap: 10px;">
+                    <div id="ob-type-expense" class="cat-option" style="flex: 1; border-color: rgb(246, 59, 59); background: rgba(246, 59, 59, 0.05); color: #f63b3b; font-weight: 700; height: 44px;" onclick="setObType('expense')">
+                        <i class="material-icons" style="font-size: 18px;">remove_circle_outline</i>
+                        <span>Expense</span>
+                    </div>
+                    <div id="ob-type-income" class="cat-option" style="flex: 1; font-weight: 700; height: 44px;" onclick="setObType('income')">
+                        <i class="material-icons" style="font-size: 18px;">add_circle_outline</i>
+                        <span>Income</span>
+                    </div>
+                </div>
+            </div>
+
             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
                 <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: -10px;">Title</div>
                 <input type="text" id="ob-input-title" class="dialog-input" style="margin-bottom: 0;" placeholder="e.g. Rent, Bills">
@@ -8852,6 +9611,87 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             <div class="dialog-actions">
                 <button id="dialog-cancel-btn" class="dialog-btn dialog-btn--cancel" style="display: none;">Cancel</button>
                 <button id="dialog-ok-btn" class="dialog-btn dialog-btn--primary">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECEIPTS & CALCULATOR MODAL -->
+    <div id="receipts-modal" class="modal-overlay full-screen">
+        <div class="receipts-content">
+            <div class="receipts-header">
+                <div class="receipts-title-box">
+                    <div class="receipts-title">Receipts & Calculator</div>
+                    <div class="receipts-subtitle" id="receipts-acc-name">BUDGET BREAKDOWN</div>
+                </div>
+                <i class="material-icons" onclick="closeReceiptsModal()" style="cursor: pointer; padding: 8px; border-radius: 50%; background: rgba(0,0,0,0.05);">close</i>
+            </div>
+            
+            <div class="receipts-scroll-area">
+                <!-- Calculator Section -->
+                <div class="calc-section">
+                    <div class="calc-display-container">
+                        <div class="calc-history" id="calc-history"></div>
+                        <div class="calc-display" id="calc-display">0</div>
+                    </div>
+                    <div class="calc-grid">
+                        <button class="calc-btn gray" onclick="calcInput('C')">C</button>
+                        <button class="calc-btn gray" onclick="calcInput('back')"><i class="material-icons">backspace</i></button>
+                        <button class="calc-btn gray" onclick="calcInput('%')">%</button>
+                        <button class="calc-btn orange" onclick="calcInput('/')">÷</button>
+                        
+                        <button class="calc-btn" onclick="calcInput('7')">7</button>
+                        <button class="calc-btn" onclick="calcInput('8')">8</button>
+                        <button class="calc-btn" onclick="calcInput('9')">9</button>
+                        <button class="calc-btn orange" onclick="calcInput('*')">×</button>
+                        
+                        <button class="calc-btn" onclick="calcInput('4')">4</button>
+                        <button class="calc-btn" onclick="calcInput('5')">5</button>
+                        <button class="calc-btn" onclick="calcInput('6')">6</button>
+                        <button class="calc-btn orange" onclick="calcInput('-')">−</button>
+                        
+                        <button class="calc-btn" onclick="calcInput('1')">1</button>
+                        <button class="calc-btn" onclick="calcInput('2')">2</button>
+                        <button class="calc-btn" onclick="calcInput('3')">3</button>
+                        <button class="calc-btn orange" onclick="calcInput('+')">+</button>
+                        
+                        <button class="calc-btn zero" onclick="calcInput('0')">0</button>
+                        <button class="calc-btn" onclick="calcInput('.')">.</button>
+                        <button class="calc-btn orange" onclick="calcInput('=')">=</button>
+                    </div>
+                    <button class="add-to-receipt-btn" onclick="addReceiptFromCalc()">
+                        <i class="material-icons">add_shopping_cart</i>
+                        ADD TO RECEIPTS
+                    </button>
+                </div>
+
+                <!-- Receipts List Section -->
+                <div class="receipt-list-container">
+                    <div class="receipt-list-header" style="display: flex; align-items: center; justify-content: left; gap: 8px; width: 100%;">
+                        <i class="material-icons" style="font-size: 20px; color: #1e293b;">receipt_long</i>
+                        <span style="font-weight: 900; font-size: 13px; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Itemized Receipts</span>
+                    </div>
+                    
+                    <button class="manual-receipt-btn" onclick="addManualReceipt()">
+                        <i class="material-icons">add_circle_outline</i>
+                        ADD MANUAL RECEIPT
+                    </button>
+
+                    <div id="receipts-items-list" class="receipts-items-list">
+                        <!-- Dynamic receipts items will be injected here -->
+                        <div class="empty-receipts">
+                            <i class="material-icons">inventory_2</i>
+                            <p>No receipts added yet. Use the calculator to add payments.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PREMIUM SUMMARY CARD -->
+            <div id="receipts-summary" class="receipts-summary-card">
+                <div class="summary-row" style="padding: 4px 0;">
+                    <span class="summary-label" style="font-size: 12px; color: #1e293b;">TOTAL</span>
+                    <span id="summary-total-net" class="summary-value" style="font-size: 16px; font-weight: 900;">₱0.00</span>
+                </div>
             </div>
         </div>
     </div>
@@ -8906,7 +9746,9 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
                     <div id="budget-modal-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">Budget Details</div>
-                    <div style="width: 28px;"></div>
+                    <div id="budget-modal-add-btn" style="width: 28px; display: flex; justify-content: flex-end;">
+                        <i class="material-icons" style="color: #10b981; font-size: 28px; cursor: pointer;">add_circle</i>
+                    </div>
                 </div>
             </div>
             
@@ -8915,6 +9757,43 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             </div>
         </div>
     </div>
+
+    <!-- BUDGET MANUAL ENTRY MODAL (FOR CASH TRANSACTIONS) -->
+    <div id="budget-manual-entry-modal" class="modal-overlay" style="align-items: center; justify-content: center; backdrop-filter: blur(8px); background: rgba(0,0,0,0.6); display: none;">
+        <div class="custom-modal" style="width: 90%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); background: #ffffff; animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <div id="budget-manual-title" style="font-weight: 800; font-size: 20px; color: #1e293b;">Add Cash Log</div>
+                <i class="material-icons" onclick="window.closeBudgetManualModal()" style="color: #94a3b8; font-size: 24px; cursor: pointer;">close</i>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px;">Price / Amount</label>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-weight: 800; color: #1e293b; font-size: 18px;">₱</span>
+                    <input type="number" id="budget-manual-amt" placeholder="0.00" style="width: 100%; padding: 14px 14px 14px 34px; border-radius: 16px; border: 2px solid #f1f5f9; font-size: 20px; font-weight: 800; color: #1e293b; outline: none; background: #fafafa;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px;">Merchant / Remarks</label>
+                <input type="text" id="budget-manual-name" placeholder="e.g. Street Food, Taxi" style="width: 100%; padding: 14px 16px; border-radius: 16px; border: 2px solid #f1f5f9; font-size: 15px; font-weight: 700; color: #1e293b; outline: none; background: #fafafa;">
+            </div>
+
+            <div id="budget-manual-cat-display" onclick="window.openBudgetManualCategoryPicker()" style="display: flex; align-items: center; padding: 12px; background: #f8fafc; border-radius: 16px; margin-bottom: 24px; border: 1px dashed #3b82f6; cursor: pointer; transition: background 0.2s;">
+                <div id="budget-manual-icon-box" style="width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                    <i class="material-icons" id="budget-manual-icon">shopping_bag</i>
+                </div>
+                <div style="flex: 1;">
+                    <div id="budget-manual-cat-label" style="font-size: 13px; font-weight: 700; color: #1e293b;">Category Name</div>
+                    <div style="font-size: 10px; font-weight: 600; color: #64748b;">Tap to change category</div>
+                </div>
+                <i class="material-icons" style="color: #94a3b8; font-size: 20px;">chevron_right</i>
+            </div>
+
+            <button id="budget-manual-save-btn" onclick="saveBudgetManualTxn()" style="width: 100%; padding: 16px; border-radius: 16px; background: #10b981; color: white; font-weight: 800; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);">SAVE LOG</button>
+        </div>
+    </div>
+
 
     <!-- MANUAL TRANSACTION MODAL -->
     <div id="manual-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(10px); background: rgba(0,0,0,0.5);">

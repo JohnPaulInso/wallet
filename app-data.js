@@ -11,7 +11,8 @@ window.unsubscribeSnapshot = null;
 window.unsubscribeSafeSpend = null;
 window.safeToSpendConfig = {
     savingsAmount: 3000,
-    obligations: []
+    obligations: [],
+    receipts: []
 };
 
 // Helper to get collection name from account ID
@@ -293,6 +294,7 @@ export function watchSafeToSpend() {
         
         if (window.updateSafeSpendUI) window.updateSafeSpendUI();
         if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+        if (window.updateReceiptsUI) window.updateReceiptsUI(); // Hook for persistence
     });
 }
 

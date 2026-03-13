@@ -614,7 +614,7 @@
                     </svg>
                     <div class="chart-center">
                         <div class="chart-center-label" id="chart-total-label">TOTAL</div>
-                        <div class="chart-center-value" id="chart-total-val">0</div>
+                        <div class="chart-center-value privacy-mask" id="chart-total-val">0</div>
                         <div class="chart-center-pct" id="chart-total-pct"></div>
                     </div>
                 </div>
@@ -955,8 +955,15 @@
                         window.isSilentRefresh = false;
                         if (resp.error) {
                             if (resp.error === 'immediate_failed') {
-                                // NEVER escalate to visible popup — just fail silently
-                                console.log('🔇 Silent refresh failed. Will retry on next manual sync or auto-refresh cycle.');
+                                // If silent refresh failed but it was a manual action (sync button/pull to refresh),
+                                // escalate to an interactive prompt for better user experience.
+                                if (window.pendingSyncManual) {
+                                    console.log('🔄 Silent refresh failed for manual action. Requesting interactive login...');
+                                    window.isSilentRefresh = false;
+                                    tokenClient.requestAccessToken({ prompt: '' });
+                                    return;
+                                }
+                                console.log('🔇 Silent refresh failed. Will retry on next manual sync.');
                             } else {
                                 log('Google Auth failed: ' + resp.error, 'error');
                             }
@@ -1100,10 +1107,16 @@
                          handleAuthResult(result);
                      } catch (popupError) {
                          if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                             log('Popup blocked. Falling back to redirect...');
-                             localStorage.setItem('auth_redirect_pending', 'true');
-                             const { signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                             await signInWithRedirect(auth, provider);
+                             if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                                 console.log('🚫 Native Auth: Popup cancelled/blocked. resetting UI instead of redirect.');
+                                 // DO NOT redirect on native platform as it leads to external browser loops
+                                 showToast('Login cancelled.');
+                             } else {
+                                 log('Popup blocked. Falling back to redirect...');
+                                 localStorage.setItem('auth_redirect_pending', 'true');
+                                 const { signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                                 await signInWithRedirect(auth, provider);
+                             }
                          } else {
                              throw popupError;
                          }
@@ -1111,14 +1124,13 @@
                  }
              } catch (error) {
                  log('Auth Click Error: ' + error.message, 'error');
-                 window.isAuthInProgress = false;
-                 window.justLoggedIn = false;
                  showToast('Login failed. Please try again.');
              } finally {
                  if (isGuestBtn) {
                      btn.classList.remove('loading');
                  }
                  window.isAuthInProgress = false;
+                 window.justLoggedIn = false;
              }
          };
 
@@ -3149,18 +3161,17 @@
             const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
 
             const isHidden = localStorage.getItem('balance_hidden') === 'true';
-            const formatVal = (val) => isHidden ? '******' : `₱${Math.floor(val).toLocaleString()}`;
-
-            const needsValue = `${formatVal(needsTotal)} / ₱${needsLimit.toLocaleString()}`;
+            
+            const needsRaw = `₱${Math.floor(needsTotal).toLocaleString()} / ₱${needsLimit.toLocaleString()}`;
             const needsEl = document.getElementById('needs-stats');
-            needsEl.innerText = needsValue;
-            needsEl.dataset.raw = needsValue;
+            needsEl.dataset.raw = needsRaw;
+            needsEl.innerText = isHidden ? `****** / ₱${needsLimit.toLocaleString()}` : needsRaw;
             document.getElementById('needs-bar').style.width = `${needsPct}%`;
 
-            const wantsValue = `${formatVal(wantsTotal)} / ₱${wantsLimit.toLocaleString()}`;
+            const wantsRaw = `₱${Math.floor(wantsTotal).toLocaleString()} / ₱${wantsLimit.toLocaleString()}`;
             const wantsEl = document.getElementById('wants-stats');
-            wantsEl.innerText = wantsValue;
-            wantsEl.dataset.raw = wantsValue;
+            wantsEl.dataset.raw = wantsRaw;
+            wantsEl.innerText = isHidden ? `****** / ₱${wantsLimit.toLocaleString()}` : wantsRaw;
             const wantsBar = document.getElementById('wants-bar');
             wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
 
@@ -3178,10 +3189,10 @@
                 if (alertMsg) alertMsg.style.display = 'none';
             }
 
-            const savingsValue = `${formatVal(savingsTotal)} / ₱${savingsLimit.toLocaleString()}`;
+            const savingsRaw = `₱${Math.floor(savingsTotal).toLocaleString()} / ₱${savingsLimit.toLocaleString()}`;
             const savingsEl = document.getElementById('savings-stats');
-            savingsEl.innerText = savingsValue;
-            savingsEl.dataset.raw = savingsValue;
+            savingsEl.dataset.raw = savingsRaw;
+            savingsEl.innerText = isHidden ? `****** / ₱${savingsLimit.toLocaleString()}` : savingsRaw;
             document.getElementById('savings-bar').style.width = `${savingsPct}%`;
 
             // Update Minimalist Indicators
@@ -3196,8 +3207,10 @@
             const footer = document.getElementById('triple-summary-footer');
             if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
 
+            const remainingRaw = `₱${Math.floor(remaining).toLocaleString()}`;
             const remainingEl = document.getElementById('triple-remaining-val');
-            remainingEl.innerText = formatVal(remaining);
+            remainingEl.dataset.raw = remainingRaw;
+            remainingEl.innerText = isHidden ? '******' : remainingRaw;
             remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
 
             const usageSub = document.getElementById('triple-usage-sub');
@@ -3389,6 +3402,9 @@
                      el.innerText = raw;
                  }
              });
+             
+             // Update complex UI elements that handle their own partial masking
+             updateBudgetUI();
              
              // Update BPI insight if exists (Special case handling inside function)
              updateBPIInsight();
@@ -5343,7 +5359,11 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 setTimeout(() => {
                     const maskedElements = document.querySelectorAll('.privacy-mask');
                     maskedElements.forEach(el => {
-                        if (!el.dataset.raw) el.dataset.raw = el.innerText;
+                        const currentText = el.innerText;
+                        // Only set dataset.raw if it's missing AND current text is NOT already masked
+                        if (!el.dataset.raw && currentText !== '******') {
+                            el.dataset.raw = currentText;
+                        }
                         el.innerText = '******';
                     });
                 }, 10);
@@ -5491,7 +5511,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                                     ${spentDisplay}
                                 </span>
                                 <span class="budget-sep">/</span>
-                                <span style="color: #64748b;">₱${Math.round(limit).toLocaleString()}</span>
+                                <span class="privacy-mask" style="color: #64748b;" data-raw="₱${Math.round(limit).toLocaleString()}">${isHidden ? '******' : '₱' + Math.round(limit).toLocaleString()}</span>
                             </div>
                         </div>
                         <div class="cat-budget-progress-bg">
@@ -5831,7 +5851,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         console.warn('🚫 Gmail Token expired.');
                         window.isSyncing = false;
                         
-                        // Clear the expired token so we don't keep retrying with it
+                        // Clear the expired token
                         localStorage.removeItem('g_access_token');
                         accessToken = null;
                         
@@ -5847,15 +5867,31 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                             lastTokenRefreshAttempt = now;
                             window.pendingSyncLimit = limit;
                             window.pendingSyncManual = manualTrigger;
-                            // FIX 3: Mark that this refresh was triggered by a 401,
-                            // so the GIS callback doesn't re-trigger handleScan (breaking the loop)
                             window.refreshTriggeredBy401 = true;
-                            // ALWAYS silent — never open a visible popup automatically
-                            window.isSilentRefresh = true;
-                            console.log('🔄 Attempting ONE silent token refresh...');
-                            tokenClient.requestAccessToken({ prompt: 'none' });
+
+                            // NATIVE (APK) ESCALATION: Silent refresh ('none') always fails in native webviews.
+                            // If it's a manual action (Sync button, PTR), we PROMPT.
+                            // If it's auto-sync (swipe), we SKIP to avoid unexpected popups.
+                            const isNativeApp = typeof isNative === 'function' ? isNative() : false;
+
+                            if (isNativeApp) {
+                                if (manualTrigger) {
+                                    window.isSilentRefresh = false;
+                                    console.log('🔄 Native Manual Sync: Requesting interactive login...');
+                                    tokenClient.requestAccessToken({ prompt: '' });
+                                } else {
+                                    tokenRefreshInProgress = false;
+                                    console.log('⏭️ Native Auto-Sync: Skipping (Token expired + Silent refresh unsupported)');
+                                    throw new Error('Unauthorized - Native silent refresh unsupported');
+                                }
+                            } else {
+                                // BROWSER: Try silent first
+                                window.isSilentRefresh = true;
+                                console.log('🔄 Browser Sync: Attempting silent token refresh...');
+                                tokenClient.requestAccessToken({ prompt: 'none' });
+                            }
                         }
-                        throw new Error('Unauthorized - Silent refresh attempted');
+                        throw new Error('Unauthorized - Refresh triggered');
                     }
                     
                     const data = await res.json();
@@ -8407,6 +8443,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             const container = document.getElementById('subscription-list');
             const section = document.getElementById('subscription-section');
             if (!container || !window.allTxns) return;
+            const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
             // Context: Current month for comparison
             const now = new Date(); 
@@ -8572,13 +8609,13 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                         </div>
                              <div class="sub-info" style="font-size: 9.5px !important;">
                             <div class="sub-name" style="font-size: 9.5px !important;">${g.name}</div>
-                            <div class="sub-meta">Avg: ₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})} / mo</div>
+                            <div class="sub-meta">Avg: <span class="privacy-mask" data-raw="₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})}">${isHidden ? '******' : '₱' + g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span> / mo</div>
                         </div>
                         <div class="sub-stats">
                             <div class="sub-current-vs-avg" style="font-weight: 800; font-size: 11px;">
-                                <span style="color: ${statusColor};">₱${g.currentMonthSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
+                                <span class="privacy-mask" style="color: ${statusColor};" data-raw="₱${g.currentMonthSpend.toLocaleString(undefined, {maximumFractionDigits:0})}">${isHidden ? '******' : '₱' + g.currentMonthSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
                                 <span style="color: #cbd5e1; margin: 0 2px;">/</span>
-                                <span style="color: #94a3b8;">₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
+                                <span class="privacy-mask" style="color: #94a3b8;" data-raw="₱${g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})}">${isHidden ? '******' : '₱' + g.averageSpend.toLocaleString(undefined, {maximumFractionDigits:0})}</span>
                             </div>
                         </div>
                     </div>
@@ -8591,13 +8628,26 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
 
             // Update UI Labels for Total
             const limit = parseFloat(localStorage.getItem('wallet_sub_limit') || 5000);
-            document.getElementById('sub-count-badge').innerText = subs.length;
-            document.getElementById('sub-total-label').innerText = `₱${totalCurrent.toLocaleString(undefined, {minimumFractionDigits:2})} spent`;
-            document.getElementById('sub-limit-label').innerText = `Target: ₱${limit.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+            const subCountBadge = document.getElementById('sub-count-badge');
+            if (subCountBadge) subCountBadge.innerText = subs.length;
+
+            const totalText = `₱${totalCurrent.toLocaleString(undefined, {minimumFractionDigits:2})} spent`;
+            const limitText = `Target: ₱${limit.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+            const subTotalEl = document.getElementById('sub-total-label');
+            const subLimitEl = document.getElementById('sub-limit-label');
+            
+            if (subTotalEl) {
+                subTotalEl.dataset.raw = totalText;
+                subTotalEl.innerText = isHidden ? '******' : totalText;
+            }
+            if (subLimitEl) {
+                subLimitEl.dataset.raw = limitText;
+                subLimitEl.innerText = isHidden ? '******' : limitText;
+            }
             
             const totalPerc = limit > 0 ? (totalCurrent / limit) * 100 : 0;
             const fill = document.getElementById('sub-limit-fill');
-            fill.style.width = Math.min(100, totalPerc) + '%';
+            if (fill) fill.style.width = Math.min(100, totalPerc) + '%';
             
             // Premium color for main bar
             fill.style.background = totalPerc >= 100 ? '#ef4444' : '#000'; // Black theme or Red if over

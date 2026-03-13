@@ -1064,7 +1064,7 @@
             transform: scale(1.02);
         }
         .chart-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: #fff; width: 90px; height: 90px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 4px 12px rgba(0,0,0,0.03); border: 4px solid #f8fafc; z-index: 10; pointer-events: none; gap: 2px; padding: 4px; }
-        .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; margin: 0; max-width: 80px; word-wrap: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .chart-center-label { font-size: 9px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.1; margin: 0; max-width: 80px; word-wrap: break-word; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
         .chart-center-value { font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; line-height: 1.1; text-align: center; }
         
         /* Highlighted Transaction Styling */
@@ -1831,9 +1831,10 @@
         }
         .dialog-overlay.show { opacity: 1; pointer-events: auto; }
         .dialog-card {
-            background: #fff; border-radius: 24px; width: 100%; max-width: 320px;
+            background: #fff; border-radius: 28px; width: 92%; max-width: 380px;
             padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
             transform: scale(0.9); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;
         }
         .dialog-overlay.show .dialog-card { transform: scale(1); }
         .dialog-title { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 8px; letter-spacing: -0.5px; }
@@ -2853,3 +2854,490 @@
             backdrop-filter: none !important;
             box-shadow: -10px 0 30px rgba(0,0,0,0.5) !important;
         }
+
+/* RECEIPTS & CALCULATOR MODAL */
+#receipts-modal {
+    z-index: 3000;
+    display: none;
+    align-items: flex-end; /* Slide up from bottom on mobile */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#receipts-modal.show {
+    display: flex;
+    opacity: 1;
+}
+
+#receipts-modal.full-screen .receipts-content {
+    width: 100%;
+    max-width: 430px;
+    height: 95vh;
+    background: #fff;
+    border-radius: 32px 32px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#receipts-modal.show .receipts-content {
+    transform: translateY(0);
+}
+
+.receipts-header {
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.receipts-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #1e293b;
+    letter-spacing: -0.5px;
+}
+
+.receipts-subtitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.receipts-scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    padding-bottom: 40px;
+}
+
+.summary-value {
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.summary-value.income { color: #10b981; }
+.summary-value.expense { color: #3b82f6; }
+
+/* Calculator Section */
+.calc-section {
+    background: #f8fafc;
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #e2e8f0;
+}
+
+.calc-display-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    text-align: right;
+    border: 1px solid #e2e8f0;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.calc-history {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 600;
+    height: 18px;
+    margin-bottom: 4px;
+}
+
+.calc-display {
+    font-size: 32px;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -1px;
+}
+
+.calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.calc-btn {
+    height: 54px;
+    border-radius: 16px;
+    border: none;
+    background: #fff;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.calc-btn:active {
+    transform: scale(0.92);
+    background: #f1f5f9;
+}
+
+.calc-btn.gray {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.calc-btn.orange {
+    background: #1e293b;
+    color: #fff;
+}
+
+.calc-btn.zero {
+    grid-column: span 2;
+}
+
+.add-to-receipt-btn {
+    width: 100%;
+    margin-top: 16px;
+    height: 54px;
+    border-radius: 16px;
+    border: none;
+    background: #1e293b;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.add-to-receipt-btn:active {
+    transform: scale(0.98);
+}
+
+.manual-receipt-btn {
+    border: 2px dashed #e2e8f0 !important;
+    background: #fff !important;
+    color: #64748b !important;
+    box-shadow: none !important;
+    margin-bottom: 12px;
+    margin-top: 18px; /* Added top padding */
+    height: auto; /* Allow padding to take effect */
+    min-height: 54px;
+    width: 100%;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    cursor: pointer;
+    font-size: 11px; /* Smaller font */
+    font-weight: 800;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+}
+
+.manual-receipt-btn i {
+    font-size: 24px;
+}
+
+.manual-receipt-btn:hover {
+    border-color: #2563eb !important;
+    color: #2563eb !important;
+    background: rgba(37, 99, 235, 0.05) !important;
+}
+
+.receipts-scroll-area {
+    padding-bottom: 220px !important; /* Increased for summary card */
+}
+
+/* REFINED RECEIPTS UI */
+.receipt-item {
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.receipt-item.income:not(.excluded) .receipt-check i {
+    color: #10b981 !important; /* Vivid Green */
+}
+
+.receipt-item.expense:not(.excluded) .receipt-check i {
+    color: #c53030 !important; /* Soft, Premium Red */
+}
+
+.receipt-item.expense .receipt-item-amount {
+    color: #c53030 !important;
+}
+
+.receipt-item-meta {
+    font-size: 8px; /* Ultra small */
+    font-weight: 700;
+    color: #94a3b8 !important; /* Forces Gray */
+}
+
+.receipt-item.excluded {
+    opacity: 0.4;
+    filter: grayscale(1);
+    transform: scale(0.98);
+}
+
+.receipt-check {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.receipt-item:not(.excluded) .receipt-check {
+    background: #f1f5f9; /* Reset default to neutral */
+    color: #94a3b8;
+}
+
+.receipt-item.income:not(.excluded) .receipt-check {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.receipt-item.expense:not(.excluded) .receipt-check {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Specific icon colors to override any inheritance */
+.receipt-item.income:not(.excluded) .receipt-check i {
+    color: #10b981 !important;
+}
+
+.receipt-item.expense:not(.excluded) .receipt-check i {
+    color: #ef4444 !important;
+}
+
+.receipt-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    cursor: pointer;
+}
+
+.receipt-item-title {
+    font-size: 12px; /* Ultra small */
+    font-weight: 800;
+    color: #1e293b;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.receipt-item-meta {
+    font-size: 8px; /* Ultra small */
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.receipt-item-amount {
+    font-size: 12.2px; /* Ultra small */
+    font-weight: 900;
+    color: #1e293b;
+    margin-right: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.receipt-item-amount:active {
+    background: rgba(0,0,0,0.05);
+}
+
+.receipt-delete-btn {
+    color: #cbd5e1;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 18px !important;
+}
+
+.empty-receipts {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+}
+
+.empty-receipts i {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+}
+
+.empty-receipts p {
+    font-size: 12px;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* PREMIUM SUMMARY CARD */
+.receipts-summary-card {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    padding: 10px 28px 16px; /* Reduced height */
+    border-top: 1px solid #f1f5f9;
+    box-shadow: 0 -15px 40px rgba(0,0,0,0.06);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: slideUpSummary 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpSummary {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Vertical alignment for header */
+.receipt-list-header {
+    display: flex;
+    align-items: center; /* Centered vertically */
+    justify-content: flex-start; /* Aligned left */
+    width: 100%;
+    margin-bottom: 12px;
+    gap: 8px;
+}
+
+/* simplified summary labels */
+.summary-label {
+    font-size: 11px;
+    font-weight: 900;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px;
+    margin-top: 4px;
+}
+
+.cat-option {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px;
+    cursor: pointer;
+    background: #fff;
+    gap: 4px !important;
+    transition: all 0.2s;
+}
+
+/* Modal Selector Color Fixes */
+.cat-option.active[onclick*="'expense'"] {
+    background: rgba(197, 48, 48, 0.05) !important;
+    border-color: #c53030 !important;
+    color: #c53030 !important;
+}
+
+.cat-option.active[onclick*="'expense'"] i {
+    color: #c53030 !important;
+}
+
+.cat-option.active[onclick*="'income'"] {
+    background: rgba(16, 185, 129, 0.05) !important;
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+
+.cat-option.active[onclick*="'income'"] i {
+    color: #10b981 !important;
+}
+
+.cat-option i {
+    font-size: 20px !important;
+    margin: 0 !important;
+}
+
+.cat-option span {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+}
+
+
+
+/* STUNNING CALCULATOR REFINEMENTS */
+.calc-section {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    padding: 24px;
+    border-radius: 24px;
+}
+
+.calc-display-container {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.05);
+    padding: 24px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    text-align: right;
+}
+
+
+.calc-btn {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    font-family: inherit;
+}
+
+.calc-btn.orange {
+    background: #1e293b;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(30, 41, 59, 0.2);
+}
+
+.calc-btn.gray {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.calc-btn:hover {
+    background: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+}

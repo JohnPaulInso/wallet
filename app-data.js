@@ -379,7 +379,17 @@ export async function handleScan(limit, manualTrigger = false) {
                             return handleScan(limit, manualTrigger);
                         }
                     } catch (refreshErr) {
-                        log('📱 Native refresh failed: ' + refreshErr.message, 'error');
+                        log('📱 Native refresh failed: ' + refreshErr.message, 'warning');
+                        
+                        // FALLBACK: If silent refresh failed and it's a manual trigger, prompt for full login
+                        if (manualTrigger) {
+                            window.pendingSyncLimit = limit;
+                            window.pendingSyncManual = manualTrigger;
+                            window.refreshTriggeredBy401 = true;
+                            log('🔄 Session expired. Triggering full re-authentication...');
+                            // Automatically open login without confirming
+                            if (typeof window.handleAuthClick === 'function') window.handleAuthClick();
+                        }
                     }
                 }
                 

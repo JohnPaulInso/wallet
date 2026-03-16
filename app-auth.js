@@ -208,6 +208,19 @@ export function handleAuthResult(user) {
     // Trigger data load & config monitoring
     if (window.loadData) window.loadData();
     if (typeof window.watchSafeToSpend === 'function') window.watchSafeToSpend();
+
+    // RESUME PENDING SYNC (If triggered by 401 refresh)
+    if (window.pendingSyncLimit) {
+        log('🔄 Resuming sync after re-authentication...');
+        const limit = window.pendingSyncLimit;
+        const manual = window.pendingSyncManual;
+        delete window.pendingSyncLimit;
+        delete window.pendingSyncManual;
+        
+        setTimeout(() => {
+            if (typeof window.handleScan === 'function') window.handleScan(limit, manual);
+        }, 1000);
+    }
     
     // Trigger Profile UI update
     if (typeof window.updateProfileUI === 'function') window.updateProfileUI(user);

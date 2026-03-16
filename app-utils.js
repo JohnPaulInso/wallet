@@ -32,6 +32,31 @@ export function formatLocalDate(date) {
 export function showToast(msg) {
     const toast = document.getElementById('toast-box');
     const msgEl = document.getElementById('toast-msg');
+    
+    // Inject global toast UI override if not present
+    if (!document.getElementById('toast-override-style')) {
+        const style = document.createElement('style');
+        style.id = 'toast-override-style';
+        style.textContent = `
+            .toast-container {
+                font-size: 21px !important;
+                padding: 12px 28px !important;
+                width: max-content !important;
+                max-width: 90% !important;
+                display: flex !important;
+                justify-content: center !important;
+                align-items: center !important;
+                white-space: nowrap !important;
+                text-align: center !important;
+            }
+            .toast-container i.material-icons {
+                font-size: 14px !important;
+                flex-shrink: 0;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     if (!toast || !msgEl) {
         console.log('Toast:', msg);
         return;

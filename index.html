@@ -459,7 +459,7 @@
                 <div class="progress-item" onclick="showBudgetTransactions('needs')">
                     <div class="progress-header">
                         <span class="progress-label">Needs</span>
-                        <span id="needs-stats" class="progress-stats privacy-mask">₱0 / ₱8,800</span>
+                        <span id="needs-stats" class="progress-stats privacy-mask" onclick="toggleBudgetStatsMode(event)">₱0 / ₱8,800</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
@@ -469,7 +469,7 @@
                 <div class="progress-item" onclick="showBudgetTransactions('wants')">
                     <div class="progress-header">
                         <span class="progress-label">Wants</span>
-                        <span id="wants-stats" class="progress-stats privacy-mask">₱0 / ₱5,280</span>
+                        <span id="wants-stats" class="progress-stats privacy-mask" onclick="toggleBudgetStatsMode(event)">₱0 / ₱5,280</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
@@ -479,7 +479,7 @@
                 <div class="progress-item" style="margin-bottom: 0;" onclick="showBudgetTransactions('savings')">
                     <div class="progress-header">
                         <span class="progress-label">Savings</span>
-                        <span id="savings-stats" class="progress-stats privacy-mask">₱0 / ₱3,520</span>
+                        <span id="savings-stats" class="progress-stats privacy-mask" onclick="toggleBudgetStatsMode(event)">₱0 / ₱3,520</span>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
@@ -1172,17 +1172,35 @@
 
             log('Loading user data...');
             loadData();
+
+            // RESUME PENDING SYNC (If triggered by 401 refresh)
+            if (window.pendingSyncLimit) {
+                console.log('🔄 Resuming sync after re-authentication...');
+                const limit = window.pendingSyncLimit;
+                const manual = window.pendingSyncManual;
+                window.pendingSyncLimit = null;
+                window.pendingSyncManual = false;
+                
+                // Small delay to ensure everything is settled
+                setTimeout(() => {
+                    if (typeof handleScan === 'function') handleScan(limit, manual);
+                }, 1000);
+            }
             
             // Show login modal INSTANTLY with user info from auth result
             setTimeout(() => {
                 const userName = result.user.displayName ? result.user.displayName.split(' ')[0] : 'there';
-                const userPic = result.user.photoURL;
                 const modal = document.getElementById('login-modal');
                 const titleEl = modal?.querySelector('.login-modal-title');
-                const avatarEl = document.getElementById('login-modal-avatar');
                 
                 if (titleEl) titleEl.textContent = `Welcome, ${userName}!`;
-                if (typeof showLoginModal === 'function') showLoginModal();
+                
+                if (window.refreshTriggeredBy401) {
+                    window.refreshTriggeredBy401 = false; // Reset the flag
+                    log('Skipping welcome modal due to background re-authentication.');
+                } else if (typeof showLoginModal === 'function') {
+                    showLoginModal();
+                }
             }, 300);
         }
 
@@ -2677,7 +2695,11 @@
              let obligationsTotal = 0;
              if (config.obligations) {
                  config.obligations.forEach(ob => {
-                     if (ob.included !== false) obligationsTotal += (parseFloat(ob.amount) || 0);
+                     if (ob.included !== false) {
+                         const amt = parseFloat(ob.amount) || 0;
+                         if (ob.isAdded === true) obligationsTotal -= amt;
+                         else obligationsTotal += amt;
+                     }
                  });
              }
 
@@ -2834,7 +2856,7 @@
                     itemSalary.style.filter = 'none';
                  }
                  if (checkSalary) checkSalary.innerText = 'payments';
-                 if (metaSalary) metaSalary.innerText = 'INCLUDED IN SAFE BUDGET';
+                 if (metaSalary) metaSalary.style.display = 'block'; // 'INCLUDED IN SAFE BUDGET';
              }
              if (salaryEl) {
                  const val = `₱${salaryValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
@@ -2851,26 +2873,37 @@
                  if (config.obligations && config.obligations.length > 0) {
                      combinedHTML += config.obligations.map(ob => {
                          const isIncluded = ob.included !== false;
+                         const isAdded = ob.isAdded === true;
                          const excludedStyle = isIncluded ? '' : 'opacity: 0.4; filter: grayscale(1);';
-                         const toggleIcon = isIncluded ? 'check_circle' : 'remove_circle_outline';
-                         const toggleColor = isIncluded ? '#64748b' : '#cbd5e1';
+                         const toggleIcon = isIncluded ? (isAdded ? 'add_circle' : 'check_circle') : 'remove_circle_outline';
+                         const toggleColor = isIncluded ? (isAdded ? '#10b981' : '#64748b') : '#cbd5e1';
+                         const valColor = isAdded ? '#10b981' : '#64748b';
+                         const actionLabel = isAdded ? 'EXCLUDE' : 'ADD';
+                         const actionClass = 'reveal-orange';
                          
                          return `
-                         <div class="breakdown-item" style="margin-top: 2px; ${excludedStyle} transition: all 0.3s ease;">
-                             <div onclick="toggleObligation('${ob.id}')" style="cursor: pointer; display: flex; align-items: center; gap: 10px; flex: 1;">
-                                 <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: ${toggleColor}; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
-                                     <i class="material-icons" style="font-size: 18px;">${toggleIcon}</i>
+                         <div class="swipe-container" style="margin-top: 2px; ${excludedStyle}">
+                             <div id="swipe-bg-${ob.id}" class="swipe-action-bg ${actionClass}">${actionLabel}</div>
+                             <div id="swipe-item-${ob.id}" class="swipe-item breakdown-item" 
+                                  ontouchstart="window.handleObligationSwipe(event, '${ob.id}')" 
+                                  ontouchmove="window.handleObligationSwipe(event, '${ob.id}')"
+                                  ontouchend="window.handleObligationSwipe(event, '${ob.id}')"
+                                  style="border-bottom: none;">
+                                 <div onclick="toggleObligation('${ob.id}')" style="cursor: pointer; display: flex; align-items: center; gap: 10px; flex: 1;">
+                                     <div class="breakdown-icon" style="background: rgba(0,0,0,0.03); color: ${toggleColor}; width: 34px; height: 34px; border-radius: 10px; font-size: 18px;">
+                                         <i class="material-icons" style="font-size: 18px;">${toggleIcon}</i>
+                                     </div>
+                                     <div class="breakdown-info">
+                                         <div class="breakdown-name" style="color: ${valColor}; font-size: 9px;">${ob.title.toUpperCase()}</div>
+                                         <div class="breakdown-meta" style="font-size: 8.5px;">${isIncluded ? (isAdded ? 'Added to Budget' : 'Fixed Obligation') : 'Excluded'}</div>
+                                     </div>
                                  </div>
-                                 <div class="breakdown-info">
-                                     <div class="breakdown-name" style="color: #64748b; font-size: 9px;">${ob.title.toUpperCase()}</div>
-                                     <div class="breakdown-meta" style="font-size: 8.5px;">${isIncluded ? 'Fixed Obligation' : 'Excluded'}</div>
+                                 <div style="display: flex; align-items: center; gap: 4px;">
+                                     <div class="breakdown-val privacy-mask" onclick="editObligationAmount('${ob.id}')" style="color: ${valColor}; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">${isAdded ? '+' : ''}₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                     <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
+                                         <i class="material-icons" style="font-size: 16px;">delete_outline</i>
+                                     </button>
                                  </div>
-                             </div>
-                             <div style="display: flex; align-items: center; gap: 4px;">
-                                 <div class="breakdown-val privacy-mask" onclick="editObligationAmount('${ob.id}')" style="color: #64748b; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱${(parseFloat(ob.amount) || 0).toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                                 <button onclick="deleteObligation('${ob.id}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; padding:4px; display:flex; align-items:center;">
-                                     <i class="material-icons" style="font-size: 16px;">delete_outline</i>
-                                 </button>
                              </div>
                          </div>
                          `;
@@ -3166,7 +3199,7 @@
 
             const aggregateFrom = (txns, account) => {
                 txns.forEach(t => {
-                    if (t.excluded || t.reimbursed) return;
+                    if (t.excluded || t.reimbursed || t.refund) return;
                     
                     // Use shared checkPeriod helper to sync with chart
                     if (!window.checkPeriod(t, currentFilter, 0, now)) return;
@@ -3183,6 +3216,8 @@
                     } else if (account === 'bpi') {
                         if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
                             savingsTotal += amt;
+                        } else if (display.category === 'Vehicle' || (t.name && (t.name.includes('Withdrawal') || t.name.includes('withdraw:')))) {
+                            needsTotal += amt;
                         }
                     } else if (account === 'budget_manual') {
                         // Include our custom manual collections
@@ -3214,17 +3249,35 @@
             const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
 
             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+            const isRemainingMode = localStorage.getItem('budget_stats_mode') === 'remaining';
             
-            const needsRaw = `₱${Math.floor(needsTotal).toLocaleString()} / ₱${needsLimit.toLocaleString()}`;
+            // Renderer helper for toggle mode
+            const formatStat = (current, limit) => {
+                const formatDec = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatInt = (num) => Math.floor(num).toLocaleString('en-US');
+
+                if (isRemainingMode) {
+                    const left = Math.max(0, limit - current);
+                    const leftStr = `₱${formatDec(left)} LEFT`;
+                    const masked = `****** LEFT`;
+                    return { raw: leftStr, display: isHidden ? masked : leftStr };
+                } else {
+                    const raw = `₱${formatInt(current)} / ₱${formatInt(limit)}`;
+                    const masked = `****** / ₱${formatInt(limit)}`;
+                    return { raw, display: isHidden ? masked : raw };
+                }
+            };
+
+            const nRes = formatStat(needsTotal, needsLimit);
             const needsEl = document.getElementById('needs-stats');
-            needsEl.dataset.raw = needsRaw;
-            needsEl.innerText = isHidden ? `****** / ₱${needsLimit.toLocaleString()}` : needsRaw;
+            needsEl.dataset.raw = nRes.raw;
+            needsEl.innerText = nRes.display;
             document.getElementById('needs-bar').style.width = `${needsPct}%`;
 
-            const wantsRaw = `₱${Math.floor(wantsTotal).toLocaleString()} / ₱${wantsLimit.toLocaleString()}`;
+            const wRes = formatStat(wantsTotal, wantsLimit);
             const wantsEl = document.getElementById('wants-stats');
-            wantsEl.dataset.raw = wantsRaw;
-            wantsEl.innerText = isHidden ? `****** / ₱${wantsLimit.toLocaleString()}` : wantsRaw;
+            wantsEl.dataset.raw = wRes.raw;
+            wantsEl.innerText = wRes.display;
             const wantsBar = document.getElementById('wants-bar');
             wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
 
@@ -3242,10 +3295,10 @@
                 if (alertMsg) alertMsg.style.display = 'none';
             }
 
-            const savingsRaw = `₱${Math.floor(savingsTotal).toLocaleString()} / ₱${savingsLimit.toLocaleString()}`;
+            const sRes = formatStat(savingsTotal, savingsLimit);
             const savingsEl = document.getElementById('savings-stats');
-            savingsEl.dataset.raw = savingsRaw;
-            savingsEl.innerText = isHidden ? `****** / ₱${savingsLimit.toLocaleString()}` : savingsRaw;
+            savingsEl.dataset.raw = sRes.raw;
+            savingsEl.innerText = sRes.display;
             document.getElementById('savings-bar').style.width = `${savingsPct}%`;
 
             // Update Minimalist Indicators
@@ -3260,7 +3313,7 @@
             const footer = document.getElementById('triple-summary-footer');
             if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
 
-            const remainingRaw = `₱${Math.floor(remaining).toLocaleString()}`;
+            const remainingRaw = `₱${remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const remainingEl = document.getElementById('triple-remaining-val');
             remainingEl.dataset.raw = remainingRaw;
             remainingEl.innerText = isHidden ? '******' : remainingRaw;
@@ -3268,6 +3321,21 @@
 
             const usageSub = document.getElementById('triple-usage-sub');
             if (usageSub) usageSub.innerText = `${Math.round(usedPct)}% BUDGET UTILIZED`;
+        };
+
+        window.toggleBudgetStatsMode = (e) => {
+            if (e) e.stopPropagation();
+            const current = localStorage.getItem('budget_stats_mode') || 'ratio';
+            localStorage.setItem('budget_stats_mode', current === 'ratio' ? 'remaining' : 'ratio');
+            
+            // Gentle feedback
+            const stats = document.querySelectorAll('.progress-stats');
+            stats.forEach(s => {
+                s.style.opacity = '0.4';
+                setTimeout(() => s.style.opacity = '1', 150);
+            });
+
+            if (typeof window.updateTripleProgressBar === 'function') window.updateTripleProgressBar();
         };
 
         window.showBudgetTransactions = (type) => {
@@ -3756,6 +3824,57 @@
              } catch (e) { console.error('Failed to save savings toggle', e); }
              
              showToast(newState ? 'Savings excluded' : 'Savings included');
+        };
+
+         window.handleObligationSwipe = (e, id) => {
+             const item = document.getElementById(`swipe-item-${id}`);
+             const bg = document.getElementById(`swipe-bg-${id}`);
+             if (!item || !bg) return;
+
+             if (e.type === 'touchstart') {
+                 window.swipeStartX = e.touches[0].clientX;
+                 window.swipeStartY = e.touches[0].clientY;
+                 item.style.transition = 'none';
+                 bg.classList.add('active');
+             } else if (e.type === 'touchmove') {
+                 const currentX = e.touches[0].clientX;
+                 const currentY = e.touches[0].clientY;
+                 const diffX = currentX - window.swipeStartX;
+                 const diffY = Math.abs(currentY - window.swipeStartY);
+                 
+                 // Swipe right only and check horizontal dominance
+                 if (diffX > 0 && diffX > diffY) {
+                     e.preventDefault();
+                     const translateX = Math.min(diffX, 90); // Cap at 90px
+                     item.style.transform = `translateX(${translateX}px)`;
+                 }
+             } else if (e.type === 'touchend') {
+                 item.style.transition = 'transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+                 const currentX = e.changedTouches[0].clientX;
+                 const diffX = currentX - window.swipeStartX;
+                 
+                 if (diffX > 60) { // Confirmation threshold
+                      item.style.transform = 'translateX(100%)';
+                      setTimeout(() => {
+                          window.toggleObligationMode(id);
+                      }, 200);
+                 } else {
+                      item.style.transform = 'translateX(0)';
+                      setTimeout(() => bg.classList.remove('active'), 300);
+                 }
+             }
+         };
+
+        window.toggleObligationMode = async (id) => {
+            if (navigator.vibrate) navigator.vibrate(50);
+            const config = window.safeToSpendConfig || { obligations: [] };
+            const ob = config.obligations.find(o => o.id === id);
+            if (ob) {
+                ob.isAdded = !ob.isAdded;
+                updateSafeSpendUI();
+                window.saveSafeSpendConfig({ obligations: config.obligations });
+                showToast(ob.isAdded ? "Obligation will be added" : "Obligation will be subtracted");
+            }
         };
 
         window.toggleAtome = async () => {
@@ -6189,6 +6308,20 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                             throw new Error('Unauthorized - Refresh throttled');
                         }
                         
+                        if (manualTrigger) {
+                            const isNativeApp = (window.Capacitor && window.Capacitor.isNativePlatform());
+                            
+                            // For APK users, explicit re-login is often more reliable than silent background refresh
+                            if (isNativeApp) {
+                                window.pendingSyncLimit = limit;
+                                window.pendingSyncManual = manualTrigger;
+                                window.refreshTriggeredBy401 = true;
+                                log('🔄 Session expired. Triggering re-authentication...');
+                                if (typeof handleAuthClick === 'function') handleAuthClick();
+                                throw new Error('Unauthorized - APK re-auth requested');
+                            }
+                        }
+
                         if (tokenClient) {
                             tokenRefreshInProgress = true;
                             lastTokenRefreshAttempt = now;
@@ -6199,7 +6332,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                             // NATIVE (APK) ESCALATION: Silent refresh ('none') always fails in native webviews.
                             // If it's a manual action (Sync button, PTR), we PROMPT.
                             // If it's auto-sync (swipe), we SKIP to avoid unexpected popups.
-                            const isNativeApp = typeof isNative === 'function' ? isNative() : false;
+                            const isNativeApp = (window.Capacitor && window.Capacitor.isNativePlatform());
 
                             if (isNativeApp) {
                                 if (manualTrigger) {
@@ -6688,12 +6821,13 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             document.getElementById('ob-type-selector').style.display = 'flex';
             setObType('expense'); // Default for calc
             modal.classList.add('show');
+            if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
 
             saveBtn.onclick = () => {
                 const title = titleInput.value.trim() || "New Receipt";
                 const finalAmount = parseFloat(amountInput.value) || amount;
                 addReceipt(title, finalAmount, currentObType);
-                modal.classList.remove('show');
+                closeObligationModal();
                 currentCalcInput = "0";
                 calcHistory = "";
                 updateCalcUI();
@@ -6727,7 +6861,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                     return;
                 }
                 addReceipt(title, amount, currentObType);
-                modal.classList.remove('show');
+                closeObligationModal();
                 showToast(currentObType.toUpperCase() + " added");
             };
         };
@@ -6802,7 +6936,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                 
                 saveReceiptsData();
                 updateReceiptsUI();
-                modal.classList.remove('show');
+                closeObligationModal();
                 showToast("Updated");
             };
         };
@@ -6907,6 +7041,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
                     swipeDirection = null;
                     newItem.style.transition = 'none';
 
+                    if (longPressTimer) clearTimeout(longPressTimer);
                     longPressTimer = setTimeout(() => {
                         if (!isSwiping) showIOSMenu(newItem, e);
                     }, 400);
@@ -7001,6 +7136,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         }
         
         function showIOSMenu(item, event) {
+            if (window.modalOpen) return; // Prevent if already open
             if (event.cancelable) event.preventDefault();
 
             // Haptic feedback if available (Mobile feel)
@@ -10015,7 +10151,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
 
 
     <!-- TOAST BOX -->
-    <div id="toast-box" class="toast-container">
+    <div id="toast-box" style="display: flex; justify-content: center; align-items: center; gap: 10px;" class="toast-container">
         <i class="material-icons">check_circle</i>
         <span id="toast-msg">Updated</span>
     </div>

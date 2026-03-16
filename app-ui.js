@@ -36,7 +36,7 @@ export function renderHistory(txns) {
     // Ensure chronological order (descending)
     entries.sort((a, b) => new Date(b[1].items[0].date) - new Date(a[1].items[0].date));
     
-    const visibleEntries = entries.slice(0, window.historyLimit || 6);
+    const visibleEntries = entries.slice(0, window.historyLimit || 3);
 
     visibleEntries.forEach(([month, data], index) => {
         const accordion = document.createElement('div');

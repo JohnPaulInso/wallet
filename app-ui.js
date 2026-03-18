@@ -2,8 +2,9 @@
  * UI Rendering and Management for the Wallet App
  */
 import { db, auth, doc, setDoc, onSnapshot, getDoc } from "./firebase-config.js";
-import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, isSubscriptionMerchant, triggerHaptic, createNotification } from "./app-utils.js";
-import { AI_CONFIG } from "./ai-config.js";
+import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, isSubscriptionMerchant, triggerHaptic, createNotification, cleanAIText, animateNumber } from "./app-utils.js";
+import { CONFIG } from "./config.js";
+import { LocalAI } from "./local-ai.js";
 
 let switchSyncTimer = null;
 
@@ -545,13 +546,21 @@ export async function updateAISummary(txns) {
     const cacheKey = `ai_summary_${window.currentAccount}_${new Date().getMonth()}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
-        summaryEl.innerText = cached;
+        summaryEl.innerHTML = cleanAIText(cached);
+        return;
+    }
+
+    const backoffUntil = localStorage.getItem('ai_ratelimit_backoff');
+    if (backoffUntil && Date.now() < parseInt(backoffUntil)) {
+        const localText = LocalAI.analyze(txns);
+        const badgeColor = '#64748b';
+        summaryEl.innerHTML = `<span style="font-size: 8px; font-weight: 800; text-transform: uppercase; color: ${badgeColor}; border: 1px solid ${badgeColor}; padding: 1px 3px; border-radius: 3px; margin-right: 6px; vertical-align: middle; display: inline-flex; align-items: center; letter-spacing: 0.5px;">Edge AI</span>${localText}`;
         return;
     }
 
     summaryEl.innerText = 'Analyzing your spending patterns...';
     
-    try {
+    const fetchInsights = async () => {
         const recentTxns = txns.slice(0, 50).map(t => ({
             merchant: t.merchant,
             amount: t.manualAmount || t.amount,
@@ -559,23 +568,78 @@ export async function updateAISummary(txns) {
             date: t.date
         }));
 
-        const prompt = `Analyze these recent transactions and provide a concise (max 2 sentences) financial insight. Focus on trends, anomalies, or a quick savings tip. Transactions: ${JSON.stringify(recentTxns)}`;
-        
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${AI_CONFIG.MODEL}:generateContent?key=${AI_CONFIG.GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
+        const prompt = `Quickly analyze these transactions: ${JSON.stringify(recentTxns)}. 
+Provide a short insight (2 sentences) in BASIC ENGLISH. Put them in ONE PARAGRAPH. BOLD key words.
 
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "No insights available at the moment.";
-        
-        summaryEl.innerText = text;
+Use DOUBLE LINE BREAKS to highlight these:
+**Recommendation:** What to cut.
+**Tip:** Savings tip.
+
+No markdown other than bolding. Do NOT line break between sentences. Only use line breaks for Recommendations and Tips.`;
+        const preferredEngine = localStorage.getItem('ai_preferred_model') || 'auto';
+
+        // --- TRY OPENAI ---
+        if (preferredEngine === 'auto' || preferredEngine === 'ChatGPT') {
+            try {
+                const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: CONFIG.OPENAI_MODEL,
+                        messages: [{ role: 'user', content: prompt }],
+                        max_tokens: 150
+                    })
+                });
+                const openAIData = await openAIResponse.json();
+                if (openAIData.choices?.[0]?.message?.content) {
+                    return { text: openAIData.choices[0].message.content.trim(), engine: 'ChatGPT' };
+                }
+                if (preferredEngine === 'ChatGPT') throw new Error('OpenAI unavailable');
+            } catch (err) { 
+                console.error('OpenAI Error:', err);
+                if (preferredEngine === 'ChatGPT') throw err;
+            }
+        }
+
+        // --- TRY GEMINI ---
+        if (preferredEngine === 'auto' || preferredEngine === 'Gemini') {
+            try {
+                const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.MODEL}:generateContent?key=${CONFIG.GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                const geminiData = await geminiResponse.json();
+                if (geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    return { text: geminiData.candidates[0].content.parts[0].text.trim(), engine: 'Gemini' };
+                }
+                if (geminiData.error?.status === 'RESOURCE_EXHAUSTED' || geminiData.error?.code === 429) {
+                    localStorage.setItem('ai_ratelimit_backoff', Date.now() + 15 * 60 * 1000);
+                }
+                if (preferredEngine === 'Gemini') throw new Error('Gemini unavailable');
+            } catch (err) { 
+                console.error('Gemini Error:', err);
+                if (preferredEngine === 'Gemini') throw err;
+            }
+        }
+
+        // --- FALLBACK ---
+        const { LocalAI } = await import('./local-ai.js');
+        return { text: LocalAI.analyze(txns), engine: 'Edge AI' };
+    };
+
+    try {
+        let { text, engine } = await fetchInsights();
+        text = cleanAIText(text);
+        const badgeColor = engine === 'ChatGPT' ? '#10a37f' : (engine === 'Gemini' ? '#3b82f6' : '#64748b');
+        summaryEl.innerHTML = `<span style="font-size: 8px; font-weight: 800; text-transform: uppercase; color: ${badgeColor}; border: 1px solid ${badgeColor}; padding: 1px 3px; border-radius: 3px; margin-right: 6px; vertical-align: middle; display: inline-flex; align-items: center; letter-spacing: 0.5px;">${engine}</span>${text}`;
         localStorage.setItem(cacheKey, text);
     } catch (err) {
-        console.error("AI Insight Error:", err);
+        console.error("Master AI Error:", err);
         summaryEl.innerText = 'Restoring AI insights. Please sync your transactions to refresh analysis.';
     }
 }
@@ -886,6 +950,9 @@ export function switchAccount(id) {
         if (id === 'bpi') updateSafeSpendUI();
     }
 
+    // Trigger data reload for the new account
+    import('./app-data.js').then(m => m.loadData());
+
     // Auto-sync if token is fresh
     if (id === 'atome' || id === 'bpi') {
         const token = localStorage.getItem('g_access_token');
@@ -1083,7 +1150,8 @@ export function updateBalanceToThisMonth(txns, targetAccount) {
 }
 
 export function updateInsightCards(txns) {
-    if (!txns || txns.length === 0) return;
+    if (!txns) return; 
+    // Allow empty array to proceed so UI clears
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
@@ -1661,6 +1729,7 @@ function bridgeGlobals() {
     window.renderHistory = renderHistory;
     window.drawPieChart = drawPieChart;
     window.updateAISummary = updateAISummary;
+    window.animateNumber = animateNumber;
     console.log('✅ Global bridge complete.');
 }
 

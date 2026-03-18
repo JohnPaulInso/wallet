@@ -1443,8 +1443,8 @@
             pointer-events: none;
         }
         .swipe-action-bg.active { opacity: 1; }
-        .swipe-action-bg.reveal-orange { background: #c98208; border-radius: 12px;}
-        .swipe-action-bg.reveal-green { background: #10b981; border-radius: 12px;}
+        .swipe-action-bg.reveal-orange { background: #10b981; border-radius: 12px; scale: 0.98}
+        .swipe-action-bg.reveal-green { background: #10b981; border-radius: 12px; scale: 0.98;}
         
         .swipe-item {
             position: relative;
@@ -2507,45 +2507,98 @@
         body.dark-mode .summary-item .s-value { color: var(--text-primary); }
         body.dark-mode .monthly-summary-toggle { background: var(--border-color); }
 
-        /* AI INSIGHT SECTION */
+        /* AI INSIGHT SECTION (PREMIUM MODERN DESIGN) */
         .ai-insight-section {
-            margin: 16px 0 8px 0; /* Added bottom margin */
-            padding: 16px;
-            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-            border-radius: 16px;
-            border: 1px solid #ddd6fe;
+            margin: 20px 0 10px 0;
+            padding: 18px 20px;
+            background: linear-gradient(135deg, rgba(237,233,254,0.6) 0%, rgba(245,243,255,0.9) 100%);
+            border-radius: 20px;
+            border: 1.5px solid rgba(139, 92, 246, 0.2);
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.08), inset 0 2px 5px rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
+        
+        .ai-insight-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: aiShimmer 3s infinite linear;
+            pointer-events: none;
+        }
+        
+        @keyframes aiShimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .ai-insight-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 3px rgba(139, 92, 246, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.8);
+        }
+
         body.dark-mode .ai-insight-section {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
-            border-color: rgba(139, 92, 246, 0.2);
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(76, 29, 149, 0.15) 100%);
+            border-color: rgba(139, 92, 246, 0.25);
+            box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
         }
+
+        body.dark-mode .ai-insight-section::before {
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+        }
+
         .ai-insight-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            position: relative;
+            z-index: 2;
         }
         .ai-insight-title {
-            font-size: 10.3px;
-            font-weight: 800;
-            color: #7c3aed;
+            font-size: 11px;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #7c3aed, #db2777);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
         }
-        body.dark-mode .ai-insight-title { color: #a78bfa; }
+        
+        body.dark-mode .ai-insight-title {
+            background: linear-gradient(90deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
         .ai-summary-text {
-            font-size: 9px; /* Reduced font size */
-            line-height: 1.6;
+            font-size: 11.5px;
+            line-height: 1.5;
             color: #4c1d95;
-            font-weight: 500;
+            font-weight: 600;
+            position: relative;
+            z-index: 2;
+            letter-spacing: -0.1px;
+            text-align: justify;
+            white-space: pre-line;
         }
-        body.dark-mode .ai-summary-text { color: #ddd6fe; }
+        .ai-summary-text strong { font-weight: 800; color: inherit; }
+        body.dark-mode .ai-summary-text { color: #94a3b8; font-weight: 500; }
+        body.dark-mode .ai-summary-text strong { color: inherit; font-weight: 800; }
         
         /* Loading Animation */
-        .ai-loading-dots { display: flex; gap: 4px; }
+        .ai-loading-dots { display: flex; gap: 5px; }
         .ai-loading-dots span {
-            width: 4px; height: 4px;
-            background: #7c3aed;
+            width: 5px; height: 5px;
+            background: linear-gradient(135deg, #7c3aed, #db2777);
             border-radius: 50%;
             display: inline-block;
             animation: aiBounce 1.4s infinite ease-in-out both;
@@ -2632,6 +2685,38 @@
             align-items: center;
             justify-content: space-between;
             padding: 14px 16px;
+        }
+
+        .ai-model-selector {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 4px;
+            padding: 1px 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ai-model-selector select {
+            background: none;
+            border: none;
+            font-size: 9px;
+            font-weight: 700;
+            color: #7c3aed;
+            cursor: pointer;
+            outline: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-right: 4px;
+        }
+
+        body.dark-mode .ai-model-selector {
+            background: rgba(167, 139, 250, 0.1);
+            border-color: rgba(167, 139, 250, 0.2);
+        }
+
+        body.dark-mode .ai-model-selector select {
+            color: #a78bfa;
         }
         .undo-snackbar-text {
             color: #1e293b;

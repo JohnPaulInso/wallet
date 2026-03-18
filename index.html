@@ -26,7 +26,8 @@
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js">
     <link rel="modulepreload" href="app-ui.js">
-    <link rel="modulepreload" href="ai-config.js">
+    <link rel="modulepreload" href="config.js">
+    <link rel="modulepreload" href="local-ai.js">
     
     <!-- SPEED UP FIREBASE AUTH POPUP -->
     <link rel="preconnect" href="https://accounts.google.com">
@@ -549,8 +550,18 @@
                                 <i class="material-icons" style="font-size: 16px; color: #8b5cf6;">auto_awesome</i>
                                 <span class="ai-insight-title">AI Analysis</span>
                             </div>
-                            <div class="ai-loading-dots" id="ai-loading" style="display: none;">
-                                <span></span><span></span><span></span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div class="ai-model-selector" style="display: flex; align-items: center; gap: 8px;">
+                                    <select id="dashboard-ai-model" onchange="localStorage.setItem('ai_preferred_model', this.value); updateAISummary(window.thisMonthTxns, true);">
+                                        <option value="auto">Auto (Smart)</option>
+                                        <option value="ChatGPT">ChatGPT</option>
+                                        <option value="Gemini">Gemini</option>
+                                        <option value="Edge AI">Edge AI</option>
+                                    </select>
+                                </div>
+                                <div class="ai-loading-dots" id="ai-loading" style="display: none;">
+                                    <span></span><span></span><span></span>
+                                </div>
                             </div>
                         </div>
                         <div class="ai-summary-text" id="ai-summary-container">
@@ -559,6 +570,15 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Set initial model selection -->
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                   const pref = localStorage.getItem('ai_preferred_model') || 'auto';
+                   const sel = document.getElementById('dashboard-ai-model');
+                   if (sel) sel.value = pref;
+                });
+            </script>
 
             <!-- OFFLINE QUEUE CARD -->
             <div id="offline-queue-card" class="offline-queue-card">
@@ -893,7 +913,9 @@
     </script>
 
     <script type="module">
-        import { AI_CONFIG } from "./ai-config.js";
+        import { CONFIG } from "./config.js";
+        import { LocalAI } from "./local-ai.js";
+        import { cleanAIText } from "./app-utils.js";
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -908,15 +930,7 @@
         };
 
         // FIREBASE CONFIG
-        const firebaseConfig = {
-            apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
-            authDomain: "atome-wallet.firebaseapp.com",
-            projectId: "atome-wallet",
-            storageBucket: "atome-wallet.firebasestorage.app",
-            messagingSenderId: "64186651619",
-            appId: "1:64186651619:web:cd7d426cfb663aab6606d6",
-            measurementId: "G-2SHWJ6S3Z3"
-        };
+        const firebaseConfig = CONFIG.FIREBASE_CONFIG;
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -2722,6 +2736,9 @@
 
              // PERSISTENCE LOGIC: Use cached value if data not yet loaded
              const safeEl = document.getElementById('safe-spend-val');
+             const isHidden = localStorage.getItem('balance_hidden') === 'true';
+             
+             // PERSISTENCE LOGIC: Use cached value if data not yet loaded
              let safeAmount = 0;
              let isLoading = !window.bpiDataLoaded || !window.atomeDataLoaded;
              
@@ -2732,30 +2749,44 @@
                      safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
                  }
                  // Add a visual indicator or keep it simple
-                 safeEl.style.opacity = '0.7'; 
+                 if (safeEl) safeEl.style.opacity = '0.7'; 
              } else {
                  safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
-                 safeEl.style.opacity = '1';
+                 if (safeEl) safeEl.style.opacity = '1';
                  
                  // Save stable value to Firestore (throttle updates)
-                 if (window.saveSafeSpendConfig && Math.abs((config.lastSafeAmount || 0) - safeAmount) > 0.01) {
+                 if (window.saveSafeSpendConfig && Math.abs((config.lastSafeAmount || 0) - safeAmount) > 0.1) {
                      window.saveSafeSpendConfig({ lastSafeAmount: safeAmount });
                  }
              }
 
-             const formatted = `₱${safeAmount.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-             
-             safeEl.dataset.raw = formatted;
-             safeEl.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : formatted;
-             
-             // Dynamic color (Health check)
-             if (safeAmount < 1000) safeEl.style.color = '#ef4444'; // Red (High Risk)
-             else if (safeAmount < 5000) safeEl.style.color = '#f59e0b'; // Orange (Risky)
-             else safeEl.style.color = '#10b981'; // Green (Safe)
+             if (safeEl) {
+                 const oldAmount = parseFloat(safeEl.dataset.curVal) || 0;
+                 safeEl.dataset.curVal = safeAmount;
+                 
+                 const formatFn = (val) => `₱${val.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                 const formatted = formatFn(safeAmount);
+                 safeEl.dataset.raw = formatted;
+
+                 if (isHidden) {
+                     safeEl.innerText = '******';
+                 } else {
+                     // Only animate if value changed significantly (> 1.00) and not during initial load
+                     if (window.animateNumber && Math.abs(oldAmount - safeAmount) > 1.0 && !isLoading) {
+                         window.animateNumber(safeEl, oldAmount, safeAmount, 400, formatFn);
+                     } else {
+                         safeEl.innerText = formatted;
+                     }
+                 }
+                 
+                 // Dynamic color (Health check)
+                 if (safeAmount < 1000) safeEl.style.color = '#ef4444'; // Red (High Risk)
+                 else if (safeAmount < 5000) safeEl.style.color = '#f59e0b'; // Orange (Risky)
+                 else safeEl.style.color = '#10b981'; // Green (Safe)
+             }
 
              // 4. Update Breakdown Items
-             const isHidden = localStorage.getItem('balance_hidden') === 'true';
-
+             
              // Maintaining Balance Update
              const itemMaintaining = document.getElementById('item-maintaining');
              const checkMaintaining = document.getElementById('maintaining-check');
@@ -4212,7 +4243,8 @@
             
             // --- DAILY AVERAGE ---
             const thisMonthTotal = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
-            const dailyAvg = dayOfMonth > 0 ? thisMonthTotal / dayOfMonth : 0;
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const dailyAvg = daysInMonth > 0 ? thisMonthTotal / daysInMonth : 0;
             const dailyAvgEl = document.getElementById('daily-avg-val');
             const dailyAvgSub = document.getElementById('daily-avg-sub');
             if (dailyAvgEl) {
@@ -4330,14 +4362,35 @@
             const box = document.getElementById('ai-insight-box');
             const textEl = document.getElementById('ai-summary-container');
             const loading = document.getElementById('ai-loading');
+            const trigger = document.getElementById('ai-title-trigger');
             const user = auth.currentUser;
+             
+            const modelSelector = document.getElementById('dashboard-ai-model');
+            const updateSelectorDisplay = (engine) => {
+                if (!modelSelector) return;
+                const pref = localStorage.getItem('ai_preferred_model') || 'auto';
+                if (pref === 'auto') {
+                    // Temporary visual update to the selected option text without changing the logic
+                    const autoOpt = Array.from(modelSelector.options).find(o => o.value === 'auto');
+                    if (autoOpt) autoOpt.textContent = `Auto [${engine}]`;
+                } else {
+                    // Restore "Auto (Smart)" if they explicitly picked a model
+                    const autoOpt = Array.from(modelSelector.options).find(o => o.value === 'auto');
+                    if (autoOpt) autoOpt.textContent = 'Auto (Smart)';
+                }
+            };
             
-            if (!box || !textEl || !thisMonthTxns || thisMonthTxns.length === 0 || !user) return;
+            if (!box || !textEl || !user) return;
+            
+            if (!thisMonthTxns || thisMonthTxns.length === 0) {
+                box.style.display = 'none';
+                return;
+            }
 
             // 1. Identify Period & Keys
             const now = new Date();
             const yearMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-            const cacheKey = `ai_summary_${yearMonth}_v3`;
+            const cacheKey = `ai_summary_${window.currentAccount || 'default'}_${yearMonth}_v3`;
             const localCached = localStorage.getItem(cacheKey);
 
             // Show container & setup title trigger
@@ -4371,101 +4424,226 @@
                 return countDiff < threshold && ageHrs < 24;
             };
 
-            // 2. Try Local Cache (Fastest)
-            if (localCached) {
+            // Show loader immediately if we're going to fetch or if forced
+            if (loading) loading.style.display = 'flex';
+
+            // 2. Try Local Cache (Fastest) - SKIP IF FORCED
+            if (localCached && !force) {
                 try {
                     const data = JSON.parse(localCached);
-                    if (isFresh(data)) {
-                        textEl.innerText = data.text;
+                     if (isFresh(data)) {
+                        textEl.innerHTML = cleanAIText(data.text);
+                        updateSelectorDisplay(data.engine || 'Edge AI');
                         if (loading) loading.style.display = 'none';
                         return;
                     }
                 } catch(e) {}
             }
 
-            // 3. Try Firestore Persistence (Cross-device)
-            if (loading) loading.style.display = 'flex';
-            try {
-                const docRef = doc(db, `users/${user.uid}/ai_summaries`, yearMonth);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (isFresh(data)) {
-                        textEl.innerText = data.text;
-                        localStorage.setItem(cacheKey, JSON.stringify(data));
-                        if (loading) loading.style.display = 'none';
-                        return;
-                    }
-                }
-            } catch (err) {
-                console.warn('AI Firestore Cache Error:', err);
-            }
 
             // 4. Generate New Summary (Throttle hit / Data stale)
-            textEl.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Analyzing your spending patterns...</span>';
+            const backoffUntil = localStorage.getItem('ai_ratelimit_backoff');
+            if (backoffUntil && Date.now() < parseInt(backoffUntil)) {
+                // If backoff is active, we can still fall back to Local AI immediately
+                 // Try to pass whatever historical context we might have from common logic
+                 const localText = cleanAIText(LocalAI.analyze(thisMonthTxns, { 
+                     avgTotal: localStorage.getItem('ai_hist_avg') || 0 
+                 }));
+                updateSelectorDisplay('Edge AI');
+                textEl.innerHTML = localText;
+                if (loading) loading.style.display = 'none';
+                return;
+            }
+
+            textEl.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">Analyzing 1 year of data...</span>';
 
             try {
-                const apiKey = AI_CONFIG.GEMINI_API_KEY;
-                
-                // Aggregation for prompt
-                const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                const total = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
-                const merchantTotals = {};
-                let smallBuysCount = 0;
-                let smallBuysTotal = 0;
+                const generateSummary = async () => {
+                    const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    const allTxns = window.allTxns || [];
+                    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
+                    
+                    const historicalTxns = allTxns.filter(t => {
+                        const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
+                        return d >= oneYearAgo && !t.excluded && !t.refund;
+                    });
 
-                thisMonthTxns.forEach(t => {
-                    const mapped = getMerchantDisplay(t.merchant, t);
-                    const amt = getAmt(t);
-                    const mName = mapped.name || t.merchant || 'Unknown';
-                    merchantTotals[mName] = (merchantTotals[mName] || 0) + amt;
-                    if (amt > 0 && amt < 200) { smallBuysCount++; smallBuysTotal += amt; }
-                });
+                    const monthlyTotals = {};
+                    const merchantStats = {}; // { mName: { total: 0, count: 0, months: Set } }
+                    const catMonthlySpend = {}; 
 
-                const topMerchants = Object.entries(merchantTotals).sort((a, b) => b[1] - a[1]).slice(0, 5)
-                    .map(([name, val]) => `${name} (₱${Math.round(val)})`).join(', ');
+                    historicalTxns.forEach(t => {
+                        const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
+                        const ym = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                        const amt = getAmt(t);
+                        const mapped = getMerchantDisplay(t.merchant, t);
+                        const cat = mapped.category || 'Other';
+                        const mName = mapped.name || t.merchant || 'Unknown';
 
-                const prompt = `You are a helpful personal finance assistant. Analyze this month's spending:
-Total Spent: ₱${Math.round(total)}
-Top Merchants: ${topMerchants}
-Small Buys (under ₱200): ${smallBuysCount} transactions totaling ₱${Math.round(smallBuysTotal)}
+                        monthlyTotals[ym] = (monthlyTotals[ym] || 0) + amt;
+                        
+                        if (!merchantStats[mName]) merchantStats[mName] = { total: 0, count: 0, months: new Set() };
+                        merchantStats[mName].total += amt;
+                        merchantStats[mName].count += 1;
+                        merchantStats[mName].months.add(ym);
 
-Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area or trend. Sentence 2: Mention the impact of the frequent small buys. Keep it encouraging and professional. Do not use bolding or markdown.`;
+                        if (!catMonthlySpend[cat]) catMonthlySpend[cat] = {};
+                        catMonthlySpend[cat][ym] = (catMonthlySpend[cat][ym] || 0) + amt;
+                    });
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
+                    const monthsActive = Object.keys(monthlyTotals).length || 1;
+                    const avgMonthlyTotal = Object.values(monthlyTotals).reduce((a, b) => a + b, 0) / monthsActive;
+                    
+                    // Identify recurring pain points (recurring merchants with high costs)
+                    const recurringMerchants = Object.entries(merchantStats)
+                        .filter(([m, stats]) => stats.months.size >= Math.ceil(monthsActive * 0.5)) // Seen in half the months
+                        .map(([m, stats]) => ({
+                            name: m,
+                            avgCost: Math.round(stats.total / stats.months.size),
+                            frequency: stats.months.size
+                        }))
+                        .sort((a, b) => b.avgCost - a.avgCost)
+                        .slice(0, 5);
 
-                const data = await response.json();
-                
-                if (data.error) {
-                    // Log full details for admin, show short message for user
-                    console.error('Gemini API Error:', data.error);
-                    if (data.error.status === 'RESOURCE_EXHAUSTED' || data.error.code === 429) {
-                        throw new Error('AI quota exceeded for now. Please try again in a few minutes.');
+                    const currentMonthYM = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+                     
+                     // --- 3-MONTH TREND INTELLIGENCE ---
+                     const last3Months = [];
+                     for (let i = 1; i <= 3; i++) {
+                         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                         last3Months.push(`${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`);
+                     }
+
+                     const threeMonthTotals = last3Months.map(ym => monthlyTotals[ym] || 0);
+                     const avg3MonthTotal = threeMonthTotals.reduce((a, b) => a + b, 0) / (threeMonthTotals.filter(v => v > 0).length || 1);
+                     
+                     // Identify "Recent Habits" (Merchants seen frequently in the last 3 months)
+                     const recentHabits = Object.entries(merchantStats)
+                         .filter(([m, stats]) => {
+                             const seenInLast3 = last3Months.some(ym => stats.months.has(ym));
+                             return seenInLast3 && stats.months.size >= 2;
+                         })
+                         .map(([m, stats]) => `${m} (avg ₱${Math.round(stats.total / stats.months.size)}/mo)`)
+                         .slice(0, 3);
+
+                     let majorSpikes = [];
+                     Object.entries(catMonthlySpend).forEach(([cat, months]) => {
+                         const histAmts = Object.entries(months).filter(([ym]) => ym !== currentMonthYM).map(([_, amt]) => amt);
+                         if (histAmts.length >= 2) {
+                             const catAvg = histAmts.reduce((a,b) => a+b, 0) / histAmts.length;
+                             const currentCatAmt = months[currentMonthYM] || 0;
+                             if (currentCatAmt > catAvg * 1.25) {
+                                 majorSpikes.push(`${cat} (₱${Math.round(currentCatAmt)} vs avg ₱${Math.round(catAvg)})`);
+                             }
+                         }
+                     });
+
+                     const historicalContext = `
+HISTORICAL DATA (12-MONTH OVERVIEW):
+- Long-term Monthly Average: ₱${Math.round(avgMonthlyTotal)}
+- Top Recurring Costs: ${recurringMerchants.map(rm => `${rm.name} [₱${rm.avgCost}/mo]`).join(', ')}
+
+RECENT TRENDS (LAST 90 DAYS):
+- 3-Month Rolling Average: ₱${Math.round(avg3MonthTotal)}
+- Recent Active Merchants: ${recentHabits.join(', ')}
+- Spikes Identified: ${majorSpikes.length > 0 ? majorSpikes.join('; ') : 'None.'}
+`;
+
+                     const allTxnsSummary = thisMonthTxns.map(t => `${t.date}: ${t.merchant} (₱${getAmt(t)})`).join('\n');
+                     const prompt = `Analyze these transactions against recent 3-month trends and 1-year history:
+${historicalContext}
+
+CURRENT MONTH DATA:
+${allTxnsSummary}
+
+Task: Provide a "Smart Learning" analysis in BASIC ENGLISH (2 sentences).
+Compare current spending specifically to the 3-MONTH ROLLING AVERAGE. 
+Identify if this is a worsening trend or identifying a specific recurring pain point from the last 90 days.
+BOLD merchants and amounts.
+
+CRITICAL RULES:
+1. NO generic percentage advice or cliché financial tips.
+2. Ensure PERFECT SPACING. Never combine words with bold tags (e.g. say "at **Merchant**" NOT "at**Merchant**").
+3. Use DOUBLE LINE BREAKS before Recommendation and Tip.
+4. **Recommendation:** A specific action regarding a merchant or category from the LAST 3 MONTHS.
+5. **Tip:** Provide a REAL-LIFE SAVINGS HACK or "Life Hack" for a merchant mentioned. (e.g., "Switch to pickup on GrabFood to save ₱50", "Check for Tuesday promos at [Merchant]", "Use a loyalty card at [Gas Station]"). NO generic advice like "set a hard limit".
+6. ALWAYS use COMMA SEPARATORS for any number or amount ₱1,000 and above.
+
+Be direct, practical, and helpful.`;
+
+                    const preferredEngine = localStorage.getItem('ai_preferred_model') || 'auto';
+
+                    // --- TRY OPENAI (PRIMARY or FORCED) ---
+                    if (preferredEngine === 'auto' || preferredEngine === 'ChatGPT') {
+                        try {
+                            const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
+                                },
+                                body: JSON.stringify({
+                                    model: CONFIG.OPENAI_MODEL,
+                                    messages: [{ role: 'user', content: prompt }],
+                                    max_tokens: 150
+                                })
+                            });
+
+                            const openAIData = await openAIResponse.json();
+                            if (openAIData.choices?.[0]?.message?.content) {
+                                return { text: openAIData.choices[0].message.content.trim(), engine: 'ChatGPT' };
+                            } 
+                            if (preferredEngine === 'ChatGPT') throw new Error('OpenAI service unavailable');
+                        } catch (err) {
+                            if (preferredEngine === 'ChatGPT') throw err;
+                        }
                     }
-                    throw new Error(data.error.message || 'API Service Error');
-                }
 
-                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-                if (!aiText) {
-                    if (data.promptFeedback?.blockReason) throw new Error(`AI Blocked: ${data.promptFeedback.blockReason}`);
-                    throw new Error('Incomplete response from AI');
-                }
+                    // --- TRY GEMINI (SECONDARY or FORCED) ---
+                    if (preferredEngine === 'auto' || preferredEngine === 'Gemini') {
+                        try {
+                            const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                            });
+                            const geminiData = await geminiResponse.json();
+                            if (geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+                                return { text: geminiData.candidates[0].content.parts[0].text.trim(), engine: 'Gemini' };
+                            }
+                            if (geminiData.error?.status === 'RESOURCE_EXHAUSTED' || geminiData.error?.code === 429) {
+                                localStorage.setItem('ai_ratelimit_backoff', Date.now() + 15 * 60 * 1000);
+                            }
+                            if (preferredEngine === 'Gemini') throw new Error('Gemini service unavailable');
+                        } catch (err) {
+                            if (preferredEngine === 'Gemini') throw err;
+                        }
+                    }
 
-                // 5. Success: Persistence & UI Update
-                localStorage.setItem('last_ai_request_time', Date.now());
+                    // --- FALLBACK (TERTIARY or FORCED) ---
+                     const histPass = { 
+                         avgTotal: avgMonthlyTotal,
+                         recurring: recurringMerchants,
+                         spikes: majorSpikes
+                     };
+                     localStorage.setItem('ai_hist_avg', avgMonthlyTotal); // Cache for immediate fallback
+                     return { text: LocalAI.analyze(thisMonthTxns, histPass), engine: 'Edge AI' };
+                };
+
+                let { text, engine } = await generateSummary();
+                text = cleanAIText(text);
+                updateSelectorDisplay(engine);
+                textEl.innerHTML = text;
+
                 const result = {
-                    text: aiText,
+                    text: text,
+                    engine: engine,
                     count: thisMonthTxns.length,
                     timestamp: Date.now()
                 };
-
-                textEl.innerText = aiText;
                 localStorage.setItem(cacheKey, JSON.stringify(result));
-                
+                if (loading) loading.style.display = 'none';
+                    
                 // Hide retry button on success
                 const retryBtn = document.getElementById('ai-retry-btn');
                 if (retryBtn) retryBtn.style.display = 'none';
@@ -4477,26 +4655,29 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
             } catch (err) {
                 console.error('AI Summary Detailed Error:', err);
                 // Show simplified error for user, full error for console
-                textEl.innerHTML = `<span style="color: var(--text-muted);">${err.message}</span>`;
+                textEl.innerHTML = `<span style="color: #db2777; font-weight: 700; display: flex; align-items: center; gap: 6px;"><i class="material-icons" style="font-size: 14px;">error_outline</i> ${err.message}</span>`;
             } finally {
                 if (loading) loading.style.display = 'none';
             }
         }
 
         window.toggleAdminMode = () => {
-            const user = auth.currentUser;
-            if (user) {
-                const adminDiv = document.getElementById('admin-controls');
-                const logDiv = document.getElementById('log-container');
-                if (!adminDiv || !logDiv) return showToast('Admin elements missing');
-                const isHidden = adminDiv.style.display === 'none';
-                adminDiv.style.display = isHidden ? 'block' : 'none';
-                logDiv.style.display = isHidden ? 'block' : 'none';
-                showToast(isHidden ? 'Admin View On' : 'Admin View Off');
-            } else {
-                showToast('Action restricted');
-            }
-        };
+             const user = auth.currentUser;
+             if (user) {
+                 const adminDiv = document.getElementById('admin-controls');
+                 const logDiv = document.getElementById('log-container');
+                 if (!adminDiv || !logDiv) {
+                    showToast('Admin elements missing');
+                    return;
+                 }
+                 const isHidden = (adminDiv.style.display === 'none');
+                 adminDiv.style.display = isHidden ? 'block' : 'none';
+                 logDiv.style.display = isHidden ? 'block' : 'none';
+                 showToast(isHidden ? 'Admin View On' : 'Admin View Off');
+             } else {
+                 showToast('Action restricted');
+             }
+         };
 
         window.exportData = () => {
             if (!window.allTxns || window.allTxns.length === 0) {
@@ -6203,6 +6384,7 @@ Write a concise 2-sentence summary. Sentence 1: Highlight the main spending area
         const stripTags = (html) => {
             if (!html) return "";
             return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+                       .replace(/(^|[\n])\s*[-*]\s+/g, '$1') // Only remove list bullets at start of lines
                        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
                        .replace(/<br\s*\/?>/gi, '\n')
                        .replace(/<\/p>| <\/div>|<\/tr>/gi, '\n')

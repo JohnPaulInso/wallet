@@ -322,16 +322,86 @@ export function createNotification(title, message, type = 'info', action = null)
     }
 }
 
-// Strip HTML tags
-export const stripTags = (html) => {
-    if (!html) return "";
-    return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-               .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-               .replace(/<br\s*\/?>/gi, '\n')
-               .replace(/<\/p>| <\/div>|<\/tr>/gi, '\n')
-               .replace(/<\/td>/gi, ' | ')
-               .replace(/<[^>]*>/g, ' ')
-               .replace(/[ \t]+/g, ' ')
-               .replace(/\n\s+/g, '\n')
-               .trim();
-};
+/**
+ * Clean AI-generated text by stripping markdown and extra formatting
+ * @param {string} text 
+ * @returns {string}
+ */
+export function cleanAIText(text) {
+    if (!text) return '';
+    
+    // We now allow bolding with ** for the user
+    let cleaned = text
+        .replace(/###/g, '') // Remove headers
+        .replace(/#{1,6}\s?/g, '') // Remove headers
+        .replace(/`/g, '') // Remove backticks
+        .replace(/(^|[\n])\s*[-*]\s+/g, '$1') // Only remove list bullets at start of lines
+        .replace(/\n\n/g, '<br><br>') // Ensure double breaks are preserved
+        .trim();
+
+    // Convert **text** to <strong>text</strong> and ensure spacing
+    cleaned = cleaned.replace(/\s?\*\*\s?(.*?)\s?\*\*\s?/g, ' <strong>$1</strong> ');
+    
+    // Convert ₱1000 to ₱1,000 using regex (Handle numbers with or without ₱)
+    // Looks for 4+ digits that aren't already comma-separated
+    cleaned = cleaned.replace(/(₱?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
+        const fullNum = p2 + p3;
+        const formatted = parseInt(fullNum).toLocaleString('en-US');
+        return p1 + formatted;
+    });
+
+    // Final cleanup
+    cleaned = cleaned
+        .replace(/\*(.*?)\*/g, '$1') // Handle single asterisks
+        .replace(/\*/g, '')          // Final sweep
+        .replace(/\s+/g, ' ')        // Collapse multiple spaces
+        .trim();
+    
+    return cleaned;
+}
+
+/**
+ * Animate a number from start to end over a duration
+ * @param {HTMLElement} el - Element to update
+ * @param {number} start - Starting value
+ * @param {number} end - Ending value
+ * @param {number} duration - Animation duration in ms
+ * @param {function} formatFn - Optional formatter (e.g. (v) => `₱${v.toLocaleString()}`)
+ */
+export function animateNumber(el, start, end, duration = 100, formatFn = null) {
+    if (!el) return;
+    
+    // Quick escape for first render or if values are same
+    if (Math.abs(start - end) < 0.01) {
+        el.innerText = formatFn ? formatFn(end) : end;
+        return;
+    }
+
+    const startTime = performance.now();
+    
+    const update = (now) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease out quad
+        const easedProgress = progress * (2 - progress);
+        const current = start + (end - start) * easedProgress;
+        
+        const displayVal = formatFn ? formatFn(current) : Math.floor(current);
+        
+        // Only update if text actually changed to save DOM cycles
+        if (el.innerText !== displayVal) {
+            el.innerText = displayVal;
+        }
+        
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        } else {
+            // Final snap to exact value
+            el.innerText = formatFn ? formatFn(end) : end;
+        }
+    };
+    
+    requestAnimationFrame(update);
+}
+

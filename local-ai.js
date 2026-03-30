@@ -45,14 +45,14 @@ export const LocalAI = {
 
         if (history && history.avgTotal && totalSpent > history.avgTotal * 1.1) {
             const diff = totalSpent - history.avgTotal;
-            analysis = `You spent **₱${Math.round(totalSpent)}**, which is **₱${Math.round(diff)} higher** than your recent average. `;
+            analysis = `You spent **₱${Math.round(totalSpent)}**, which is **₱${Math.round(diff)} higher** than your recent average.`;
         } else if (topMerchant && topMerchant[1] > totalSpent * 0.3) {
-            analysis = `**${topMerchant[0]}** is your leading expense this month, taking up **₱${Math.round(topMerchant[1])}**. `;
+            analysis = `**${topMerchant[0]}** is your leading expense this month, taking up **₱${Math.round(topMerchant[1])}**. At this rate, you're on track to spend over **₱${Math.round(topMerchant[1] * (daysInMonth / now.getDate()))}** here by month-end.`;
         } else if (topCategory) {
-            analysis = `Most of your spending went to **${topCategory[0]}** (**₱${Math.round(topCategory[1])}**). `;
+            analysis = `Most of your spending went to **${topCategory[0]}** (**₱${Math.round(topCategory[1])}**).`;
         }
         
-        analysis += `Your daily average for the month is **₱${Math.round(totalSpent/daysInMonth)}**.`;
+        analysis += ` Your daily average is **₱${Math.round(totalSpent/now.getDate())}**.`;
         lines.push(analysis);
 
         // 3. Recommendation: Smart learning from clusters

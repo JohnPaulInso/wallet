@@ -146,6 +146,7 @@ export function renderHistory(txns) {
                          data-date="${t.date}"
                          data-manual-amount="${t.manualAmount !== undefined ? t.manualAmount : ''}"
                          data-category="${mapped.category}"
+                         data-manual-budget-category="${t.manualBudgetCategory || ''}"
                          data-note="${noteSafe}"
                          data-excluded="${t.excluded || false}"
                          data-refund="${t.refund || false}"
@@ -224,68 +225,475 @@ export function renderHistory(txns) {
 
 // Update Triple Progress Bar
 export function updateTripleProgressBar() {
-    const data = window.allTxns || [];
-    const config = window.safeToSpendConfig || { savingsAmount: 3000, obligations: [] };
-    const monthlySalary = parseFloat(localStorage.getItem('monthly_salary_target') || '0');
+    const user = auth.currentUser;
+    const widget = document.getElementById('triple-progress-widget');
+    if (!widget) return;
     
-    if (!monthlySalary) return;
+    // Always show widget by default (as per user request for instant load)
+    widget.style.display = 'block';
 
+    let needsTotal = 0;
+    let wantsTotal = 0;
+    let savingsTotal = 0;
+    let wantsCategoryMap = {};
+
+    // --- INSTANT LOAD CACHE ---
+    const cacheKey = `budget_widget_cache_${user?.uid || 'guest'}`;
+    const cachedDataStr = localStorage.getItem(cacheKey);
+    let parsedCache = null;
+    try { if (cachedDataStr) parsedCache = JSON.parse(cachedDataStr); } catch (e) { }
+
+    // DATA READINESS (Modified 2026-03-27: Wait for ALL sources to prevent flicker)
+    const isMultiWallet = !!window.walletTxns;
+    const atomeReady = isMultiWallet ? (window.walletTxns.atome !== undefined) : (window.allTxns !== null);
+    const bpiReady = isMultiWallet ? (window.walletTxns.bpi !== undefined) : (window.allTxns !== null);
+    const manualReady = (window.budgetManualTxns !== undefined);
+
+    // Categories are only "Live Ready" if ALL their possible sources are loaded (Atomic Readiness)
+    // Modified 2026-03-27: Consolidate to a single ready flag to prevent partial updates/flickers
+    // Added window.hasBudgetLiveData check to ensure we wait for a LIVE sync, not just cache
+    const isAggregatedReady = window.hasBudgetLiveData && atomeReady && bpiReady && manualReady;
+    
+    // Safety Fallback: Allow cache rendering if live takes > 2.5s
+    if (!window.budgetLoadStartTime) {
+        window.budgetLoadStartTime = Date.now();
+        // Modified 2026-03-27: Fail-safe trigger to ensure reveal even if data is stagnant
+        setTimeout(() => {
+            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+        }, 2600);
+    }
+    const isTimeoutFallback = (Date.now() - window.budgetLoadStartTime > 2500);
+
+    const canUseLiveNeeds = isAggregatedReady; 
+    const canUseLiveWants = isAggregatedReady; 
+    const canUseLiveSavings = isAggregatedReady;
+
+    if (canUseLiveNeeds || canUseLiveWants || canUseLiveSavings) {
+        // Live aggregation
+        const now = new Date();
+        const filterEl = document.getElementById('chart-filter');
+        const currentFilter = filterEl ? filterEl.value : 'this_month';
+
+        const aggregateFrom = (txns, account) => {
+            txns.forEach(t => {
+                if (t.excluded || t.reimbursed || t.refund) return;
+                if (window.checkPeriod && !window.checkPeriod(t, currentFilter, 0, now)) return;
+
+                const display = getMerchantDisplay(t.name || t.merchant, t);
+                const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                const manualCat = t.manualBudgetCategory;
+
+                if (manualCat) {
+                    if (manualCat === 'needs') needsTotal += amt;
+                    else if (manualCat === 'wants') wantsTotal += amt;
+                    else if (manualCat === 'savings') savingsTotal += amt;
+                } else if (account === 'atome') {
+                    if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
+                        needsTotal += amt;
+                    } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses' || display.category === 'Financial Expenses') {
+                        wantsTotal += amt;
+                        wantsCategoryMap[display.category] = (wantsCategoryMap[display.category] || 0) + amt;
+                    }
+                } else if (account === 'bpi') {
+                    if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
+                        savingsTotal += amt;
+                    } else if (display.category === 'Vehicle' || (t.name && (t.name.includes('Withdrawal') || t.name.includes('withdraw:')))) {
+                        needsTotal += amt;
+                    }
+                } else if (account === 'budget_manual') {
+                    if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
+                        needsTotal += amt;
+                    } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses' || display.category === 'Financial Expenses') {
+                        wantsTotal += amt;
+                        wantsCategoryMap[display.category] = (wantsCategoryMap[display.category] || 0) + amt;
+                    } else if (display.category === 'Savings') {
+                        savingsTotal += amt;
+                    }
+                }
+            });
+        };
+
+        if (window.walletTxns) {
+            aggregateFrom(window.walletTxns.atome || [], 'atome');
+            aggregateFrom(window.walletTxns.bpi || [], 'bpi');
+            aggregateFrom(window.budgetManualTxns || [], 'budget_manual');
+        } else {
+            aggregateFrom(window.allTxns || [], window.currentAccount);
+        }
+    }
+
+    // FALLBACK TO CACHE FOR SPECIFIC CATEGORIES (Modified 2026-03-27)
+    // If a category source isn't ready, use its cached value instead of 0
+    if (parsedCache) {
+        if (!canUseLiveNeeds) needsTotal = parsedCache.needs || 0;
+        if (!canUseLiveWants) wantsTotal = parsedCache.wants || 0;
+        if (!canUseLiveSavings) savingsTotal = parsedCache.savings || 0;
+    }
+    // --------------------------
+
+    // Salary Target & Rules from LocalStorage (single declaration)
+    const salaryTarget = parseFloat(localStorage.getItem('monthly_salary_target') || '17600');
+    const budgetRule = localStorage.getItem('budget_rule') || '50/30/20';
+
+    let weights = { needs: 0.50, wants: 0.30, savings: 0.20 };
+    if (budgetRule === '40/30/30') {
+        weights = { needs: 0.40, wants: 0.30, savings: 0.30 };
+    } else if (budgetRule === '50/20/30') {
+        weights = { needs: 0.50, wants: 0.20, savings: 0.30 };
+    } else if (budgetRule === 'custom') {
+        weights = {
+            needs: (parseInt(localStorage.getItem('custom_rule_needs')) || 50) / 100,
+            wants: (parseInt(localStorage.getItem('custom_rule_wants')) || 30) / 100,
+            savings: (parseInt(localStorage.getItem('custom_rule_savings')) || 20) / 100
+        };
+    }
+
+    const filterEl = document.getElementById('chart-filter');
+    const filterVal = filterEl ? filterEl.value : 'this_month';
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    
+    // Monthly Budget Label Update (Modified 2026-03-27)
+    const monthDisplay = document.getElementById('triple-month-display');
+    if (monthDisplay) {
+        const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+        const currentMonthName = monthNames[now.getMonth()];
+        const currentYear = now.getFullYear();
 
-    let totalSpent = 0;
-    data.forEach(t => {
-        const d = new Date(t.date);
-        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
-            const mapped = getMerchantDisplay(t.merchant, t);
-            if (mapped.category !== 'Income') {
-                totalSpent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+        if (filterVal === 'this_month') monthDisplay.innerText = `${currentMonthName} ${currentYear}`;
+        else if (filterVal === 'today') monthDisplay.innerText = `TODAY, ${currentMonthName.slice(0,3)} ${now.getDate()}`;
+        else if (filterVal === 'this_week' || filterVal === 'last_week' || filterVal === 'last_7_days') monthDisplay.innerText = `WEEKLY BUDGET`;
+        else if (filterVal === 'first_15' || filterVal === 'last_15') monthDisplay.innerText = `15-DAY BUDGET`;
+        else if (filterVal === 'last_6_months') monthDisplay.innerText = `6-MONTH BUDGET`;
+        else if (filterVal === 'this_year') monthDisplay.innerText = `YEARLY BUDGET`;
+    }
+
+    // SCALING LOGIC (Modified 2026-03-27)
+    let scalingFactor = 1.0;
+    if (filterVal === 'today') scalingFactor = 1 / 31;
+    else if (filterVal === 'this_week' || filterVal === 'last_week' || filterVal === 'last_7_days') scalingFactor = 7 / 31;
+    else if (filterVal === 'first_15' || filterVal === 'last_15') scalingFactor = 15 / 31;
+    else if (filterVal === 'last_6_months') scalingFactor = 6;
+    else if (filterVal === 'this_year') scalingFactor = 12;
+
+    const needsLimit = salaryTarget * weights.needs * scalingFactor;
+    const wantsLimit = salaryTarget * weights.wants * scalingFactor;
+    const savingsLimit = salaryTarget * weights.savings * scalingFactor;
+
+    const needsPct = Math.min((needsTotal / needsLimit) * 100, 100);
+    const wantsPct = (wantsTotal / wantsLimit) * 100;
+    const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
+
+        const isHidden = localStorage.getItem('balance_hidden') === 'true';
+        const isRemainingMode = localStorage.getItem('budget_stats_mode') === 'remaining';
+        
+        const needsReadyToDisplay = canUseLiveNeeds || (parsedCache && parsedCache.needs !== undefined);
+        const wantsReadyToDisplay = canUseLiveWants || (parsedCache && parsedCache.wants !== undefined);
+        const savingsReadyToDisplay = canUseLiveSavings || (parsedCache && parsedCache.savings !== undefined);
+        const allReadyToDisplay = needsReadyToDisplay && wantsReadyToDisplay && savingsReadyToDisplay;
+
+        const formatStat = (current, limit) => {
+            const formatDec = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const formatInt = (num) => Math.floor(num).toLocaleString('en-US');
+
+            if (isRemainingMode) {
+                const left = Math.max(0, limit - current);
+                const leftStr = `₱${formatDec(left)} LEFT`;
+                return { raw: leftStr, display: isHidden ? `****** LEFT` : leftStr };
+            } else {
+                const raw = `₱${formatInt(current)} / ₱${formatInt(limit)}`;
+                return { raw, display: isHidden ? `****** / ₱${formatInt(limit)}` : raw };
+            }
+        };
+
+        const needsEl = document.getElementById('needs-stats');
+        if (needsEl) {
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
+            
+            if (shouldReveal) {
+                needsEl.classList.remove('skeleton');
+                if (needsReadyToDisplay) {
+                    const diff = needsLimit - needsTotal;
+                    const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" label
+                    const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+
+                    const statsVal = isRemainingMode ? 
+                        (diff < 0 ? `₱-${absDiff.toLocaleString()} ${label}` : `₱${absDiff.toLocaleString()} ${label}`) :
+                        `₱${Math.floor(needsTotal).toLocaleString()} / ₱${Math.floor(needsLimit).toLocaleString()}`;
+                    needsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ₱${Math.floor(needsLimit).toLocaleString()}`) : statsVal;
+                    needsEl.dataset.raw = statsVal;
+                }
+            } else {
+                // Modified 2026-03-27: Apply skeleton directly to element (prevent layout break)
+                needsEl.classList.add('skeleton');
             }
         }
-    });
+        // --- Needs Bar Render ---
+        const needsBar = document.getElementById('needs-bar');
+        if (needsBar) {
+            const bg = needsBar.closest('.progress-bar-bg');
+            // Modified 2026-03-27: Bars only reveal when FULLY aggregated OR timeout fallback
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
 
-    const totalObligations = (config.obligations || []).reduce((sum, ob) => sum + (ob.amount || 0), 0);
-    const savings = config.savingsAmount || 0;
-
-    // Progress 1: Obligations (Fixed overhead)
-    const prog1 = document.getElementById('triple-progress-1');
-    const label1 = document.getElementById('triple-label-1');
-    if (prog1 && label1) {
-        const pct = Math.min((totalObligations / monthlySalary) * 100, 100);
-        prog1.style.width = pct + '%';
-        label1.innerText = `OBLIGATIONS: ₱${totalObligations.toLocaleString()}`;
-    }
-
-    // Progress 2: Savings Target
-    const prog2 = document.getElementById('triple-progress-2');
-    const label2 = document.getElementById('triple-label-2');
-    if (prog2 && label2) {
-        const pct = Math.min((savings / monthlySalary) * 100, 100);
-        prog2.style.width = pct + '%';
-        prog2.style.left = (parseFloat(prog1?.style.width || 0)) + '%';
-        label2.innerText = `SAVINGS: ₱${savings.toLocaleString()}`;
-    }
-
-    // Progress 3: Variable Spending
-    const prog3 = document.getElementById('triple-progress-3');
-    const label3 = document.getElementById('triple-label-3');
-    if (prog3 && label3) {
-        const remainingForSpend = monthlySalary - totalObligations - savings;
-        const pct = Math.min((totalSpent / monthlySalary) * 100, 100);
-        prog3.style.width = pct + '%';
-        prog3.style.left = (parseFloat(prog1?.style.width || 0) + parseFloat(prog2?.style.width || 0)) + '%';
-        label3.innerText = `SPENT: ₱${Math.round(totalSpent).toLocaleString()}`;
-        // Budget Alerts
-        if (remainingForSpend > 0) {
-            const spendPct = (totalSpent / remainingForSpend) * 100;
-            if (spendPct >= 100) {
-                checkAndTriggerAlert('main_budget_100', 'Budget Depleted!', `You've spent your entire monthly budget of ₱${Math.round(remainingForSpend).toLocaleString()}.`, 'error');
-            } else if (spendPct >= 80) {
-                checkAndTriggerAlert('main_budget_80', 'Budget Warning', `You've used 80% of your monthly budget.`, 'warning');
+            if (bg && shouldReveal && needsReadyToDisplay) {
+                if (bg.classList.contains('skeleton')) {
+                    bg.classList.remove('skeleton');
+                    needsBar.style.width = '0%'; // Start from zero
+                    setTimeout(() => {
+                        needsBar.style.width = `${needsPct}%`;
+                    }, 150); 
+                } else {
+                    needsBar.style.width = `${needsPct}%`;
+                }
+            } else if (!shouldReveal) {
+                // Keep in skeleton or reset to hidden while waiting
+                if (bg) bg.classList.add('skeleton');
+                needsBar.style.width = '0%';
             }
         }
-    }
+
+        const wantsEl = document.getElementById('wants-stats');
+        if (wantsEl) {
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+
+            if (shouldReveal) {
+                wantsEl.classList.remove('skeleton');
+                if (wantsReadyToDisplay) {
+                    const diff = wantsLimit - wantsTotal;
+                    const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" label
+                    const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+
+                    const statsVal = isRemainingMode ?
+                        (diff < 0 ? `₱-${absDiff.toLocaleString()} ${label}` : `₱${absDiff.toLocaleString()} ${label}`) :
+                        `₱${Math.floor(wantsTotal).toLocaleString()} / ₱${Math.floor(wantsLimit).toLocaleString()}`;
+                    wantsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ₱${Math.floor(wantsLimit).toLocaleString()}`) : statsVal;
+                    wantsEl.dataset.raw = statsVal;
+                }
+            } else {
+                wantsEl.classList.add('skeleton');
+            }
+        }
+        // --- Wants Bar Render ---
+        const wantsBar = document.getElementById('wants-bar');
+        if (wantsBar) {
+            const bg = wantsBar.closest('.progress-bar-bg');
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+
+            if (bg && shouldReveal && wantsReadyToDisplay) {
+                if (bg.classList.contains('skeleton')) {
+                    bg.classList.remove('skeleton');
+                    wantsBar.style.width = '0%';
+                    setTimeout(() => {
+                        wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
+                    }, 300); 
+                } else {
+                    wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
+                }
+            } else if (!shouldReveal) {
+                if (bg) bg.classList.add('skeleton');
+                wantsBar.style.width = '0%';
+            }
+            
+            wantsBar.classList.remove('fill-wants', 'fill-wants-orange', 'fill-wants-red');
+            if (wantsPct >= 100) wantsBar.classList.add('fill-wants-red');
+            else if (wantsPct >= 80) wantsBar.classList.add('fill-wants-orange');
+            else wantsBar.classList.add('fill-wants');
+        }
+        
+        const wantsOver = Math.max(0, wantsTotal - wantsLimit);
+        const wantsMsg = document.getElementById('wants-depleted-msg');
+        if (wantsMsg) {
+            // Modified 2026-03-27: Gate message with Unified Reveal (Atomic Readiness)
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay;
+            if (shouldReveal) {
+                if (wantsPct >= 100) {
+                    wantsMsg.style.display = 'flex';
+                    wantsMsg.className = 'overspending-msg critical';
+                    wantsMsg.innerHTML = `<i class="material-icons" style="font-size: 16px; margin-right: 6px;">error_outline</i>
+                                        <span>Wants depleted! Excess spent: ₱${wantsOver.toLocaleString()}</span>`;
+                } else if (wantsPct >= 80) {
+                    // SUGGESTION LOGIC (Modified 2026-03-27)
+                    wantsMsg.style.display = 'flex';
+                    wantsMsg.className = 'overspending-msg warning';
+                    
+                    // Find top category to suggest cutting
+                    let topCat = "luxuries";
+                    let maxVal = 0;
+                    for (const [cat, val] of Object.entries(wantsCategoryMap)) {
+                        if (val > maxVal) { maxVal = val; topCat = cat; }
+                    }
+                    
+                    wantsMsg.innerHTML = `<i class="material-icons" style="font-size: 16px; margin-right: 6px;">lightbulb_outline</i>
+                                        <span>Wants almost depleted! Consider cutting down on <b>${topCat}</b>.</span>`;
+                } else {
+                    wantsMsg.style.display = 'none';
+                }
+            } else {
+                wantsMsg.style.display = 'none'; // Hide message if not ready
+            }
+        }
+
+        const savingsEl = document.getElementById('savings-stats');
+        if (savingsEl) {
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
+            if (shouldReveal) {
+                savingsEl.classList.remove('skeleton');
+                if (savingsReadyToDisplay) {
+                    const diff = savingsLimit - savingsTotal;
+                    const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" label
+                    const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+
+                    const statsVal = isRemainingMode ? 
+                        (diff < 0 ? `₱-${absDiff.toLocaleString()} ${label}` : `₱${absDiff.toLocaleString()} ${label}`) :
+                        `₱${Math.floor(savingsTotal).toLocaleString()} / ₱${Math.floor(savingsLimit).toLocaleString()}`;
+                    savingsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ₱${Math.floor(savingsLimit).toLocaleString()}`) : statsVal;
+                    savingsEl.dataset.raw = statsVal;
+                }
+            } else {
+                savingsEl.classList.add('skeleton');
+            }
+        }
+        // --- Savings Bar Render ---
+        const savingsBar = document.getElementById('savings-bar');
+        if (savingsBar) {
+            const bg = savingsBar.closest('.progress-bar-bg');
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+
+            if (bg && shouldReveal && savingsReadyToDisplay) {
+                if (bg.classList.contains('skeleton')) {
+                    bg.classList.remove('skeleton');
+                    savingsBar.style.width = '0%';
+                    setTimeout(() => {
+                        savingsBar.style.width = `${Math.min(savingsPct, 100)}%`;
+                    }, 450); 
+                } else {
+                    savingsBar.style.width = `${Math.min(savingsPct, 100)}%`;
+                }
+            } else if (!shouldReveal) {
+                if (bg) bg.classList.add('skeleton');
+                savingsBar.style.width = '0%';
+            }
+        }
+
+
+        const stats = [needsEl, wantsEl, savingsEl];
+        stats.forEach((el, idx) => {
+            if (el && allReadyToDisplay) {
+                const skel = el.querySelector('.skeleton');
+                if (skel) skel.remove();
+            }
+        });
+
+        // Final Summary Calculations (Scaled)
+        const totalSpent = needsTotal + wantsTotal + savingsTotal;
+        const totalBudget = (needsLimit + wantsLimit + savingsLimit) || 1;
+        const usedPct = (totalSpent / totalBudget) * 100;
+        const remaining = totalBudget - totalSpent; // Modified 2026-03-27: Allow negative for status
+        const remainingPct = 100 - usedPct;
+
+        const statusKey = remaining < 0 ? 'negative' : (remainingPct < 15 ? 'warning' : 'remaining'); // Fix 2026-03-28: Simplified status logic
+
+        const footer = document.getElementById('triple-summary-footer');
+        if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
+
+        const totalExcess = Math.abs(Math.min(0, needsLimit - needsTotal)) + 
+                           Math.abs(Math.min(0, wantsLimit - wantsTotal)) + 
+                           Math.abs(Math.min(0, savingsLimit - savingsTotal));
+
+        const displayVal = remaining; // Fix 2026-03-28: Use net remaining balance for main value
+        const remainingRaw = remaining < 0 ? 
+            `₱-${Math.abs(displayVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 
+            `₱${displayVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; // Fix 2026-03-28: Negative for excess
+        const remainingEl = document.getElementById('triple-remaining-val');
+        const remainingLabel = document.getElementById('triple-remaining-label');
+        if (remainingLabel) {
+            remainingLabel.innerText = 'Available to Spend'; // Fix 2026-03-28: Constant label
+        }
+
+        if (remainingEl) {
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
+            remainingEl.dataset.raw = remainingRaw;
+            remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
+            
+            if (shouldReveal) {
+                remainingEl.classList.remove('skeleton');
+                remainingEl.innerText = isHidden ? '******' : remainingRaw;
+            } else {
+                // Modified 2026-03-27: Apply skeleton directly to element
+                remainingEl.classList.add('skeleton');
+            }
+        }
+
+        // --- Fix 2026-03-28: Donut Chart View Logic ---
+        const viewMode = localStorage.getItem('budget_view_mode') || 'bars';
+        const barsView = document.getElementById('triple-bars-view');
+        const donutView = document.getElementById('triple-donut-view');
+        const viewIcon = document.getElementById('budget-view-icon');
+        
+        if (barsView && donutView) {
+            if (viewMode === 'donut') {
+                barsView.style.display = 'none';
+                donutView.style.display = 'flex';
+                if (viewIcon) viewIcon.innerText = 'view_sidebar';
+                
+                // Update Donut Rings
+                const updateRing = (id, pct, circum) => {
+                    const ring = document.getElementById(id);
+                    if (ring) {
+                        const offset = circum - (Math.min(pct, 100) / 100 * circum);
+                        ring.style.strokeDasharray = `${circum - offset} ${circum}`;
+                    }
+                };
+                
+                updateRing('donut-needs', needsPct, 251.2);
+                updateRing('donut-wants', Math.min(wantsPct, 100), 188.4);
+                updateRing('donut-savings', savingsPct, 125.6);
+                
+                // Update Center Percentage (Weighted Average of Spending towards Limit)
+                const donutPctEl = document.getElementById('donut-pct');
+                if (donutPctEl) {
+                    const totalLimit = needsLimit + wantsLimit + savingsLimit;
+                    const totalSpent = needsTotal + wantsTotal + savingsTotal;
+                    const avgPct = Math.min((totalSpent / totalLimit) * 100, 100);
+                    donutPctEl.innerText = `${Math.round(avgPct)}%`;
+                }
+            } else {
+                barsView.style.display = 'block';
+                donutView.style.display = 'none';
+                if (viewIcon) viewIcon.innerText = 'donut_large';
+            }
+        }
+
+        const usageSub = document.getElementById('triple-usage-sub');
+        if (usageSub) {
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
+            if (shouldReveal) {
+                usageSub.classList.remove('skeleton');
+                let subText;
+                if (remaining < 0) {
+                    subText = `₱-${Math.round(totalExcess).toLocaleString()} EXCESSIVE SPENDING`; // Fix 2026-03-28: Sum of excesses in subtext
+                } else {
+                    subText = isRemainingMode ? 
+                        `₱${totalBudget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total Budget` : 
+                        `₱${remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAVED`;
+                }
+                usageSub.innerText = isHidden ? (remaining < 0 ? '****** EXCESSIVE SPENDING' : (isRemainingMode ? '****** Total Budget' : '****** SAVED')) : subText;
+            } else {
+                // Modified 2026-03-27: Apply skeleton directly to element
+                usageSub.classList.add('skeleton');
+            }
+        }
+
+        if (window.syncWidgets) window.syncWidgets();
+
+        // --- SAVE TO CACHE ---
+        if (canUseLiveNeeds && canUseLiveWants && canUseLiveSavings) {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                needs: needsTotal,
+                wants: wantsTotal,
+                savings: savingsTotal,
+                lastUpdate: Date.now()
+            }));
+        }
 }
 
 function checkAndTriggerAlert(alertKey, title, message, type) {
@@ -539,13 +947,13 @@ function filterHistoryByWeek(weekIndex) {
 }
 
 // Insight and AI Summary
-export async function updateAISummary(txns) {
+export async function updateAISummary(txns, force = false) {
     const summaryEl = document.getElementById('ai-summary-text');
     if (!summaryEl) return;
     
     const cacheKey = `ai_summary_${window.currentAccount}_${new Date().getMonth()}`;
     const cached = localStorage.getItem(cacheKey);
-    if (cached) {
+    if (!force && cached) {
         summaryEl.innerHTML = cleanAIText(cached);
         return;
     }
@@ -569,13 +977,13 @@ export async function updateAISummary(txns) {
         }));
 
         const prompt = `Quickly analyze these transactions: ${JSON.stringify(recentTxns)}. 
-Provide a short insight (2 sentences) in BASIC ENGLISH. Put them in ONE PARAGRAPH. BOLD key words.
+Provide a short, forward-looking financial insight (2 sentences) in BASIC ENGLISH. Focus on forecasting and future spending predictions (e.g., "At this rate, you will spend X by month-end"). Identify potential savings. Put them in ONE PARAGRAPH. BOLD key words.
 
 Use DOUBLE LINE BREAKS to highlight these:
-**Recommendation:** What to cut.
-**Tip:** Savings tip.
+**Recommendation:** Concrete action to cut costs next month.
+**Tip:** Predictive savings tip.
 
-No markdown other than bolding. Do NOT line break between sentences. Only use line breaks for Recommendations and Tips.`;
+No markdown other than bolding. Do NOT line break between sentences. Only use line breaks for Recommendations and Tips. Avoid spaces before periods or commas.`;
         const preferredEngine = localStorage.getItem('ai_preferred_model') || 'auto';
 
         // --- TRY OPENAI ---
@@ -714,12 +1122,23 @@ export function updateProfileUI(user) {
     const dropdown = document.getElementById('profile-dropdown');
     if (!dropdown) return;
 
+    // Greeting Name Skeleton
+    const nameEl = document.getElementById('user-display-name');
+    if (!user && nameEl) {
+        nameEl.innerHTML = '<div class="skeleton skeleton-text" style="width: 80px; height: 18px; margin-top: 4px;"></div>';
+        return;
+    }
+
     if (user.isAnonymous) {
         dropdown.innerHTML = `
             <div class="dropdown-header">Guest Session</div>
             <div class="dropdown-item" onclick="toggleDarkMode()">
                 <i class="material-icons" id="theme-icon">dark_mode</i>
                 <span id="theme-text">Dark Mode</span>
+            </div>
+            <div class="dropdown-item" onclick="window.toggleWidgetDarkMode()">
+                <i class="material-icons" id="widget-dark-mode-icon">brightness_4</i>
+                <span id="widget-dark-mode-text">Widget Dark Mode</span>
             </div>
             <div class="dropdown-item" onclick="handleAuthClick()">
                 <i class="material-icons">cloud_upload</i>
@@ -736,6 +1155,10 @@ export function updateProfileUI(user) {
             <div class="dropdown-item" onclick="toggleDarkMode()">
                 <i class="material-icons" id="dark-mode-icon">dark_mode</i>
                 <span id="dark-mode-text">Dark Mode</span>
+            </div>
+            <div class="dropdown-item" onclick="window.toggleWidgetDarkMode()">
+                <i class="material-icons" id="widget-dark-mode-icon">brightness_4</i>
+                <span id="widget-dark-mode-text">Widget Dark Mode</span>
             </div>
             <div class="dropdown-item" onclick="handleAuthClick()">
                 <i class="material-icons">sync</i>
@@ -862,10 +1285,25 @@ export function updateAccountSwitcherUI(accounts) {
     `).join('');
 }
 
-// Balance Cards Management
+// Balance Cards Management - updated 2026-03-27 - added shimmer effect - 2026-03-27
 export function updateBalanceCardsUI(accounts) {
     const container = document.getElementById('dynamic-balance-cards');
     if (!container) return;
+
+    // SKELETON STATE: If accounts is null or empty, show 2 skeleton cards
+    if (!accounts || accounts.length === 0) {
+        container.innerHTML = `
+            <div class="skeleton-card skeleton-card-atome">
+                <div class="skeleton-card-inner">
+                    <div class="skeleton skeleton-title" style="opacity: 0.4;"></div>
+                    <div class="skeleton skeleton-balance" style="opacity: 0.4;"></div>
+                    <div class="skeleton skeleton-number" style="margin-top: auto; opacity: 0.4;"></div>
+                    <i class="material-icons" style="position: absolute; bottom: 24px; right: 24px; color: rgba(255,255,255,0.08); font-size: 20px;">sync</i>
+                </div>
+            </div>
+        `;
+        return;
+    }
 
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
@@ -876,6 +1314,7 @@ export function updateBalanceCardsUI(accounts) {
         
         return `
         <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
+            <div class="card-shimmer"></div> <!-- .card-shimmer - Added 2026-03-27 - subtle intermittent shimmer effect -->
             ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
             ${isBPI ? '<div class="bpi-rays"></div>' : ''}
             
@@ -1150,8 +1589,30 @@ export function updateBalanceToThisMonth(txns, targetAccount) {
 }
 
 export function updateInsightCards(txns) {
-    if (!txns) return; 
-    // Allow empty array to proceed so UI clears
+    const dailyAvgEl = document.getElementById('daily-avg-val');
+    const bigVal = document.getElementById('biggest-txn-val');
+    const summaryTotal = document.getElementById('summary-total');
+    const dailyAvgSub = document.getElementById('daily-avg-sub');
+    const bigSub = document.getElementById('biggest-txn-sub');
+    const summaryChange = document.getElementById('summary-change');
+    const summaryTopCat = document.getElementById('summary-top-cat');
+    const summaryCount = document.getElementById('summary-txn-count');
+
+    if (!txns || txns.length === 0) {
+        if (dailyAvgEl) dailyAvgEl.innerHTML = '<div class="skeleton skeleton-insight-val"></div>';
+        if (dailyAvgSub) dailyAvgSub.innerHTML = '<div class="skeleton skeleton-insight-sub"></div>';
+        
+        if (bigVal) bigVal.innerHTML = '<div class="skeleton skeleton-insight-val"></div>';
+        if (bigSub) bigSub.innerHTML = '<div class="skeleton skeleton-insight-sub"></div>';
+        
+        if (summaryTotal) summaryTotal.innerHTML = '<div class="skeleton skeleton-text md" style="width: 100px;"></div>';
+        if (summaryChange) summaryChange.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 40px;"></div>';
+        if (summaryTopCat) summaryTopCat.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 60px;"></div>';
+        if (summaryCount) summaryCount.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 20px;"></div>';
+        
+        if (!txns) return; 
+    }
+
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
@@ -1180,7 +1641,6 @@ export function updateInsightCards(txns) {
     const thisMonthTotal = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
     const dailyAvg = dayOfMonth > 0 ? thisMonthTotal / dayOfMonth : 0;
     
-    const dailyAvgEl = document.getElementById('daily-avg-val');
     if (dailyAvgEl) {
         const formatted = '₱' + dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 });
         dailyAvgEl.dataset.raw = formatted;
@@ -1190,7 +1650,7 @@ export function updateInsightCards(txns) {
     const lastMonthTotal = lastMonthTxns.reduce((s, t) => s + getAmt(t), 0);
     const daysInLM = new Date(lmDate.getFullYear(), lmDate.getMonth() + 1, 0).getDate();
     const lastDailyAvg = daysInLM > 0 ? lastMonthTotal / daysInLM : 0;
-    const dailyAvgSub = document.getElementById('daily-avg-sub');
+    
     if (dailyAvgSub) {
         if (lastDailyAvg > 0) {
             const pct = ((dailyAvg - lastDailyAvg) / lastDailyAvg) * 100;
@@ -1213,25 +1673,20 @@ export function updateInsightCards(txns) {
         }
     });
 
-    const bigVal = document.getElementById('biggest-txn-val');
     if (bigVal) {
         const formatted = '₱' + biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 });
         bigVal.dataset.raw = formatted;
         bigVal.textContent = isHidden ? '******' : formatted;
     }
-    const bigSub = document.getElementById('biggest-txn-sub');
     if (bigSub) bigSub.textContent = biggestName.toUpperCase();
 
-    const summaryTotal = document.getElementById('summary-total');
     if (summaryTotal) {
         const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
         summaryTotal.dataset.raw = formatted;
         summaryTotal.textContent = isHidden ? '******' : formatted;
     }
-    const summaryCount = document.getElementById('summary-txn-count');
     if (summaryCount) summaryCount.textContent = thisMonthTxns.length;
 
-    const summaryChange = document.getElementById('summary-change');
     if (summaryChange) {
         if (lastMonthTotal > 0) {
             const pct = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
@@ -1239,23 +1694,36 @@ export function updateInsightCards(txns) {
             summaryChange.className = 's-value ' + (pct > 0 ? 'red' : 'green');
         } else {
             summaryChange.textContent = '—';
+            summaryChange.className = 's-value';
         }
     }
 
-    const summaryTopCat = document.getElementById('summary-top-cat');
+    // Top category
     if (summaryTopCat) {
         const catTotals = {};
         thisMonthTxns.forEach(t => {
-            const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : { category: 'Other' };
-            const cat = t.manualCategory || mapped.category || 'Other';
-            catTotals[cat] = (catTotals[cat] || 0) + getAmt(t);
+            const mapped = getMerchantDisplay(t.merchant, t);
+            const cat = t.manualCategory || mapped.category || 'Uncategorized';
+            const label = typeof displayCategoryName === 'function' ? displayCategoryName(cat) : cat;
+            catTotals[label] = (catTotals[label] || 0) + getAmt(t);
         });
-        const top = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
-        summaryTopCat.textContent = top ? (window.displayCategoryName ? window.displayCategoryName(top[0]) : top[0]) : '—';
+        const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+        summaryTopCat.textContent = topCat ? topCat[0] : '—';
     }
 
-    if (window.updateAISummary) window.updateAISummary(thisMonthTxns);
+    // Trigger AI Summary with DEBOUNCE
+    window.thisMonthTxns = thisMonthTxns;
+    if (typeof window.updateAISummary === 'function') {
+        clearTimeout(window.aiSummaryTimeout);
+        window.aiSummaryTimeout = setTimeout(() => {
+            window.updateAISummary(thisMonthTxns);
+        }, 2000); // 2s debounce
+    }
+
+    // SYNC WIDGETS
+    if (window.syncWidgets) window.syncWidgets();
 }
+window.updateInsightCards = updateInsightCards;
 
 export function initPrivacyLock() {
     const pin = localStorage.getItem('wallet_privacy_pin');
@@ -1603,11 +2071,17 @@ window.handleNotificationClick = function(id) {
     toggleNotificationCenter();
 };
 
-// Global UI Initialization
+// INITIAL LOADING STATE: Prevent JS from overwriting skeletons too early
+window.isInitialLoading = true;
+
 export function initUI() {
     log('Initializing UI Engine...');
     
-    
+    // Initial Skeleton States
+    updateProfileUI(null);
+    updateBalanceCardsUI(null);
+    updateInsightCards(null);
+
     // Notifications Bridging (Internal - initUI still handles some setup)
     updateUnreadCount();
 
@@ -1636,8 +2110,21 @@ export function initUI() {
     // 2. Populate Previous 3 Months in filter
     populateMonthFilter();
 
-    // 3. Setup Fast Path rendering if possible
-    setupFastPath();
+    // 3. Setup Fast Path rendering if possible (Delayed for skeleton visibility)
+    setTimeout(() => {
+        window.isInitialLoading = false;
+        setupFastPath();
+        
+        // Force refresh UI after loading gate
+        if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+        
+        // IMPORTANT: Trigger dashboard refresh once gate is open
+        if (window.allTxns) {
+            console.log('🔄 Loading Gate Open: Refreshing Dashboard...');
+            if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(window.allTxns);
+            if (window.updateInsightCards) window.updateInsightCards(window.allTxns);
+        }
+    }, 200);
 }
 
 function populateMonthFilter() {
@@ -1708,6 +2195,8 @@ function bridgeGlobals() {
     window.updateBalanceCardsUI = updateBalanceCardsUI;
     window.scrollToActiveCard = scrollToActiveCard;
     window.updateProfileUI = updateProfileUI;
+    window.updateBalanceToThisMonth = updateBalanceToThisMonth;
+    window.updateInsightCards = updateInsightCards;
     window.handleLocalModeNudge = handleLocalModeNudge;
     window.switchAccount = switchAccount;
     window.updateUnreadCount = updateUnreadCount;
@@ -1729,6 +2218,15 @@ function bridgeGlobals() {
     window.renderHistory = renderHistory;
     window.drawPieChart = drawPieChart;
     window.updateAISummary = updateAISummary;
+    window.updateTripleProgressBar = updateTripleProgressBar;
+    window.toggleBudgetView = function() {
+        const current = localStorage.getItem('budget_view_mode') || 'bars';
+        const next = current === 'bars' ? 'donut' : 'bars';
+        localStorage.setItem('budget_view_mode', next);
+        updateTripleProgressBar();
+        triggerHaptic('medium');
+    };
+ 
     window.animateNumber = animateNumber;
     console.log('✅ Global bridge complete.');
 }

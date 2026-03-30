@@ -5,7 +5,7 @@
 
 export const CONFIG = {
     // New GEMINI API KEY
-    GEMINI_API_KEY: "AIzaSyBPUyS_0GLjUCmyJ0_hHxnQxpTIVq9Muic",
+    GEMINI_API_KEY: "AIzaSyAr_PrUwZyjHySmCokEHv3_v4a_IvAJpZU",
     PROJECT_NUMBER: "64186651619",
     MODEL: "gemini-2.0-flash",
 

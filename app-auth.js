@@ -240,7 +240,8 @@ export async function handleSignout() {
         }
 
         localStorage.clear();
-        window.allTxns = [];
+        // Modified 2026-03-27: Set to null for consistency
+        window.allTxns = null;
         
         const historyContainer = document.getElementById('history-container');
         const logContainer = document.getElementById('log-container');

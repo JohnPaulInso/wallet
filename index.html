@@ -55,6 +55,165 @@
         
         document.addEventListener('DOMContentLoaded', () => {
             if (isNative()) document.documentElement.classList.add('is-native');
+            
+            // --- INSTANT BUDGET CACHE LOADER ---
+            (function() {
+                try {
+                    const lastUid = localStorage.getItem('wallet_last_uid') || 'guest';
+                    const cacheKey = `budget_widget_cache_${lastUid}`;
+                    const cachedData = localStorage.getItem(cacheKey);
+                    if (!cachedData) return;
+                    
+                    const data = JSON.parse(cachedData);
+                    const salaryTarget = parseFloat(localStorage.getItem('monthly_salary_target') || '17600');
+                    const budgetRule = localStorage.getItem('budget_rule') || '50/30/20';
+                    const isRemainingMode = localStorage.getItem('budget_stats_mode') === 'remaining';
+                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
+
+                    // Weights
+                    let weights = { needs: 0.50, wants: 0.30, savings: 0.20 };
+                    if (budgetRule === '40/30/30') weights = { needs: 0.40, wants: 0.30, savings: 0.30 };
+                    else if (budgetRule === '50/20/30') weights = { needs: 0.50, wants: 0.20, savings: 0.30 };
+                    else if (budgetRule === 'custom') {
+                        weights = {
+                            needs: (parseInt(localStorage.getItem('custom_rule_needs')) || 50) / 100,
+                            wants: (parseInt(localStorage.getItem('custom_rule_wants')) || 30) / 100,
+                            savings: (parseInt(localStorage.getItem('custom_rule_savings')) || 20) / 100
+                        };
+                    }
+
+                    const filterEl = document.getElementById('chart-filter');
+                    const filterVal = filterEl ? filterEl.value : 'this_month';
+                    
+                    // Scaling Logic (Modified 2026-03-27: Match app-ui.js)
+                    let scalingFactor = 1.0;
+                    if (filterVal === 'today') scalingFactor = 1 / 31;
+                    else if (filterVal === 'this_week' || filterVal === 'last_week' || filterVal === 'last_7_days') scalingFactor = 7 / 31;
+                    else if (filterVal === 'first_15' || filterVal === 'last_15') scalingFactor = 15 / 31;
+                    else if (filterVal === 'last_6_months') scalingFactor = 6;
+                    else if (filterVal === 'this_year') scalingFactor = 12;
+
+                    // Modified 2026-03-27: Only apply cache for Monthly view to prevent scaling flickers
+                    if (filterVal !== 'this_month') return;
+
+                    const limits = { 
+                        needs: salaryTarget * weights.needs, 
+                        wants: salaryTarget * weights.wants, 
+                        savings: salaryTarget * weights.savings 
+                    };
+                    const totals = { needs: data.needs || 0, wants: data.wants || 0, savings: data.savings || 0 };
+                    const updateItem = (id, barId, current, limit) => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+
+                        const diff = limit - current;
+                        const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" for negative balance
+                        const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+
+                        // Modified 2026-03-27: Populate text but KEEP skeleton pulse (Unified Reveal Gate)
+                        let val;
+                        if (isRemainingMode) {
+                            val = diff < 0 ? 
+                                `₱-${absDiff.toLocaleString()} ${label}` : // Fix 2026-03-28: Negative for "OVER"
+                                `₱${absDiff.toLocaleString()} ${label}`;
+                            if (isHidden) val = `****** ${label}`;
+                        } else {
+                            val = `₱${Math.floor(current).toLocaleString()} / ₱${Math.floor(limit).toLocaleString()}`;
+                            if (isHidden) val = `****** / ₱${Math.floor(limit).toLocaleString()}`;
+                        }
+                        
+                        // Set text and add skeleton class (Unified Reveal Gate)
+                        el.innerText = val;
+                        el.classList.add('skeleton');
+                    };
+
+                    updateItem('needs-stats', 'needs-bar', totals.needs, limits.needs);
+                    updateItem('wants-stats', 'wants-bar', totals.wants, limits.wants);
+                    updateItem('savings-stats', 'savings-bar', totals.savings, limits.savings);
+
+                    // --- ADDED: Update Summary Area from Cache (KEEP SKELETON) ---
+                    const totalSpent = totals.needs + totals.wants + totals.savings;
+                    const netRemaining = salaryTarget - totalSpent;
+                    const usedPct = Math.min((totalSpent / salaryTarget) * 100, 100);
+
+                    // Fix 2026-03-28: Calculate sum of absolute excesses (overspends)
+                    const totalExcess = Math.abs(Math.min(0, limits.needs - totals.needs)) + 
+                                       Math.abs(Math.min(0, limits.wants - totals.wants)) + 
+                                       Math.abs(Math.min(0, limits.savings - totals.savings));
+
+                    const usageSub = document.getElementById('triple-usage-sub');
+                    const remainingEl = document.getElementById('triple-remaining-val');
+                    const remainingLabel = document.getElementById('triple-remaining-label');
+                    
+                    if (remainingLabel) {
+                        remainingLabel.innerText = 'Available to Spend'; // Fix 2026-03-28: Constant label
+                    }
+
+                    // --- Fix 2026-03-28: Cache View Mode Support ---
+                    const viewMode = localStorage.getItem('budget_view_mode') || 'bars';
+                    const barsView = document.getElementById('triple-bars-view');
+                    const donutView = document.getElementById('triple-donut-view');
+                    const viewIcon = document.getElementById('budget-view-icon');
+
+                    if (barsView && donutView) {
+                        if (viewMode === 'donut') {
+                            barsView.style.display = 'none';
+                            donutView.style.display = 'flex';
+                            if (viewIcon) viewIcon.innerText = 'view_sidebar';
+                            
+                            const updateRing = (id, pct, circum) => {
+                                const ring = document.getElementById(id);
+                                if (ring) {
+                                    const offset = circum - (Math.min(pct, 100) / 100 * circum);
+                                    ring.style.strokeDasharray = `${circum - offset} ${circum}`;
+                                }
+                            };
+                            updateRing('donut-needs', (totals.needs / limits.needs) * 100, 251.2);
+                            updateRing('donut-wants', (totals.wants / limits.wants) * 100, 188.4);
+                            updateRing('donut-savings', (totals.savings / limits.savings) * 100, 125.6);
+
+                            const donutPctEl = document.getElementById('donut-pct');
+                            if (donutPctEl) {
+                                const avgPct = Math.min((totalSpent / salaryTarget) * 100, 100);
+                                donutPctEl.innerText = `${Math.round(avgPct)}%`;
+                            }
+                        } else {
+                            barsView.style.display = 'block';
+                            donutView.style.display = 'none';
+                            if (viewIcon) viewIcon.innerText = 'donut_large';
+                        }
+                    }
+
+                    if (usageSub) {
+                        let subText;
+                        if (netRemaining < 0) {
+                            subText = `₱-${Math.round(totalExcess).toLocaleString()} EXCESSIVE SPENDING`; // Fix 2026-03-28: Sum of excesses in subtext
+                        } else {
+                            subText = isRemainingMode ? 
+                                `₱${salaryTarget.toLocaleString()} Total Budget` : 
+                                `₱${netRemaining.toLocaleString()} SAVED`; // Fix 2026-03-28: Use netRemaining
+                        }
+                        const displaySub = isHidden ? (netRemaining < 0 ? '****** EXCESSIVE SPENDING' : (isRemainingMode ? '****** Total Budget' : '****** SAVED')) : subText;
+                        usageSub.innerText = displaySub;
+                        usageSub.classList.add('skeleton');
+                    }
+                    if (remainingEl) {
+                        const remainingRaw = netRemaining < 0 ? 
+                            `₱-${Math.abs(netRemaining).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 
+                            `₱${netRemaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; // Fix 2026-03-28: Show net balance with negative sign
+                        const displayRemaining = isHidden ? '******' : remainingRaw;
+                        remainingEl.dataset.raw = remainingRaw;
+                        remainingEl.innerText = displayRemaining;
+                        remainingEl.className = `triple-summary-value privacy-mask skeleton ${netRemaining < 0 ? 'negative' : (100-usedPct < 15 ? 'warning' : 'remaining')}`;
+                    }
+                    
+                    // Hide depleted message initially until logic runs
+                    const depletedMsg = document.getElementById('wants-depleted-msg');
+                    if (depletedMsg) depletedMsg.style.display = 'none';
+                    
+                    console.log('⚡ [Budget] DOM level Cache Applied');
+                } catch (e) { console.warn('Budget cache fail', e); }
+            })();
         });
     </script>
     <!-- Consolidate ALL APK styling after original CSS -->
@@ -69,8 +228,9 @@
         .is-native .card-label, .is-native .card-type-label { /* font-size: 10px; */ font-size: 9px !important; }
         .is-native .card-number-label, .is-native .status-text, .is-native .integrated-sync-btn { /* font-size: 8px; */ font-size: 7.2px !important; }
         .is-native .card-number { /* font-size: 13.5px; */ font-size: 12.15px !important; }
-        .is-native .nav-item span { /* font-size: 11px; */ font-size: 9.9px !important; }
-        .is-native .nav-item i { /* font-size: 24px; */ font-size: 21.6px !important; }
+        .is-native .nav-item span { /* font-size: 10px; */ font-size: 9px !important; }
+        .is-native .nav-item i { /* font-size: 24px; */ font-size: 20px !important; }
+        .is-native .nav-item.active i { transform: scale(1.1) translateY(-1px) !important; }
         .is-native .txn-amount { /* font-size: 13px; */ font-size: 11.7px !important; }
         .is-native .txn-merch { /* font-size: 12px; */ font-size: 10.8px !important; }
         .is-native .txn-sub, .is-native .txn-note { /* font-size: 9.5px; */ font-size: 8.55px !important; }
@@ -96,6 +256,15 @@
         .is-native .monthly-summary-header h3 { /* font-size: 1rem; */ font-size: 0.9rem !important; }
         .is-native .summary-item .s-label { /* font-size: 9px; */ font-size: 8.1px !important; }
         .is-native .summary-item .s-value { /* font-size: 14px; */ font-size: 12.6px !important; }
+        
+        /* Receipt Scaling */
+        .is-native .receipt-item-title { font-size: 9.5px !important; }
+        .is-native .receipt-item-amount { font-size: 10px !important; }
+        .is-native .receipt-item-meta { font-size: 7px !important; }
+        .is-native .receipt-check { width: 26px !important; height: 26px !important; }
+        .is-native .receipt-check i { font-size: 15px !important; }
+        .is-native .manual-receipt-btn { font-size: 9.5px !important; min-height: 48px !important; }
+
         
         /* Search Container Scale - 20% smaller than web regular */
         .is-native #txn-search { font-size: 10.4px !important; }
@@ -145,6 +314,83 @@
         body.dark-mode .safe-spend-header-v2 { border-bottom-color: #262626 !important; }
         body.dark-mode .breakdown-item { border-top-color: #262626 !important; }
         body.dark-mode .breakdown-item:hover { background: #262626 !important; }
+
+        /* Dark Mode Nav & Toast Fixes */
+        body.dark-mode .bottom-nav {
+            background: rgba(15, 23, 42, 0.9) !important;
+            border-top-color: rgba(51, 65, 85, 0.5) !important;
+        }
+        body.dark-mode .nav-item.active {
+            color: #f8fafc !important;
+        }
+        body.dark-mode .toast-container {
+            background: rgba(30, 41, 59, 0.9) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        /* Classification Menu Styles */
+        .ios-action-label {
+            pointer-events: none;
+        }
+        .mini-classify-btn {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .mini-classify-btn.active {
+            background: #3b82f6;
+            border-color: #2563eb;
+            color: white;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+        body.dark-mode .mini-classify-btn {
+            background: #262626;
+            border-color: #404040;
+            color: #a3a3a3;
+        }
+        body.dark-mode .mini-classify-btn.active {
+            filter: brightness(0.9);
+            color: white;
+        }
+        .mini-classify-btn.active.needs { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1); }
+        .mini-classify-btn.active.wants { background: #fff7ed; border-color: #f97316; color: #c2410c; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.1); }
+        .mini-classify-btn.active.savings { background: #f0fdf4; border-color: #22c55e; color: #15803d; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1); }
+        /* FIX 2026-03-27: Renamed .auto to .na for N/A classification button */
+        .mini-classify-btn.active.na { background: #f8fafc; border-color: #94a3b8; color: #475569; box-shadow: 0 4px 12px rgba(148, 163, 184, 0.1); }
+        body.dark-mode .mini-classify-btn.active.needs { background: #1e3a8a; border-color: #3b82f6; color: #dbeafe; }
+        body.dark-mode .mini-classify-btn.active.wants { background: #7c2d12; border-color: #f97316; color: #ffedd5; }
+        body.dark-mode .mini-classify-btn.active.savings { background: #064e3b; border-color: #22c55e; color: #d1fae5; }
+        body.dark-mode .mini-classify-btn.active.na { background: #334155; border-color: #94a3b8; color: #f1f5f9; }
+        .overspending-msg {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            color: #ef4444;
+            font-size: 11px;
+            font-weight: 800;
+            margin-top: 10px;
+            padding: 10px;
+            background: #fef2f2;
+            border: 1px dashed #fca5a5;
+            border-radius: 12px;
+            animation: slideUp 0.3s ease;
+        }
+        .overspending-msg.warning { background: #fffbeb; color: #92400e; border-color: #fca5a5; }
+        .overspending-msg.critical { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+        body.dark-mode .overspending-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
     </style>
 
 
@@ -274,6 +520,10 @@
                     <i class="material-icons" id="dark-mode-icon">dark_mode</i>
                     <span id="dark-mode-text">Dark Mode</span>
                 </div>
+                <div class="dropdown-item" onclick="toggleWidgetDarkMode()">
+                    <i class="material-icons" id="widget-dark-mode-icon">brightness_auto</i>
+                    <span id="widget-dark-mode-text">Widget Dark Mode</span>
+                </div>
                 <div class="dropdown-item" onclick="handleAuthClick()">
                     <i class="material-icons">sync</i>
                     <span>Switch Account</span>
@@ -312,26 +562,13 @@
             <div class="card-carousel-scroll" id="cardCarouselScroll">
                 <!-- DYNAMICALLY RENDERED CARDS -->
                 <div id="dynamic-balance-cards" style="display: contents;">
-                    <!-- Default Wallet Card (Static Placeholder) -->
-                    <div class="balance-card active" id="default_walletCard" data-account="default_wallet" style="background: #121212;">
-                        <div class="card-header-row">
-                            <div style="display: flex; align-items: baseline; gap: 6px;">
-                                <div class="card-label" style="text-transform: uppercase;">My Wallet</div>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                             <div class="balance-amount">PHP 0.00</div>
-                        </div>
-                        <div class="card-footer" style="margin-top: 20px;">
-                            <div class="card-number-box">
-                                <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                                <div class="card-number" style="letter-spacing: 2px;">•••• •••• •••• 0000</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <button class="sync-icon-btn">
-                                    <i class="material-icons">sync</i>
-                                </button>
-                            </div>
+                    <!-- SKELETON CARD (Only Black as requested) -->
+                    <div class="skeleton-card skeleton-card-atome">
+                        <div class="skeleton-card-inner">
+                            <div class="skeleton skeleton-title" style="opacity: 0.4;"></div>
+                            <div class="skeleton skeleton-balance" style="opacity: 0.4;"></div>
+                            <div class="skeleton skeleton-number" style="margin-top: auto; opacity: 0.4;"></div>
+                            <i class="material-icons" style="position: absolute; bottom: 24px; right: 24px; color: rgba(255,255,255,0.08); font-size: 20px;">sync</i>
                         </div>
                     </div>
                 </div>
@@ -370,7 +607,7 @@
                     </button>
                 </div>
                 
-                <div id="safe-spend-val" class="safe-spend-amount-v2 privacy-mask">PHP 0.00</div>
+                <div id="safe-spend-val" class="safe-spend-amount-v2 privacy-mask skeleton"></div>
                 <div class="safe-spend-subtitle-v2">Safe budget until <span id="budget-until-date">Jan 30</span> (Wallet + Salary)</div>
 
                 <div class="breakdown-list" id="safe-spend-breakdown">
@@ -383,7 +620,7 @@
                             <div class="breakdown-name">MAINTAINING BALANCE</div>
                             <div class="breakdown-meta" id="maintaining-meta">BPI Required</div>
                         </div>
-                        <div id="breakdown-maintaining" class="breakdown-val breakdown-red-text privacy-mask">₱3,000.00</div>
+                        <div id="breakdown-maintaining" class="breakdown-val breakdown-red-text privacy-mask skeleton"></div>
                     </div>
 
                     <!-- Credit Card Payment -->
@@ -397,7 +634,7 @@
                                 <div class="breakdown-meta" id="credit-meta">Atome Wallet Link</div>
                             </div>
                         </div>
-                        <div id="breakdown-credit" class="breakdown-val breakdown-yellow-text privacy-mask">₱0.00</div>
+                        <div id="breakdown-credit" class="breakdown-val breakdown-yellow-text privacy-mask skeleton"></div>
                     </div>
 
                     <!-- Savings -->
@@ -411,7 +648,7 @@
                                 <div class="breakdown-meta" id="savings-meta">Monthly Target</div>
                             </div>
                         </div>
-                        <div id="breakdown-savings" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSavings()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱3,000.00</div>
+                        <div id="breakdown-savings" class="breakdown-val breakdown-green-text privacy-mask skeleton" onclick="promptSetSavings()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;"></div>
                     </div>
 
                     <!-- Upcoming Salary -->
@@ -425,7 +662,7 @@
                                 <div class="breakdown-meta" id="salary-meta">Included in safe budget</div>
                             </div>
                         </div>
-                        <div id="breakdown-salary" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSalary()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">₱8,800.00</div>
+                        <div id="breakdown-salary" class="breakdown-val breakdown-green-text privacy-mask" onclick="promptSetSalary()" style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;">+₱8,800.00</div>
                     </div>
 
                     <!-- DYNAMIC OBLIGATIONS WILL BE INJECTED HERE -->
@@ -445,58 +682,98 @@
             </div>
 
 
- <!-- TRIPLE PROGRESS BAR WIDGET -->
+ <!-- TRIPLE PROGRESS BAR / MONTHLY BUDGET WIDGET -->
             <div id="triple-progress-widget" class="triple-progress-card">
                 <div class="triple-progress-header">
                     <div class="triple-title-group">
                         <div class="triple-progress-title">Monthly Budget</div>
                         <div id="triple-month-display" class="triple-month-label">JANUARY 2026</div>
                     </div>
-                    <button class="triple-edit-btn" onclick="promptSetMonthlySalary()">
-                        <i class="material-icons">edit</i>
-                    </button>
-                </div>
-
-                <div class="progress-item" onclick="showBudgetTransactions('needs')">
-                    <div class="progress-header">
-                        <span class="progress-label">Needs</span>
-                        <span id="needs-stats" class="progress-stats privacy-mask" onclick="toggleBudgetStatsMode(event)">₱0 / ₱8,800</span>
-                    </div>
-                    <div class="progress-bar-bg">
-                        <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
+                    <div style="display: flex; gap: 8px;"> <!-- Fix 2026-03-28: Added toggle button -->
+                        <button class="triple-edit-btn" id="budget-view-toggle" onclick="toggleBudgetView()" title="Switch View">
+                            <i class="material-icons" id="budget-view-icon">donut_large</i>
+                        </button>
+                        <button class="triple-edit-btn" onclick="promptSetMonthlySalary()">
+                            <i class="material-icons">edit</i>
+                        </button>
                     </div>
                 </div>
 
-                <div class="progress-item" onclick="showBudgetTransactions('wants')">
-                    <div class="progress-header">
-                        <span class="progress-label">Wants</span>
-                        <span id="wants-stats" class="progress-stats privacy-mask" onclick="toggleBudgetStatsMode(event)">₱0 / ₱5,280</span>
+                <div id="triple-bars-view"> <!-- Fix 2026-03-28: Wrapped bar items -->
+                    <div class="progress-item" onclick="showBudgetTransactions('needs')">
+                        <div class="progress-header">
+                            <span class="progress-label">Needs</span>
+                            <span id="needs-stats" class="progress-stats privacy-mask skeleton" onclick="toggleBudgetStatsMode(event)"></span>
+                        </div>
+                        <div class="progress-bar-bg skeleton">
+                            <div id="needs-bar" class="progress-bar-fill fill-needs" style="width: 0%"></div>
+                        </div>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
+
+                    <div class="progress-item" onclick="showBudgetTransactions('wants')">
+                        <div class="progress-header">
+                            <span class="progress-label">Wants</span>
+                            <span id="wants-stats" class="progress-stats privacy-mask skeleton" onclick="toggleBudgetStatsMode(event)"></span>
+                        </div>
+                        <div class="progress-bar-bg skeleton">
+                            <div id="wants-bar" class="progress-bar-fill fill-wants" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="progress-item" style="margin-bottom: 0;" onclick="showBudgetTransactions('savings')">
+                        <div class="progress-header">
+                            <span class="progress-label">Savings</span>
+                            <span id="savings-stats" class="progress-stats privacy-mask skeleton" onclick="toggleBudgetStatsMode(event)"></span>
+                        </div>
+                        <div class="progress-bar-bg skeleton">
+                            <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="progress-item" style="margin-bottom: 0;" onclick="showBudgetTransactions('savings')">
-                    <div class="progress-header">
-                        <span class="progress-label">Savings</span>
-                        <span id="savings-stats" class="progress-stats privacy-mask" onclick="toggleBudgetStatsMode(event)">₱0 / ₱3,520</span>
+                <div id="triple-donut-view" style="display: none; padding: 0px 0; justify-content: center; align-items: center;"> <!-- Fix 2026-03-28: Added donut container -->
+                    <div class="donut-container" style="position: relative; width: 180px; height: 180px;">
+                        <svg viewBox="0 0 100 100" style="transform: rotate(-90deg); width: 100%; height: 100%;">
+                            <!-- Grey backgrounds ("grayed ones") -->
+                            <circle cx="50" cy="50" r="40" fill="none" stroke="#f1f5f9" stroke-width="8" opacity="1" class="donut-track" />
+                            <circle cx="50" cy="50" r="30" fill="none" stroke="#f1f5f9" stroke-width="8" opacity="1" class="donut-track" />
+                            <circle cx="50" cy="50" r="20" fill="none" stroke="#f1f5f9" stroke-width="8" opacity="1" class="donut-track" />
+                            
+                            <!-- Colored segments -->
+                            <circle id="donut-needs" cx="50" cy="50" r="40" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="0 251.2" stroke-linecap="round" style="transition: stroke-dasharray 1s ease-out;" onclick="showBudgetTransactions('needs')" />
+                            <circle id="donut-wants" cx="50" cy="50" r="30" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="0 188.4" stroke-linecap="round" style="transition: stroke-dasharray 1s ease-out;" onclick="showBudgetTransactions('wants')" />
+                            <circle id="donut-savings" cx="50" cy="50" r="20" fill="none" stroke="#22c55e" stroke-width="8" stroke-dasharray="0 125.6" stroke-linecap="round" style="transition: stroke-dasharray 1s ease-out;" onclick="showBudgetTransactions('savings')" />
+                        </svg>
+                        <!-- Center info -->
+                        <div id="donut-center-info" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; font-weight: 800; color: #1e293b; pointer-events: none;">
+                            <div id="donut-pct" style="font-size: 14px;">0%</div>
+                            <div style="font-size: 8px; color: #64748b; text-transform: uppercase;">SPENT</div>
+                        </div>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div id="savings-bar" class="progress-bar-fill fill-savings" style="width: 0%"></div>
+                    <!-- Mini legend for donut view -->
+                    <div class="donut-legend" style="margin-left: 20px; display: flex; flex-direction: column; gap: 8px;">
+                        <div class="donut-legend-item" style="display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #1e293b;" onclick="showBudgetTransactions('needs')">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></div> Needs
+                        </div>
+                        <div class="donut-legend-item" style="display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #1e293b;" onclick="showBudgetTransactions('wants')">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div> Wants
+                        </div>
+                        <div class="donut-legend-item" style="display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; color: #1e293b;" onclick="showBudgetTransactions('savings')">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22c55e;"></div> Savings
+                        </div>
                     </div>
                 </div>
 
-                <div id="wants-depleted-msg" class="overspending-msg">
+                <div id="wants-depleted-msg" class="overspending-msg" style="display: none;">
                     Wants budget depleted. Stop spending on luxuries to protect your savings and avoid new debt.
                 </div>
 
                 <div id="triple-summary-footer" class="triple-summary-footer" style="margin-top:20px">
                     <div class="triple-summary-left">
-                        <span class="triple-summary-label">Available to Spend</span>
-                        <span id="triple-usage-sub" class="triple-summary-sub">0% BUDGET UTILIZED</span>
+                        <span id="triple-remaining-label" class="triple-summary-label">Available to Spend</span>
+                        <span id="triple-usage-sub" class="triple-summary-sub skeleton"></span>
                     </div>
-                    <span id="triple-remaining-val" style="font-size:11px !important;" class="triple-summary-value remaining privacy-mask">₱0.00</span>
+                    <span id="triple-remaining-val" style="font-size:11px !important;" class="triple-summary-value remaining privacy-mask skeleton"></span>
                 </div>
             </div>
 
@@ -505,13 +782,13 @@
             <div class="insight-row">
                 <div class="insight-card">
                     <div class="insight-label">Daily Average</div>
-                    <div class="insight-value privacy-mask" id="daily-avg-val">₱0</div>
-                    <div class="insight-sub" id="daily-avg-sub">this month</div>
+                    <div class="insight-value privacy-mask" id="daily-avg-val"><div class="skeleton" style="width: 60px; height: 20px;"></div></div>
+                    <div class="insight-sub" id="daily-avg-sub"><div class="skeleton" style="width: 80px; height: 10px;"></div></div>
                 </div>
                 <div class="insight-card">
                     <div class="insight-label">Biggest Expense</div>
-                    <div class="insight-value privacy-mask" id="biggest-txn-val">₱0</div>
-                    <div class="insight-sub" id="biggest-txn-sub">—</div>
+                    <div class="insight-value privacy-mask" id="biggest-txn-val"><div class="skeleton" style="width: 60px; height: 20px;"></div></div>
+                    <div class="insight-sub" id="biggest-txn-sub"><div class="skeleton" style="width: 40px; height: 10px;"></div></div>
                 </div>
             </div>
 
@@ -527,19 +804,19 @@
                     <div class="summary-grid">
                         <div class="summary-item">
                             <span class="s-label">Total Spent</span>
-                            <span class="s-value privacy-mask" id="summary-total">₱0</span>
+                            <span class="s-value privacy-mask" id="summary-total"><div class="skeleton" style="width: 50px; height: 16px;"></div></span>
                         </div>
                         <div class="summary-item">
                             <span class="s-label">vs Last Month</span>
-                            <span class="s-value" id="summary-change">—</span>
+                            <span class="s-value" id="summary-change"><div class="skeleton" style="width: 40px; height: 16px;"></div></span>
                         </div>
                         <div class="summary-item">
                             <span class="s-label">Top Category</span>
-                            <span class="s-value" id="summary-top-cat">—</span>
+                            <span class="s-value" id="summary-top-cat"><div class="skeleton" style="width: 60px; height: 16px;"></div></span>
                         </div>
                         <div class="summary-item">
                             <span class="s-label">Transactions</span>
-                            <span class="s-value" id="summary-txn-count">0</span>
+                            <span class="s-value" id="summary-txn-count"><div class="skeleton" style="width: 30px; height: 16px;"></div></span>
                         </div>
                     </div>
 
@@ -552,7 +829,8 @@
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div class="ai-model-selector" style="display: flex; align-items: center; gap: 8px;">
-                                    <select id="dashboard-ai-model" onchange="localStorage.setItem('ai_preferred_model', this.value); updateAISummary(window.thisMonthTxns, true);">
+                                    <select id="dashboard-ai-model">
+
                                         <option value="auto">Auto (Smart)</option>
                                         <option value="ChatGPT">ChatGPT</option>
                                         <option value="Gemini">Gemini</option>
@@ -620,11 +898,11 @@
                 <div style="display: flex; margin-bottom: 20px;">
                     <div style="flex: 1;">
                         <div style="font-size: 10px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.9;">Total Expenses</div>
-                        <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);" id="expenses-total-summary" class="dash-total-val">PHP 0.00</div>
+                        <div style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);" id="expenses-total-summary" class="dash-total-val"><div class="skeleton" style="width: 100px; height: 24px; border-radius: 6px;"></div></div>
                     </div>
                     <div style="text-align: right;">
                         <div style="font-size: 10px; color: var(--text-primary); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; opacity: 0.8;">vs past period</div>
-                        <div id="mom-growth-box" style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);"><span id="mom-growth"></span></div>
+                        <div id="mom-growth-box" style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-primary);"><span id="mom-growth"><div class="skeleton" style="width: 60px; height: 24px; border-radius: 6px; margin-left: auto;"></div></span></div>
                     </div>
                 </div>
 
@@ -634,12 +912,14 @@
                     </svg>
                     <div class="chart-center">
                         <div class="chart-center-label" id="chart-total-label">TOTAL</div>
-                        <div class="chart-center-value privacy-mask" id="chart-total-val">0</div>
+                        <div class="chart-center-value privacy-mask" id="chart-total-val"><div class="skeleton" style="width: 80px; height: 28px; border-radius: 6px; margin: 0 auto;"></div></div>
                         <div class="chart-center-pct" id="chart-total-pct"></div>
                     </div>
                 </div>
                 <div id="chart-legend" class="legend">
-                    <!-- Dynamic segments will go here -->
+                    <div class="legend-item"><div class="skeleton-circle" style="width: 12px; height: 12px; margin-right: 8px;"></div><div class="skeleton" style="width: 60px; height: 12px;"></div></div>
+                    <div class="legend-item"><div class="skeleton-circle" style="width: 12px; height: 12px; margin-right: 8px;"></div><div class="skeleton" style="width: 80px; height: 12px;"></div></div>
+                    <div class="legend-item"><div class="skeleton-circle" style="width: 12px; height: 12px; margin-right: 8px;"></div><div class="skeleton" style="width: 50px; height: 12px;"></div></div>
                 </div>
             </div>
 
@@ -878,7 +1158,7 @@
     <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
         <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
             <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
-                <h3 id="cat-budget-modal-title" style="margin: 0; font-size: 0.80rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
+                <h3 id="cat-budget-modal-title" style="margin: 0; font-size: 1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
             </div>
             
             <div class="modal-body">
@@ -1314,7 +1594,6 @@
                 };
 
                 overlay.classList.add('show');
-                if (window.NavState) window.NavState.pushModalState('app-dialog', () => close(null));
             });
         };
 
@@ -1521,7 +1800,7 @@
                         }
                         
                         updateSafeSpendUI();
-                        if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                        window.debouncedUpdateBudget();
                     });
 
                     const configRef = doc(db, "users", user.uid, "config", "accounts");
@@ -1574,6 +1853,7 @@
                         // Only load data if Fast Path didn't already trigger for this UID
                         if (!window.fastPathTriggered || window.currentAccount !== localStorage.getItem('wallet_current_account')) {
                             loadData(); 
+                            if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
                         }
                         window.fastPathTriggered = false; // Reset for future changes
                         
@@ -1935,6 +2215,7 @@
         window.getCollectionName = (accId) => {
             if (accId === 'atome') return "transactions";
             if (accId === 'bpi') return "bpi_transactions";
+            if (accId === 'default_wallet') return "transactions_default";
             return `txns_${accId}`;
         };
         
@@ -2125,7 +2406,8 @@
                                 } catch(e) { /* fall through */ }
                             }
                             if (!usedCache) {
-                                window.allTxns = [];
+                                // Modified 2026-03-27: Set to null instead of [] to trigger skeletons in budget widget
+                                window.allTxns = null;
                                 renderHistory([]);
                             }
                             
@@ -2378,6 +2660,7 @@
                     if (spinner) spinner.style.display = 'none';
                     
                     updateBalanceToThisMonth(txns, syncAccount); 
+                    if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
 
                     if (txns.length === 0) {
                         // EMPTY STATE
@@ -2469,8 +2752,9 @@
         window.loadData = loadData;
 
         // BACKGROUND WATCHER: Keep Atome balance in sync even when on BPI account
-         window.walletTxns = { atome: [], bpi: [] };
+         window.walletTxns = null;
          window.budgetManualTxns = [];
+         window.hasBudgetLiveData = false; // Modified 2026-03-27
 
          window.watchBudgetManual = () => {
              const uid = auth.currentUser?.uid;
@@ -2480,7 +2764,9 @@
              const q = query(collection(db, "users", uid, "budget_manual_txns"), orderBy("date", "desc"));
              window.unsubscribeBudgetManual = onSnapshot(q, (snap) => {
                  window.budgetManualTxns = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                 window.hasBudgetLiveData = true; // Signal live data arrival
+                 window.debouncedUpdateBudget(); // Use debounced update
+                 if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
                  
                  const modal = document.getElementById('budget-txn-modal');
                  if (modal && modal.style.display !== 'none') {
@@ -2494,6 +2780,16 @@
              });
          };
 
+         // DEBOUNCED BUDGET UPDATE (2026-03-27: Prevent multi-wallet flicker)
+         window.budgetUpdateTimer = null;
+         window.debouncedUpdateBudget = () => {
+             if (window.budgetUpdateTimer) clearTimeout(window.budgetUpdateTimer);
+             window.budgetUpdateTimer = setTimeout(() => {
+                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                 if (window.syncWidgets) window.syncWidgets();
+             }, 150);
+         };
+
          window.watchAtomeBalance = () => {
              const uid = auth.currentUser?.uid;
              if (!uid) return;
@@ -2505,7 +2801,10 @@
              
              window.unsubscribeAtomeWatch = onSnapshot(q, (snap) => {
                  const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                 if (!window.walletTxns) window.walletTxns = {};
                  window.walletTxns.atome = txns;
+                 window.hasBudgetLiveData = true;
+                 window.debouncedUpdateBudget();
                  
                  let incomeTotal = 0;
                  let expenseTotal = 0;
@@ -2528,7 +2827,7 @@
                  }
                   window.atomeDataLoaded = true;
                   updateSafeSpendUI();
-                  if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                  window.debouncedUpdateBudget();
               });
           };
 
@@ -2540,7 +2839,10 @@
             const q = query(collection(db, "users", uid, "bpi_transactions"), orderBy("date", "desc"));
             window.unsubscribeBpiWatch = onSnapshot(q, (snap) => {
                 const txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                if (!window.walletTxns) window.walletTxns = {};
                 window.walletTxns.bpi = txns;
+                window.hasBudgetLiveData = true;
+                window.debouncedUpdateBudget();
                 
                 let incomeTotal = 0;
                 let expenseTotal = 0;
@@ -2556,7 +2858,7 @@
 
                 window.bpiDataLoaded = true;
                 updateBPIInsight(); 
-                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                window.debouncedUpdateBudget();
             });
          };
 
@@ -2581,7 +2883,7 @@
                     timestamp: Date.now()
                 }));
                 window.budgetManualTxns = txns;
-                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                window.debouncedUpdateBudget();
             } catch (e) { console.warn('Manual budget hydration failed', e); }
             
             for (const accId of allAccountIds) {
@@ -2652,7 +2954,10 @@
                 if (atomeEl) atome = parseFloat(atomeEl.innerText.replace(/[^\d.-]/g, '')) || 0;
             }
 
-            if (bpi === 0 && atome === 0) return;
+            if (bpi === 0 && atome === 0) {
+                insightEl.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 120px; opacity: 0.5;"></div>';
+                return;
+            }
 
             const remaining = bpi + atome;
             const atomeLabel = (atome < 0 ? '-' : '+') + '₱' + Math.abs(atome).toLocaleString(undefined, {minimumFractionDigits:2});
@@ -2778,11 +3083,19 @@
                          safeEl.innerText = formatted;
                      }
                  }
+
+                 if (!isLoading) {
+                     safeEl.classList.remove('skeleton');
+                     safeEl.style.opacity = '1';
+                 }
                  
                  // Dynamic color (Health check)
                  if (safeAmount < 1000) safeEl.style.color = '#ef4444'; // Red (High Risk)
                  else if (safeAmount < 5000) safeEl.style.color = '#f59e0b'; // Orange (Risky)
                  else safeEl.style.color = '#10b981'; // Green (Safe)
+
+                // SYNC STS WIDGET
+                if (window.syncWidgets) window.syncWidgets();
              }
 
              // 4. Update Breakdown Items
@@ -2812,6 +3125,7 @@
                  const val = `₱${mainBalValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                  maintainingEl.dataset.raw = val;
                  maintainingEl.innerText = isHidden ? '******' : val;
+                 if (!isLoading) maintainingEl.classList.remove('skeleton');
              }
 
              // Savings Update
@@ -2839,6 +3153,7 @@
                  const val = `₱${savingsValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                  savingsEl.dataset.raw = val;
                  savingsEl.innerText = isHidden ? '******' : val;
+                 if (!isLoading) savingsEl.classList.remove('skeleton');
              }
 
              // CC Payment Update
@@ -2866,6 +3181,7 @@
                  const val = `₱${ccPayment.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                  creditEl.dataset.raw = val;
                  creditEl.innerText = isHidden ? '******' : val;
+                 if (!isLoading) creditEl.classList.remove('skeleton');
              }
 
              // Salary Update
@@ -2890,9 +3206,10 @@
                  if (metaSalary) metaSalary.style.display = 'block'; // 'INCLUDED IN SAFE BUDGET';
              }
              if (salaryEl) {
-                 const val = `₱${salaryValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
+                 const val = `+₱${salaryValue.toLocaleString(undefined, {minimumFractionDigits:2})}`;
                  salaryEl.dataset.raw = val;
                  salaryEl.innerText = isHidden ? '******' : val;
+                 if (!isLoading) salaryEl.classList.remove('skeleton');
              }
 
              // 5. Dynamic Obligations & Receipts rendering
@@ -3159,211 +3476,25 @@
                         }
                         
                         updateTripleProgressBar();
+                        if (window.syncWidgets) window.syncWidgets();
                         showToast('Settings updated! Targets recalculated.');
                     }
                 }
             });
          };
 
-        window.updateTripleProgressBar = () => {
-            const user = auth.currentUser;
-            const widget = document.getElementById('triple-progress-widget');
-            if (!widget || !user) {
-                if (widget) widget.style.display = 'none';
-                return;
-            }
-            widget.style.display = 'block';
 
-            // Filter & Month Label sync
-            const now = new Date();
-            const filterEl = document.getElementById('chart-filter');
-            const currentFilter = filterEl ? filterEl.value : 'this_month';
-            
-            const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-            const monthDisplay = document.getElementById('triple-month-display');
-            
-            if (monthDisplay) {
-                if (currentFilter === 'this_month') {
-                    monthDisplay.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-                } else if (currentFilter === 'today') {
-                    monthDisplay.innerText = 'TODAY';
-                } else if (currentFilter === 'this_week') {
-                    monthDisplay.innerText = 'THIS WEEK';
-                } else if (currentFilter === 'last_7_days') {
-                    monthDisplay.innerText = 'LAST 7 DAYS';
-                } else if (currentFilter.match(/^\d{4}-\d{2}$/)) {
-                    // Handle dynamic months (YYYY-MM)
-                    const [year, month] = currentFilter.split('-').map(Number);
-                    monthDisplay.innerText = `${monthNames[month - 1]} ${year}`;
-                } else {
-                    // Fallback to capitalizing the filter value (e.g. "last_3_months" -> "LAST 3 MONTHS")
-                    monthDisplay.innerText = currentFilter.replace(/_/g, ' ').toUpperCase();
-                }
-            }
-
-            // Salary Target & Rules from LocalStorage
-            const salaryTarget = parseFloat(localStorage.getItem('monthly_salary_target') || '17600');
-            const budgetRule = localStorage.getItem('budget_rule') || '50/30/20';
-
-            // Define weights based on rule
-            let weights = { needs: 0.50, wants: 0.30, savings: 0.20 };
-            if (budgetRule === '40/30/30') {
-                weights = { needs: 0.40, wants: 0.30, savings: 0.30 };
-            } else if (budgetRule === '50/20/30') {
-                weights = { needs: 0.50, wants: 0.20, savings: 0.30 };
-            } else if (budgetRule === 'custom') {
-                weights = {
-                    needs: (parseInt(localStorage.getItem('custom_rule_needs')) || 50) / 100,
-                    wants: (parseInt(localStorage.getItem('custom_rule_wants')) || 30) / 100,
-                    savings: (parseInt(localStorage.getItem('custom_rule_savings')) || 20) / 100
-                };
-            }
-
-            // Calculate Limits
-            const needsLimit = salaryTarget * weights.needs;
-            const wantsLimit = salaryTarget * weights.wants;
-            const savingsLimit = salaryTarget * weights.savings;
-
-            let needsTotal = 0;
-            let wantsTotal = 0;
-            let savingsTotal = 0;
-
-            const aggregateFrom = (txns, account) => {
-                txns.forEach(t => {
-                    if (t.excluded || t.reimbursed || t.refund) return;
-                    
-                    // Use shared checkPeriod helper to sync with chart
-                    if (!window.checkPeriod(t, currentFilter, 0, now)) return;
-
-                    const display = getMerchantDisplay(t.name || t.merchant, t);
-                    const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-
-                    if (account === 'atome') {
-                        if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
-                            needsTotal += amt;
-                        } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses') {
-                            wantsTotal += amt;
-                        }
-                    } else if (account === 'bpi') {
-                        if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
-                            savingsTotal += amt;
-                        } else if (display.category === 'Vehicle' || (t.name && (t.name.includes('Withdrawal') || t.name.includes('withdraw:')))) {
-                            needsTotal += amt;
-                        }
-                    } else if (account === 'budget_manual') {
-                        // Include our custom manual collections
-                        if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
-                            needsTotal += amt;
-                        } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses') {
-                            wantsTotal += amt;
-                        } else if (display.category === 'Savings') {
-                            savingsTotal += amt;
-                        }
-                    }
-                });
-            };
-
-            // Aggregate from all known transactions
-            if (window.walletTxns) {
-                aggregateFrom(window.walletTxns.atome || [], 'atome');
-                aggregateFrom(window.walletTxns.bpi || [], 'bpi');
-                aggregateFrom(window.budgetManualTxns || [], 'budget_manual');
-            } else {
-                // Fallback to window.allTxns
-                aggregateFrom(window.allTxns || [], window.currentAccount);
-            }
-
-
-            // Update UI
-            const needsPct = Math.min((needsTotal / needsLimit) * 100, 100);
-            const wantsPct = (wantsTotal / wantsLimit) * 100;
-            const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
-
-            const isHidden = localStorage.getItem('balance_hidden') === 'true';
-            const isRemainingMode = localStorage.getItem('budget_stats_mode') === 'remaining';
-            
-            // Renderer helper for toggle mode
-            const formatStat = (current, limit) => {
-                const formatDec = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                const formatInt = (num) => Math.floor(num).toLocaleString('en-US');
-
-                if (isRemainingMode) {
-                    const left = Math.max(0, limit - current);
-                    const leftStr = `₱${formatDec(left)} LEFT`;
-                    const masked = `****** LEFT`;
-                    return { raw: leftStr, display: isHidden ? masked : leftStr };
-                } else {
-                    const raw = `₱${formatInt(current)} / ₱${formatInt(limit)}`;
-                    const masked = `****** / ₱${formatInt(limit)}`;
-                    return { raw, display: isHidden ? masked : raw };
-                }
-            };
-
-            const nRes = formatStat(needsTotal, needsLimit);
-            const needsEl = document.getElementById('needs-stats');
-            needsEl.dataset.raw = nRes.raw;
-            needsEl.innerText = nRes.display;
-            document.getElementById('needs-bar').style.width = `${needsPct}%`;
-
-            const wRes = formatStat(wantsTotal, wantsLimit);
-            const wantsEl = document.getElementById('wants-stats');
-            wantsEl.dataset.raw = wRes.raw;
-            wantsEl.innerText = wRes.display;
-            const wantsBar = document.getElementById('wants-bar');
-            wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
-
-            // Wants color logic
-            wantsBar.classList.remove('fill-wants', 'fill-wants-orange', 'fill-wants-red');
-            const alertMsg = document.getElementById('wants-depleted-msg');
-            if (wantsPct >= 100) {
-                wantsBar.classList.add('fill-wants-red');
-                if (alertMsg) alertMsg.style.display = 'block';
-            } else if (wantsPct >= 80) {
-                wantsBar.classList.add('fill-wants-orange');
-                if (alertMsg) alertMsg.style.display = 'none';
-            } else {
-                wantsBar.classList.add('fill-wants');
-                if (alertMsg) alertMsg.style.display = 'none';
-            }
-
-            const sRes = formatStat(savingsTotal, savingsLimit);
-            const savingsEl = document.getElementById('savings-stats');
-            savingsEl.dataset.raw = sRes.raw;
-            savingsEl.innerText = sRes.display;
-            document.getElementById('savings-bar').style.width = `${savingsPct}%`;
-
-            // Update Minimalist Indicators
-            const remaining = salaryTarget - (needsTotal + wantsTotal + savingsTotal);
-            const usedPct = Math.min(((needsTotal + wantsTotal + savingsTotal) / salaryTarget) * 100, 100);
-            const remainingPct = 100 - usedPct;
-
-            let statusKey = 'remaining';
-            if (remaining < 0) statusKey = 'negative';
-            else if (remainingPct < 15) statusKey = 'warning';
-
-            const footer = document.getElementById('triple-summary-footer');
-            if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
-
-            const remainingRaw = `₱${remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            const remainingEl = document.getElementById('triple-remaining-val');
-            remainingEl.dataset.raw = remainingRaw;
-            remainingEl.innerText = isHidden ? '******' : remainingRaw;
-            remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
-
-            const usageSub = document.getElementById('triple-usage-sub');
-            if (usageSub) usageSub.innerText = `${Math.round(usedPct)}% BUDGET UTILIZED`;
-        };
 
         window.toggleBudgetStatsMode = (e) => {
             if (e) e.stopPropagation();
             const current = localStorage.getItem('budget_stats_mode') || 'ratio';
             localStorage.setItem('budget_stats_mode', current === 'ratio' ? 'remaining' : 'ratio');
             
-            // Gentle feedback
+            // Gentle feedback (faster)
             const stats = document.querySelectorAll('.progress-stats');
             stats.forEach(s => {
                 s.style.opacity = '0.4';
-                setTimeout(() => s.style.opacity = '1', 150);
+                setTimeout(() => s.style.opacity = '1', 50);
             });
 
             if (typeof window.updateTripleProgressBar === 'function') window.updateTripleProgressBar();
@@ -3376,6 +3507,7 @@
             const addBtn = document.getElementById('budget-modal-add-btn');
             if (!modal || !list) return;
 
+            const isAlreadyOpen = modal.classList.contains('show');
             modal.style.display = 'flex';
             setTimeout(() => modal.classList.add('show'), 10);
             list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading transactions...</div>';
@@ -3387,7 +3519,7 @@
                 addBtn.onclick = () => window.openBudgetManualEntryModal(type);
             }
             
-            if (window.NavState) window.NavState.pushModalState('budget-txn-modal', () => closeModals(true));
+            if (window.NavState && !isAlreadyOpen) window.NavState.pushModalState('budget-txn-modal', () => closeModals('budget-txn-modal', true));
 
             const filterEl = document.getElementById('chart-filter');
             const currentFilter = filterEl ? filterEl.value : 'this_month';
@@ -3403,18 +3535,20 @@
                     const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                     
                     let match = false;
-                    if (type === 'needs') {
-                        if ((account === 'atome' || account === 'budget_manual') && (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation')) {
-                            match = true;
-                        }
+                    const manualBudgetCategory = t.manualBudgetCategory;
+                    const mappedCategory = display.category;
+
+                    // FIX 2026-03-27: Skip N/A transactions from budget modal listing
+                    if (manualBudgetCategory === 'n/a') return;
+
+                    if (manualBudgetCategory) {
+                        if (manualBudgetCategory === type) match = true;
+                    } else if (type === 'needs') {
+                        if (mappedCategory === 'Education' || mappedCategory === 'Service' || mappedCategory === 'Vehicle' || mappedCategory === 'Transportation') match = true;
                     } else if (type === 'wants') {
-                        if ((account === 'atome' || account === 'budget_manual') && (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses')) {
-                            match = true;
-                        }
+                        if (mappedCategory === 'Shopping' || mappedCategory === 'Online shopping' || mappedCategory === 'Food & Drinks' || mappedCategory === 'Life & Entertainment' || mappedCategory === 'Sport' || mappedCategory === 'Financial expenses' || mappedCategory === 'Financial Expenses') match = true;
                     } else if (type === 'savings') {
-                        if ((account === 'bpi' || account === 'budget_manual') && (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS')))) {
-                            match = true;
-                        }
+                        if (mappedCategory === 'Savings') match = true;
                     }
                     
                     if (match) {
@@ -3447,21 +3581,47 @@
                     // Only manual entries from our new collection are editable
                     const isEditable = t.account === 'budget_manual';
 
+                    const nameLen = display.name.length;
+                    let fontSize = '11.2px'; // Fix 2026-03-28: Smaller font size (12.5px -> 11.5px)
+                    if (nameLen > 25) fontSize = '9.2px'; // Fix 2026-03-28: Smaller font size (10px -> 9.5px)
+                    else if (nameLen > 20) fontSize = '10.2px'; // Fix 2026-03-28: Smaller font size (11px -> 10.5px)
+
+                    // FIX 2026-03-27: Build note display with txn-note color logic for budget modal
+                    let displayNote = t.note || '';
+                    if (!displayNote && display.category === 'Vehicle') {
+                        displayNote = (amt > 250) ? 'Car Refill' : 'Motor Refill';
+                    }
+                    const isRefund = t.refund || false;
+                    const isReimbursed = t.reimbursed || false;
+                    // FIX 2026-03-27: Inline darkColor map (categoryConfig is scoped locally elsewhere)
+                    const budgetNoteColors = {
+                        'Online shopping': '#ea580c', 'Vehicle': '#7c3aed', 'Shopping': '#2563eb',
+                        'Service': '#c026d3', 'Food & Drinks': '#ca8a04', 'Life & Entertainment': '#059669',
+                        'Trading Expenses': '#dc2626', 'Trade Copier': '#0e7490', 'Financial Expenses': '#dc2626',
+                        'Financial expenses': '#dc2626', 'Transportation': '#7c3aed', 'Education': '#1e3a8a',
+                        'Sport': '#059669', 'Savings': '#16a34a', 'Income': '#16a34a'
+                    };
+                    const noteColor = (display.category === 'Savings' || display.category === 'Income' || display.category === 'Life & Entertainment' || display.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (budgetNoteColors[display.category] || '#475569'));
+
+
+
                     html += `
-                        <div style="display: flex; align-items: center; padding: 14px 16px; background: #ffffff; border-radius: 16px; margin-bottom: 12px; border: 1px solid #f1f5f9; position: relative;">
-                            <div style="width: 40px; height: 40px; border-radius: 12px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #1e293b;">
-                                <i class="material-icons" style="font-size: 20px;">${display.icon}</i>
+                        <div style="display: flex; align-items: center; padding: 12px 16px; background: #ffffff; border-radius: 16px; margin-bottom: 12px; border: 1px solid #f1f5f9; position: relative;"> <!-- updated 2026-03-28 - fixed vertical alignment by using center - 2026-03-28 -->
+                            <div class="icon-box ${display.catClass || ''}" style="width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-right: 14px; flex-shrink: 0;"> <!-- updated 2026-03-28 - removed margin-top for center alignment - 2026-03-28 -->
+                                <i class="material-icons" style="font-size: 18px;">${display.icon}</i>
                             </div>
-                            <div style="flex: 1; overflow: hidden;">
-                                <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${display.name}</div>
-                                <div style="font-size: 11px; color: #64748b; font-weight: 600;">${dateStr}${isEditable ? ' • CASH LOG' : ''}</div>
+                            <div style="flex: 1; min-width: 0;"> <!-- added min-width: 0 to prevent overflow -->
+                                <div style="font-size: ${fontSize}; font-weight: 800; color: #1e293b; margin-bottom: 1px; letter-spacing: 0.2px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">${display.name}</div> <!-- updated 2026-03-28 - added ellipsis to prevent pushing buttons - 2026-03-28 -->
+                                <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${dateStr} • ${display.category}${isEditable ? ' • CASH LOG' : ''}</div> <!-- Fix 2026-03-28: Adjusted font size - 2026-03-28 -->
+                                ${displayNote ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayNote}</div>` : ''}
                             </div>
-                            <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
-                                <div style="font-size: 15px; font-weight: 800; color: #1e293b;">₱${amt.toLocaleString()}</div>
+                            <div style="text-align: right; display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0;"> <!-- updated 2026-03-28 - used margin-left, gap and flex-shrink to prevent overlapping - 2026-03-28 -->
+                                <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; white-space: nowrap;">₱${amt.toLocaleString()}</div> <!-- Fix 2026-03-28: Consolidated amount style - 2026-03-28 -->
+
                                 ${isEditable ? `
-                                <div style="display: flex; gap: 4px;">
-                                    <i class="material-icons" onclick="event.stopPropagation(); window.openBudgetManualEditModal(\`${JSON.stringify({...t, name: display.name}).replace(/"/g, '&quot;')}\`)" style="font-size: 18px; color: #3b82f6; cursor: pointer; padding: 4px;">edit</i>
-                                    <i class="material-icons" onclick="event.stopPropagation(); window.deleteBudgetManualTxn('${t.id}')" style="font-size: 18px; color: #ef4444; cursor: pointer; padding: 4px;">delete</i>
+                                <div style="display: flex; gap: 2px;"> <!-- updated 2026-03-28 - reduced gap - 2026-03-28 -->
+                                    <i class="material-icons" onclick="event.stopPropagation(); window.openBudgetManualEditModal(\`${JSON.stringify({...t, name: display.name}).replace(/"/g, '&quot;')}\`)" style="font-size: 16px; color: #3b82f6; cursor: pointer; padding: 4px;">edit</i>
+                                    <i class="material-icons" onclick="event.stopPropagation(); window.deleteBudgetManualTxn('${t.id}')" style="font-size: 16px; color: #ef4444; cursor: pointer; padding: 4px;">delete</i>
                                 </div>
                                 ` : ''}
                             </div>
@@ -3494,7 +3654,7 @@
                 modal.classList.add('show');
                 document.getElementById('budget-manual-amt').focus();
             }, 10);
-            if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => window.closeBudgetManualModal());
+            if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => closeModals('budget-manual-entry-modal', true));
         };
 
         window.openBudgetManualEditModal = (txnJson) => {
@@ -3510,7 +3670,7 @@
             
             document.getElementById('budget-manual-entry-modal').style.display = 'flex';
             setTimeout(() => document.getElementById('budget-manual-entry-modal').classList.add('show'), 10);
-            if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => window.closeBudgetManualModal());
+            if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => closeModals('budget-manual-entry-modal', true));
         };
 
         function updateBudgetManualCatUI(catId) {
@@ -3545,15 +3705,8 @@
             displayBox.style.borderColor = colors.color + '60';
         }
 
-        window.closeBudgetManualModal = () => {
-            const modal = document.getElementById('budget-manual-entry-modal');
-            if (!modal) return;
-            modal.classList.add('closing');
-            if (window.NavState) window.NavState.popModalState('budget-manual-entry-modal');
-            setTimeout(() => {
-                modal.classList.remove('show', 'closing');
-                modal.style.display = 'none';
-            }, 300);
+        window.closeBudgetManualModal = (fromHistory = false) => {
+            closeModals('budget-manual-entry-modal', fromHistory);
         };
 
         window.openBudgetManualCategoryPicker = async () => {
@@ -3668,6 +3821,7 @@
                 const typeMap = { 'needs': 'needs', 'wants': 'wants', 'savings': 'savings' };
                 if (typeMap[titleText]) window.showBudgetTransactions(typeMap[titleText]);
                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (window.syncWidgets) window.syncWidgets();
                 
             } catch (err) {
                 log('Save manual budget error: ' + err.message, 'error');
@@ -3698,6 +3852,7 @@
                 const typeMap = { 'needs': 'needs', 'wants': 'wants', 'savings': 'savings' };
                 if (typeMap[titleText]) window.showBudgetTransactions(typeMap[titleText]);
                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (window.syncWidgets) window.syncWidgets();
             } catch (e) {
                 console.error(e);
                 showToast('Error deleting');
@@ -3754,6 +3909,7 @@
                     if (val !== null && val !== false && !isNaN(val)) {
                         localStorage.setItem('bpi_obligations', val);
                         updateSafeSpendUI();
+                        if (window.syncWidgets) window.syncWidgets();
                         showToast('Obligations updated!');
                     }
                 }
@@ -3771,6 +3927,7 @@
                     if (val !== null && val !== false && !isNaN(val)) {
                         localStorage.setItem('bpi_expected_cashin', val);
                         updateSafeSpendUI();
+                        if (window.syncWidgets) window.syncWidgets();
                         showToast('Expected cash-in updated!');
                     }
                 }
@@ -3815,6 +3972,7 @@
              
              // Update BPI insight if exists (Special case handling inside function)
              updateBPIInsight();
+             if (window.syncWidgets) window.syncWidgets();
         };
 
         window.toggleMaintainingBalance = async () => {
@@ -3835,6 +3993,7 @@
              } catch (e) { console.error('Failed to save maintaining toggle', e); }
              
              showToast(newState ? 'Maintaining balance excluded' : 'Maintaining balance included');
+             if (window.syncWidgets) window.syncWidgets();
         };
 
         window.toggleSavings = async () => {
@@ -3855,6 +4014,7 @@
              } catch (e) { console.error('Failed to save savings toggle', e); }
              
              showToast(newState ? 'Savings excluded' : 'Savings included');
+             if (window.syncWidgets) window.syncWidgets();
         };
 
          window.handleObligationSwipe = (e, id) => {
@@ -4126,17 +4286,48 @@
             if (window.updateCategoryBudgets) window.updateCategoryBudgets();
         };
 
+        // WIDGET DARK MODE TOGGLE
+        window.toggleWidgetDarkMode = async () => {
+            const currentMode = localStorage.getItem('widget_dark_mode') === 'true';
+            const newMode = !currentMode;
+            
+            localStorage.setItem('widget_dark_mode', newMode);
+            
+            // Update UI
+            const icon = document.getElementById('widget-dark-mode-icon');
+            const text = document.getElementById('widget-dark-mode-text');
+            if (icon) icon.innerText = newMode ? 'brightness_7' : 'brightness_4';
+            if (text) text.innerText = newMode ? 'Widget Light Mode' : 'Widget Dark Mode';
+            
+            // Sync with Native
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const { WidgetPlugin } = Capacitor.Plugins;
+                if (WidgetPlugin && WidgetPlugin.setWidgetTheme) {
+                    await WidgetPlugin.setWidgetTheme({ isDark: newMode });
+                }
+            }
+            
+            showToast(newMode ? 'Widgets switched to Dark Mode' : 'Widgets switched to Light Mode');
+        };
+
         // SAFETY: Initialize visibility and theme on load
         window.addEventListener('DOMContentLoaded', () => {
              // Initialize theme
-             const savedTheme = localStorage.getItem('theme_preference') || 'light';
-             if (savedTheme === 'dark') {
-                 document.body.classList.add('dark-mode');
-                 const icon = document.getElementById('dark-mode-icon');
-                 const text = document.getElementById('dark-mode-text');
-                 if (icon) icon.innerText = 'light_mode';
-                 if (text) text.innerText = 'Light Mode';
-             }
+              const savedTheme = localStorage.getItem('theme_preference') || 'light';
+              if (savedTheme === 'dark') {
+                  document.body.classList.add('dark-mode');
+                  const icon = document.getElementById('dark-mode-icon');
+                  const text = document.getElementById('dark-mode-text');
+                  if (icon) icon.innerText = 'light_mode';
+                  if (text) text.innerText = 'Light Mode';
+              }
+
+              // Initialize widget theme UI
+              const widgetIsDark = localStorage.getItem('widget_dark_mode') === 'true';
+              const wIcon = document.getElementById('widget-dark-mode-icon');
+              const wText = document.getElementById('widget-dark-mode-text');
+              if (wIcon) wIcon.innerText = widgetIsDark ? 'brightness_7' : 'brightness_4';
+              if (wText) wText.innerText = widgetIsDark ? 'Widget Light Mode' : 'Widget Dark Mode';
 
              // Initialize privacy mask
              const isHidden = localStorage.getItem('balance_hidden') === 'true';
@@ -4155,209 +4346,176 @@
              }
         });
 
-        function updateBalanceToThisMonth(txns, targetAccount) {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            
-            let incomeTotal = 0;
-            let expenseTotal = 0;
-
-            txns.forEach(t => {
-                if (t.excluded || t.refund) return;
-                const d = new Date(t.date);
-                // Removed monthly filter to make balance cumulative
-                // if (d.getFullYear() !== year || d.getMonth() !== month) return;
-
-                const mapped = getMerchantDisplay(t.merchant, t);
-                const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-                
-                if (mapped.category === 'Income') {
-                    incomeTotal += amt;
-                } else {
-                    expenseTotal += amt;
-                }
-            });
-
-            // Target the specific card's balance element
-            const acc = targetAccount || window.currentAccount;
-            const balanceEl = document.querySelector(`.balance-card[data-account="${acc}"] .balance-amount`) || document.getElementById(`${acc}-balance`);
-            if (balanceEl) {
-                const balance = incomeTotal - expenseTotal;
-                const formatted = `PHP ${balance.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-                
-                // Store raw for toggle
-                balanceEl.dataset.raw = formatted;
-                
-                // Add privacy class
-                balanceEl.classList.add('privacy-mask');
-                
-                // Apply visibility state
-                const isHidden = localStorage.getItem('balance_hidden') === 'true';
-                balanceEl.innerText = isHidden ? '******' : formatted;
-                
-                // Store globally and update insight
-                if (acc === 'atome') window.atomeBalanceVal = balance;
-                if (acc === 'bpi') window.bpiBalanceVal = balance;
-                updateBPIInsight();
-            }
-
-            // Update insight cards and comparison charts
-            updateInsightCards(txns);
-
+        // Dashboard rendering logic is now centralized in app-ui.js
+        function updateBalanceToThisMonth(txns, account) {
+            if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, account);
         }
 
 
-        // ---- INSIGHT CARDS & MONTHLY SUMMARY ----
+        // Insight cards logic moved to app-ui.js
         function updateInsightCards(txns) {
-            if (!txns || txns.length === 0) return;
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const dayOfMonth = now.getDate();
-
-            // This month's expenses (non-excluded, non-refund, non-income)
-            const thisMonthTxns = txns.filter(t => {
-                if (t.excluded || t.refund || t.reimbursed) return false;
-                const d = new Date(t.date);
-                if (d.getFullYear() !== year || d.getMonth() !== month) return false;
-                const mapped = getMerchantDisplay(t.merchant, t);
-                return mapped.category !== 'Income';
-            });
-
-            // Last month's expenses
-            const lastMonthDate = new Date(year, month - 1, 1);
-            const lmYear = lastMonthDate.getFullYear();
-            const lmMonth = lastMonthDate.getMonth();
-            const lastMonthTxns = txns.filter(t => {
-                if (t.excluded || t.refund || t.reimbursed) return false;
-                const d = new Date(t.date);
-                if (d.getFullYear() !== lmYear || d.getMonth() !== lmMonth) return false;
-                const mapped = getMerchantDisplay(t.merchant, t);
-                return mapped.category !== 'Income';
-            });
-
-            const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-
-            const isHidden = localStorage.getItem('balance_hidden') === 'true';
-            
-            // --- DAILY AVERAGE ---
-            const thisMonthTotal = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const dailyAvg = daysInMonth > 0 ? thisMonthTotal / daysInMonth : 0;
-            const dailyAvgEl = document.getElementById('daily-avg-val');
-            const dailyAvgSub = document.getElementById('daily-avg-sub');
-            if (dailyAvgEl) {
-                const formatted = '₱' + dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 });
-                dailyAvgEl.dataset.raw = formatted;
-                dailyAvgEl.textContent = isHidden ? '******' : formatted;
-            }
-
-            // Compare to last month's daily average
-            const lastMonthTotal = lastMonthTxns.reduce((s, t) => s + getAmt(t), 0);
-            const daysInLastMonth = new Date(lmYear, lmMonth + 1, 0).getDate();
-            const lastDailyAvg = daysInLastMonth > 0 ? lastMonthTotal / daysInLastMonth : 0;
-            if (dailyAvgSub) {
-                if (lastDailyAvg > 0) {
-                    const pctChange = ((dailyAvg - lastDailyAvg) / lastDailyAvg) * 100;
-                    const arrow = pctChange > 0 ? '↑' : '↓';
-                    dailyAvgSub.textContent = `${arrow} ${Math.abs(pctChange).toFixed(0)}% vs last month`;
-                    dailyAvgSub.className = 'insight-sub ' + (pctChange > 0 ? 'up' : 'down');
-                } else {
-                    dailyAvgSub.textContent = 'this month';
-                    dailyAvgSub.className = 'insight-sub neutral';
-                }
-            }
-
-            // --- BIGGEST EXPENSE ---
-            let biggestAmt = 0;
-            let biggestName = '—';
-            thisMonthTxns.forEach(t => {
-                const amt = getAmt(t);
-                if (amt > biggestAmt) {
-                    biggestAmt = amt;
-                    const mapped = getMerchantDisplay(t.merchant, t);
-                    // USER REQUEST: Prioritize merchant name over note
-                    biggestName = mapped.name || t.merchant || t.note || 'Unknown';
-                }
-            });
-            const bigVal = document.getElementById('biggest-txn-val');
-            const bigSub = document.getElementById('biggest-txn-sub');
-            if (bigVal) {
-                const formatted = '₱' + biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 });
-                bigVal.dataset.raw = formatted;
-                bigVal.textContent = isHidden ? '******' : formatted;
-            }
-            if (bigSub) bigSub.textContent = biggestName.toUpperCase();
-
-            // --- MONTHLY SUMMARY ---
-            const summaryTotal = document.getElementById('summary-total');
-            const summaryChange = document.getElementById('summary-change');
-            const summaryTopCat = document.getElementById('summary-top-cat');
-            const summaryCount = document.getElementById('summary-txn-count');
-
-            if (summaryTotal) {
-                const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                summaryTotal.dataset.raw = formatted;
-                summaryTotal.textContent = isHidden ? '******' : formatted;
-            }
-            if (summaryCount) summaryCount.textContent = thisMonthTxns.length;
-
-            // % change vs last month
-            if (summaryChange) {
-                if (lastMonthTotal > 0) {
-                    const pct = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
-                    const arrow = pct > 0 ? '↑' : '↓';
-                    summaryChange.textContent = `${arrow} ${Math.abs(pct).toFixed(0)}%`;
-                    summaryChange.className = 's-value ' + (pct > 0 ? 'red' : 'green');
-                } else {
-                    summaryChange.textContent = '—';
-                    summaryChange.className = 's-value';
-                }
-            }
-
-            // Top category
-            if (summaryTopCat) {
-                const catTotals = {};
-                thisMonthTxns.forEach(t => {
-                    const mapped = getMerchantDisplay(t.merchant, t);
-                    const cat = t.manualCategory || mapped.category || 'Uncategorized';
-                    const label = typeof displayCategoryName === 'function' ? displayCategoryName(cat) : cat;
-                    catTotals[label] = (catTotals[label] || 0) + getAmt(t);
-                });
-                const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
-                summaryTopCat.textContent = topCat ? topCat[0] : '—';
-            }
-
-            // Trigger AI Summary with DEBOUNCE
-            window.thisMonthTxns = thisMonthTxns;
-            clearTimeout(window.aiSummaryTimeout);
-            window.aiSummaryTimeout = setTimeout(() => {
-                updateAISummary(thisMonthTxns);
-            }, 2000); // 2s debounce
+            if (window.updateInsightCards) window.updateInsightCards(txns);
         }
+
+        async function syncWidgets() {
+            if (!(window.Capacitor && window.Capacitor.isNativePlatform())) return;
+            
+            try {
+                const { WidgetPlugin } = Capacitor.Plugins;
+                if (!WidgetPlugin) return;
+
+                const txns = window.allTxns || [];
+                const config = window.safeToSpendConfig || { savingsAmount: 0, obligations: [] };
+                const monthlySalary = parseFloat(localStorage.getItem('monthly_salary_target') || '0');
+                
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+
+                // 1. Budget Data
+                let totalSpent = 0;
+                txns.forEach(t => {
+                    const d = new Date(t.date);
+                    if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
+                        const mapped = getMerchantDisplay(t.merchant, t);
+                        if (mapped.category !== 'Income') {
+                            totalSpent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                        }
+                    }
+                });
+
+                const totalObligations = (config.obligations || []).reduce((sum, ob) => sum + (ob.amount || 0), 0);
+                const savings = config.savingsAmount || 0;
+
+                const budgetData = {
+                    salary: monthlySalary,
+                    spent: totalSpent,
+                    obligations: totalObligations,
+                    savings: savings
+                };
+
+                await WidgetPlugin.updateBudget({ data: JSON.stringify(budgetData) });
+
+                // 2. Chart Data
+                const catTotals = {};
+                txns.forEach(t => {
+                    const d = new Date(t.date);
+                    if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
+                        const mapped = getMerchantDisplay(t.merchant, t);
+                        if (mapped.category !== 'Income') {
+                            const cat = mapped.category;
+                            catTotals[cat] = (catTotals[cat] || 0) + Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                        }
+                    }
+                });
+
+                const sortedCats = Object.entries(catTotals).sort((a, b) => b[1] - a[1]).slice(0, 4);
+                const labels = sortedCats.map(c => typeof displayCategoryName === 'function' ? displayCategoryName(c[0]) : c[0]);
+                const values = sortedCats.map(c => c[1]);
+
+                const chartData = {
+                    labels: JSON.stringify(labels),
+                    values: JSON.stringify(values)
+                };
+
+                await WidgetPlugin.updateChart({ data: JSON.stringify(chartData) });
+
+                // 3. Safe to Spend Data
+                const stsConfig = window.safeToSpendConfig || { savingsAmount: 3000, obligations: [] };
+                const bpiBal = window.bpiBalanceVal || 0;
+                const atomeBal = Math.abs(window.atomeBalanceVal || 0);
+                
+                let stsObligations = 0;
+                if (stsConfig.obligations) {
+                    stsConfig.obligations.forEach(ob => {
+                        if (ob.included !== false) {
+                            const amt = parseFloat(ob.amount) || 0;
+                            if (ob.isAdded === true) stsObligations -= amt;
+                            else stsObligations += amt;
+                        }
+                    });
+                }
+
+                const effMain = stsConfig.excludeMaintaining ? 0 : 3000;
+                const effSavings = stsConfig.excludeSavings ? 0 : (stsConfig.savingsAmount || 3000);
+                const effAtome = stsConfig.excludeAtome ? 0 : atomeBal;
+                const effSalary = stsConfig.includeSalary ? (stsConfig.salaryAmount || 8800) : 0;
+
+                const stsAmount = bpiBal - effMain - effSavings - effAtome - stsObligations + effSalary;
+                const stsFormatted = `₱${stsAmount.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+                
+                let subtext = "Safe budget until next payday";
+                // If we can find the next obligation or payday, we could be more specific
+                
+                await WidgetPlugin.updateSTS({ 
+                    data: JSON.stringify({ 
+                        amount: stsFormatted, 
+                        subtext: subtext,
+                        isNegative: stsAmount < 0
+                    }) 
+                });
+
+                console.log("✅ Widgets synchronized (Budget, Chart, STS)");
+            } catch (err) {
+                console.error("❌ Widget sync failed:", err);
+            }
+        }
+
+        // --- DEEP LINK HANDLING ---
+        window.handleStartupAccount = function() {
+            const target = window.startupTargetAccount;
+            if (!target) return;
+            
+            console.log("🚀 Deep Link: Switching to", target);
+            if (typeof window.switchAccount === 'function') {
+                window.switchAccount(target);
+            }
+            // Clear it so it doesn't switch every time the app regains focus if not intended
+            window.startupTargetAccount = null;
+        };
+
+        // Check on initial load
+        setTimeout(() => {
+            if (window.startupTargetAccount) window.handleStartupAccount();
+        }, 1500);
 
         // --- AI SUMMARY GENERATION ---
         window.toggleMonthlySummary = function() {
-            const body = document.getElementById('summary-body');
+            const box = document.getElementById('ai-insight-box');
             const toggle = document.getElementById('summary-toggle');
-            if (body && toggle) {
-                const isCollapsed = body.classList.toggle('collapsed');
-                toggle.classList.toggle('collapsed');
+            if (box && toggle) {
+                const isCollapsed = box.classList.toggle('collapsed');
+                toggle.classList.toggle('collapsed', isCollapsed);
                 // Persist state
-                localStorage.setItem('wallet_summary_collapsed', isCollapsed);
+                localStorage.setItem('wallet_ai_box_hidden', isCollapsed);
             }
         };
 
         // --- AI SUMMARY GENERATION ---
         async function updateAISummary(thisMonthTxns, force = false) {
+            
+            // Ensure LocalAI is available (dynamic import for Edge AI/Fallback)
+            if (!window.LocalAI) {
+                try {
+                    const { LocalAI } = await import('./local-ai.js');
+                    window.LocalAI = LocalAI;
+                } catch (e) { console.error("Failed to load LocalAI:", e); }
+            }
+
+            const preferredEngine = localStorage.getItem('ai_preferred_model') || 'auto';
+            console.log(`🤖 [AI] Requesting Analysis (Model: ${preferredEngine}, Forced: ${force})`);
+
+
             // COOLDOWN GUARD: Prevent rapid requests (60s cooldown)
             const lastUpdate = parseInt(localStorage.getItem('last_ai_request_time') || '0');
             const cooldownPeriod = 60000; // 60 seconds
             if (!force && (Date.now() - lastUpdate < cooldownPeriod)) {
-                console.log('❄️ AI Summary cooling down...');
+                console.log('❄️ [AI] Cooldown active. Skipping auto-refresh.');
                 return;
             }
+
+            console.log('🤖 [AI] Syncing with logic...');
+
 
             const box = document.getElementById('ai-insight-box');
             const textEl = document.getElementById('ai-summary-container');
@@ -4380,17 +4538,22 @@
                 }
             };
             
-            if (!box || !textEl || !user) return;
+            if (!box || !textEl || !user) {
+                console.log('🚫 [AI] Missing required elements or user. Exiting.', { box: !!box, textEl: !!textEl, user: !!user });
+                return;
+            }
             
             if (!thisMonthTxns || thisMonthTxns.length === 0) {
+                console.log('🚫 [AI] No transactions for this month. Hiding box.');
                 box.style.display = 'none';
                 return;
             }
 
+
             // 1. Identify Period & Keys
             const now = new Date();
             const yearMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
-            const cacheKey = `ai_summary_${window.currentAccount || 'default'}_${yearMonth}_v3`;
+            const cacheKey = `ai_summary_${window.currentAccount || 'default'}_${yearMonth}_${preferredEngine}_v3`;
             const localCached = localStorage.getItem(cacheKey);
 
             // Show container & setup title trigger
@@ -4404,11 +4567,11 @@
                 };
             }
 
-            // Restore collapse state for the parent card
-            const isCollapsed = localStorage.getItem('wallet_summary_collapsed') === 'true';
-            if (isCollapsed) {
-                document.getElementById('summary-body')?.classList.add('collapsed');
-                document.getElementById('summary-toggle')?.classList.add('collapsed');
+            // Restore collapse state for the AI insight section
+            const aiBoxHidden = localStorage.getItem('wallet_ai_box_hidden') === 'true';
+            if (aiBoxHidden) {
+                box.classList.add('collapsed');
+                toggle?.classList.add('collapsed');
             }
 
             // HELPER: Check if cache is fresh enough to skip Gemini
@@ -4442,8 +4605,11 @@
 
 
             // 4. Generate New Summary (Throttle hit / Data stale)
-            const backoffUntil = localStorage.getItem('ai_ratelimit_backoff');
-            if (backoffUntil && Date.now() < parseInt(backoffUntil)) {
+            const backoffKey = (preferredEngine === 'auto' || preferredEngine === 'Gemini') ? 'ai_ratelimit_backoff_gemini' : 
+                               (preferredEngine === 'ChatGPT' ? 'ai_ratelimit_backoff_chatgpt' : null);
+            
+            const backoffUntil = backoffKey ? localStorage.getItem(backoffKey) : null;
+            if (!force && backoffUntil && Date.now() < parseInt(backoffUntil)) {
                 // If backoff is active, we can still fall back to Local AI immediately
                  // Try to pass whatever historical context we might have from common logic
                  const localText = cleanAIText(LocalAI.analyze(thisMonthTxns, { 
@@ -4556,18 +4722,19 @@ ${historicalContext}
 CURRENT MONTH DATA:
 ${allTxnsSummary}
 
-Task: Provide a "Smart Learning" analysis in BASIC ENGLISH (2 sentences).
-Compare current spending specifically to the 3-MONTH ROLLING AVERAGE. 
-Identify if this is a worsening trend or identifying a specific recurring pain point from the last 90 days.
-BOLD merchants and amounts.
+Task: Provide a "Smart Learning" forecasting analysis in BASIC ENGLISH (2 sentences).
+Compare current spending specifically to the 3-MONTH ROLLING AVERAGE and 1-YEAR history. 
+Focus on predicting future spending trends (e.g., "At this rate, you will spend X more than usual by month-end").
+Identify where the user can cut costs next month based on recent spikes. BOLD merchants and amounts.
 
 CRITICAL RULES:
-1. NO generic percentage advice or cliché financial tips.
+1. NO generic percentage advice or cliché financial tips. Be predictive.
 2. Ensure PERFECT SPACING. Never combine words with bold tags (e.g. say "at **Merchant**" NOT "at**Merchant**").
 3. Use DOUBLE LINE BREAKS before Recommendation and Tip.
-4. **Recommendation:** A specific action regarding a merchant or category from the LAST 3 MONTHS.
-5. **Tip:** Provide a REAL-LIFE SAVINGS HACK or "Life Hack" for a merchant mentioned. (e.g., "Switch to pickup on GrabFood to save ₱50", "Check for Tuesday promos at [Merchant]", "Use a loyalty card at [Gas Station]"). NO generic advice like "set a hard limit".
+4. **Recommendation:** A specific, predictive action regarding a merchant or category for next month.
+5. **Tip:** Provide a REAL-LIFE SAVINGS HACK for a merchant mentioned. (e.g., "Switch to pickup on GrabFood", "Check for Tuesday promos").
 6. ALWAYS use COMMA SEPARATORS for any number or amount ₱1,000 and above.
+7. Avoid any spaces before periods or commas.
 
 Be direct, practical, and helpful.`;
 
@@ -4575,52 +4742,114 @@ Be direct, practical, and helpful.`;
 
                     // --- TRY OPENAI (PRIMARY or FORCED) ---
                     if (preferredEngine === 'auto' || preferredEngine === 'ChatGPT') {
+                        console.log('🤖 [AI] Attempting ChatGPT...');
                         try {
-                            const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
-                                },
-                                body: JSON.stringify({
-                                    model: CONFIG.OPENAI_MODEL,
-                                    messages: [{ role: 'user', content: prompt }],
-                                    max_tokens: 150
-                                })
-                            });
+                            let openAIData;
+                            
+                            // Check if Capacitor native fetch is available (bypasses CORS)
+                            if (window.Capacitor?.Plugins?.CapacitorHttp) {
+                                const response = await window.Capacitor.Plugins.CapacitorHttp.request({
+                                    url: 'https://api.openai.com/v1/chat/completions',
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
+                                    },
+                                    data: {
+                                        model: CONFIG.OPENAI_MODEL,
+                                        messages: [{ role: 'user', content: prompt }],
+                                        max_tokens: 150
+                                    }
+                                });
+                                openAIData = response.data;
+                            } else {
+                                const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${CONFIG.OPENAI_API_KEY}`
+                                    },
+                                    body: JSON.stringify({
+                                        model: CONFIG.OPENAI_MODEL,
+                                        messages: [{ role: 'user', content: prompt }],
+                                        max_tokens: 150
+                                    })
+                                });
+                                openAIData = await openAIResponse.json();
+                            }
 
-                            const openAIData = await openAIResponse.json();
                             if (openAIData.choices?.[0]?.message?.content) {
                                 return { text: openAIData.choices[0].message.content.trim(), engine: 'ChatGPT' };
-                            } 
-                            if (preferredEngine === 'ChatGPT') throw new Error('OpenAI service unavailable');
+                            } else if (openAIData.error) {
+                                console.error("[AI] OpenAI API Error:", openAIData.error);
+                                throw new Error(openAIData.error.message || "OpenAI API Error");
+                            }
                         } catch (err) {
-                            if (preferredEngine === 'ChatGPT') throw err;
+                            console.error("[AI Summary] ChatGPT Fetch Failed:", err);
+                            const isNetworkError = err.message.includes('fetch') || err.name === 'TypeError' || err.message.includes('Connection Failed');
+                            const statusInfo = err.status ? ` (Status ${err.status})` : "";
+                            const msg = isNetworkError 
+                                ? `ChatGPT Connection Failed${statusInfo}. This is usually a Network Block or CORS (if on PC).`
+                                : `ChatGPT Error: ${err.message}${statusInfo}`;
+                            
+                            if (window.isNative && window.isNative()) log(msg, 'error');
+                            if (preferredEngine === 'ChatGPT') throw new Error(msg);
                         }
                     }
 
                     // --- TRY GEMINI (SECONDARY or FORCED) ---
                     if (preferredEngine === 'auto' || preferredEngine === 'Gemini') {
+                        console.log('🤖 [AI] Attempting Gemini...');
                         try {
-                            const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                            });
-                            const geminiData = await geminiResponse.json();
+                            const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
+                            let geminiData;
+
+                            if (window.Capacitor?.Plugins?.CapacitorHttp) {
+                                const response = await window.Capacitor.Plugins.CapacitorHttp.request({
+                                    url: geminiUrl,
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    data: { contents: [{ parts: [{ text: prompt }] }] }
+                                });
+                                geminiData = response.data;
+                                if (response.status !== 200 && !geminiData.candidates) {
+                                     throw new Error(`Gemini Status ${response.status}: ${geminiData.error?.message || 'Unknown'}`);
+                                }
+                            } else {
+                                const geminiResponse = await fetch(geminiUrl, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                                });
+                                geminiData = await geminiResponse.json();
+                            }
+
                             if (geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
                                 return { text: geminiData.candidates[0].content.parts[0].text.trim(), engine: 'Gemini' };
                             }
-                            if (geminiData.error?.status === 'RESOURCE_EXHAUSTED' || geminiData.error?.code === 429) {
-                                localStorage.setItem('ai_ratelimit_backoff', Date.now() + 15 * 60 * 1000);
+                            
+                            if (geminiData.error) {
+                                if (geminiData.error.status === 'RESOURCE_EXHAUSTED' || geminiData.error.code === 429) {
+                                    localStorage.setItem('ai_ratelimit_backoff_gemini', Date.now() + 15 * 60 * 1000);
+                                }
+                                throw new Error(geminiData.error.message || "Gemini API Error");
                             }
+
                             if (preferredEngine === 'Gemini') throw new Error('Gemini service unavailable');
                         } catch (err) {
-                            if (preferredEngine === 'Gemini') throw err;
+                            console.error("[AI Summary] Gemini Fetch Failed:", err);
+                            if (preferredEngine === 'Gemini') {
+                                const isNetworkError = err.message.includes('fetch') || err.name === 'TypeError';
+                                const msg = isNetworkError 
+                                    ? `Gemini Connection Failed. CORS or Network block.`
+                                    : `Gemini Error: ${err.message}`;
+                                throw new Error(msg);
+                            }
                         }
                     }
 
                     // --- FALLBACK (TERTIARY or FORCED) ---
+                    console.log(`🤖 [AI] Using Edge AI (Local ${preferredEngine === 'Edge AI' ? 'Selection' : 'Fallback'})...`);
                      const histPass = { 
                          avgTotal: avgMonthlyTotal,
                          recurring: recurringMerchants,
@@ -4653,13 +4882,41 @@ Be direct, practical, and helpful.`;
                 setDoc(docRef, result, { merge: true }).catch(e => console.error('Firestore Persistence Error:', e));
 
             } catch (err) {
-                console.error('AI Summary Detailed Error:', err);
-                // Show simplified error for user, full error for console
-                textEl.innerHTML = `<span style="color: #db2777; font-weight: 700; display: flex; align-items: center; gap: 6px;"><i class="material-icons" style="font-size: 14px;">error_outline</i> ${err.message}</span>`;
+                console.error('🤖 [AI] Analysis failed:', err);
+                const localCached = localStorage.getItem(cacheKey);
+                if (localCached) {
+                    try {
+                        const data = JSON.parse(localCached);
+                        // Silently restore previous analysis without showing a visible error box
+                        textEl.innerHTML = cleanAIText(data.text);
+                        console.warn('🤖 [AI] Showing cached result as fallback.');
+                    } catch(e) {
+                        textEl.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">Analysis temporarily unavailable. Check console for details.</span>`;
+                    }
+                } else {
+                    textEl.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">Analysis temporarily unavailable. Check console for details.</span>`;
+                }
             } finally {
                 if (loading) loading.style.display = 'none';
             }
         }
+        
+        
+        // --- EVENT BINDING ---
+        const aiModelSelector = document.getElementById('dashboard-ai-model');
+        if (aiModelSelector) {
+            aiModelSelector.addEventListener('change', (e) => {
+                console.log('🔄 [AI] Model Change Selection:', e.target.value);
+                localStorage.setItem('ai_preferred_model', e.target.value);
+                updateAISummary(window.thisMonthTxns, true); // Force update on change
+            });
+        }
+
+        // Store for global initialization to ensure it wins over app-ui.js
+        window.__dashboardUpdateAISummary = updateAISummary;
+
+        window.updateAISummary = updateAISummary;
+
 
         window.toggleAdminMode = () => {
              const user = auth.currentUser;
@@ -5882,6 +6139,28 @@ Be direct, practical, and helpful.`;
                     const logoHTML = logo ? `<div class="brand-badge" style="display: ${typeof showLogos !== 'undefined' && showLogos ? 'flex' : 'none'}"><img src="${logo}"></div>` : '';
 
                     const noteSafe = (t.note || '').replace(/"/g, '&quot;');
+
+                    // FIX 2026-03-27: Budget classification dot (Needs=blue, Wants=orange, Savings=green)
+                    let budgetDotHTML = '';
+                    if (!t.excluded && !isIncome && !isRefund && !isReimbursed && mapped.category !== 'Credit Card Payment') {
+                        const manualBCat = t.manualBudgetCategory;
+                        let detectedBudget = '';
+                        if (manualBCat && manualBCat !== 'n/a') {
+                            detectedBudget = manualBCat;
+                        } else if (manualBCat !== 'n/a') {
+                            const needsCats = ['Education', 'Service', 'Vehicle', 'Transportation'];
+                            const wantsCats = ['Shopping', 'Online shopping', 'Food & Drinks', 'Life & Entertainment', 'Sport', 'Financial expenses', 'Financial Expenses'];
+                            const savingsCats = ['Savings', 'Investments'];
+                            if (needsCats.includes(mapped.category)) detectedBudget = 'needs';
+                            else if (wantsCats.includes(mapped.category)) detectedBudget = 'wants';
+                            else if (savingsCats.includes(mapped.category)) detectedBudget = 'savings';
+                        }
+                        const dotColors = { needs: '#3b82f6', wants: '#F5BE27', savings: '#22c55e' };
+                        if (detectedBudget && dotColors[detectedBudget]) {
+                            budgetDotHTML = `<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${dotColors[detectedBudget]};margin-left:6px;vertical-align:middle;"></span>`;
+                        }
+                    }
+
                     contentHTML += `
                         <div class="txn-swipe-wrapper">
                             <div class="txn-swipe-bg left">DELETE</div>
@@ -5893,6 +6172,7 @@ Be direct, practical, and helpful.`;
                                  data-date="${t.date}"
                                  data-manual-amount="${t.manualAmount !== undefined ? t.manualAmount : ''}"
                                  data-category="${mapped.category}"
+                                 data-manual-budget-category="${t.manualBudgetCategory || ''}"
                                  data-note="${noteSafe}"
                                  data-excluded="${t.excluded || false}"
                                  data-refund="${t.refund || false}"
@@ -5904,7 +6184,7 @@ Be direct, practical, and helpful.`;
                                 <div class="txn-details">
                                     <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
                                     <div class="txn-sub">
-                                        <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
+                                        <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                                     </div>
                                     ${displayNote ? `<div class="txn-note" style="color: ${(mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'))}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                                 </div>
@@ -6000,143 +6280,136 @@ Be direct, practical, and helpful.`;
             const account = window.currentAccount;
             const uid = auth.currentUser?.uid;
 
-            if (!uid || !widget || !listContainer) return;
+            try {
+                if (!widget || !listContainer) return;
 
-            // Only show for main wallets and Atome
-            const visibleAccounts = ['atome', 'bpi', 'default_wallet'];
-            if (!visibleAccounts.includes(account)) {
-                widget.style.display = 'none';
-                return;
-            }
-            widget.style.display = 'block';
-
-            // Get limits from Firestore
-            const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
-            const docSnap = await getDoc(budgetRef).catch(() => null);
-            let budgets = (docSnap && docSnap.exists()) ? docSnap.data().categories : null;
-
-            // Default Testing Limits for Atome
-            if (!budgets && account === 'atome') {
-                budgets = {
-                    'Shopping': 1000,
-                    'Online shopping': 2000,
-                    'Vehicle': 2000
-                };
-                await setDoc(budgetRef, { categories: budgets }, { merge: true });
-            }
-
-            if (!budgets || Object.keys(budgets).length === 0) {
-                listContainer.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:10px; font-weight:600; border: 1px dashed #e2e8f0; border-radius: 5px;">No category limits set.<br>Click ADD to start budgeting.</div>';
-                return;
-            }
-
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-
-            const itemsHTML = Object.entries(budgets).map(([cat, limit]) => {
-                // Calculate spent for this category THIS MONTH
-                let spent = 0;
-                if (window.allTxns) {
-                    window.allTxns.forEach(t => {
-                        const d = new Date(t.date);
-                        // USER REQUEST: Monthly filter - budgets reset each month
-                        if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
-                            const mapped = getMerchantDisplay(t.merchant, t);
-                            const itemCatLabel = displayCategoryName(mapped.category);
-                            if (mapped.category === cat || itemCatLabel === cat) {
-                                spent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                            }
-                        }
-                    });
+                if (!uid) {
+                    widget.style.setProperty('display', 'none', 'important');
+                    return;
                 }
 
-                const percent = Math.min((spent / limit) * 100, 100);
-                
-                // Dynamic Font Color Logic
-                let spentColor = ''; // Default
-                if (percent >= 90) spentColor = 'color: #ef4444;'; // Red
-                else if (percent >= 75) spentColor = 'color: #f97316;'; // Orange
-                else if (percent < 50) spentColor = 'color: #10b981;'; // Green
+                // FORCE SHOW: Remove restrictive visibleAccounts check
+                widget.style.setProperty('display', 'block', 'important');
+                console.log(`[Category Limits] Forced show for account: ${account}`);
 
-                let statusClass = '';
-                if (percent >= 90) statusClass = 'high';
-                else if (percent >= 75) statusClass = 'mid';
-                else if (percent >= 50) statusClass = 'low';
+                // Get limits from Firestore
+                const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
+                const docSnap = await getDoc(budgetRef).catch(() => null);
+                let budgets = (docSnap && docSnap.exists()) ? (docSnap.data().categories || {}) : {};
 
-                const catInfo = CATEGORIES.find(c => c.id === cat) || CATEGORIES.find(c => c.label === cat) || { id: cat, icon: 'category', color: '#64748b' };
-                const displayLabel = catInfo.label || cat;
+                // Default Testing Limits for Atome
+                if (!budgets && account === 'atome') {
+                    budgets = {
+                        'Shopping': 1000,
+                        'Online shopping': 2000,
+                        'Vehicle': 2000
+                    };
+                    await setDoc(budgetRef, { categories: budgets }, { merge: true });
+                }
 
-                const spentDisplay = (() => {
-                    const isHidden = localStorage.getItem('balance_hidden') === 'true';
-                    if (isHidden) return '******';
-                    
-                    const spentStr = Math.round(spent).toLocaleString();
-                    if (spent <= limit) return `₱${spentStr}`;
+                if (!budgets || Object.keys(budgets).length === 0) {
+                    listContainer.innerHTML = '<div style="text-align:center; padding:30px 20px; color:#94a3b8; font-size:10px; font-weight:600; border: 1px dashed #e2e8f0; border-radius: 5px;">No category limits set.<br>Click ADD to start budgeting.</div>';
+                    return;
+                }
 
-                    // NEW Rule:
-                    // 1. If OVERSPEND is 1000 or more: Everything turns RED (PHP symbol, Commas, Digits)
-                    if ((spent - limit) >= 1000) {
-                        return `<span style="color: #ef4444;">₱${spentStr}</span>`;
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+
+                const itemsHTML = Object.entries(budgets).map(([cat, limit]) => {
+                    // Calculate spent for this category THIS MONTH
+                    let spent = 0;
+                    if (window.allTxns) {
+                        window.allTxns.forEach(t => {
+                            const d = new Date(t.date);
+                            if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
+                                const mapped = getMerchantDisplay(t.merchant, t);
+                                const itemCatLabel = displayCategoryName(mapped.category);
+                                if (mapped.category === cat || itemCatLabel === cat) {
+                                    spent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                                }
+                            }
+                        });
                     }
 
-                    // 2. Minor Overspend (< 1000): Partial coloring
-                    // PHP symbol and Commas are gray. Matching leading digits are gray.
-                    const limitStr = Math.round(limit).toLocaleString();
-                    const sDigits = spentStr.replace(/[^\d]/g, '');
-                    const lDigits = limitStr.replace(/[^\d]/g, '').padStart(sDigits.length, '0');
+                    const percent = Math.min((spent / limit) * 100, 100);
                     
-                    let result = '<span style="color: #94a3b8;">₱</span>';
-                    let mismatchStarted = false;
-                    
-                    for (let i = 0, dIdx = 0; i < spentStr.length; i++) {
-                        const char = spentStr[i];
-                        if (/\d/.test(char)) {
-                            const limitDigit = lDigits[dIdx];
-                            
-                            if (!mismatchStarted && parseInt(char) > parseInt(limitDigit)) {
-                                mismatchStarted = true;
-                            }
-                            
-                            if (mismatchStarted) {
-                                result += `<span style="color: #ef4444;">${char}</span>`;
+                    // User requested dynamic colors/icons
+                    let spentColor = ''; 
+                    if (percent >= 90) spentColor = 'color: #ef4444; font-weight: 800;'; 
+                    else if (percent >= 75) spentColor = 'color: #f97316; font-weight: 700;'; 
+                    else if (percent < 50) spentColor = 'color: #10b981; font-weight: 700;';
+
+                    let statusClass = '';
+                    if (percent >= 90) statusClass = 'high';
+                    else if (percent >= 75) statusClass = 'mid';
+                    else if (percent >= 50) statusClass = 'low';
+
+                    const catInfo = CATEGORIES.find(c => c.id === cat) || CATEGORIES.find(c => c.label === cat) || { id: cat, icon: 'category', color: '#64748b' };
+                    const displayLabel = catInfo.label || cat;
+
+                    const spentDisplay = (() => {
+                        const isHidden = localStorage.getItem('balance_hidden') === 'true';
+                        if (isHidden) return '******';
+                        
+                        const spentStr = '₱' + Math.round(spent).toLocaleString();
+                        const limitStr = '₱' + Math.round(limit).toLocaleString();
+                        
+                        if (spent <= limit) return spentStr;
+
+                        // Rules for Overspend
+                        if ((spent - limit) >= 1000) {
+                            return `<span style="color: #ef4444;">${spentStr}</span>`;
+                        }
+
+                        const sDigits = spentStr.replace(/[^\d]/g, '');
+                        const lDigits = limitStr.replace(/[^\d]/g, '').padStart(sDigits.length, '0');
+                        
+                        let result = '';
+                        let mismatchStarted = false;
+                        
+                        for (let i = 0, dIdx = 0; i < spentStr.length; i++) {
+                            const char = spentStr[i];
+                            if (/\d/.test(char)) {
+                                const limitDigit = lDigits[dIdx];
+                                if (!mismatchStarted && parseInt(char) > parseInt(limitDigit)) mismatchStarted = true;
+                                result += `<span style="color: ${mismatchStarted ? '#ef4444' : '#94a3b8'};">${char}</span>`;
+                                dIdx++;
                             } else {
                                 result += `<span style="color: #94a3b8;">${char}</span>`;
                             }
-                            dIdx++;
-                        } else {
-                            // Commas and separators stay gray in minor overspend
-                            result += `<span style="color: #94a3b8;">${char}</span>`;
                         }
-                    }
-                    return result;
-                })();
+                        return result;
+                    })();
 
-                return `
-                    <div class="cat-budget-item" onclick="handleCatClick(event, '${cat}')" data-cat="${cat}">
-                        <div class="cat-budget-info">
-                            <div class="cat-budget-name-group">
-                                <div class="cat-budget-icon-box ${catInfo.cls || ''}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
-                                    <i class="material-icons" style="font-size: 18px;">${catInfo.icon}</i>
+                    return `
+                        <div class="cat-budget-item" onclick="handleCatClick(event, '${cat}')" data-cat="${cat}">
+                            <div class="cat-budget-info">
+                                <div class="cat-budget-name-group">
+                                    <div class="cat-budget-icon-box ${catInfo.cls || ''}" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0,0,0,0.03);">
+                                        <i class="material-icons" style="font-size: 18px;">${catInfo.icon}</i>
+                                    </div>
+                                    <span class="cat-budget-name">${displayLabel}</span>
                                 </div>
-                                <span class="cat-budget-name">${displayLabel}</span>
+                                <div class="cat-budget-values">
+                                    <span class="privacy-mask" style="${spentColor}" data-raw="₱${Math.round(spent).toLocaleString()}">
+                                        ${spentDisplay}
+                                    </span>
+                                    <span class="budget-sep">/</span>
+                                    <span class="privacy-mask" style="color: #64748b;" data-raw="₱${Math.round(limit).toLocaleString()}">₱${Math.round(limit).toLocaleString()}</span>
+                                </div>
                             </div>
-                            <div class="cat-budget-values">
-                                <span class="privacy-mask" style="${spentColor}" data-raw="₱${Math.round(spent).toLocaleString()}">
-                                    ${spentDisplay}
-                                </span>
-                                <span class="budget-sep">/</span>
-                                <span class="privacy-mask" style="color: #64748b;" data-raw="₱${Math.round(limit).toLocaleString()}">${isHidden ? '******' : '₱' + Math.round(limit).toLocaleString()}</span>
+                            <div class="cat-budget-progress-bg">
+                                <div class="cat-budget-progress-fill ${statusClass}" style="width: ${percent}%;"></div>
                             </div>
                         </div>
-                        <div class="cat-budget-progress-bg">
-                            <div class="cat-budget-progress-fill ${statusClass}" style="width: ${percent}%;"></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
 
-            listContainer.innerHTML = itemsHTML;
+                listContainer.innerHTML = itemsHTML;
+            } catch (err) {
+                console.error("[Category Limits] UI Update Failed:", err);
+            }
         };
 
         window.handleCatClick = async (e, category) => {
@@ -6184,7 +6457,16 @@ Be direct, practical, and helpful.`;
             const docSnap = await getDoc(budgetRef);
             
             if (docSnap.exists()) {
-                const currentLimit = docSnap.data().categories[category] || 0;
+                const budgetsData = docSnap.data().categories || {};
+                
+                // Case-insensitive lookup fallback
+                let currentLimit = budgetsData[category];
+                if (currentLimit === undefined) {
+                    const lowerCat = category.toLowerCase();
+                    const foundKey = Object.keys(budgetsData).find(k => k.toLowerCase() === lowerCat);
+                    if (foundKey) currentLimit = budgetsData[foundKey];
+                }
+                if (currentLimit === undefined) currentLimit = 0;
                 
                 const amountInput = document.getElementById('budget-cat-amount');
                 const saveBtn = document.getElementById('save-cat-budget-btn');
@@ -6192,24 +6474,37 @@ Be direct, practical, and helpful.`;
                 const selectionArea = document.getElementById('cat-budget-selection-area');
                 
                 title.innerText = `Edit ${category} Limit`;
-                amountInput.value = currentLimit;
+                // Use setTimeout to ensure the value is set after the modal starts showing
+                setTimeout(() => {
+                    amountInput.value = currentLimit;
+                    amountInput.focus();
+                }, 50);
                 if (selectionArea) selectionArea.style.display = 'none';
                 
-                document.getElementById('cat-budget-modal').classList.add('show');
-                document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-                if (window.NavState) window.NavState.pushModalState('cat-budget', () => closeModals(true));
+                const modal = document.getElementById('cat-budget-modal');
+                modal.classList.remove('closing');
+                modal.style.display = 'flex';
+                modal.classList.add('show');
+                if (window.NavState) window.NavState.pushModalState('cat-budget-modal', () => closeModals(true));
                 
                 saveBtn.onclick = async () => {
                     const limit = parseFloat(amountInput.value);
                     if (isNaN(limit) || limit <= 0) return showToast('Enter a valid amount');
 
-                    const budgets = docSnap.data().categories;
+                    const budgets = docSnap.data().categories || {};
                     budgets[category] = limit;
 
-                    await setDoc(budgetRef, { categories: budgets }, { merge: true });
+                    // OPTIMISTIC UI: Close modal and show toast immediately
+                    closeModals('cat-budget-modal');
                     showToast(`Updated ${category} budget`);
-                    closeModals();
-                    updateCategoryBudgetsUI();
+
+                    // Perform save in background
+                    setDoc(budgetRef, { categories: budgets }, { merge: true }).then(() => {
+                        updateCategoryBudgetsUI();
+                    }).catch(err => {
+                        console.error("Failed to save budget:", err);
+                        showToast("Error saving budget", "error");
+                    });
                 };
             }
         };
@@ -6218,6 +6513,8 @@ Be direct, practical, and helpful.`;
             const grid = document.getElementById('budget-cat-grid');
             const amountInput = document.getElementById('budget-cat-amount');
             const saveBtn = document.getElementById('save-cat-budget-btn');
+            
+            if (!grid || !amountInput || !saveBtn) return;
             
             amountInput.value = '';
             selectedBudgetCatId = null;
@@ -6242,12 +6539,17 @@ Be direct, practical, and helpful.`;
             const selectionArea = document.getElementById('cat-budget-selection-area');
             if (selectionArea) selectionArea.style.display = 'block';
 
-            document.getElementById('cat-budget-modal').classList.add('show');
-            document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
-            document.querySelector('.fab')?.classList.add('blur-active');
-            document.querySelector('.bottom-nav')?.classList.add('blur-active');
-            if (window.NavState) window.NavState.pushModalState('cat-budget', () => closeModals(true));
-            setTimeout(() => amountInput.focus(), 300);
+            const modal = document.getElementById('cat-budget-modal');
+            modal.classList.remove('closing');
+            modal.style.display = 'flex';
+            modal.classList.add('show');
+            if (window.NavState) window.NavState.pushModalState('cat-budget-modal', () => closeModals(true));
+            
+            // Force clear and focus
+            setTimeout(() => {
+                amountInput.value = '';
+                amountInput.focus();
+            }, 100);
 
             saveBtn.onclick = async () => {
                 if (!selectedBudgetCatId) return showToast('Please select a category');
@@ -6259,13 +6561,20 @@ Be direct, practical, and helpful.`;
                 const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
                 
                 const docSnap = await getDoc(budgetRef).catch(() => null);
-                let budgets = (docSnap && docSnap.exists()) ? docSnap.data().categories : {};
+                let budgets = (docSnap && docSnap.exists()) ? (docSnap.data().categories || {}) : {};
                 budgets[selectedBudgetCatId] = limit;
 
-                await setDoc(budgetRef, { categories: budgets }, { merge: true });
+                // OPTIMISTIC UI: Close and show toast immediately
+                closeModals('cat-budget-modal');
                 showToast(`Budget set for ${selectedBudgetCatId}`);
-                closeModals();
-                updateCategoryBudgetsUI();
+
+                // Perform save in background
+                setDoc(budgetRef, { categories: budgets }, { merge: true }).then(() => {
+                    updateCategoryBudgetsUI();
+                }).catch(err => {
+                    console.error("Failed to save budget:", err);
+                    showToast("Error saving budget", "error");
+                });
             };
         };
 
@@ -6307,16 +6616,8 @@ Be direct, practical, and helpful.`;
                 }
             }
             
-            // CLICK OUTSIDE TO CLOSE MODALS
-            if (e.target.classList.contains('modal-overlay') || e.target.classList.contains('dialog-overlay')) {
-                if (e.target.id === 'receipts-modal') {
-                    window.closeReceiptsModal();
-                } else if (e.target.id === 'obligation-modal') {
-                    window.closeObligationModal();
-                } else if (typeof window.closeModals === 'function') {
-                    window.closeModals();
-                }
-            }
+            // CLICK OUTSIDE TO CLOSE MODALS handled by overlay onclick to prevent double-firing
+
             
             // PIE CHART TOOLTIP CLOSE ON OUTSIDE TAP
             const tooltip = document.getElementById('chart-tooltip');
@@ -6349,7 +6650,8 @@ Be direct, practical, and helpful.`;
                 }
 
                 localStorage.clear();
-                window.allTxns = [];
+                // Modified 2026-03-27: Set to null for consistency
+                window.allTxns = null;
                 const historyContainer = document.getElementById('history-container');
                 const logContainer = document.getElementById('log-container');
                 if (historyContainer) historyContainer.innerHTML = '';
@@ -6839,12 +7141,16 @@ Be direct, practical, and helpful.`;
             });
         };
 
+        window.currentReceiptSectionId = null;
+
+        // Section metadata: { id, name }
+        if (!window.receiptSections) window.receiptSections = [];
+
         window.openReceiptsModal = (accId) => {
             receiptsModalAccount = accId;
             const modal = document.getElementById('receipts-modal');
             const accName = document.getElementById('receipts-acc-name');
             
-            // Map account ID to readable name
             let name = "My Wallet";
             if (accId === 'bpi') name = "BPI Account";
             else if (accId === 'atome') name = "Atome Card";
@@ -6855,12 +7161,25 @@ Be direct, practical, and helpful.`;
                 setTimeout(() => modal.classList.add('show'), 10);
             }
             
-            // Reset calculator
             currentCalcInput = "0";
             calcHistory = "";
             updateCalcUI();
             
-            // Update receipts list
+            // Load sections from config
+            if (window.safeToSpendConfig && window.safeToSpendConfig.sections) {
+                window.receiptSections = window.safeToSpendConfig.sections;
+            }
+            
+            // Auto-select latest section if exists
+            if (window.safeToSpendConfig && window.safeToSpendConfig.receipts && window.safeToSpendConfig.receipts.length > 0) {
+                const latest = window.safeToSpendConfig.receipts.reduce((prev, current) => (prev.timestamp > current.timestamp) ? prev : current);
+                if (latest.sectionId) window.currentReceiptSectionId = latest.sectionId;
+            } else if (window.receiptSections.length > 0) {
+                window.currentReceiptSectionId = window.receiptSections[window.receiptSections.length - 1].id;
+            } else {
+                window.currentReceiptSectionId = null;
+            }
+
             updateReceiptsUI();
             
             window.modalOpen = true;
@@ -6868,7 +7187,6 @@ Be direct, practical, and helpful.`;
                 window.NavState.pushModalState('receipts-modal', () => closeReceiptsModal(true));
             }
             
-            // Disable body scroll
             document.body.style.overflow = 'hidden';
         };
 
@@ -6968,6 +7286,19 @@ Be direct, practical, and helpful.`;
                 showToast("Enter a valid amount");
                 return;
             }
+
+            // Check if there are sections to pick from
+            const receipts = (window.safeToSpendConfig && window.safeToSpendConfig.receipts) || [];
+            const sectionIds = [...new Set(receipts.map(r => r.sectionId).filter(Boolean))];
+            // Also include empty sections from metadata
+            window.receiptSections.forEach(s => {
+                if (!sectionIds.includes(s.id)) sectionIds.push(s.id);
+            });
+
+            if (sectionIds.length === 0) {
+                showToast("Create a section first using 'New Section'");
+                return;
+            }
             
             // Repurpose the obligation-modal style for Receipts
             const titleInput = document.getElementById('ob-input-title');
@@ -6978,7 +7309,6 @@ Be direct, practical, and helpful.`;
             const msgDisplay = modal ? modal.querySelector('.dialog-msg') : null;
 
             if (!modal || !titleInput || !amountInput) {
-                // Fallback to simple dialog if modal elements not found
                 showAppDialog({
                     title: 'Receipt Name',
                     message: 'Enter a title for this receipt:',
@@ -6997,18 +7327,47 @@ Be direct, practical, and helpful.`;
             }
 
             titleDisplay.innerText = "New Payment";
-            if (msgDisplay) msgDisplay.innerText = "Mark this payment as income or expense.";
+            if (msgDisplay) {
+                // Build section picker dropdown
+                let sectionPickerHtml = `<div style="margin-bottom: 6px;">Mark this payment as income or expense.</div>`;
+                sectionPickerHtml += `<div style="margin-top: 8px;"><label style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 6px;">Add to Section</label>`;
+                sectionPickerHtml += `<select id="ob-section-picker" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 2px solid #e2e8f0; font-size: 13px; font-weight: 700; color: #1e293b; background: #f8fafc; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22><path fill=%22%2364748b%22 d=%22M1 1l5 5 5-5%22 stroke=%22%2364748b%22 stroke-width=%221.5%22 fill=%22none%22/></svg>'); background-repeat: no-repeat; background-position: right 12px center;">`;
+                // Filtering sectionIds to only show those that have metadata or were explicitly created
+                const validSectionIds = sectionIds.filter(sId => {
+                    const secMeta = window.receiptSections.find(s => s.id === sId);
+                    // Only include if it has a name (sanity check to avoid "Section 12345")
+                    return secMeta && secMeta.name && !secMeta.name.startsWith('Section ');
+                });
+
+                if (validSectionIds.length === 0 && window.receiptSections.length > 0) {
+                    // Fallback to all sections if somehow all are "broken"
+                    window.receiptSections.forEach(s => {
+                        if (!validSectionIds.includes(s.id)) validSectionIds.push(s.id);
+                    });
+                }
+
+                validSectionIds.forEach(sId => {
+                    const secMeta = window.receiptSections.find(s => s.id === sId);
+                    const secName = secMeta ? secMeta.name : ('Section ' + sId);
+                    const isSelected = sId === window.currentReceiptSectionId ? 'selected' : '';
+                    sectionPickerHtml += `<option value="${sId}" ${isSelected}>${secName}</option>`;
+                });
+                sectionPickerHtml += `</select></div>`;
+                msgDisplay.innerHTML = sectionPickerHtml;
+            }
             titleInput.value = "";
             amountInput.value = amount.toFixed(2);
             document.getElementById('ob-type-selector').style.display = 'flex';
-            setObType('expense'); // Default for calc
+            setObType('expense');
             modal.classList.add('show');
             if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
 
             saveBtn.onclick = () => {
                 const title = titleInput.value.trim() || "New Receipt";
                 const finalAmount = parseFloat(amountInput.value) || amount;
-                addReceipt(title, finalAmount, currentObType);
+                const picker = document.getElementById('ob-section-picker');
+                const targetSection = picker ? Number(picker.value) : window.currentReceiptSectionId;
+                addReceipt(title, finalAmount, currentObType, targetSection);
                 closeObligationModal();
                 currentCalcInput = "0";
                 calcHistory = "";
@@ -7017,7 +7376,7 @@ Be direct, practical, and helpful.`;
             };
         };
 
-        window.addManualReceipt = () => {
+        window.addManualReceipt = (targetSectionId) => {
             const titleInput = document.getElementById('ob-input-title');
             const amountInput = document.getElementById('ob-input-amount');
             const modal = document.getElementById('obligation-modal');
@@ -7042,23 +7401,30 @@ Be direct, practical, and helpful.`;
                     showToast("Please enter a valid amount");
                     return;
                 }
-                addReceipt(title, amount, currentObType);
+                addReceipt(title, amount, currentObType, targetSectionId || window.currentReceiptSectionId);
                 closeObligationModal();
                 showToast(currentObType.toUpperCase() + " added");
             };
         };
 
         // Receipts CRUD
-        function addReceipt(title, amount, type = 'expense') {
-            if (!window.safeToSpendConfig) window.safeToSpendConfig = { receipts: [] };
+        function addReceipt(title, amount, type = 'expense', targetSectionId) {
+            if (!window.safeToSpendConfig) window.safeToSpendConfig = { receipts: [], sections: [] };
             if (!window.safeToSpendConfig.receipts) window.safeToSpendConfig.receipts = [];
             
+            const sectionId = targetSectionId || window.currentReceiptSectionId;
+            if (!sectionId) {
+                showToast("Create a section first");
+                return;
+            }
+
             const newReceipt = {
                 id: 'rcpt_' + Date.now(),
                 title: title,
                 amount: amount,
-                type: type, // 'income' or 'expense'
+                type: type,
                 included: true,
+                sectionId: sectionId,
                 timestamp: Date.now()
             };
             
@@ -7066,6 +7432,100 @@ Be direct, practical, and helpful.`;
             saveReceiptsData();
             updateReceiptsUI();
         }
+
+        window.addNewReceiptSection = () => {
+            showAppDialog({
+                title: 'New Section',
+                message: 'Enter a name for this section:',
+                input: true,
+                placeholder: 'e.g. Groceries, Bills...',
+                callback: (name) => {
+                    if (name === false) return;
+                    const sectionName = (name || '').trim() || 'Section ' + (window.receiptSections.length + 1);
+                    const newId = Date.now();
+                    window.receiptSections.push({ id: newId, name: sectionName });
+                    window.currentReceiptSectionId = newId;
+                    if (!window.safeToSpendConfig) window.safeToSpendConfig = { receipts: [], sections: [] };
+                    window.safeToSpendConfig.sections = window.receiptSections;
+                    saveReceiptsData();
+                    updateReceiptsUI();
+                    showToast('Section "' + sectionName + '" created');
+                }
+            });
+        };
+
+        window.renameReceiptSection = (sectionId) => {
+            const sIdStr = String(sectionId);
+            const sec = window.receiptSections.find(s => String(s.id) === sIdStr);
+            const currentName = sec ? sec.name : (sectionId === 'legacy' ? 'Legacy Items' : 'New Section');
+            
+            showAppDialog({
+                title: 'Rename Section',
+                message: 'Enter a new name:',
+                input: true,
+                value: currentName,
+                callback: (name) => {
+                    if (name === false) return;
+                    const newName = (name || '').trim();
+                    if (!newName) return;
+                    
+                    if (sec) {
+                        sec.name = newName;
+                    } else {
+                        // Push new metadata entry
+                        const idToStore = (sectionId === 'legacy') ? 'legacy' : (isNaN(sectionId) ? sectionId : Number(sectionId));
+                        window.receiptSections.push({ id: idToStore, name: newName });
+                    }
+                    
+                    if (!window.safeToSpendConfig) window.safeToSpendConfig = { receipts: [], sections: [] };
+                    window.safeToSpendConfig.sections = window.receiptSections;
+                    saveReceiptsData();
+                    updateReceiptsUI();
+                    showToast('Renamed to "' + newName + '"');
+                }
+            });
+        };
+
+        window.deleteReceiptSection = async (sectionId) => {
+            const sIdStr = String(sectionId);
+            const receipts = (window.safeToSpendConfig && window.safeToSpendConfig.receipts) || [];
+            
+            // Normalize sectionId in receipts to handle string/number mismatch
+            const sectionReceipts = receipts.filter(r => String(r.sectionId || 'legacy') === sIdStr);
+            const sec = window.receiptSections.find(s => String(s.id) === sIdStr);
+            const secName = sec ? sec.name : (sectionId === 'legacy' ? 'Legacy Items' : 'this section');
+            
+            if (sectionReceipts.length > 0) {
+                const confirmed = await showAppDialog({
+                    title: 'Delete Section?',
+                    message: `"${secName}" has ${sectionReceipts.length} receipt(s). Delete the section and all its receipts?`,
+                    confirm: true
+                });
+                if (!confirmed) return;
+            } else {
+                const confirmed = await showAppDialog({
+                    title: 'Delete Empty Section?',
+                    message: `Are you sure you want to delete "${secName}"?`,
+                    confirm: true
+                });
+                if (!confirmed) return;
+            }
+            
+            // Remove receipts in this section
+            window.safeToSpendConfig.receipts = receipts.filter(r => String(r.sectionId || 'legacy') !== sIdStr);
+            // Remove section metadata
+            window.receiptSections = window.receiptSections.filter(s => String(s.id) !== sIdStr);
+            window.safeToSpendConfig.sections = window.receiptSections;
+            
+            // If deleted section was current, switch to another
+            if (String(window.currentReceiptSectionId) === sIdStr) {
+                window.currentReceiptSectionId = window.receiptSections.length > 0 ? window.receiptSections[window.receiptSections.length - 1].id : null;
+            }
+            
+            saveReceiptsData();
+            updateReceiptsUI();
+            showToast('Section deleted');
+        };
 
         window.toggleReceiptInclusion = (id) => {
             const rcpt = window.safeToSpendConfig.receipts.find(r => r.id === id);
@@ -7102,6 +7562,9 @@ Be direct, practical, and helpful.`;
             titleInput.value = rcpt.title;
             amountInput.value = rcpt.amount;
             document.getElementById('ob-type-selector').style.display = 'flex';
+            // Sync modal with reality - USER REQUEST 2026-03-27
+            if (window.setObType) window.setObType(rcpt.type || 'expense');
+            
             modal.classList.add('show');
             if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
 
@@ -7125,11 +7588,13 @@ Be direct, practical, and helpful.`;
 
         function saveReceiptsData() {
             localStorage.setItem('wallet_receipts_backup', JSON.stringify(window.safeToSpendConfig.receipts));
+            localStorage.setItem('wallet_receipt_sections_backup', JSON.stringify(window.receiptSections));
             
             const uid = auth.currentUser?.uid;
             if (uid) {
                 setDoc(doc(db, "users", uid, "config", "safe_to_spend"), { 
-                    receipts: window.safeToSpendConfig.receipts 
+                    receipts: window.safeToSpendConfig.receipts,
+                    sections: window.receiptSections
                 }, { merge: true })
                 .then(() => console.log("Receipts synced to cloud"))
                 .catch(e => console.error("Sync error:", e));
@@ -7145,55 +7610,138 @@ Be direct, practical, and helpful.`;
             const summaryNetEl = document.getElementById('summary-total-net');
             if (!container) return;
             
-            const receipts = window.safeToSpendConfig.receipts || [];
+            let receipts = (window.safeToSpendConfig && window.safeToSpendConfig.receipts) || [];
+            const hasSections = window.receiptSections.length > 0;
             
-            if (receipts.length === 0) {
+            if (receipts.length === 0 && !hasSections) {
                 container.innerHTML = `
                     <div class="empty-receipts">
                         <i class="material-icons">inventory_2</i>
-                        <p>No budget items yet. Use the calculator or add manually.</p>
+                        <p>No sections yet. Tap "New Section" to get started.</p>
                     </div>`;
                 if (totalEl) totalEl.innerText = "₱0.00";
                 if (summaryNetEl) summaryNetEl.innerText = "₱0.00";
                 return;
             }
             
-            let totalIncome = 0;
-            let totalExpenses = 0;
-            
-            // Sort by timestamp newest first
-            receipts.sort((a,b) => b.timestamp - a.timestamp);
-            
-            container.innerHTML = receipts.map(rcpt => {
-                const isExcluded = !rcpt.included;
-                const isIncome = rcpt.type === 'income';
+            let html = '';
+            let grandTotalNet = 0;
+
+            // Group by sectionId
+            const grouped = {};
+            receipts.forEach(rcpt => {
+                const sId = rcpt.sectionId || 'legacy';
+                if (!grouped[sId]) {
+                    grouped[sId] = {
+                        items: [],
+                        net: 0,
+                        lastTimestamp: 0
+                    };
+                }
+                grouped[sId].items.push(rcpt);
+                if (rcpt.timestamp > grouped[sId].lastTimestamp) {
+                    grouped[sId].lastTimestamp = rcpt.timestamp;
+                }
+            });
+
+            // Ensure all sections from metadata appear (even if empty)
+            window.receiptSections.forEach(sec => {
+                if (!grouped[sec.id]) {
+                    grouped[sec.id] = { items: [], net: 0, lastTimestamp: sec.id };
+                }
+            });
+
+            // Sort sections by metadata order (newest added last = show first)
+            const sectionOrder = window.receiptSections.map(s => String(s.id));
+            const sortedSections = Object.keys(grouped).sort((a, b) => {
+                const idxA = sectionOrder.indexOf(a);
+                const idxB = sectionOrder.indexOf(b);
+                // Sections in metadata appear by most-recently-added first
+                if (idxA !== -1 && idxB !== -1) return idxB - idxA;
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+                return grouped[b].lastTimestamp - grouped[a].lastTimestamp;
+            });
+
+            sortedSections.forEach((sId) => {
+                const group = grouped[sId];
+                group.items.sort((a,b) => b.timestamp - a.timestamp);
+
+                const sIdStr = String(sId);
+                const isActive = sIdStr === String(window.currentReceiptSectionId);
+                const secMeta = window.receiptSections.find(s => String(s.id) === sIdStr);
+                const sectionName = secMeta ? secMeta.name : (sId === 'legacy' ? 'Legacy Items' : 'Section');
                 
-                if (!isExcluded) {
-                    if (isIncome) totalIncome += rcpt.amount;
-                    else totalExpenses += rcpt.amount;
+                let sectionNet = 0;
+                let itemsHtml = '';
+
+                if (group.items.length === 0) {
+                    itemsHtml = `<div style="text-align: center; color: #94a3b8; font-size: 11px; padding: 16px; font-style: italic;">Empty section. Add items below.</div>`;
+                } else {
+                    itemsHtml = group.items.map(rcpt => {
+                        const isExcluded = !rcpt.included;
+                        const isIncome = rcpt.type === 'income';
+                        
+                        if (!isExcluded) {
+                            if (isIncome) sectionNet += rcpt.amount;
+                            else sectionNet -= rcpt.amount;
+                        }
+
+                        return `
+                            <div class="receipt-item ${rcpt.type || 'expense'} ${isExcluded ? 'excluded' : ''}">
+                                <div class="receipt-check" onclick="toggleReceiptInclusion('${rcpt.id}')">
+                                    <i class="material-icons">${!isExcluded ? (isIncome ? 'add_circle' : 'remove_circle') : 'remove_circle_outline'}</i>
+                                </div>
+                                <div class="receipt-item-info" onclick="editReceipt('${rcpt.id}')">
+                                    <div class="receipt-item-title">${rcpt.title}</div>
+                                    <div class="receipt-item-meta">${isIncome ? 'Income' : 'Expense'}</div>
+                                </div>
+                                <div class="receipt-item-amount" onclick="editReceipt('${rcpt.id}')" style="color: ${isIncome ? '#10b981' : '#ef4444'};">${isIncome ? '+' : '-'}₱${rcpt.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
+                                <i class="material-icons receipt-delete-btn" onclick="deleteReceipt('${rcpt.id}')">delete_outline</i>
+                            </div>
+                        `;
+                    }).join('') || '<div class="empty-receipts"><i class="material-icons">receipt_long</i><p>No items in this section</p></div>';
                 }
 
-                return `
-                    <div class="receipt-item ${rcpt.type || 'expense'} ${isExcluded ? 'excluded' : ''}">
-                        <div class="receipt-check" onclick="toggleReceiptInclusion('${rcpt.id}')">
-                            <i class="material-icons">${!isExcluded ? (isIncome ? 'add_circle' : 'remove_circle') : 'remove_circle_outline'}</i>
+                grandTotalNet += sectionNet;
+
+                // Section Header & Structure
+                const sectionHeaderHtml = `
+                    <div class="receipt-section ${isActive ? 'active' : ''}" id="sec-${sId}" style="margin-bottom: 20px; background: #f8fafc; border: 1.5px solid #f1f5f9; border-radius: 16px; padding: 12px; transition: all 0.2s;">
+                        <div class="receipt-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+                                <div onclick="renameReceiptSection('${sId}')" style="font-size: 11.5px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Tap to rename">${sectionName}</div>
+                                <i class="material-icons" onclick="renameReceiptSection('${sId}')" style="font-size: 14px; color: #94a3b8; cursor: pointer;">edit</i>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                                <div style="font-size: 11.5px; font-weight: 800; color: ${sectionNet >= 0 ? '#10b981' : '#ef4444'}; white-space: nowrap;">
+                                    ${sectionNet < 0 ? '-' : ''}₱${Math.abs(sectionNet).toLocaleString(undefined, {minimumFractionDigits:2})}
+                                </div>
+                                <i class="material-icons" onclick="deleteReceiptSection('${sId}')" style="font-size: 20px; color: #ef4444; cursor: pointer; padding: 4px; opacity: 0.7;" title="Delete Section">delete_outline</i>
+                            </div>
                         </div>
-                        <div class="receipt-item-info" onclick="toggleReceiptInclusion('${rcpt.id}')">
-                            <div class="receipt-item-title">${rcpt.title}</div>
-                            <div class="receipt-item-meta">${isIncome ? 'Income' : 'Expense'}</div>
-                        </div>
-                        <div class="receipt-item-amount" onclick="editReceipt('${rcpt.id}')">₱${rcpt.amount.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
-                        <i class="material-icons receipt-delete-btn" onclick="deleteReceipt('${rcpt.id}')">delete_outline</i>
-                    </div>
                 `;
-            }).join('');
+
+                let sectionHtml = sectionHeaderHtml;
+                sectionHtml += itemsHtml;
+
+                // Per-section Add Receipt button
+                sectionHtml += `
+                    <div onclick="addManualReceipt('${sId}')" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; margin-top: 8px; border-radius: 12px; border: 1.5px dashed #d1d5db; color: #64748b; font-size: 10.5px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.01); text-transform: uppercase; letter-spacing: 0.3px;">
+                        <i class="material-icons" style="font-size: 16px;">add_circle_outline</i>
+                        Add Receipt
+                    </div>
+                </div>`;
+                
+                html += sectionHtml;
+            });
+
+            container.innerHTML = html;
             
-            const netTotal = totalIncome - totalExpenses;
-            const formattedTotal = `₱${netTotal.toLocaleString(undefined, {minimumFractionDigits:2})}`;
-            
+            const formattedTotal = `₱${Math.abs(grandTotalNet).toLocaleString(undefined, {minimumFractionDigits:2})}`;
             if (summaryNetEl) {
-                summaryNetEl.innerText = formattedTotal;
-                summaryNetEl.style.color = netTotal >= 0 ? '#10b981' : '#ef4444';
+                summaryNetEl.innerText = (grandTotalNet >= 0 ? '' : '-') + formattedTotal;
+                summaryNetEl.style.color = grandTotalNet >= 0 ? '#10b981' : '#ef4444';
             }
         }
 
@@ -7557,6 +8105,33 @@ Be direct, practical, and helpful.`;
                 case 'delete':
                     openDeleteModal(txnId, window.currentAccount);
                     break;
+                case 'classify':
+                    updateTransactionBudgetCategory(txnId, args[0]);
+                    break;
+            }
+        };
+
+        window.updateTransactionBudgetCategory = async (id, budgetCategory) => {
+            const user = auth.currentUser;
+            if (!user) return;
+            
+            // OPTIMISTIC UPDATE
+            const idx = window.allTxns.findIndex(t => t.id === id);
+            if (idx > -1) {
+                window.allTxns[idx].manualBudgetCategory = budgetCategory;
+                if (window.renderHistory) renderHistory(window.allTxns);
+                if (window.updateTripleProgressBar) updateTripleProgressBar();
+            }
+
+            try {
+                const colName = getCollectionName(window.currentAccount);
+                const docRef = doc(db, "users", user.uid, colName, id);
+                await updateDoc(docRef, { manualBudgetCategory: budgetCategory });
+                // FIX 2026-03-27: Updated toast text — 'Auto' replaced with 'N/A'
+                showToast(`Classification updated to ${budgetCategory === 'n/a' ? 'N/A' : budgetCategory || 'Auto'}`);
+                triggerHaptic('success');
+            } catch (e) {
+                log('Failed to update classification: ' + e.message, 'error');
             }
         };
 
@@ -7722,6 +8297,12 @@ Be direct, practical, and helpful.`;
         };
 
         window.confirmDuplicate = async () => {
+            const confirmBtn = document.getElementById('duplicate-confirm-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">DUPLICATING...</span>';
+            }
+            
             console.log('📋 confirmDuplicate called, currentDuplicateTxn:', currentDuplicateTxn);
             
             if (!currentDuplicateTxn) {
@@ -7747,6 +8328,7 @@ Be direct, practical, and helpful.`;
                 showToast('Please sign in to duplicate transactions');
                 closeModals();
                 currentDuplicateTxn = null;
+                if (confirmBtn) confirmBtn.disabled = false;
                 return;
             }
             
@@ -7834,6 +8416,10 @@ Be direct, practical, and helpful.`;
                 showToast(`Transaction duplicated to ${successCount} account(s)`);
             } else {
                 showToast('Failed to duplicate: ' + errorMessages.join(', '));
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = 'DUPLICATE';
+                }
             }
             
             closeModals();
@@ -8131,61 +8717,30 @@ Be direct, practical, and helpful.`;
             });
         };
         populateTxnFilter();
-        // Global navigation helpers
-        window.closeModals = (fromPopState = false) => {
-            const wasModalOpen = window.modalOpen;
-            const overlays = document.querySelectorAll('.modal-overlay.show, .dialog-overlay.show');
-            
-            // Explicitly handle budget-txn-modal if not handled by .show class
-            const btm = document.getElementById('budget-txn-modal');
-            if (btm && btm.style.display === 'flex') {
-                btm.classList.add('closing');
-            }
-
-            if (overlays.length > 0 || (btm && btm.classList.contains('closing'))) {
-                overlays.forEach(m => {
-                    m.classList.add('closing');
-                    if (window.NavState) window.NavState.popModalState(m.id);
-                });
-                
-                // Allow animation to finish before removing show and cleaning up
-                setTimeout(() => {
-                    overlays.forEach(m => {
-                        m.classList.remove('show');
-                        m.classList.remove('closing');
-                        m.style.display = 'none'; // Ensure hidden
-                    });
-                    if (btm) {
-                        btm.classList.remove('show');
-                        btm.classList.remove('closing');
-                        btm.style.display = 'none';
-                    }
-                    cleanupModalState(wasModalOpen, fromPopState);
-                }, 300); // Sync with 0.3s CSS animations
-            } else {
-                cleanupModalState(wasModalOpen, fromPopState);
-            }
-        };
-
+        // cleanupModalState is now consolidated and stack-aware
         function cleanupModalState(wasModalOpen, fromPopState) {
+            // Check if ANY modal overlays are still visible
+            const overlays = document.querySelectorAll('.modal-overlay.show, .dialog-overlay.show, .obligation-modal.show, .receipts-modal.show, .login-modal-overlay.show');
+            const stillOpen = Array.from(overlays).some(el => {
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && !el.classList.contains('closing');
+            });
+            
+            if (stillOpen) return; // Keep blur if something else is open
+
             currentTxnId = null;
             window.modalOpen = false;
             
             // Remove blur effect from background elements
-            document.querySelector('.mobile-wrapper')?.classList.remove('blur-active');
-            document.querySelector('.fab')?.classList.remove('blur-active');
-            document.querySelector('.bottom-nav')?.classList.remove('blur-active');
+            document.querySelectorAll('.mobile-wrapper, .fab, .bottom-nav').forEach(el => el.classList.remove('blur-active'));
 
             // Restore scroll
             const wrapper = document.querySelector('.mobile-wrapper');
-            if (wrapper) {
-                wrapper.style.overflow = 'auto';
-            }
+            if (wrapper) wrapper.style.overflow = 'auto';
             document.body.style.overflow = '';
             document.body.style.position = '';
             document.body.style.width = '';
             
-            // Also close iOS menu if open
             if (window.closeIOSMenu) closeIOSMenu();
             
             // Pop history state if not from popstate event
@@ -8198,12 +8753,7 @@ Be direct, practical, and helpful.`;
         // Initialize history state
         history.replaceState(null, '', '');
 
-        // Close on outside click
-        window.onclick = (e) => {
-            if (e.target.classList.contains('modal-overlay')) {
-                closeModals();
-            }
-        };
+
 
         window.openCategoryModal = (id, merchant, currentCatId) => {
             currentTxnId = id;
@@ -8710,9 +9260,11 @@ Be direct, practical, and helpful.`;
             select.value = activeAcc;
             updateManualAccountUI(activeAcc);
             
-            // Default Category
+            // Default Category & Classification
             selectedManualCatId = 'Financial Expenses';
             setTxnType('expense');
+            // FIX 2026-03-27: Default classification — 'n/a' for BPI (bank txns), 'wants' for others
+            setManualClassification(activeAcc === 'bpi' ? 'n/a' : 'wants');
             
             // Set Date Input to Today
             const d = formatLocalDate(new Date());
@@ -8798,8 +9350,15 @@ Be direct, practical, and helpful.`;
             const d = formatLocalDate(new Date(dateValue));
             document.getElementById('manual-date').value = d;
             
-            // Set category
+            // Set category and classification
             selectedManualCatId = (txn && txn.manualCategory) ? txn.manualCategory : category;
+            // FIX 2026-03-27: Migrate old Auto ('') to auto-detected category on edit
+            const loadedBudgetCat = txn ? txn.manualBudgetCategory : '';
+            if (!loadedBudgetCat || loadedBudgetCat === '') {
+                setManualClassification(autoDetectClassification(selectedManualCatId));
+            } else {
+                setManualClassification(loadedBudgetCat);
+            }
             
             // Determine type based on category
             if (selectedManualCatId === 'Income' || category === 'Income') {
@@ -8892,10 +9451,59 @@ Be direct, practical, and helpful.`;
             }).join('');
         };
 
+        // FIX 2026-03-27: Removed auto-detect hint update (no more Auto mode)
         window.selectManualCategory = (id) => {
             selectedManualCatId = id;
             renderManualCategories();
         };
+
+        // FIX 2026-03-27: Replaced Auto with N/A — 'n/a' value = not included in budget
+        window.currentManualClassification = 'wants';
+        window.setManualClassification = (category) => {
+            window.currentManualClassification = category;
+            
+            // Update UI — FIX 2026-03-27: 'n/a' replaces old '' (auto) key
+            const btns = {
+                'needs': document.getElementById('classify-needs'),
+                'wants': document.getElementById('classify-wants'),
+                'savings': document.getElementById('classify-savings'),
+                'n/a': document.getElementById('classify-na')
+            };
+            
+            Object.keys(btns).forEach(key => {
+                if (btns[key]) {
+                    const btnKey = key === 'n/a' ? 'na' : key;
+                    if (key === category) {
+                        btns[key].classList.add('active', btnKey);
+                    } else {
+                        btns[key].classList.remove('active', 'needs', 'wants', 'savings', 'na');
+                    }
+                }
+            });
+            
+            // Update visibility of hint — FIX 2026-03-27: Show N/A hint instead of Auto
+            const hint = document.getElementById('auto-classification-hint');
+            if (hint) {
+                if (category === 'n/a') {
+                    hint.innerText = 'N/A: Not included in budget calculations.';
+                    hint.style.display = 'block';
+                } else {
+                    hint.style.display = 'none';
+                }
+            }
+        };
+
+        function autoDetectClassification(catId) {
+            const cat = CATEGORIES.find(c => c.id === catId);
+            if (!cat) return 'wants';
+            
+            if (cat.id === 'Savings' || cat.id === 'Investments') return 'savings';
+            
+            const needsCategories = ['Rent', 'Utilities', 'Grocery', 'Transportation', 'Vehicle', 'Health', 'Education', 'Service'];
+            if (needsCategories.includes(cat.id)) return 'needs';
+            
+            return 'wants';
+        }
 
         window.saveManualTxn = async () => {
             if (auth.currentUser?.isAnonymous) {
@@ -8948,7 +9556,8 @@ Be direct, practical, and helpful.`;
                     manualCategory: selectedManualCatId,
                     category: selectedManualCatId,
                     type: manualTxnType,
-                    excluded: document.getElementById('manual-exclude-toggle').checked
+                    excluded: document.getElementById('manual-exclude-toggle').checked,
+                    manualBudgetCategory: window.currentManualClassification
                 };
 
                 // Use the selected account in the modal
@@ -9038,6 +9647,88 @@ Be direct, practical, and helpful.`;
             localStorage.setItem('offlineQueue', JSON.stringify(window.offlineQueue));
             updateOfflineQueueCard();
             showOfflineSnackbar(type, merchant);
+        }
+
+        window.closeModals = function(targetIdOrFromHistory = null, fromHistory = false) {
+            const wasModalOpen = window.modalOpen;
+            let targetId = null;
+            let isFromHistory = fromHistory;
+
+            // Handle legacy calls or Capacitor calls where true is passed as first arg
+            if (targetIdOrFromHistory === true) {
+                isFromHistory = true;
+                targetId = null;
+            } else {
+                targetId = targetIdOrFromHistory;
+            }
+
+            const ids = [
+                'duplicate-modal',
+                'manual-txn-modal', 
+                'cat-modal',
+                'app-dialog',
+                'budget-modal-content', 
+                'budget-txn-modal', 
+                'account-select-modal',
+                'budget-manual-entry-modal',
+                'budget-manual-entry-modal-edit',
+                'merchant-picker-modal',
+                'merchant-details-modal',
+                'merchant-insights-modal',
+                'login-modal',
+                'obligation-modal',
+                'receipts-modal',
+                'cat-budget-modal',
+                'delete-modal',
+                'auth-trouble-modal'
+            ];
+            
+            let targetToClose = null;
+            if (typeof targetId === 'string' && targetId) {
+                targetToClose = targetId;
+            } else {
+                // Find top-most open modal (reverse of ids list)
+                const reversedIds = [...ids].reverse();
+                for (const id of reversedIds) {
+                    const el = document.getElementById(id);
+                    if (el && (el.classList.contains('show') || el.style.display === 'flex' || el.style.display === 'block')) {
+                        // CRITICAL: If the top-most visible modal is ALREADY closing, stop everything.
+                        // Do NOT skip it and find the parent below it!
+                        if (el.classList.contains('closing')) return;
+                        targetToClose = id;
+                        break;
+                    }
+                }
+            }
+
+            if (!targetToClose) {
+                // If nothing found but we were told to cleanup
+                if (isFromHistory) cleanupModalState(wasModalOpen, true);
+                return;
+            }
+
+            // Sync with browser history
+            if (!isFromHistory && window.NavState && window.NavState.modalStack.some(m => m.id === targetToClose)) {
+                history.back();
+                return;
+            }
+
+            const el = document.getElementById(targetToClose);
+            if (el) {
+                el.classList.add('closing');
+                if (window.NavState) window.NavState.popModalState(targetToClose);
+                setTimeout(() => {
+                    // CRITICAL RACE CONDITION FIX: 
+                    // If the modal was re-opened (has 'show' class) while this timeout was pending, 
+                    // do NOT hide it or remove the 'show' class.
+                    if (el.classList.contains('show') && !el.classList.contains('closing')) {
+                        return;
+                    }
+                    el.classList.remove('show', 'closing');
+                    el.style.display = 'none';
+                    cleanupModalState(wasModalOpen, isFromHistory);
+                }, 300);
+            }
         }
 
         function updateOfflineQueueCard() {
@@ -9989,10 +10680,12 @@ Be direct, practical, and helpful.`;
                         <span style="font-weight: 900; font-size: 13px; color: #1e293b; text-transform: uppercase; letter-spacing: 0.5px;">Itemized Receipts</span>
                     </div>
                     
-                    <button class="manual-receipt-btn" onclick="addManualReceipt()">
-                        <i class="material-icons">add_circle_outline</i>
-                        ADD MANUAL RECEIPT
-                    </button>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <button class="manual-receipt-btn" onclick="addNewReceiptSection()" style="flex: 1; padding: 12px 10px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-color: rgba(59, 130, 246, 0.2); font-size: 11px;">
+                            <i class="material-icons" style="font-size: 16px;">post_add</i>
+                            NEW SECTION
+                        </button>
+                    </div>
 
                     <div id="receipts-items-list" class="receipts-items-list">
                         <!-- Dynamic receipts items will be injected here -->
@@ -10047,22 +10740,22 @@ Be direct, practical, and helpful.`;
                 </div>
             </div>
             <div class="modal-actions" style="margin-top: 24px; justify-content: space-between; align-items: center;">
-                <div class="cancel-link" onclick="closeModals()" style="padding-left: 0;">CANCEL</div>
-                <button class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3; height: 44px; padding: 0 32px;">DUPLICATE</button>
+                <div class="cancel-link" onclick="closeModals('duplicate-modal')" style="padding-left: 0;">CANCEL</div>
+                <button id="duplicate-confirm-btn" class="mui-btn mui-btn--raised mui-btn--primary" onclick="confirmDuplicate()" style="border-radius: 12px; font-weight: 700; background-color: #2196F3; height: 44px; padding: 0 32px;">DUPLICATE</button>
             </div>
         </div>
     </div>
 
     <!-- BUDGET TRANSACTIONS MODAL -->
-    <div id="budget-txn-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
-        <div class="custom-modal" id="budget-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 80vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y; background: #ffffff;">
+    <div id="budget-txn-modal" class="modal-overlay" onclick="closeModals('budget-txn-modal'); event.stopPropagation();" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
+        <div class="custom-modal" id="budget-modal-content" onclick="event.stopPropagation()" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 80vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y; background: #ffffff;">
             
             <div id="budget-modal-drag-handle" style="width: 100%; padding: 20px 20px 8px 20px; background: #ffffff; border-radius: 24px 24px 0 0 !important; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #f1f5f9; cursor: grab;">
                 <div style="display: flex; justify-content: center; margin-bottom: 12px;">
                     <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
+                    <i class="material-icons" onclick="closeModals('budget-txn-modal')" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
                     <div id="budget-modal-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">Budget Details</div>
                     <div id="budget-modal-add-btn" style="width: 28px; display: flex; justify-content: flex-end;">
                         <i class="material-icons" style="color: #10b981; font-size: 28px; cursor: pointer;">add_circle</i>
@@ -10077,11 +10770,11 @@ Be direct, practical, and helpful.`;
     </div>
 
     <!-- BUDGET MANUAL ENTRY MODAL (FOR CASH TRANSACTIONS) -->
-    <div id="budget-manual-entry-modal" class="modal-overlay" style="align-items: center; justify-content: center; backdrop-filter: blur(8px); background: rgba(0,0,0,0.6); display: none;">
-        <div class="custom-modal" style="width: 90%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); background: #ffffff; animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+    <div id="budget-manual-entry-modal" class="modal-overlay" onclick="closeModals('budget-manual-entry-modal'); event.stopPropagation();" style="align-items: center; justify-content: center; backdrop-filter: blur(8px); background: rgba(0,0,0,0.6); display: none;">
+        <div class="custom-modal" onclick="event.stopPropagation()" style="width: 90%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); background: #ffffff; animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                 <div id="budget-manual-title" style="font-weight: 800; font-size: 20px; color: #1e293b;">Add Cash Log</div>
-                <i class="material-icons" onclick="window.closeBudgetManualModal()" style="color: #94a3b8; font-size: 24px; cursor: pointer;">close</i>
+                <i class="material-icons" onclick="closeModals('budget-manual-entry-modal')" style="color: #94a3b8; font-size: 24px; cursor: pointer;">close</i>
             </div>
             
             <div style="margin-bottom: 20px;">
@@ -10124,7 +10817,7 @@ Be direct, practical, and helpful.`;
                 </div>
                 <div style="padding: 0 20px 16px 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <i class="material-icons" onclick="closeModals()" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
+                        <i class="material-icons" onclick="closeModals('manual-txn-modal')" style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
                         <div id="modal-title" style="font-weight: 800; font-size: 16.2px; color: #1e293b;">New Transaction</div>
                         <div id="done-btn" style="font-weight: 800; font-size: 14.4px; color: #10b981; cursor: pointer; text-transform: uppercase;" onclick="saveManualTxn()">Done</div>
                     </div>
@@ -10169,6 +10862,7 @@ Be direct, practical, and helpful.`;
                         <select id="manual-account" onchange="updateManualAccountUI(this.value)" style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 700; color: #1e293b; background: transparent; padding: 0; appearance: none; -webkit-appearance: none; cursor: pointer;">
                             <option value="atome">Atome Account</option>
                             <option value="bpi">BPI Account</option>
+                            <option value="default_wallet">My Wallet</option>
                         </select>
                     </div>
                     <i class="material-icons" style="color: #cbd5e1; font-size: 20px !important;">unfold_more</i>
@@ -10220,6 +10914,19 @@ Be direct, practical, and helpful.`;
                         <input type="checkbox" id="manual-exclude-toggle" style="display: none;">
                         <div class="toggle-slider"></div>
                     </div>
+                </div>
+
+                <!-- Classification Card -->
+                <div id="classification-card" style="background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 4px; margin-bottom: 60px;">
+                    <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Budget Classification</div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="mini-classify-btn" id="classify-needs" onclick="setManualClassification('needs')">Needs</button>
+                        <button class="mini-classify-btn" id="classify-wants" onclick="setManualClassification('wants')">Wants</button>
+                        <button class="mini-classify-btn" id="classify-savings" onclick="setManualClassification('savings')">Savings</button>
+                        <!-- FIX 2026-03-27: Replaced 'Auto' with 'N/A' (not included in budget) -->
+                        <button class="mini-classify-btn" id="classify-na" onclick="setManualClassification('n/a')">N/A</button>
+                    </div>
+                    <div id="auto-classification-hint" style="font-size: 9px; color: #94a3b8; margin-top: 10px; font-weight: 600; font-style: italic; display: none;">N/A: Not included in budget calculations.</div>
                 </div>
             </div>
 
@@ -10314,7 +11021,7 @@ Be direct, practical, and helpful.`;
                     modalContent.style.transition = 'transform 0.3s ease-out';
                     modalContent.style.transform = 'translateY(100%)';
                     setTimeout(() => {
-                        closeModals();
+                        closeModals('manual-txn-modal');
                         modalContent.style.transform = '';
                         modalContent.style.transition = '';
                     }, 300);
@@ -10837,6 +11544,7 @@ Be direct, practical, and helpful.`;
                     } else if (typeof refreshUIForAccount === 'function') {
                         refreshUIForAccount(currentAcc);
                     }
+                    if (window.syncWidgets) window.syncWidgets();
                     
                     // Hide after delay
                     setTimeout(() => {
@@ -10900,9 +11608,149 @@ Be direct, practical, and helpful.`;
             const { initUI } = await import('./app-ui.js');
             console.log('🚀 Initializing UI...');
             initUI();
+            
+            // ENSURE DASHBOARD VERSION WINS (initUI/app-ui.js might overwrite it)
+            if (window.__dashboardUpdateAISummary) {
+                window.updateAISummary = window.__dashboardUpdateAISummary;
+                console.log('✅ Dashboard AI Engine Restored (Precedence Locked)');
+            }
+
         } catch (e) {
             console.error('⚠️ Module load failed (non-fatal):', e);
         }
+    </script>
+    <script>
+        window.syncWidgets = async () => {
+            if (typeof Capacitor === 'undefined' || !Capacitor.Plugins.WidgetPlugin) return;
+
+            try {
+                const allTxns = window.allTxns || [];
+                const config = window.safeToSpendConfig || { savingsAmount: 3000, obligations: [] };
+                const monthlySalary = parseFloat(localStorage.getItem('monthly_salary_target') || '0');
+                
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const monthName = now.toLocaleString('default', { month: 'long' }).toUpperCase();
+
+                let totalSpent = 0;
+                const catTotals = {};
+
+                allTxns.forEach(t => {
+                    const d = new Date(t.date);
+                    if (d.getFullYear() === year && d.getMonth() === month && !t.excluded && !t.refund && !t.reimbursed) {
+                        const mapped = typeof getMerchantDisplay === 'function' ? getMerchantDisplay(t.merchant, t) : {category: 'Other'};
+                        if (mapped.category !== 'Income') {
+                            const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                            totalSpent += amt;
+                            catTotals[mapped.category] = (catTotals[mapped.category] || 0) + amt;
+                        }
+                    }
+                });
+
+                const totalObligations = (config.obligations || []).reduce((sum, ob) => sum + (ob.amount || 0), 0);
+                const savings = config.savingsAmount || 0;
+                const available = monthlySalary - totalSpent;
+
+                // Safe to Spend Calculation
+                let balance = window.bpiBalanceVal || 0;
+                const ccPayment = Math.abs(window.atomeBalanceVal || 0);
+                let includedObligations = 0;
+                if (config.obligations) {
+                    config.obligations.forEach(ob => {
+                        if (ob.included !== false) {
+                            const amt = parseFloat(ob.amount) || 0;
+                            if (ob.isAdded === true) includedObligations -= amt;
+                            else includedObligations += amt;
+                        }
+                    });
+                }
+                const stsVal = balance - includedObligations - savings - ccPayment;
+                
+                const needsPct = monthlySalary > 0 ? (totalObligations / monthlySalary) * 100 : 0;
+                const savingsPct = monthlySalary > 0 ? (savings / monthlySalary) * 100 : 0;
+                const spentPct = monthlySalary > 0 ? (totalSpent / monthlySalary) * 100 : 0;
+
+                // Prepare Chart Data (Top 4 categories)
+                const sortedCats = Object.entries(catTotals)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 4);
+
+                const chartCategories = sortedCats.map(([name, amount]) => {
+                    const color = (window.categoryConfig && window.categoryConfig[name]?.darkColor) || "#3b82f6";
+                    return {
+                        name: name.toUpperCase(),
+                        amount: "₱" + Math.round(amount).toLocaleString(),
+                        percent: totalSpent > 0 ? (amount / totalSpent) : 0,
+                        color: color
+                    };
+                });
+
+                const widgetData = {
+                    budget: {
+                        month: monthName,
+                        needs: { left: `₱${totalObligations.toLocaleString()}`, percent: Math.round(needsPct) },
+                        wants: { left: `₱${Math.round(totalSpent).toLocaleString()}`, percent: Math.round(spentPct) },
+                        savings: { left: `₱${savings.toLocaleString()}`, percent: Math.round(savingsPct) },
+                        available: available.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})
+                    },
+                    sts: {
+                        amount: "₱" + stsVal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}),
+                        subtext: "Safe budget for BPI",
+                        isNegative: stsVal < 0
+                    },
+                    chart: {
+                        categories: chartCategories
+                    }
+                };
+
+                await Capacitor.Plugins.WidgetPlugin.syncWidgetData({ data: JSON.stringify(widgetData) });
+                console.log('✅ Widgets synced');
+            } catch (e) {
+                console.error('❌ Widget sync failed:', e);
+            }
+        };
+
+        window.toggleWidgetDarkMode = async () => {
+            const current = localStorage.getItem('widget_dark_mode') === 'true';
+            const newValue = !current;
+            localStorage.setItem('widget_dark_mode', newValue);
+            
+            if (typeof Capacitor !== 'undefined' && Capacitor.Plugins.WidgetPlugin) {
+                await Capacitor.Plugins.WidgetPlugin.setWidgetTheme({ isDark: newValue });
+                showToast(`Widget Theme: ${newValue ? 'Dark' : 'Light'}`);
+            }
+            
+            const icon = document.getElementById('widget-dark-mode-icon');
+            const text = document.getElementById('widget-dark-mode-text');
+            if (icon) icon.innerText = newValue ? 'brightness_2' : 'brightness_5';
+            if (text) text.innerText = newValue ? 'Widget Light Mode' : 'Widget Dark Mode';
+        };
+
+        // Initialize widget theme UI
+        document.addEventListener('DOMContentLoaded', () => {
+            const isDark = localStorage.getItem('widget_dark_mode') === 'true';
+            const icon = document.getElementById('widget-dark-mode-icon');
+            const text = document.getElementById('widget-dark-mode-text');
+            if (icon) icon.innerText = isDark ? 'brightness_2' : 'brightness_5';
+            if (text) text.innerText = isDark ? 'Widget Light Mode' : 'Widget Dark Mode';
+            
+            // Handle Startup Deep Link
+            if (window.handleStartupAccount) {
+                setTimeout(window.handleStartupAccount, 1500);
+            }
+        });
+
+        window.handleStartupAccount = () => {
+             if (window.startupTargetAccount) {
+                 const target = window.startupTargetAccount;
+                 console.log("🚀 Deep link target:", target);
+                 if (target === 'bpi' && typeof window.switchAccount === 'function') {
+                     window.switchAccount('bpi');
+                 }
+                 window.startupTargetAccount = null;
+             }
+        };
     </script>
 </body>
 </html>

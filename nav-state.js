@@ -321,6 +321,7 @@ const NavState = {
     pushModalState(id, closeFn) {
         this.modalStack.push({ id, closeFn });
         history.pushState({ modalId: id }, '');
+        window.modalOpen = true;
         console.log(` Modal state pushed: ${id}`);
     },
     

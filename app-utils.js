@@ -33,30 +33,6 @@ export function showToast(msg) {
     const toast = document.getElementById('toast-box');
     const msgEl = document.getElementById('toast-msg');
     
-    // Inject global toast UI override if not present
-    if (!document.getElementById('toast-override-style')) {
-        const style = document.createElement('style');
-        style.id = 'toast-override-style';
-        style.textContent = `
-            .toast-container {
-                font-size: 21px !important;
-                padding: 12px 28px !important;
-                width: max-content !important;
-                max-width: 90% !important;
-                display: flex !important;
-                justify-content: center !important;
-                align-items: center !important;
-                white-space: nowrap !important;
-                text-align: center !important;
-            }
-            .toast-container i.material-icons {
-                font-size: 14px !important;
-                flex-shrink: 0;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     if (!toast || !msgEl) {
         console.log('Toast:', msg);
         return;
@@ -339,8 +315,14 @@ export function cleanAIText(text) {
         .replace(/\n\n/g, '<br><br>') // Ensure double breaks are preserved
         .trim();
 
-    // Convert **text** to <strong>text</strong> and ensure spacing
+    // Convert **text** to <strong>text</strong> and ensure proper spacing
     cleaned = cleaned.replace(/\s?\*\*\s?(.*?)\s?\*\*\s?/g, ' <strong>$1</strong> ');
+    
+    // De-duplicate spaces and fix spaces before common punctuation
+    cleaned = cleaned
+        .replace(/\s+/g, ' ')
+        .replace(/\s([.,!?;:])/g, '$1')
+        .trim();
     
     // Convert ₱1000 to ₱1,000 using regex (Handle numbers with or without ₱)
     // Looks for 4+ digits that aren't already comma-separated

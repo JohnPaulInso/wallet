@@ -5,7 +5,9 @@ import { db, auth, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, get
 import { log, showToast, getMerchantDisplay, formatLocalDate, stripTags, triggerHaptic } from "./app-utils.js";
 
 // Global data state
-window.allTxns = [];
+// Modified 2026-03-27: Initialize to null instead of [] to prevent hasLiveData truthy flickering
+window.allTxns = null; 
+window.hasBudgetLiveData = false; // Modified 2026-03-27: Prevent cache from triggering bar build-up
 window.isSyncing = false;
 window.unsubscribeSnapshot = null;
 window.unsubscribeSafeSpend = null;
@@ -19,7 +21,7 @@ window.safeToSpendConfig = {
 export function getCollectionName(accId) {
     if (accId === 'bpi') return 'transactions_bpi';
     if (accId === 'atome') return 'transactions_atome';
-    if (accId === 'default_wallet') return 'transactions_default';
+    if (accId === 'default_wallet') return 'transactions'; // Normal wallet usually points here
     return `transactions_${accId}`;
 }
 
@@ -43,6 +45,17 @@ export async function loadData(providedUid = null) {
     window.historyLimit = 6; 
     const container = document.getElementById('history-container');
     const spinner = document.getElementById('loading-spinner');
+    
+    // Clear existing data to trigger skeletons/placeholders
+    // Modified 2026-03-27: Clear ALL buckets and reset live-data flag
+    window.allTxns = null; 
+    window.walletTxns = null;
+    window.budgetManualTxns = undefined;
+    window.hasBudgetLiveData = false;
+    window.budgetLoadStartTime = Date.now();
+    
+    if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+    else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
     
     // Clear existing listener if any
     if (window.unsubscribeSnapshot) {
@@ -68,6 +81,8 @@ export async function loadData(providedUid = null) {
                 window.allTxns = cache.txns;
                 if (window.renderHistory) window.renderHistory(cache.txns);
                 if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(cache.txns);
+                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                 hasValidCache = true;
                 
                 // Robust Chart Initialization with slight delay to ensure DOM readiness
@@ -189,6 +204,11 @@ export async function loadData(providedUid = null) {
             if (spinner) spinner.style.display = 'none';
             
             if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount); 
+            
+            // Modified 2026-03-27: Signal that we have live data for the budget widget
+            window.hasBudgetLiveData = true;
+            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+            else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
 
             if (txns.length === 0) {
                 // EMPTY STATE
@@ -233,6 +253,7 @@ export async function loadData(providedUid = null) {
                    setTimeout(() => { if (window.filterChart) window.filterChart(); }, 50);
                 }
             }
+            if (window.syncWidgets) window.syncWidgets();
         }, (error) => {
             log('Snapshot Error: ' + error.message, 'error');
             window.isDataLoading = false;
@@ -293,7 +314,8 @@ export function watchSafeToSpend() {
         }
         
         if (window.updateSafeSpendUI) window.updateSafeSpendUI();
-        if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+    else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
         if (window.updateReceiptsUI) window.updateReceiptsUI(); // Hook for persistence
     });
 }

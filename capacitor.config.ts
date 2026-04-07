@@ -5,6 +5,11 @@ const config: CapacitorConfig = {
   appName: 'Smart Wallet',
   webDir: 'www',
   plugins: {
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#00000000',
+      overlaysWebView: true,
+    },
     GoogleAuth: {
       scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
       serverClientId: '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com',

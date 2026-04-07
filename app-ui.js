@@ -8,6 +8,17 @@ import { LocalAI } from "./local-ai.js";
 
 let switchSyncTimer = null;
 
+function triggerSoftFadeInElement(el) {
+    if (!el) return;
+    el.classList.remove('fade-in-soft');
+    void el.offsetWidth;
+    el.classList.add('fade-in-soft');
+    window.clearTimeout(el._fadeInSoftTimer);
+    el._fadeInSoftTimer = window.setTimeout(() => {
+        el.classList.remove('fade-in-soft');
+    }, 320);
+}
+
 // Render Transaction History
 export function renderHistory(txns) {
     const container = document.getElementById('history-container');
@@ -37,7 +48,7 @@ export function renderHistory(txns) {
     // Ensure chronological order (descending)
     entries.sort((a, b) => new Date(b[1].items[0].date) - new Date(a[1].items[0].date));
     
-    const visibleEntries = entries.slice(0, window.historyLimit || 3);
+    const visibleEntries = entries.slice(0, window.historyLimit || 4);
 
     visibleEntries.forEach(([month, data], index) => {
         const accordion = document.createElement('div');
@@ -51,8 +62,8 @@ export function renderHistory(txns) {
         header.innerHTML = `
             <span class="month-title">${month}</span>
             <div style="display:flex; align-items:center; gap:12px;">
-                <span class="month-total privacy-mask" data-raw="₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
-                    ${isHidden ? '******' : '₱' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
+                <span class="month-total privacy-mask" data-raw="ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
+                    ${isHidden ? '******' : 'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
                 </span>
                 <i class="material-icons expand-icon">expand_more</i>
             </div>
@@ -158,13 +169,13 @@ export function renderHistory(txns) {
                         <div class="txn-details">
                             <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}${subChip}</div>
                             <div class="txn-sub">
-                                <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>
+                                <span>${shortDate}</span> ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ <span>${displayCategoryName(mapped.category)}</span>
                             </div>
                             ${displayNote ? `<div class="txn-note" style="color: ${window.categoryConfig && window.categoryConfig[mapped.category]?.darkColor || '#475569'}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                         </div>
                         <div class="txn-right">
-                            <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                            <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + 'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                             </div>
                         </div>
                     </div>
@@ -187,7 +198,7 @@ export function renderHistory(txns) {
     container.appendChild(fragment);
 
     // Load More Button
-    if (entries.length > (window.historyLimit || 6)) {
+    if (entries.length > (window.historyLimit || 4)) {
         const loadMoreWrap = document.createElement('div');
         loadMoreWrap.style.cssText = 'padding: 10px 0 40px; text-align: center;';
         const btn = document.createElement('button');
@@ -200,7 +211,7 @@ export function renderHistory(txns) {
             btn.style.opacity = '0.7';
             btn.style.pointerEvents = 'none';
             setTimeout(() => {
-                window.historyLimit = (window.historyLimit || 6) + 6;
+                window.historyLimit = (window.historyLimit || 4) + 2;
                 renderHistory(window.allTxns);
             }, 400);
         };
@@ -235,6 +246,9 @@ export function updateTripleProgressBar() {
     let needsTotal = 0;
     let wantsTotal = 0;
     let savingsTotal = 0;
+    let savingsSpent = 0; // [NEW: 2026-04-03] Track budget "theft" from savings
+    let todayNeeds = 0;
+    let todayWants = 0;
     let wantsCategoryMap = {};
 
     // --- INSTANT LOAD CACHE ---
@@ -245,14 +259,20 @@ export function updateTripleProgressBar() {
 
     // DATA READINESS (Modified 2026-03-27: Wait for ALL sources to prevent flicker)
     const isMultiWallet = !!window.walletTxns;
+    const isCurrentAccountBucketSeparate = Boolean(
+        isMultiWallet
+        && window.currentAccount
+        && !['atome', 'bpi', 'budget_manual'].includes(window.currentAccount)
+    );
     const atomeReady = isMultiWallet ? (window.walletTxns.atome !== undefined) : (window.allTxns !== null);
     const bpiReady = isMultiWallet ? (window.walletTxns.bpi !== undefined) : (window.allTxns !== null);
+    const currentReady = isCurrentAccountBucketSeparate ? Array.isArray(window.allTxns) : true;
     const manualReady = (window.budgetManualTxns !== undefined);
 
     // Categories are only "Live Ready" if ALL their possible sources are loaded (Atomic Readiness)
     // Modified 2026-03-27: Consolidate to a single ready flag to prevent partial updates/flickers
     // Added window.hasBudgetLiveData check to ensure we wait for a LIVE sync, not just cache
-    const isAggregatedReady = window.hasBudgetLiveData && atomeReady && bpiReady && manualReady;
+    const isAggregatedReady = window.hasBudgetLiveData && atomeReady && bpiReady && manualReady && currentReady;
     
     // Safety Fallback: Allow cache rendering if live takes > 2.5s
     if (!window.budgetLoadStartTime) {
@@ -282,31 +302,85 @@ export function updateTripleProgressBar() {
                 const display = getMerchantDisplay(t.name || t.merchant, t);
                 const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
                 const manualCat = t.manualBudgetCategory;
+                
+                // Track today's specific velocity
+                const isToday = window.checkPeriod && window.checkPeriod(t, 'today', 0, now);
+
+                // [NEW: 2026-04-03] Multi-Category Split Logic
+                if (t.budgetSplit && (t.budgetSplit.needs > 0 || t.budgetSplit.wants > 0 || t.budgetSplit.savings > 0 || t.budgetSplit.na > 0)) {
+                    const split = t.budgetSplit;
+                    
+                    // Add to Needs
+                    if (split.needs > 0) {
+                        needsTotal += split.needs;
+                        if (isToday) todayNeeds += split.needs;
+                    }
+                    
+                    // Add to Wants
+                    if (split.wants > 0) {
+                        wantsTotal += split.wants;
+                        if (isToday) todayWants += split.wants;
+                        wantsCategoryMap['Split Wants'] = (wantsCategoryMap['Split Wants'] || 0) + split.wants;
+                    }
+                    
+                    // Add to Savings (Spent or Total depending on account)
+                    if (split.savings > 0) {
+                        const sourceAcc = t.account || account;
+                        if (sourceAcc === 'atome') {
+                            savingsSpent += split.savings;
+                        } else {
+                            savingsTotal += split.savings;
+                        }
+                    }
+                    
+                    return; // Done with this split transaction
+                }
 
                 if (manualCat) {
-                    if (manualCat === 'needs') needsTotal += amt;
-                    else if (manualCat === 'wants') wantsTotal += amt;
-                    else if (manualCat === 'savings') savingsTotal += amt;
+                    if (manualCat === 'needs') {
+                        needsTotal += amt;
+                        if (isToday) todayNeeds += amt;
+                    } else if (manualCat === 'wants') {
+                        wantsTotal += amt;
+                        if (isToday) todayWants += amt;
+                    } else if (manualCat === 'savings') {
+                        // [REFINED: 2026-04-03] Manual Savings Split: Detect account from txn object if available
+                        const sourceAcc = t.account || account;
+                        if (sourceAcc === 'atome') {
+                            savingsSpent += amt;
+                        } else {
+                            savingsTotal += amt;
+                        }
+                    }
                 } else if (account === 'atome') {
                     if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
                         needsTotal += amt;
+                        if (isToday) todayNeeds += amt;
                     } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses' || display.category === 'Financial Expenses') {
                         wantsTotal += amt;
+                        if (isToday) todayWants += amt;
                         wantsCategoryMap[display.category] = (wantsCategoryMap[display.category] || 0) + amt;
+                    } else if (display.category === 'Savings') {
+                        // [NEW: 2026-04-03] Atome Expense tagged Savings = Spent Savings (Olive)
+                        savingsSpent += amt;
                     }
                 } else if (account === 'bpi') {
                     if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
                         savingsTotal += amt;
                     } else if (display.category === 'Vehicle' || (t.name && (t.name.includes('Withdrawal') || t.name.includes('withdraw:')))) {
                         needsTotal += amt;
+                        if (isToday) todayNeeds += amt;
                     }
                 } else if (account === 'budget_manual') {
                     if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
                         needsTotal += amt;
+                        if (isToday) todayNeeds += amt;
                     } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses' || display.category === 'Financial Expenses') {
                         wantsTotal += amt;
+                        if (isToday) todayWants += amt;
                         wantsCategoryMap[display.category] = (wantsCategoryMap[display.category] || 0) + amt;
                     } else if (display.category === 'Savings') {
+                        // Manual savings usually count as accumulated unless specified
                         savingsTotal += amt;
                     }
                 }
@@ -314,9 +388,22 @@ export function updateTripleProgressBar() {
         };
 
         if (window.walletTxns) {
-            aggregateFrom(window.walletTxns.atome || [], 'atome');
-            aggregateFrom(window.walletTxns.bpi || [], 'bpi');
-            aggregateFrom(window.budgetManualTxns || [], 'budget_manual');
+            const aggregatedAccounts = new Set();
+            const aggregateBucket = (txns, account) => {
+                if (!account || aggregatedAccounts.has(account)) return;
+                aggregatedAccounts.add(account);
+                aggregateFrom(txns || [], account);
+            };
+
+            Object.entries(window.walletTxns).forEach(([account, txns]) => {
+                aggregateBucket(txns, account);
+            });
+
+            if (isCurrentAccountBucketSeparate) {
+                aggregateBucket(window.allTxns || [], window.currentAccount);
+            }
+
+            aggregateBucket(window.budgetManualTxns || [], 'budget_manual');
         } else {
             aggregateFrom(window.allTxns || [], window.currentAccount);
         }
@@ -327,7 +414,10 @@ export function updateTripleProgressBar() {
     if (parsedCache) {
         if (!canUseLiveNeeds) needsTotal = parsedCache.needs || 0;
         if (!canUseLiveWants) wantsTotal = parsedCache.wants || 0;
-        if (!canUseLiveSavings) savingsTotal = parsedCache.savings || 0;
+        if (!canUseLiveSavings) {
+            savingsTotal = parsedCache.savings || 0;
+            savingsSpent = parsedCache.savingsSpent || 0;
+        }
     }
     // --------------------------
 
@@ -381,7 +471,11 @@ export function updateTripleProgressBar() {
 
     const needsPct = Math.min((needsTotal / needsLimit) * 100, 100);
     const wantsPct = (wantsTotal / wantsLimit) * 100;
-    const savingsPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
+    
+    // [REFINED: 2026-04-03] Savings Dual-Segment Logic
+    const savingsAccumPct = Math.min((savingsTotal / savingsLimit) * 100, 100);
+    const savingsSpentPct = Math.min((savingsSpent / savingsLimit) * 100, 100);
+    const totalSavingsPct = Math.min(((savingsTotal + savingsSpent) / savingsLimit) * 100, 100);
 
         const isHidden = localStorage.getItem('balance_hidden') === 'true';
         const isRemainingMode = localStorage.getItem('budget_stats_mode') === 'remaining';
@@ -391,40 +485,111 @@ export function updateTripleProgressBar() {
         const savingsReadyToDisplay = canUseLiveSavings || (parsedCache && parsedCache.savings !== undefined);
         const allReadyToDisplay = needsReadyToDisplay && wantsReadyToDisplay && savingsReadyToDisplay;
 
+        window.lastBudgetNotificationSnapshot = {
+            uid: user?.uid || null,
+            filterVal,
+            needsReadyToDisplay,
+            wantsReadyToDisplay,
+            savingsReadyToDisplay,
+            needsTotal,
+            wantsTotal,
+            savingsThresholdTotal: savingsTotal + savingsSpent,
+            needsLimit,
+            wantsLimit,
+            savingsLimit,
+            todayNeeds,
+            todayWants,
+            fullNeedsLimit: salaryTarget * weights.needs,
+            fullWantsLimit: salaryTarget * weights.wants
+        };
+
+        const canRunBudgetNotifications = Boolean(
+            user
+            && filterVal === 'this_month'
+            && window.NotificationsEngine
+        );
+
+        // Fire threshold notifications per category as soon as that visible total is ready.
+        if (canRunBudgetNotifications) {
+            const uid = user.uid;
+            const savingsThresholdTotal = savingsTotal + savingsSpent;
+            if (needsReadyToDisplay && Number.isFinite(needsLimit) && needsLimit > 0) {
+                window.NotificationsEngine.checkBudgetThresholds(uid, 'Needs', needsTotal, needsLimit);
+            }
+            if (wantsReadyToDisplay && Number.isFinite(wantsLimit) && wantsLimit > 0) {
+                window.NotificationsEngine.checkBudgetThresholds(uid, 'Wants', wantsTotal, wantsLimit);
+            }
+            if (savingsReadyToDisplay && Number.isFinite(savingsLimit) && savingsLimit > 0) {
+                window.NotificationsEngine.checkBudgetThresholds(uid, 'Savings', savingsThresholdTotal, savingsLimit);
+            }
+
+            const fullWantsLimit = salaryTarget * weights.wants;
+            const fullNeedsLimit = salaryTarget * weights.needs;
+            if (wantsReadyToDisplay && Number.isFinite(fullWantsLimit) && fullWantsLimit > 0) {
+                window.NotificationsEngine.checkVelocity(uid, 'Wants', todayWants, fullWantsLimit);
+            }
+            if (needsReadyToDisplay && Number.isFinite(fullNeedsLimit) && fullNeedsLimit > 0) {
+                window.NotificationsEngine.checkVelocity(uid, 'Needs', todayNeeds, fullNeedsLimit);
+            }
+        }
+
+        const peso = '\u20B1';
+        const triggerFadeIn = (el) => {
+            if (!el) return;
+            el.classList.remove('fade-in-load');
+            void el.offsetWidth;
+            el.classList.add('fade-in-load');
+            window.clearTimeout(el._fadeInLoadTimer);
+            el._fadeInLoadTimer = window.setTimeout(() => {
+                el.classList.remove('fade-in-load');
+            }, 420);
+        };
         const formatStat = (current, limit) => {
-            const formatDec = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const formatInt = (num) => Math.floor(num).toLocaleString('en-US');
 
             if (isRemainingMode) {
                 const left = Math.max(0, limit - current);
-                const leftStr = `₱${formatDec(left)} LEFT`;
+                const leftStr = `${peso}${formatDec(left)} LEFT`;
                 return { raw: leftStr, display: isHidden ? `****** LEFT` : leftStr };
             } else {
-                const raw = `₱${formatInt(current)} / ₱${formatInt(limit)}`;
-                return { raw, display: isHidden ? `****** / ₱${formatInt(limit)}` : raw };
+                const raw = `${peso}${formatInt(current)} / ${peso}${formatInt(limit)}`;
+                return { raw, display: isHidden ? `****** / ${peso}${formatInt(limit)}` : raw };
             }
         };
 
         const needsEl = document.getElementById('needs-stats');
+        const needsPctEl = document.getElementById('needs-pct');
         if (needsEl) {
             const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
             
             if (shouldReveal) {
+                const needsHadSkeleton = needsEl.classList.contains('skeleton');
                 needsEl.classList.remove('skeleton');
+                if (needsHadSkeleton) triggerFadeIn(needsEl);
+                if (needsPctEl) {
+                    const needsPctWasHidden = needsPctEl.style.visibility !== 'visible';
+                    needsPctEl.innerText = `${Math.round((needsTotal / (needsLimit || 1)) * 100)}%`;
+                    needsPctEl.style.opacity = '1';
+                    needsPctEl.style.visibility = 'visible';
+                    if (needsPctWasHidden) triggerFadeIn(needsPctEl);
+                }
                 if (needsReadyToDisplay) {
                     const diff = needsLimit - needsTotal;
-                    const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" label
-                    const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+                    const label = diff < 0 ? 'OVER' : 'LEFT'; 
+                    const absDiff = Math.abs(Math.round(diff)); 
 
                     const statsVal = isRemainingMode ? 
-                        (diff < 0 ? `₱-${absDiff.toLocaleString()} ${label}` : `₱${absDiff.toLocaleString()} ${label}`) :
-                        `₱${Math.floor(needsTotal).toLocaleString()} / ₱${Math.floor(needsLimit).toLocaleString()}`;
-                    needsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ₱${Math.floor(needsLimit).toLocaleString()}`) : statsVal;
+                        (diff < 0 ? `${peso}-${absDiff.toLocaleString()} ${label}` : `${peso}${absDiff.toLocaleString()} ${label}`) :
+                        `${peso}${Math.floor(needsTotal).toLocaleString()} / ${peso}${Math.floor(needsLimit).toLocaleString()}`;
+                    needsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ${peso}${Math.floor(needsLimit).toLocaleString()}`) : statsVal;
                     needsEl.dataset.raw = statsVal;
                 }
             } else {
-                // Modified 2026-03-27: Apply skeleton directly to element (prevent layout break)
                 needsEl.classList.add('skeleton');
+                if (needsPctEl) {
+                    needsPctEl.style.opacity = '0';
+                    needsPctEl.style.visibility = 'hidden';
+                }
             }
         }
         // --- Needs Bar Render ---
@@ -437,7 +602,8 @@ export function updateTripleProgressBar() {
             if (bg && shouldReveal && needsReadyToDisplay) {
                 if (bg.classList.contains('skeleton')) {
                     bg.classList.remove('skeleton');
-                    needsBar.style.width = '0%'; // Start from zero
+                    triggerFadeIn(bg);
+                    needsBar.style.width = '0%';
                     setTimeout(() => {
                         needsBar.style.width = `${needsPct}%`;
                     }, 150); 
@@ -452,24 +618,38 @@ export function updateTripleProgressBar() {
         }
 
         const wantsEl = document.getElementById('wants-stats');
+        const wantsPctEl = document.getElementById('wants-pct');
         if (wantsEl) {
-            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay;
 
             if (shouldReveal) {
+                const wantsHadSkeleton = wantsEl.classList.contains('skeleton');
                 wantsEl.classList.remove('skeleton');
+                if (wantsHadSkeleton) triggerFadeIn(wantsEl);
+                if (wantsPctEl) {
+                    const wantsPctWasHidden = wantsPctEl.style.visibility !== 'visible';
+                    wantsPctEl.innerText = `${Math.round((wantsTotal / (wantsLimit || 1)) * 100)}%`;
+                    wantsPctEl.style.opacity = '1';
+                    wantsPctEl.style.visibility = 'visible';
+                    if (wantsPctWasHidden) triggerFadeIn(wantsPctEl);
+                }
                 if (wantsReadyToDisplay) {
                     const diff = wantsLimit - wantsTotal;
-                    const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" label
-                    const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+                    const label = diff < 0 ? 'OVER' : 'LEFT'; 
+                    const absDiff = Math.abs(Math.round(diff));
 
                     const statsVal = isRemainingMode ?
-                        (diff < 0 ? `₱-${absDiff.toLocaleString()} ${label}` : `₱${absDiff.toLocaleString()} ${label}`) :
-                        `₱${Math.floor(wantsTotal).toLocaleString()} / ₱${Math.floor(wantsLimit).toLocaleString()}`;
-                    wantsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ₱${Math.floor(wantsLimit).toLocaleString()}`) : statsVal;
+                        (diff < 0 ? `${peso}-${absDiff.toLocaleString()} ${label}` : `${peso}${absDiff.toLocaleString()} ${label}`) :
+                        `${peso}${Math.floor(wantsTotal).toLocaleString()} / ${peso}${Math.floor(wantsLimit).toLocaleString()}`;
+                    wantsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ${peso}${Math.floor(wantsLimit).toLocaleString()}`) : statsVal;
                     wantsEl.dataset.raw = statsVal;
                 }
             } else {
                 wantsEl.classList.add('skeleton');
+                if (wantsPctEl) {
+                    wantsPctEl.style.opacity = '0';
+                    wantsPctEl.style.visibility = 'hidden';
+                }
             }
         }
         // --- Wants Bar Render ---
@@ -481,6 +661,7 @@ export function updateTripleProgressBar() {
             if (bg && shouldReveal && wantsReadyToDisplay) {
                 if (bg.classList.contains('skeleton')) {
                     bg.classList.remove('skeleton');
+                    triggerFadeIn(bg);
                     wantsBar.style.width = '0%';
                     setTimeout(() => {
                         wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
@@ -493,10 +674,17 @@ export function updateTripleProgressBar() {
                 wantsBar.style.width = '0%';
             }
             
-            wantsBar.classList.remove('fill-wants', 'fill-wants-orange', 'fill-wants-red');
-            if (wantsPct >= 100) wantsBar.classList.add('fill-wants-red');
-            else if (wantsPct >= 80) wantsBar.classList.add('fill-wants-orange');
-            else wantsBar.classList.add('fill-wants');
+    // Wants uses the updated gold tone as the base color
+    let wantsColor = '#ED9326';
+            if (wantsPct >= 70) {
+                const ratio = Math.min((wantsPct - 70) / 30, 1);
+                const h = 16 - (16 * ratio);
+                const s = 100 - (16 * ratio);
+                const l = 56 + (4 * ratio);
+                wantsColor = `hsl(${h}, ${s}%, ${l}%)`;
+            }
+            wantsBar.style.backgroundColor = wantsColor;
+            wantsBar.style.boxShadow = `0 0 12px ${wantsColor}44`;
         }
         
         const wantsOver = Math.max(0, wantsTotal - wantsLimit);
@@ -509,7 +697,7 @@ export function updateTripleProgressBar() {
                     wantsMsg.style.display = 'flex';
                     wantsMsg.className = 'overspending-msg critical';
                     wantsMsg.innerHTML = `<i class="material-icons" style="font-size: 16px; margin-right: 6px;">error_outline</i>
-                                        <span>Wants depleted! Excess spent: ₱${wantsOver.toLocaleString()}</span>`;
+                                        <span>Wants depleted! Excess spent: ${peso}${wantsOver.toLocaleString()}</span>`;
                 } else if (wantsPct >= 80) {
                     // SUGGESTION LOGIC (Modified 2026-03-27)
                     wantsMsg.style.display = 'flex';
@@ -533,27 +721,45 @@ export function updateTripleProgressBar() {
         }
 
         const savingsEl = document.getElementById('savings-stats');
+        const savingsPctEl = document.getElementById('savings-pct');
         if (savingsEl) {
             const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
             if (shouldReveal) {
+                const savingsHadSkeleton = savingsEl.classList.contains('skeleton');
                 savingsEl.classList.remove('skeleton');
+                if (savingsHadSkeleton) triggerFadeIn(savingsEl);
+                if (savingsPctEl) {
+                    const savingsPctWasHidden = savingsPctEl.style.visibility !== 'visible';
+                    const combinedPercentage = Math.round(((savingsTotal + savingsSpent) / (savingsLimit || 1)) * 100);
+                    savingsPctEl.innerText = `${combinedPercentage}%`;
+                    savingsPctEl.style.opacity = '1';
+                    savingsPctEl.style.visibility = 'visible';
+                    if (savingsPctWasHidden) triggerFadeIn(savingsPctEl);
+                }
                 if (savingsReadyToDisplay) {
-                    const diff = savingsLimit - savingsTotal;
-                    const label = diff < 0 ? 'OVER' : 'LEFT'; // Fix 2026-03-28: Use "OVER" label
-                    const absDiff = Math.abs(Math.round(diff)); // Fix 2026-03-28: No decimals for bars
+                    const combinedSavings = savingsTotal + savingsSpent;
+                    const diff = savingsLimit - combinedSavings;
+                    const label = diff < 0 ? 'OVER' : 'LEFT'; 
+                    const absDiff = Math.abs(Math.round(diff)); 
 
                     const statsVal = isRemainingMode ? 
-                        (diff < 0 ? `₱-${absDiff.toLocaleString()} ${label}` : `₱${absDiff.toLocaleString()} ${label}`) :
-                        `₱${Math.floor(savingsTotal).toLocaleString()} / ₱${Math.floor(savingsLimit).toLocaleString()}`;
-                    savingsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ₱${Math.floor(savingsLimit).toLocaleString()}`) : statsVal;
+                        (diff < 0 ? `${peso}-${absDiff.toLocaleString()} ${label}` : `${peso}${absDiff.toLocaleString()} ${label}`) :
+                        `${peso}${Math.floor(combinedSavings).toLocaleString()} / ${peso}${Math.floor(savingsLimit).toLocaleString()}`;
+                    savingsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ${peso}${Math.floor(savingsLimit).toLocaleString()}`) : statsVal;
                     savingsEl.dataset.raw = statsVal;
                 }
             } else {
                 savingsEl.classList.add('skeleton');
+                if (savingsPctEl) {
+                    savingsPctEl.style.opacity = '0';
+                    savingsPctEl.style.visibility = 'hidden';
+                }
             }
         }
         // --- Savings Bar Render ---
-        const savingsBar = document.getElementById('savings-bar');
+        // [REFINED: Dual-Segment Rendering (Olive First) - 2026-04-03]
+        const savingsBar = document.getElementById('savings-bar'); // Green
+        const savingsBarSpent = document.getElementById('savings-bar-spent'); // Olive
         if (savingsBar) {
             const bg = savingsBar.closest('.progress-bar-bg');
             const shouldReveal = isAggregatedReady || isTimeoutFallback;
@@ -561,16 +767,29 @@ export function updateTripleProgressBar() {
             if (bg && shouldReveal && savingsReadyToDisplay) {
                 if (bg.classList.contains('skeleton')) {
                     bg.classList.remove('skeleton');
+                    triggerFadeIn(bg);
                     savingsBar.style.width = '0%';
+                    if (savingsBarSpent) savingsBarSpent.style.width = '0%';
+                    
                     setTimeout(() => {
-                        savingsBar.style.width = `${Math.min(savingsPct, 100)}%`;
+                        // Order in HTML: Spent (Olive) then Accumulated (Green)
+                        if (savingsBarSpent) {
+                            savingsBarSpent.style.width = `${savingsSpentPct}%`;
+                        }
+                        savingsBar.style.width = `${savingsAccumPct}%`;
                     }, 450); 
                 } else {
-                    savingsBar.style.width = `${Math.min(savingsPct, 100)}%`;
+                    if (savingsBarSpent) {
+                        savingsBarSpent.style.width = `${savingsSpentPct}%`;
+                    }
+                    savingsBar.style.width = `${savingsAccumPct}%`;
                 }
             } else if (!shouldReveal) {
                 if (bg) bg.classList.add('skeleton');
                 savingsBar.style.width = '0%';
+                if (savingsBarSpent) {
+                    savingsBarSpent.style.width = '0%';
+                }
             }
         }
 
@@ -584,35 +803,37 @@ export function updateTripleProgressBar() {
         });
 
         // Final Summary Calculations (Scaled)
-        const totalSpent = needsTotal + wantsTotal + savingsTotal;
+        const totalSpendingLimit = needsLimit + wantsLimit;
+        const totalSpendingActual = needsTotal + wantsTotal;
+        const remaining = totalSpendingLimit - totalSpendingActual;
+        
+        const totalSpent = needsTotal + wantsTotal + (savingsTotal + savingsSpent); // Gross Monthly Use
         const totalBudget = (needsLimit + wantsLimit + savingsLimit) || 1;
         const usedPct = (totalSpent / totalBudget) * 100;
-        const remaining = totalBudget - totalSpent; // Modified 2026-03-27: Allow negative for status
-        const remainingPct = 100 - usedPct;
+        const remainingPct = (remaining / (needsLimit + wantsLimit)) * 100; // Relative to spending buckets
 
-        const statusKey = remaining < 0 ? 'negative' : (remainingPct < 15 ? 'warning' : 'remaining'); // Fix 2026-03-28: Simplified status logic
-
+        const statusKey = remaining <= 0 ? 'negative' : (remainingPct < 15 ? 'warning' : 'remaining');
+        
+        // [FIXED: 2026-04-05] Visual Fidelity: Restore footer class for background/value coloring
         const footer = document.getElementById('triple-summary-footer');
         if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
-
-        const totalExcess = Math.abs(Math.min(0, needsLimit - needsTotal)) + 
-                           Math.abs(Math.min(0, wantsLimit - wantsTotal)) + 
-                           Math.abs(Math.min(0, savingsLimit - savingsTotal));
-
-        const displayVal = remaining; // Fix 2026-03-28: Use net remaining balance for main value
+        
+        const displayVal = remaining; 
         const remainingRaw = remaining < 0 ? 
-            `₱-${Math.abs(displayVal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 
-            `₱${displayVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; // Fix 2026-03-28: Negative for excess
+            `${peso}-${Math.abs(displayVal).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 
+            `${peso}${displayVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const totalSpentText = `${peso}${totalSpent.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const remainingEl = document.getElementById('triple-remaining-val');
         const remainingLabel = document.getElementById('triple-remaining-label');
         if (remainingLabel) {
-            remainingLabel.innerText = 'Available to Spend'; // Fix 2026-03-28: Constant label
+            remainingLabel.innerText = isRemainingMode ? 'Available Balance' : 'Total Spent';
         }
 
         if (remainingEl) {
             const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
             remainingEl.dataset.raw = remainingRaw;
             remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
+            remainingEl.style.display = '';
             
             if (shouldReveal) {
                 remainingEl.classList.remove('skeleton');
@@ -620,6 +841,7 @@ export function updateTripleProgressBar() {
             } else {
                 // Modified 2026-03-27: Apply skeleton directly to element
                 remainingEl.classList.add('skeleton');
+                remainingEl.innerText = isHidden ? '******' : remainingRaw;
             }
         }
 
@@ -644,16 +866,36 @@ export function updateTripleProgressBar() {
                     }
                 };
                 
+                // [FIXED: 2026-04-05] Visual Sync: Correct Donut Ring variable names and overflow capping
                 updateRing('donut-needs', needsPct, 251.2);
-                updateRing('donut-wants', Math.min(wantsPct, 100), 188.4);
-                updateRing('donut-savings', savingsPct, 125.6);
+                const wantsDonutPct = wantsLimit > 0 ? Math.min((wantsTotal / wantsLimit) * 100, 100) : 0;
+                updateRing('donut-wants', wantsDonutPct, 188.4);
                 
-                // Update Center Percentage (Weighted Average of Spending towards Limit)
+                // [FIXED: 2026-04-05] Savings Dual-Ring Logic: Render Spent portion and offset the Accumulated portion
+                const savingsCircum = 125.6;
+                updateRing('donut-savings-spent', savingsSpentPct, savingsCircum);
+                const savingsSpentRing = document.getElementById('donut-savings-spent');
+                if (savingsSpentRing) {
+                    savingsSpentRing.style.opacity = savingsSpentPct > 0.25 ? '1' : '0';
+                    savingsSpentRing.style.strokeLinecap = savingsSpentPct > 0.25 ? 'round' : 'butt';
+                }
+                
+                const savingsRing = document.getElementById('donut-savings');
+                if (savingsRing) {
+                    const offset = -(savingsSpentPct / 100 * savingsCircum);
+                    savingsRing.style.strokeDashoffset = offset;
+                    const dashLen = (Math.min(savingsAccumPct, 100) / 100 * savingsCircum);
+                    savingsRing.style.strokeDasharray = `${dashLen} ${savingsCircum}`;
+                    savingsRing.style.opacity = dashLen > 0.25 ? '1' : '0';
+                    savingsRing.style.strokeLinecap = dashLen > 0.25 ? 'round' : 'butt';
+                }
+                
+                // Update Center Percentage (Weighted Average of Spending)
                 const donutPctEl = document.getElementById('donut-pct');
                 if (donutPctEl) {
-                    const totalLimit = needsLimit + wantsLimit + savingsLimit;
-                    const totalSpent = needsTotal + wantsTotal + savingsTotal;
-                    const avgPct = Math.min((totalSpent / totalLimit) * 100, 100);
+                    const totalLimit = needsLimit + wantsLimit; 
+                    const currentSpent = needsTotal + wantsTotal;
+                    const avgPct = totalLimit > 0 ? Math.min((currentSpent / totalLimit) * 100, 100) : 0;
                     donutPctEl.innerText = `${Math.round(avgPct)}%`;
                 }
             } else {
@@ -667,16 +909,11 @@ export function updateTripleProgressBar() {
         if (usageSub) {
             const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
             if (shouldReveal) {
+                const usageSubHadSkeleton = usageSub.classList.contains('skeleton');
                 usageSub.classList.remove('skeleton');
-                let subText;
-                if (remaining < 0) {
-                    subText = `₱-${Math.round(totalExcess).toLocaleString()} EXCESSIVE SPENDING`; // Fix 2026-03-28: Sum of excesses in subtext
-                } else {
-                    subText = isRemainingMode ? 
-                        `₱${totalBudget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Total Budget` : 
-                        `₱${remaining.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAVED`;
-                }
-                usageSub.innerText = isHidden ? (remaining < 0 ? '****** EXCESSIVE SPENDING' : (isRemainingMode ? '****** Total Budget' : '****** SAVED')) : subText;
+                const totalBudgetText = `${peso}${totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                usageSub.innerText = isHidden ? '******' : (isRemainingMode ? totalBudgetText : totalSpentText);
+                if (usageSubHadSkeleton) triggerFadeIn(usageSub);
             } else {
                 // Modified 2026-03-27: Apply skeleton directly to element
                 usageSub.classList.add('skeleton');
@@ -691,6 +928,7 @@ export function updateTripleProgressBar() {
                 needs: needsTotal,
                 wants: wantsTotal,
                 savings: savingsTotal,
+                savingsSpent: savingsSpent,
                 lastUpdate: Date.now()
             }));
         }
@@ -727,7 +965,7 @@ export function drawPieChart(segments, total, isUpdate = false) {
     const strokeWidth = 40; 
     const circumference = 2 * Math.PI * radius;
     
-    const totalFormatted = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+    const totalFormatted = total > 0 ? `ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(total).toLocaleString()}` : "ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±0";
 
     // State-based Label Logic
     if (totalLabel && totalVal) {
@@ -740,7 +978,7 @@ export function drawPieChart(segments, total, isUpdate = false) {
             const seg = segments.find(s => s.name === window.selectedCategoryName);
             if (seg) {
                 totalLabel.innerText = seg.name;
-                const valText = `₱${Math.round(seg.value).toLocaleString()}`;
+                const valText = `ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(seg.value).toLocaleString()}`;
                 totalVal.dataset.raw = valText;
                 totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
                 if (totalPct) {
@@ -948,8 +1186,22 @@ function filterHistoryByWeek(weekIndex) {
 
 // Insight and AI Summary
 export async function updateAISummary(txns, force = false) {
-    const summaryEl = document.getElementById('ai-summary-text');
+    const boxEl = document.getElementById('ai-insight-box');
+    const toggleEl = document.getElementById('summary-toggle');
+    const summaryEl = document.getElementById('ai-summary-text') || document.getElementById('ai-summary-container');
     if (!summaryEl) return;
+
+    if (boxEl) {
+        boxEl.style.display = 'block';
+        boxEl.classList.remove('collapsed');
+    }
+    if (toggleEl) toggleEl.classList.remove('collapsed');
+    localStorage.removeItem('wallet_ai_box_hidden');
+
+    if (!Array.isArray(txns) || txns.length === 0) {
+        summaryEl.innerText = 'AI insights will appear here after this month has enough spending data.';
+        return;
+    }
     
     const cacheKey = `ai_summary_${window.currentAccount}_${new Date().getMonth()}`;
     const cached = localStorage.getItem(cacheKey);
@@ -977,11 +1229,11 @@ export async function updateAISummary(txns, force = false) {
         }));
 
         const prompt = `Quickly analyze these transactions: ${JSON.stringify(recentTxns)}. 
-Provide a short, forward-looking financial insight (2 sentences) in BASIC ENGLISH. Focus on forecasting and future spending predictions (e.g., "At this rate, you will spend X by month-end"). Identify potential savings. Put them in ONE PARAGRAPH. BOLD key words.
+Provide a short, forward-looking financial insight (2 sentences) in BASIC ENGLISH. Focus on FORECASTING and future spending predictions (e.g., "At this rate, you will spend X by month-end"). Predict how much can be saved if spending in their top category is reduced by 20%. Put them in ONE PARAGRAPH. BOLD key words.
 
 Use DOUBLE LINE BREAKS to highlight these:
 **Recommendation:** Concrete action to cut costs next month.
-**Tip:** Predictive savings tip.
+**Tip:** Predictive savings tip specific to the top merchant or category (e.g., if fuel/Seaoil, suggest promo days; if shopping, suggest loyalty points; if services/subs, suggest auditing).
 
 No markdown other than bolding. Do NOT line break between sentences. Only use line breaks for Recommendations and Tips. Avoid spaces before periods or commas.`;
         const preferredEngine = localStorage.getItem('ai_preferred_model') || 'auto';
@@ -1102,14 +1354,14 @@ export async function updateCategoryBudgetsUI() {
         if (limit > 0) {
             const catLabel = displayCategoryName(cat);
             if (pct >= 100) {
-                checkAndTriggerAlert(`cat_budget_${cat}_100`, `${catLabel} Limit Reached`, `You've maxed out your ₱${limit.toLocaleString()} budget for ${catLabel}.`, 'error');
+                checkAndTriggerAlert(`cat_budget_${cat}_100`, `${catLabel} Limit Reached`, `You've maxed out your ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()} budget for ${catLabel}.`, 'error');
             } else if (pct >= 80) {
                 checkAndTriggerAlert(`cat_budget_${cat}_80`, `${catLabel} Warning`, `You've used 80% of your ${catLabel} budget.`, 'warning');
             }
         }
         return `
             <div class="cat-budget-item">
-                <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>₱${Math.round(spent).toLocaleString()} / ₱${limit.toLocaleString()}</span></div>
+                <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(spent).toLocaleString()} / ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()}</span></div>
                 <div class="cat-budget-bar-wrap"><div class="cat-budget-bar" style="width: ${pct}%; background: ${pct > 90 ? '#ef4444' : '#3b82f6'};"></div></div>
             </div>
         `;
@@ -1249,7 +1501,7 @@ export function triggerAdaptiveSync() {
     if (!isAdmin || window.isSyncing) return;
     
     if (window.justLoggedIn) {
-        console.log('⏭️ Skipping auto-sync: just logged in.');
+        console.log('ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â Skipping auto-sync: just logged in.');
         return;
     }
 
@@ -1259,14 +1511,14 @@ export function triggerAdaptiveSync() {
     const token = localStorage.getItem('g_access_token');
 
     if (token) {
-        console.log(`🔄 Auto-syncing ${id} on load (10 emails)...`);
+        console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Auto-syncing ${id} on load (10 emails)...`);
         import('./app-data.js').then(m => {
             if (m.handleScan) {
                 setTimeout(() => m.handleScan(10, false), 1500);
             }
         });
     } else {
-        console.log(`⏭️ No Gmail token found for ${id}. Use manual Sync to authenticate.`);
+        console.log(`ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â No Gmail token found for ${id}. Use manual Sync to authenticate.`);
     }
 }
 
@@ -1285,6 +1537,47 @@ export function updateAccountSwitcherUI(accounts) {
     `).join('');
 }
 
+function resolveActiveAccountId(accounts, preferredId = null) {
+    const list = Array.isArray(accounts) ? accounts.filter(Boolean) : [];
+    if (!list.length) {
+        return preferredId || window.currentAccount || localStorage.getItem('wallet_current_account') || 'default_wallet';
+    }
+
+    const desired = preferredId || window.currentAccount || localStorage.getItem('wallet_current_account');
+    if (desired && list.some(acc => acc.id === desired)) return desired;
+
+    const defaultAcc = list.find(acc => acc.isDefault);
+    return defaultAcc ? defaultAcc.id : list[0].id;
+}
+
+function ensureActiveBalanceCard(accId) {
+    const cards = Array.from(document.querySelectorAll('.balance-card'));
+    if (!cards.length) return null;
+
+    const target = cards.find(card => card.dataset.account === accId) || cards[0];
+    cards.forEach(card => card.classList.toggle('active', card === target));
+    return target;
+}
+
+function releaseInstantActiveCards(container) {
+    if (!container) return;
+    window.requestAnimationFrame(() => {
+        container.querySelectorAll('.balance-card.instant-active').forEach((card) => {
+            card.classList.remove('instant-active');
+        });
+    });
+}
+
+function settleBalanceCards() {
+    const viewport = document.getElementById('cardCarouselScroll');
+    if (!viewport) return;
+    viewport.classList.add('cards-settling');
+    window.clearTimeout(viewport._cardsSettlingTimer);
+    viewport._cardsSettlingTimer = window.setTimeout(() => {
+        viewport.classList.remove('cards-settling');
+    }, 320);
+}
+
 // Balance Cards Management - updated 2026-03-27 - added shimmer effect - 2026-03-27
 export function updateBalanceCardsUI(accounts) {
     const container = document.getElementById('dynamic-balance-cards');
@@ -1293,7 +1586,7 @@ export function updateBalanceCardsUI(accounts) {
     // SKELETON STATE: If accounts is null or empty, show 2 skeleton cards
     if (!accounts || accounts.length === 0) {
         container.innerHTML = `
-            <div class="skeleton-card skeleton-card-atome">
+            <div class="balance-card active instant-active atome-card wallet-card-skeleton skeleton-card skeleton-card-atome">
                 <div class="skeleton-card-inner">
                     <div class="skeleton skeleton-title" style="opacity: 0.4;"></div>
                     <div class="skeleton skeleton-balance" style="opacity: 0.4;"></div>
@@ -1305,12 +1598,18 @@ export function updateBalanceCardsUI(accounts) {
         return;
     }
 
+    const activeAccountId = resolveActiveAccountId(accounts);
+    window.currentAccount = activeAccountId;
+    localStorage.setItem('wallet_current_account', activeAccountId);
+    settleBalanceCards();
+
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
     container.innerHTML = accounts.map(acc => {
         const isAtome = acc.id === 'atome';
         const isBPI = acc.id === 'bpi';
-        const cardClass = `balance-card ${acc.id === window.currentAccount ? 'active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''}`;
+        const isActiveCard = acc.id === activeAccountId;
+        const cardClass = `balance-card ${isActiveCard ? 'active instant-active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''}`;
         
         return `
         <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
@@ -1343,7 +1642,7 @@ export function updateBalanceCardsUI(accounts) {
             <div class="card-footer">
                 <div class="card-number-box">
                     <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                    <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
+                    <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : 'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ' + acc.last4}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                     ${(isAtome || isBPI) ? `
@@ -1362,38 +1661,47 @@ export function updateBalanceCardsUI(accounts) {
         </div>
         `;
     }).join('');
+
+    const renderedCards = container.querySelectorAll('.balance-card');
+    renderedCards.forEach((card) => {
+        window.requestAnimationFrame(() => triggerSoftFadeInElement(card));
+    });
     
     if (window.setupAccountSwitcher) window.setupAccountSwitcher(); // Re-bind observer to new cards
+    ensureActiveBalanceCard(activeAccountId);
+    releaseInstantActiveCards(container);
 }
 
 // Scroll to Active Card
 export function scrollToActiveCard(accId) {
-    const card = document.querySelector(`.balance-card[data-account="${accId}"]`);
+    const card = ensureActiveBalanceCard(accId);
     if (card) {
-        card.classList.add('active');
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 }
 // Account Switcher Management
-export function switchAccount(id) {
-    localStorage.setItem('wallet_current_account', id);
-    window.currentAccount = id;
-    triggerHaptic('bump');
-    if (window.walletAccounts) applyAccountTheme(id, window.walletAccounts);
+export function switchAccount(id, silentRestore = false, forceReload = false) {
+    const resolvedId = resolveActiveAccountId(window.walletAccounts, id);
+    if (resolvedId === window.currentAccount && !forceReload) return;
+    localStorage.setItem('wallet_current_account', resolvedId);
+    window.currentAccount = resolvedId;
+    ensureActiveBalanceCard(resolvedId);
+    if (!silentRestore) triggerHaptic('bump');
+    if (window.walletAccounts) applyAccountTheme(resolvedId, window.walletAccounts);
     
     // Toggle Safe to Spend Widget Visibility
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
         // Safe to Spend is specifically for BPI account
-        safeSpendWidget.style.display = (id === 'bpi') ? 'block' : 'none';
-        if (id === 'bpi') updateSafeSpendUI();
+        safeSpendWidget.style.display = (resolvedId === 'bpi') ? 'block' : 'none';
+        if (resolvedId === 'bpi') updateSafeSpendUI();
     }
 
     // Trigger data reload for the new account
     import('./app-data.js').then(m => m.loadData());
 
     // Auto-sync if token is fresh
-    if (id === 'atome' || id === 'bpi') {
+    if (!silentRestore && (resolvedId === 'atome' || resolvedId === 'bpi')) {
         const token = localStorage.getItem('g_access_token');
         const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
         const tokenAge = Date.now() - tokenIssuedAt;
@@ -1555,10 +1863,19 @@ export function updateHeaderIcon(account) {
 }
 
 export function updateBalanceToThisMonth(txns, targetAccount) {
+    // Modified 2026-04-02: Use ALL transactions for pinpoint accuracy if available, else use current batch
+    const sourceTxns = (window.allTxns && window.allTxns.length > 0) ? window.allTxns : txns;
+    
     let incomeTotal = 0;
     let expenseTotal = 0;
+    const acc = targetAccount || window.currentAccount;
 
-    txns.forEach(t => {
+    sourceTxns.forEach(t => {
+        // Filter by account if we are using the global pool
+        if (targetAccount && t.account && t.account !== targetAccount) return;
+        // Basic sync accounts usually don't have account field in txn object if loaded directly, 
+        // but loadData ensures window.allTxns is correct for currentAccount.
+        
         if (t.excluded || t.refund) return;
         const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
         const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : { category: 'Other' };
@@ -1570,7 +1887,6 @@ export function updateBalanceToThisMonth(txns, targetAccount) {
         }
     });
 
-    const acc = targetAccount || window.currentAccount;
     const balanceEl = document.querySelector(`.balance-card[data-account="${acc}"] .balance-amount`) || document.getElementById(`${acc}-balance`);
     if (balanceEl) {
         const balance = incomeTotal - expenseTotal;
@@ -1585,6 +1901,7 @@ export function updateBalanceToThisMonth(txns, targetAccount) {
         if (acc === 'bpi') window.bpiBalanceVal = balance;
         if (window.updateBPIInsight) window.updateBPIInsight();
     }
+    // Update insights using the specific view transactions (usually this month)
     updateInsightCards(txns);
 }
 
@@ -1598,130 +1915,209 @@ export function updateInsightCards(txns) {
     const summaryTopCat = document.getElementById('summary-top-cat');
     const summaryCount = document.getElementById('summary-txn-count');
 
-    if (!txns || txns.length === 0) {
+    const rawTxns = Array.isArray(txns) ? txns.filter(t => t && typeof t === 'object') : null;
+
+    if (!rawTxns) {
         if (dailyAvgEl) dailyAvgEl.innerHTML = '<div class="skeleton skeleton-insight-val"></div>';
         if (dailyAvgSub) dailyAvgSub.innerHTML = '<div class="skeleton skeleton-insight-sub"></div>';
-        
         if (bigVal) bigVal.innerHTML = '<div class="skeleton skeleton-insight-val"></div>';
         if (bigSub) bigSub.innerHTML = '<div class="skeleton skeleton-insight-sub"></div>';
-        
         if (summaryTotal) summaryTotal.innerHTML = '<div class="skeleton skeleton-text md" style="width: 100px;"></div>';
         if (summaryChange) summaryChange.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 40px;"></div>';
         if (summaryTopCat) summaryTopCat.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 60px;"></div>';
         if (summaryCount) summaryCount.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 20px;"></div>';
-        
-        if (!txns) return; 
+        return;
     }
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const dayOfMonth = now.getDate();
-
-    const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
-
-    const thisMonthTxns = txns.filter(t => {
-        if (t.excluded || t.refund || t.reimbursed) return false;
-        const d = new Date(t.date);
-        if (d.getFullYear() !== year || d.getMonth() !== month) return false;
-        const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : { category: 'Other' };
-        return mapped.category !== 'Income';
-    });
-
-    const lmDate = new Date(year, month - 1, 1);
-    const lastMonthTxns = txns.filter(t => {
-        if (t.excluded || t.refund || t.reimbursed) return false;
-        const d = new Date(t.date);
-        if (d.getFullYear() !== lmDate.getFullYear() || d.getMonth() !== lmDate.getMonth()) return false;
-        const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : { category: 'Other' };
-        return mapped.category !== 'Income';
-    });
 
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
-    const thisMonthTotal = thisMonthTxns.reduce((s, t) => s + getAmt(t), 0);
-    const dailyAvg = dayOfMonth > 0 ? thisMonthTotal / dayOfMonth : 0;
-    
-    if (dailyAvgEl) {
-        const formatted = '₱' + dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 });
-        dailyAvgEl.dataset.raw = formatted;
-        dailyAvgEl.textContent = isHidden ? '******' : formatted;
-    }
+    const peso = '\u20B1';
+    const emDash = '\u2014';
+    const arrowUp = '\u2191';
+    const arrowDown = '\u2193';
 
-    const lastMonthTotal = lastMonthTxns.reduce((s, t) => s + getAmt(t), 0);
-    const daysInLM = new Date(lmDate.getFullYear(), lmDate.getMonth() + 1, 0).getDate();
-    const lastDailyAvg = daysInLM > 0 ? lastMonthTotal / daysInLM : 0;
-    
-    if (dailyAvgSub) {
-        if (lastDailyAvg > 0) {
-            const pct = ((dailyAvg - lastDailyAvg) / lastDailyAvg) * 100;
-            dailyAvgSub.textContent = `${pct > 0 ? '↑' : '↓'} ${Math.abs(pct).toFixed(0)}% vs last month`;
-            dailyAvgSub.className = 'insight-sub ' + (pct > 0 ? 'up' : 'down');
-        } else {
-            dailyAvgSub.textContent = 'this month';
+    const setZeroState = () => {
+        if (dailyAvgEl) {
+            dailyAvgEl.dataset.raw = `${peso}0`;
+            dailyAvgEl.textContent = isHidden ? '******' : `${peso}0`;
+            triggerSoftFadeInElement(dailyAvgEl);
+        }
+        if (dailyAvgSub) {
+            dailyAvgSub.textContent = 'BASED ON 0 DAYS';
             dailyAvgSub.className = 'insight-sub neutral';
+            triggerSoftFadeInElement(dailyAvgSub);
         }
-    }
-
-    let biggestAmt = 0;
-    let biggestName = '—';
-    thisMonthTxns.forEach(t => {
-        const amt = getAmt(t);
-        if (amt > biggestAmt) {
-            biggestAmt = amt;
-            const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : null;
-            biggestName = mapped?.name || t.merchant || t.note || 'Unknown';
+        if (bigVal) {
+            bigVal.dataset.raw = `${peso}0`;
+            bigVal.textContent = isHidden ? '******' : `${peso}0`;
+            triggerSoftFadeInElement(bigVal);
         }
-    });
-
-    if (bigVal) {
-        const formatted = '₱' + biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 });
-        bigVal.dataset.raw = formatted;
-        bigVal.textContent = isHidden ? '******' : formatted;
-    }
-    if (bigSub) bigSub.textContent = biggestName.toUpperCase();
-
-    if (summaryTotal) {
-        const formatted = '₱' + thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2 });
-        summaryTotal.dataset.raw = formatted;
-        summaryTotal.textContent = isHidden ? '******' : formatted;
-    }
-    if (summaryCount) summaryCount.textContent = thisMonthTxns.length;
-
-    if (summaryChange) {
-        if (lastMonthTotal > 0) {
-            const pct = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
-            summaryChange.textContent = `${pct > 0 ? '↑' : '↓'} ${Math.abs(pct).toFixed(0)}%`;
-            summaryChange.className = 's-value ' + (pct > 0 ? 'red' : 'green');
-        } else {
-            summaryChange.textContent = '—';
+        if (bigSub) {
+            bigSub.textContent = emDash;
+            triggerSoftFadeInElement(bigSub);
+        }
+        if (summaryTotal) {
+            summaryTotal.dataset.raw = `${peso}0.00`;
+            summaryTotal.textContent = isHidden ? '******' : `${peso}0.00`;
+            triggerSoftFadeInElement(summaryTotal);
+        }
+        if (summaryCount) {
+            summaryCount.textContent = '0';
+            triggerSoftFadeInElement(summaryCount);
+        }
+        if (summaryChange) {
+            summaryChange.textContent = emDash;
             summaryChange.className = 's-value';
+            triggerSoftFadeInElement(summaryChange);
         }
-    }
+        if (summaryTopCat) {
+            summaryTopCat.textContent = emDash;
+            triggerSoftFadeInElement(summaryTopCat);
+        }
+        window.thisMonthTxns = [];
+    };
 
-    // Top category
-    if (summaryTopCat) {
-        const catTotals = {};
-        thisMonthTxns.forEach(t => {
-            const mapped = getMerchantDisplay(t.merchant, t);
-            const cat = t.manualCategory || mapped.category || 'Uncategorized';
-            const label = typeof displayCategoryName === 'function' ? displayCategoryName(cat) : cat;
-            catTotals[label] = (catTotals[label] || 0) + getAmt(t);
+    const parseTxnDate = (value) => {
+        if (!value) return null;
+
+        let parsed = null;
+        if (value instanceof Date) parsed = value;
+        else if (typeof value.toDate === 'function') parsed = value.toDate();
+        else if (typeof value.toMillis === 'function') parsed = new Date(value.toMillis());
+        else if (typeof value.seconds === 'number') parsed = new Date(value.seconds * 1000);
+        else if (typeof value === 'number') parsed = new Date(value < 1e12 ? value * 1000 : value);
+        else if (typeof value === 'string') {
+            parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime()) && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                parsed = new Date(`${value}T12:00:00`);
+            }
+        } else {
+            parsed = new Date(value);
+        }
+
+        return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
+    };
+
+    const getAmt = (t) => {
+        const raw = t.manualAmount !== undefined ? t.manualAmount : (t.amount ?? 0);
+        const amount = Number(raw);
+        return Number.isFinite(amount) ? Math.abs(amount) : 0;
+    };
+
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth();
+
+        const filterExpenseTxn = (targetYear, targetMonth) => rawTxns.filter((t) => {
+            if (!t || t.deleted || t.excluded || t.refund || t.reimbursed) return false;
+            const d = parseTxnDate(t.date || t.createdAt);
+            if (!d || d.getFullYear() !== targetYear || d.getMonth() !== targetMonth) return false;
+            const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : { category: 'Other' };
+            return mapped.category !== 'Income';
         });
-        const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
-        summaryTopCat.textContent = topCat ? topCat[0] : '—';
-    }
 
-    // Trigger AI Summary with DEBOUNCE
-    window.thisMonthTxns = thisMonthTxns;
-    if (typeof window.updateAISummary === 'function') {
-        clearTimeout(window.aiSummaryTimeout);
-        window.aiSummaryTimeout = setTimeout(() => {
-            window.updateAISummary(thisMonthTxns);
-        }, 2000); // 2s debounce
-    }
+        const thisMonthTxns = filterExpenseTxn(year, month);
+        const lmDate = new Date(year, month - 1, 1);
+        const lastMonthTxns = filterExpenseTxn(lmDate.getFullYear(), lmDate.getMonth());
 
-    // SYNC WIDGETS
-    if (window.syncWidgets) window.syncWidgets();
+        const thisMonthTotal = thisMonthTxns.reduce((sum, t) => sum + getAmt(t), 0);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const dailyAvg = daysInMonth > 0 ? thisMonthTotal / daysInMonth : 0;
+
+        if (dailyAvgEl) {
+            const formatted = `${peso}${dailyAvg.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+            dailyAvgEl.dataset.raw = formatted;
+            dailyAvgEl.textContent = isHidden ? '******' : formatted;
+            triggerSoftFadeInElement(dailyAvgEl);
+        }
+
+        const lastMonthTotal = lastMonthTxns.reduce((sum, t) => sum + getAmt(t), 0);
+        const daysInLM = new Date(lmDate.getFullYear(), lmDate.getMonth() + 1, 0).getDate();
+        const lastDailyAvg = daysInLM > 0 ? lastMonthTotal / daysInLM : 0;
+
+        if (dailyAvgSub) {
+            if (lastDailyAvg > 0) {
+                const pct = ((dailyAvg - lastDailyAvg) / lastDailyAvg) * 100;
+                dailyAvgSub.textContent = `${pct > 0 ? arrowUp : arrowDown} ${Math.abs(pct).toFixed(0)}% vs last month`;
+                dailyAvgSub.className = `insight-sub ${pct > 0 ? 'up' : 'down'}`;
+            } else {
+                dailyAvgSub.textContent = `BASED ON ${daysInMonth} DAYS`;
+                dailyAvgSub.className = 'insight-sub neutral';
+            }
+            triggerSoftFadeInElement(dailyAvgSub);
+        }
+
+        let biggestAmt = 0;
+        let biggestName = emDash;
+        thisMonthTxns.forEach((t) => {
+            const amt = getAmt(t);
+            if (amt > biggestAmt) {
+                biggestAmt = amt;
+                const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(t.merchant, t) : null;
+                biggestName = mapped?.name || t.merchant || t.note || 'Unknown';
+            }
+        });
+
+        if (bigVal) {
+            const formatted = `${peso}${biggestAmt.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+            bigVal.dataset.raw = formatted;
+            bigVal.textContent = isHidden ? '******' : formatted;
+            triggerSoftFadeInElement(bigVal);
+        }
+        if (bigSub) {
+            bigSub.textContent = String(biggestName || emDash).toUpperCase();
+            triggerSoftFadeInElement(bigSub);
+        }
+
+        if (summaryTotal) {
+            const formatted = `${peso}${thisMonthTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            summaryTotal.dataset.raw = formatted;
+            summaryTotal.textContent = isHidden ? '******' : formatted;
+            triggerSoftFadeInElement(summaryTotal);
+        }
+        if (summaryCount) {
+            summaryCount.textContent = String(thisMonthTxns.length);
+            triggerSoftFadeInElement(summaryCount);
+        }
+
+        if (summaryChange) {
+            if (lastMonthTotal > 0) {
+                const pct = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
+                summaryChange.textContent = `${pct > 0 ? arrowUp : arrowDown} ${Math.abs(pct).toFixed(0)}%`;
+                summaryChange.className = `s-value ${pct > 0 ? 'red' : 'green'}`;
+            } else {
+                summaryChange.textContent = emDash;
+                summaryChange.className = 's-value';
+            }
+            triggerSoftFadeInElement(summaryChange);
+        }
+
+        if (summaryTopCat) {
+            const catTotals = {};
+            thisMonthTxns.forEach((t) => {
+                const mapped = getMerchantDisplay(t.merchant, t);
+                const cat = t.manualCategory || mapped.category || 'Uncategorized';
+                const label = typeof displayCategoryName === 'function' ? displayCategoryName(cat) : cat;
+                catTotals[label] = (catTotals[label] || 0) + getAmt(t);
+            });
+            const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+            summaryTopCat.textContent = topCat ? topCat[0] : emDash;
+            triggerSoftFadeInElement(summaryTopCat);
+        }
+
+        window.thisMonthTxns = thisMonthTxns;
+        if (typeof window.updateAISummary === 'function') {
+            clearTimeout(window.aiSummaryTimeout);
+            window.aiSummaryTimeout = setTimeout(() => {
+                window.updateAISummary(thisMonthTxns);
+            }, 2000);
+        }
+
+        if (window.syncWidgets) window.syncWidgets();
+    } catch (error) {
+        console.warn('updateInsightCards fallback triggered', error);
+        setZeroState();
+    }
 }
 window.updateInsightCards = updateInsightCards;
 
@@ -1792,8 +2188,8 @@ export function drawCashFlowChart() {
         html += `
             <div class="bar-group">
                 <div class="bars-pair">
-                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ₱${m.income.toLocaleString()}"></div>
-                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ₱${m.expense.toLocaleString()}"></div>
+                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${m.income.toLocaleString()}"></div>
+                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${m.expense.toLocaleString()}"></div>
                 </div>
                 <div class="bar-label">${m.name}</div>
             </div>
@@ -1821,7 +2217,7 @@ function checkDailySummary() {
     });
     
     if (ySpent > 0) {
-        createNotification('Daily Summary', `Yesterday you spent ₱${Math.round(ySpent).toLocaleString()}. Check your trends to see how you're doing!`, 'info');
+        createNotification('Daily Summary', `Yesterday you spent ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(ySpent).toLocaleString()}. Check your trends to see how you're doing!`, 'info');
         localStorage.setItem('last_daily_summary_date', today);
     }
 }
@@ -1926,10 +2322,10 @@ export function detectSubscriptions() {
                 </div>
                 <div class="sub-info">
                     <div class="sub-name">${g.name}</div>
-                    <div class="sub-label">AVG ₱${Math.round(g.averageSpend).toLocaleString()}</div>
+                    <div class="sub-label">AVG ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(g.averageSpend).toLocaleString()}</div>
                 </div>
                 <div class="sub-val" style="color: ${statusColor}">
-                    ₱${Math.round(g.currentMonthSpend).toLocaleString()}
+                    ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(g.currentMonthSpend).toLocaleString()}
                 </div>
             </div>
         `;
@@ -1941,7 +2337,7 @@ export function detectSubscriptions() {
             // Predict if due soon (heuristic: if middle of month and not paid)
             const day = new Date().getDate();
             if (day >= 10 && day <= 25) {
-                checkAndTriggerAlert(`sub_${s.name.replace(/\s+/g, '_')}`, 'Upcoming Bill', `${s.name} is usually paid around this time (Avg: ₱${Math.round(s.averageSpend).toLocaleString()}).`, 'info');
+                checkAndTriggerAlert(`sub_${s.name.replace(/\s+/g, '_')}`, 'Upcoming Bill', `${s.name} is usually paid around this time (Avg: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(s.averageSpend).toLocaleString()}).`, 'info');
             }
         }
     });
@@ -1970,10 +2366,10 @@ export function toggleProfileDropdown(e) {
 export function toggleNotificationCenter(e) {
     if (e) e.stopPropagation();
     const sidebar = document.getElementById('notification-center');
-    console.log('🔔 toggleNotificationCenter called. Sidebar found:', !!sidebar);
+    console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Â toggleNotificationCenter called. Sidebar found:', !!sidebar);
     
     if (!sidebar) {
-        console.error('❌ Notification sidebar element (#notification-center) NOT FOUND in DOM');
+        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Notification sidebar element (#notification-center) NOT FOUND in DOM');
         return;
     }
     
@@ -1996,79 +2392,387 @@ export function toggleNotificationCenter(e) {
     }
 }
 
-export function renderNotifications() {
+export async function forceBudgetNotificationCheck() {
+    if (typeof window.updateTripleProgressBar === 'function') {
+        window.updateTripleProgressBar();
+    }
+
+    const snapshot = window.lastBudgetNotificationSnapshot;
+    if (!snapshot || snapshot.filterVal !== 'this_month' || !snapshot.uid || !window.NotificationsEngine) return;
+
+    const jobs = [];
+    if (snapshot.needsReadyToDisplay && Number.isFinite(snapshot.needsLimit) && snapshot.needsLimit > 0) {
+        jobs.push(window.NotificationsEngine.checkBudgetThresholds(snapshot.uid, 'Needs', snapshot.needsTotal, snapshot.needsLimit));
+        jobs.push(window.NotificationsEngine.checkVelocity(snapshot.uid, 'Needs', snapshot.todayNeeds, snapshot.fullNeedsLimit));
+    }
+    if (snapshot.wantsReadyToDisplay && Number.isFinite(snapshot.wantsLimit) && snapshot.wantsLimit > 0) {
+        jobs.push(window.NotificationsEngine.checkBudgetThresholds(snapshot.uid, 'Wants', snapshot.wantsTotal, snapshot.wantsLimit));
+        jobs.push(window.NotificationsEngine.checkVelocity(snapshot.uid, 'Wants', snapshot.todayWants, snapshot.fullWantsLimit));
+    }
+    if (snapshot.savingsReadyToDisplay && Number.isFinite(snapshot.savingsLimit) && snapshot.savingsLimit > 0) {
+        jobs.push(window.NotificationsEngine.checkBudgetThresholds(snapshot.uid, 'Savings', snapshot.savingsThresholdTotal, snapshot.savingsLimit));
+    }
+
+    if (!jobs.length) return;
+    await Promise.allSettled(jobs);
+}
+
+function getLocalFallbackNotifications() {
+    try {
+        const raw = getStoredLocalFallbackNotificationsRaw();
+        if (!Array.isArray(raw)) return [];
+        return raw.map(item => ({
+            id: `local-${item.id}`,
+            title: item.title || 'Notification',
+            body: item.message || '',
+            type: item.type || 'general',
+            isRead: item.unread === false,
+            createdAtMs: Number(new Date(item.time).getTime()) || Date.now(),
+            isLocalFallback: true,
+            action: item.action || null,
+            meta: item.meta || null
+        }));
+    } catch (e) {
+        return [];
+    }
+}
+
+function getStoredLocalFallbackNotificationsRaw() {
+    try {
+        const raw = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+        return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function writeLocalFallbackNotifications(items) {
+    try {
+        localStorage.setItem('smartwallet_notifications', JSON.stringify(items));
+    } catch (e) {
+        console.warn('Failed to persist local fallback notifications:', e);
+    }
+}
+
+function getNotifDedupKey(item = {}) {
+    return `${item.type || 'general'}|${item.title || ''}|${item.body || item.message || ''}`;
+}
+
+function formatNotifTimestamp(createdAtMs) {
+    return new Date(createdAtMs).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+export async function renderNotifications() {
     const list = document.getElementById('notification-list');
     if (!list) return;
-    
-    let notifications = [];
-    try {
-        notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
-    } catch (e) {
-        console.error('Failed to parse notifications from localStorage', e);
-        notifications = [];
-    }
-    
-    if (notifications.length === 0) {
+
+    if (!window.db || !window.auth.currentUser) {
         list.innerHTML = `
             <div class="empty-notifications">
-                <i class="material-icons" style="font-size: 48px; color: #e2e8f0; margin-bottom: 12px;">notifications_none</i>
-                <p>Everything is up to date!</p>
+                <i class="material-icons" style="font-size: 48px; color: #e2e8f0; margin-bottom: 12px;">cloud_off</i>
+                <p>Not signed in. Connect to see notifications.</p>
             </div>
         `;
         return;
     }
-    
-    list.innerHTML = notifications.map(n => `
-        <div class="notification-item ${n.unread ? 'unread' : ''}" onclick="handleNotificationClick(${n.id})">
-            <div class="notification-item-icon notif-${n.type}">
-                <i class="material-icons">${n.type === 'warning' ? 'warning' : n.type === 'success' ? 'check_circle' : 'info'}</i>
-            </div>
-            <div class="notif-content">
-                <div class="notif-title">${n.title}</div>
-                <div class="notif-message">${n.message}</div>
-                <div class="notif-time">${new Date(n.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-        </div>
-    `).join('');
 
-    // Mark all as read when opening
-    updateUnreadCount(true);
+    try {
+        const { collection, getDocs, query, orderBy, limit } = window;
+        const uid = window.auth.currentUser.uid;
+        const notifRef = collection(window.db, `users/${uid}/notifications`);
+        const q = query(notifRef, orderBy('createdAt', 'desc'), limit(20));
+        const snap = await getDocs(q);
+        const localFallbacks = getLocalFallbackNotifications();
+        window.__notificationActionMap = {};
+
+        const items = [];
+        const remoteKeys = new Set();
+
+        snap.forEach(docSnap => {
+            const data = docSnap.data() || {};
+            const createdAtMs = data.createdAt?.toDate ? data.createdAt.toDate().getTime() : Date.now();
+            const key = getNotifDedupKey(data);
+            remoteKeys.add(key);
+            items.push({
+                id: docSnap.id,
+                title: data.title || 'Notification',
+                body: data.body || '',
+                type: data.type || 'general',
+                isRead: Boolean(data.isRead),
+                createdAtMs,
+                isLocalFallback: false,
+                action: data.action || null,
+                meta: data.meta || null
+            });
+        });
+
+        localFallbacks.forEach(item => {
+            const key = getNotifDedupKey(item);
+            if (!remoteKeys.has(key)) items.push(item);
+        });
+
+        if (items.length === 0) {
+            list.innerHTML = `
+                <div class="empty-notifications">
+                    <i class="material-icons" style="font-size: 48px; color: #e2e8f0; margin-bottom: 12px;">notifications_none</i>
+                    <p>Everything is up to date!</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        items.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+        items.forEach(data => {
+            const id = data.id;
+            const date = data.createdAtMs ? formatNotifTimestamp(data.createdAtMs) : 'Just now';
+            const isUnread = !data.isRead;
+            window.__notificationActionMap[id] = {
+                action: data.action || null,
+                meta: data.meta || null,
+                isLocalFallback: Boolean(data.isLocalFallback)
+            };
+
+            html += `
+                <div class="notif-item ${isUnread ? 'unread' : ''}" onclick="window.handleNotificationClick('${id}')">
+                    <div class="notif-icon ${getNotifTone(data.type)}">
+                        <i class="material-icons">${getNotifIcon(data.type)}</i>
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-title">${data.title}</div>
+                        <div class="notif-body">${data.body}</div>
+                        <div class="notif-date">${date}</div>
+                    </div>
+                    
+                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${id}')">
+                        <i class="material-icons">more_vert</i>
+                    </div>
+                    
+                    <div class="notif-dropdown" id="notif-dropdown-${id}" onclick="event.stopPropagation()">
+                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${id}')">
+                            <i class="material-icons">mark_as_unread</i> Mark as Unread
+                        </div>
+                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${id}')">
+                            <i class="material-icons">delete_outline</i> Delete Alert
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+
+    } catch (e) {
+        console.error('Failed to fetch notifications from Firestore:', e);
+        const fallbackItems = getLocalFallbackNotifications();
+        if (!fallbackItems.length) return;
+        window.__notificationActionMap = {};
+        list.innerHTML = fallbackItems
+            .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))
+            .map(data => {
+                window.__notificationActionMap[data.id] = {
+                    action: data.action || null,
+                    meta: data.meta || null,
+                    isLocalFallback: true
+                };
+                return `
+                <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${data.id}')">
+                    <div class="notif-icon ${getNotifTone(data.type)}">
+                        <i class="material-icons">${getNotifIcon(data.type)}</i>
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-title">${data.title}</div>
+                        <div class="notif-body">${data.body}</div>
+                        <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
+                    </div>
+                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${data.id}')">
+                        <i class="material-icons">more_vert</i>
+                    </div>
+                    <div class="notif-dropdown" id="notif-dropdown-${data.id}" onclick="event.stopPropagation()">
+                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${data.id}')">
+                            <i class="material-icons">mark_as_unread</i> Mark as Unread
+                        </div>
+                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${data.id}')">
+                            <i class="material-icons">delete_outline</i> Delete Alert
+                        </div>
+                    </div>
+                </div>
+            `;
+            }).join('');
+    }
+}
+
+function getNotifIcon(type) {
+    if (!type) return 'notifications';
+    const normalized = String(type).toLowerCase();
+    if (normalized.includes('goal') || normalized.includes('success')) return 'check_circle';
+    if (normalized.includes('threshold') || normalized.includes('warning')) return 'warning';
+    if (normalized.includes('velocity')) return 'speed';
+    if (normalized.includes('recurring')) return 'event';
+    if (normalized.includes('error')) return 'error';
+    return 'notifications';
+}
+
+function getNotifTone(type) {
+    if (!type) return 'general';
+    const normalized = String(type).toLowerCase();
+    if (normalized.includes('goal') || normalized.includes('success')) return 'success';
+    if (normalized.includes('threshold') || normalized.includes('warning')) return 'warning';
+    if (normalized.includes('error')) return 'error';
+    if (normalized.includes('velocity') || normalized.includes('recurring') || normalized.includes('info') || normalized.includes('monthly')) return 'info';
+    return 'general';
 }
 
 export function updateUnreadCount(markRead = false) {
-    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
-    if (markRead) {
-        notifications.forEach(n => n.unread = false);
-        localStorage.setItem('smartwallet_notifications', JSON.stringify(notifications));
-    }
-    
-    const unreadCount = notifications.filter(n => n.unread).length;
     const badge = document.getElementById('unread-count');
-    
-    if (badge) {
-        if (unreadCount > 0) {
-            badge.innerText = unreadCount;
-            badge.style.display = 'flex';
-        } else {
-            badge.style.display = 'none';
-        }
+    if (!badge) return;
+
+    const localUnread = getLocalFallbackNotifications().filter(item => !item.isRead);
+    const paintBadge = (count) => {
+        badge.innerText = count;
+        badge.style.display = count > 0 ? 'flex' : 'none';
+    };
+
+    // Paint local unread immediately so the red badge appears without waiting on Firestore.
+    paintBadge(localUnread.length);
+
+    if (!window.db || !window.auth?.currentUser || !window.collection || !window.getDocs || !window.query) {
+        return;
     }
+
+    (async () => {
+        try {
+            const uid = window.auth.currentUser.uid;
+            const notifRef = window.collection(window.db, `users/${uid}/notifications`);
+            const snap = await window.getDocs(window.query(notifRef, window.orderBy('createdAt', 'desc'), window.limit(30)));
+            let remoteUnread = 0;
+            const remoteKeys = new Set();
+
+            snap.forEach(docSnap => {
+                const data = docSnap.data() || {};
+                if (!data.isRead) remoteUnread++;
+                remoteKeys.add(getNotifDedupKey(data));
+            });
+
+            const uniqueLocalUnread = localUnread.filter(item => !remoteKeys.has(getNotifDedupKey(item))).length;
+            const unreadCount = remoteUnread + uniqueLocalUnread;
+            paintBadge(unreadCount);
+        } catch (e) {
+            paintBadge(localUnread.length);
+        }
+    })();
 }
 
 export function clearAllNotifications() {
     // Persistent notifications: disable clear all
-    console.log('📢 clearAllNotifications is disabled.');
+    console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â¢ clearAllNotifications is disabled.');
 }
 
-window.handleNotificationClick = function(id) {
-    const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
-    const notif = notifications.find(n => n.id === id);
-    if (notif && notif.action && notif.action.callbackString) {
-        try {
-            eval(notif.action.callbackString);
-        } catch(e) { console.error('Notification action failed', e); }
-    }
+window.handleNotificationClick = async function(id) {
+    await window.markNotifRead(id);
     toggleNotificationCenter();
+
+    const notifMeta = window.__notificationActionMap?.[id] || {};
+    const meta = notifMeta.meta || {};
+    const action = meta.action || notifMeta.action?.type || notifMeta.action?.label || null;
+
+    if (action === 'open_goal_edit' && meta.goalId) {
+        const uid = window.auth?.currentUser?.uid;
+        const openGoal = () => {
+            if (window.GoalsView && typeof window.GoalsView.openGoalEdit === 'function') {
+                window.GoalsView.openGoalEdit(meta.goalId);
+                return;
+            }
+            if (uid && window.EditGoalView && typeof window.EditGoalView.open === 'function') {
+                window.EditGoalView.open(uid, meta.goalId);
+            }
+        };
+
+        if (typeof window.scrollToView === 'function') {
+            window.scrollToView(3);
+            window.setTimeout(openGoal, 360);
+        } else {
+            openGoal();
+        }
+    }
+};
+
+// Global Handlers
+window.toggleNotifDropdown = (e, id) => {
+    e.stopPropagation();
+    document.querySelectorAll('.notif-dropdown.active').forEach(d => {
+        if (d.id !== `notif-dropdown-${id}`) d.classList.remove('active');
+    });
+    const dropdown = document.getElementById(`notif-dropdown-${id}`);
+    if (dropdown) dropdown.classList.toggle('active');
+};
+
+window.markNotifRead = async (id) => {
+    if (String(id).startsWith('local-')) {
+        const targetId = String(id).replace('local-', '');
+        const items = getStoredLocalFallbackNotificationsRaw();
+        writeLocalFallbackNotifications(items.map(item => String(item.id) === targetId ? { ...item, unread: false } : item));
+        updateUnreadCount();
+        if (document.getElementById('notification-center')?.classList.contains('active')) renderNotifications();
+        return;
+    }
+    if (!window.auth.currentUser || !window.db) return;
+    try {
+        const uid = window.auth.currentUser.uid;
+        const ref = window.doc(window.db, `users/${uid}/notifications`, id);
+        await window.updateDoc(ref, { isRead: true });
+        updateUnreadCount();
+    } catch (e) { console.error("Error marking as read", e); }
+};
+
+window.markNotifUnread = async (id) => {
+    if (String(id).startsWith('local-')) {
+        const targetId = String(id).replace('local-', '');
+        const items = getStoredLocalFallbackNotificationsRaw();
+        writeLocalFallbackNotifications(items.map(item => String(item.id) === targetId ? { ...item, unread: true } : item));
+        updateUnreadCount();
+        if (document.getElementById('notification-center')?.classList.contains('active')) renderNotifications();
+        window.closeAllNotifMenus();
+        return;
+    }
+    if (!window.auth.currentUser || !window.db) return;
+    try {
+        const uid = window.auth.currentUser.uid;
+        const ref = window.doc(window.db, `users/${uid}/notifications`, id);
+        await window.updateDoc(ref, { isRead: false });
+        window.closeAllNotifMenus();
+        updateUnreadCount();
+    } catch (e) { console.error("Error marking as unread", e); }
+};
+
+window.deleteNotif = async (id) => {
+    if (String(id).startsWith('local-')) {
+        const targetId = String(id).replace('local-', '');
+        const items = getStoredLocalFallbackNotificationsRaw().filter(item => String(item.id) !== targetId);
+        writeLocalFallbackNotifications(items);
+        updateUnreadCount();
+        if (document.getElementById('notification-center')?.classList.contains('active')) renderNotifications();
+        window.closeAllNotifMenus();
+        return;
+    }
+    if (!window.auth.currentUser || !window.db) return;
+    try {
+        const uid = window.auth.currentUser.uid;
+        const ref = window.doc(window.db, `users/${uid}/notifications`, id);
+        await window.deleteDoc(ref);
+        window.closeAllNotifMenus();
+        updateUnreadCount();
+    } catch (e) { console.error("Error deleting notification", e); }
+};
+
+window.closeAllNotifMenus = () => {
+    document.querySelectorAll('.notif-dropdown.active').forEach(d => d.classList.remove('active'));
 };
 
 // INITIAL LOADING STATE: Prevent JS from overwriting skeletons too early
@@ -2119,10 +2823,18 @@ export function initUI() {
         if (window.updateTripleProgressBar) window.updateTripleProgressBar();
         
         // IMPORTANT: Trigger dashboard refresh once gate is open
-        if (window.allTxns) {
-            console.log('🔄 Loading Gate Open: Refreshing Dashboard...');
+        if (Array.isArray(window.allTxns)) {
+            console.log('Loading Gate Open: Refreshing Dashboard...');
             if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(window.allTxns);
-            if (window.updateInsightCards) window.updateInsightCards(window.allTxns);
+            if (window.updateInsightCards) {
+                window.updateInsightCards(window.allTxns);
+                requestAnimationFrame(() => {
+                    const summaryTotalEl = document.getElementById('summary-total');
+                    if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
+                        window.updateInsightCards(window.allTxns);
+                    }
+                });
+            }
         }
     }, 200);
 }
@@ -2158,7 +2870,7 @@ function setupFastPath() {
     const cachedBalances = localStorage.getItem('wallet_cached_balances');
     
     if (lastUid && cachedAccounts && cachedCurrent) {
-        console.log('⚡ Fast Path: Rendering from cache...');
+        console.log('ÃƒÂ¢Ã…Â¡Ã‚Â¡ Fast Path: Rendering from cache...');
         try {
             const accounts = JSON.parse(cachedAccounts);
             
@@ -2190,7 +2902,7 @@ function setupFastPath() {
 
 // LEGACY BRIDGING (Final Export to Global Scope)
 function bridgeGlobals() {
-    console.log('🌐 Bridging exports to global scope...');
+    console.log('ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Bridging exports to global scope...');
     window.updateAccountSwitcherUI = updateAccountSwitcherUI;
     window.updateBalanceCardsUI = updateBalanceCardsUI;
     window.scrollToActiveCard = scrollToActiveCard;
@@ -2226,10 +2938,19 @@ function bridgeGlobals() {
         updateTripleProgressBar();
         triggerHaptic('medium');
     };
+    window.forceBudgetNotificationCheck = forceBudgetNotificationCheck;
  
     window.animateNumber = animateNumber;
-    console.log('✅ Global bridge complete.');
+    console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Global bridge complete.');
+    // If cached/live txns landed before app-ui finished wiring globals, paint the dashboard now.
+    if (Array.isArray(window.allTxns)) {
+        updateBalanceToThisMonth(window.allTxns, window.currentAccount);
+        updateInsightCards(window.allTxns);
+        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+        else updateTripleProgressBar();
+    }
 }
 
 // Run bridging immediately
 bridgeGlobals();
+

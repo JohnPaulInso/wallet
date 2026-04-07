@@ -109,6 +109,29 @@
         .is-native .manual-cat-circle i { font-size: 20px !important; }
         .is-native #manual-txn-modal .custom-modal { height: 98vh !important; }
         #manual-txn-modal { backdrop-filter: blur(10px) !important; background: rgba(0,0,0,0.5) !important; }
+
+        /* is-native #header - updated 2026-03-31 - connect frosted glass header to system status bar with safe-area padding */
+        .is-native #header {
+            padding-top: calc(env(safe-area-inset-top, 24px) + 10px) !important;
+            background: rgba(255, 255, 255, 0.72) !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+        }
+        /* is-native .header-spacer - updated 2026-03-31 - account for taller header with status bar padding */
+        .is-native .header-spacer { height: calc(70px + env(safe-area-inset-top, 24px)) !important; }
+
+        /* is-native .bottom-nav - updated 2026-03-31 - set to Light Mode (frosted white-tinted) in-app */
+        .is-native .bottom-nav {
+            background: rgba(255, 255, 255, 0.72) !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+            box-shadow: 0 -1px 8px rgba(0,0,0,0.04) !important;
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+        /* is-native .nav-item - updated 2026-03-31 - dark icons for Light Mode in-app bar */
+        .is-native .nav-item { color: #94a3b8 !important; }
+        .is-native .nav-item.active { color: #1e293b !important; }
     </style>
 
     <script>
@@ -125,13 +148,21 @@
 
    
     <style>
-        /* NUCLEAR DARK MODE OVERRIDES */
+        /* NUCLEAR DARK MODE OVERRIDES - updated 2026-03-31 - header stays frosted glass white, notification icons stay dark */
         body.dark-mode #header {
-            background: #0f172a !important;
+            background: rgba(255, 255, 255, 0.72) !important;
             opacity: 1 !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
+            backdrop-filter: blur(20px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            border-color: rgba(0,0,0,0.06) !important;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.04) !important;
         }
+        /* .notification-trigger - updated 2026-03-31 - always dark icons even in dark mode */
+        body.dark-mode .notification-trigger { background: rgba(0, 0, 0, 0.05) !important; color: #1e293b !important; }
+        body.dark-mode .notification-trigger i { color: #1e293b !important; }
+        /* .greeting-text & .user-name - updated 2026-03-31 - dark text on frosted glass header in dark mode */
+        body.dark-mode .greeting-text { color: #94a3b8 !important; }
+        body.dark-mode .user-name { color: #1e293b !important; }
         body.dark-mode #triple-progress-widget.triple-progress-card,
         body.dark-mode #safe-spend-widget.safe-spend-card {
             background: #1a1a1a !important;
@@ -1930,12 +1961,12 @@
                 fab.style.transition = 'background-color 0.4s ease'; 
             }
             
-            // 2. Update Active Nav Item
+            // 2. Update Active Nav Item - updated 2026-03-31 - disabled to keep universal bottom nav colors
             const activeNav = document.querySelector('.nav-item.active');
-            if(activeNav) {
+            /* if(activeNav) {
                 activeNav.style.color = theme.nav;
                 activeNav.style.transition = 'color 0.4s ease';
-            }
+            } */
 
             // 3. Update Trend Chart Line & Text
             const trendPath = document.getElementById('trendPath');

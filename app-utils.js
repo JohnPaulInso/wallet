@@ -272,8 +272,9 @@ export function triggerHaptic(type = 'light') {
  * @param {string} message - Notification message
  * @param {string} type - 'info', 'warning', 'success', 'error'
  * @param {object} action - Optional action object { label, callback }
+ * @param {object} meta - Optional metadata persisted with the notification
  */
-export function createNotification(title, message, type = 'info', action = null) {
+export function createNotification(title, message, type = 'info', action = null, meta = null) {
     const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
     const newNotif = {
         id: Date.now(),
@@ -282,7 +283,8 @@ export function createNotification(title, message, type = 'info', action = null)
         type,
         time: new Date().toISOString(),
         unread: true,
-        action: action ? { label: action.label, callbackString: action.callbackString } : null
+        action: action ? { label: action.label, callbackString: action.callbackString } : null,
+        meta: meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null
     };
 
     notifications.unshift(newNotif);
@@ -290,6 +292,13 @@ export function createNotification(title, message, type = 'info', action = null)
     localStorage.setItem('smartwallet_notifications', JSON.stringify(notifications));
 
     // Update unread count and UI if event listeners are active
+    if (typeof window.updateUnreadCount === 'function') {
+        try {
+            window.updateUnreadCount();
+        } catch (e) {
+            console.warn('Immediate unread update failed:', e);
+        }
+    }
     window.dispatchEvent(new CustomEvent('notification-created', { detail: newNotif }));
     
     // Also show a toast for immediate feedback if it's high priority

@@ -18,6 +18,16 @@ setPersistence(auth, browserLocalPersistence).catch(e => console.error("Persiste
 // Export core instances
 export { app, auth, db };
 
+// [NEW: GLOBAL BRIDGE - 2026-04-03]
+// Expose modules to window for non-module scripts like accounts-logic.js
+window.FirebaseModule = {
+    app, auth, db,
+    doc, getDoc, setDoc, addDoc, collection, serverTimestamp, 
+    getDocs, onSnapshot, query, orderBy, where, updateDoc, 
+    deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch, increment,
+    GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signInWithCredential
+};
+
 export { 
     doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, where, updateDoc, deleteDoc, deleteField, enableIndexedDbPersistence, writeBatch, increment,
     GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signInWithCredential

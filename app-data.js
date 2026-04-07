@@ -19,16 +19,24 @@ window.safeToSpendConfig = {
 
 // Helper to get collection name from account ID
 export function getCollectionName(accId) {
-    if (accId === 'bpi') return 'transactions_bpi';
-    if (accId === 'atome') return 'transactions_atome';
-    if (accId === 'default_wallet') return 'transactions'; // Normal wallet usually points here
-    return `transactions_${accId}`;
+    if (accId === 'atome') return 'transactions';
+    if (accId === 'bpi') return 'bpi_transactions';
+    if (accId === 'default_wallet') return 'transactions_default';
+    return `txns_${accId}`;
+}
+
+function getCachedBalanceForAccount(accId) {
+    try {
+        const balances = JSON.parse(localStorage.getItem('wallet_cached_balances') || '{}');
+        return typeof balances[accId] === 'number' ? balances[accId] : null;
+    } catch (e) {
+        return null;
+    }
 }
 
 // Load Data with Real-time Listeners
 window.unsubscribeSnapshot = null;
 window.isDataLoading = false; 
-
 export async function loadData(providedUid = null) {
     const uid = providedUid || auth.currentUser?.uid;
     if (!uid) return;
@@ -41,8 +49,7 @@ export async function loadData(providedUid = null) {
     }
     window.lastLoadKey = loadKey;
     window.isDataLoading = true;
-
-    window.historyLimit = 6; 
+    window.historyLimit = 4; 
     const container = document.getElementById('history-container');
     const spinner = document.getElementById('loading-spinner');
     
@@ -80,11 +87,15 @@ export async function loadData(providedUid = null) {
             if (cache.txns && (now - cache.timestamp < 86400000)) {
                 window.allTxns = cache.txns;
                 if (window.renderHistory) window.renderHistory(cache.txns);
-                if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(cache.txns);
+                if (window.updateBalanceToThisMonth && !(Array.isArray(cache.txns) && cache.txns.length === 0 && getCachedBalanceForAccount(window.currentAccount) !== null)) {
+                    window.updateBalanceToThisMonth(cache.txns);
+                }
+                if (window.updateInsightCards) window.updateInsightCards(cache.txns);
+                if (window.renderCalendar) window.renderCalendar();
                 if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
                 else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                 hasValidCache = true;
-                
+
                 // Robust Chart Initialization with slight delay to ensure DOM readiness
                 setTimeout(() => {
                     const filterEl = document.getElementById('chart-filter');
@@ -93,7 +104,7 @@ export async function loadData(providedUid = null) {
                         if (window.filterChart) window.filterChart();
                     }
                 }, 100);
-                
+
                 if (spinner) spinner.style.display = 'none'; 
             }
         } catch(e) { console.warn("Cache error", e); }
@@ -173,6 +184,12 @@ export async function loadData(providedUid = null) {
 
             if (isSame && document.getElementById('history-container').children.length > 0) {
                 log(`Snapshot matches cache for ${syncAccount}. Render skipped.`);
+
+                if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount);
+                if (window.updateInsightCards) window.updateInsightCards(txns);
+                if (window.renderCalendar) window.renderCalendar();
+                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                 
                 // Ensure chart is still rendered if it's currently empty
                 const filterEl = document.getElementById('chart-filter');
@@ -204,6 +221,8 @@ export async function loadData(providedUid = null) {
             if (spinner) spinner.style.display = 'none';
             
             if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount); 
+            if (window.updateInsightCards) window.updateInsightCards(txns);
+            if (window.renderCalendar) window.renderCalendar();
             
             // Modified 2026-03-27: Signal that we have live data for the budget widget
             window.hasBudgetLiveData = true;
@@ -218,13 +237,11 @@ export async function loadData(providedUid = null) {
                 if (trendTotal) trendTotal.innerText = 'PHP 0.00';
                 const chartVal = document.getElementById('chart-total-val');
                 if (chartVal) chartVal.innerText = '0';
-                
-                const balanceEl = document.querySelector(`.balance-card[data-account="${syncAccount}"] .balance-amount`);
-                if (balanceEl) {
+                const cachedBalance = getCachedBalanceForAccount(window.currentAccount);
+                const balanceEl = document.querySelector(`.balance-card[data-account="${window.currentAccount}"] .balance-amount`) || document.getElementById(`${window.currentAccount}-balance`);
+                if (balanceEl && cachedBalance === null) {
                     balanceEl.innerText = 'PHP 0.00';
                     balanceEl.dataset.raw = 'PHP 0.00';
-                    balanceEl.classList.add('privacy-mask');
-                    if(localStorage.getItem('balance_hidden') === 'true') balanceEl.innerText = '******';
                 }
                 
                 if (window.drawPieChart) window.drawPieChart([], 0);
@@ -270,6 +287,8 @@ export async function loadData(providedUid = null) {
 
     } catch (e) { 
         log('Failed to load history: ' + e.message, 'error');
+        window.isDataLoading = false;
+        clearTimeout(window.spinnerTimeout);
         if (spinner) spinner.style.display = 'none';
     }
 }
@@ -477,13 +496,14 @@ export async function handleScan(limit, manualTrigger = false) {
                         firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
                         
                         // Auto-duplicate BPI "Atome Payment" to Atome wallet
-                        const merchantLower = txn.merchant?.toLowerCase() || '';
-                        const categoryLower = txn.manualCategory?.toLowerCase() || '';
-                        const isAtomePayment = merchantLower.includes('atome') || categoryLower.includes('credit card payment');
+                        const isAtomePayment = txn.merchant === 'ATOME PAYMENT' || 
+                                              (txn.merchant && txn.merchant.toUpperCase().includes('ATOME')) ||
+                                              (txn.manualCategory === 'Credit Card Payment'); // simplified check // 2026-04-02
 
                         if (syncAccount === 'bpi' && isAtomePayment) {
                             const atomeCol = getCollectionName('atome');
-                            const atomeTxnId = 'auto_' + txn.id;
+                            // Ensure ID is stable and unique for the duplication
+                            const atomeTxnId = 'atome_auto_' + txn.id.replace('bpi_', ''); 
                             const atomeDocRef = doc(db, "users", uid, atomeCol, atomeTxnId);
 
                             const atomeSnap = await getDoc(atomeDocRef);
@@ -492,12 +512,15 @@ export async function handleScan(limit, manualTrigger = false) {
                                 const atomeTxn = {
                                     ...txn,
                                     id: atomeTxnId,
-                                    amount: Math.abs(txn.amount),
+                                    merchant: 'ATOME PAYMENT', // Standardize name
+                                    amount: Math.abs(txn.amount || 0), // Atome payment is income for that wallet
                                     manualAmount: txn.manualAmount !== undefined ? Math.abs(txn.manualAmount) : undefined,
-                                    manualCategory: 'Income',
-                                    note: (txn.note || '') + ' (BPI Sync)',
+                                    manualCategory: 'Income', // Fixed as income // 2026-04-02
+                                    note: (txn.note || '') + ' (Synced from BPI)',
+                                    date: txn.date, // Match the date exactly
                                     duplicatedFrom: txn.id,
-                                    duplicatedFromAccount: 'bpi'
+                                    duplicatedFromAccount: 'bpi',
+                                    isAutoGenerated: true // Mark as auto // 2026-04-02
                                 };
                                 firestoreBatch.set(atomeDocRef, { ...atomeTxn, deleted: false, createdAt: serverTimestamp() });
                             }

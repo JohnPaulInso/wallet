@@ -1,9 +1,18 @@
-const CACHE_NAME = 'smartwallet-v2.0';
+const CACHE_NAME = 'smartwallet-v2.1';
 const ASSETS = [
     './',
     './index.html',
     './index.css',
     './index.js',
+    './app-data.js',
+    './app-ui.js',
+    './app-utils.js',
+    './notifications-engine.js',
+    './accounts-logic.js',
+    './goals-logic.js',
+    './calendar-logic.js',
+    './local-ai.js',
+    './config.js',
     './calendar.html',
     './accounts.html',
     './goals.html',
@@ -15,10 +24,14 @@ const ASSETS = [
     './applogo.png',
     // External CDN assets
     'https://cdn.muicss.com/mui-0.10.3/css/mui.min.css',
+    'https://cdn.jsdelivr.net/npm/chart.js',
+    'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js',
+    'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js',
     'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap',
     'https://fonts.googleapis.com/icon?family=Material+Icons',
     'https://fonts.googleapis.com/css2?family=Lexend:wght@700;800;900&display=swap',
     'https://fonts.googleapis.com/css2?family=DM+Serif+Display&display=swap',
+    'https://fonts.cdnfonts.com/css/lemon-milk',
     // Firebase SDK
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js',
     'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js',

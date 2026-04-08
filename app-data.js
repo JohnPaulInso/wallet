@@ -171,6 +171,11 @@ export async function loadData(providedUid = null) {
                 return b._createKey - a._createKey;
             });
 
+            const hasRealtimeAddedTxn = prevTxns.length > 0 && snap.docChanges().some(change => change.type === 'added');
+            if (hasRealtimeAddedTxn && window.queueBudgetThresholdNotificationTrigger) {
+                window.queueBudgetThresholdNotificationTrigger(uid, null, 'realtime_snapshot');
+            }
+
             const isSame = prevTxns.length === txns.length && 
                            txns.every((t, i) => 
                                prevTxns[i] && 

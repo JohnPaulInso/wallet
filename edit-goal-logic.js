@@ -19,10 +19,95 @@ let dynamicMonthlySavings = 5000;
 let activeTxnId = null;
 let txnPressTimer = null;
 const PESO_SYMBOL = '\u20B1';
+const GOAL_NOTIFICATION_MILESTONES = [50, 100];
 
 function toFiniteAmount(value) {
     const amount = Number(value);
     return Number.isFinite(amount) ? amount : 0;
+}
+
+function getGoalMilestoneCycles(goal) {
+    if (!goal || typeof goal !== 'object' || !goal.milestoneCycles || typeof goal.milestoneCycles !== 'object') {
+        return {};
+    }
+    return goal.milestoneCycles;
+}
+
+function buildGoalMilestoneCycleUpdates(goal, nextAmount) {
+    const safeGoal = goal || {};
+    const targetAmount = Number(safeGoal.targetAmount || 0);
+    if (!(targetAmount > 0)) return null;
+
+    const previousAmount = Number(safeGoal.currentAmount || 0);
+    const nextValue = Number(nextAmount || 0);
+    const previousPct = (previousAmount / targetAmount) * 100;
+    const nextPct = (nextValue / targetAmount) * 100;
+    const currentCycles = getGoalMilestoneCycles(safeGoal);
+    const updates = {};
+    let changed = false;
+
+    GOAL_NOTIFICATION_MILESTONES.forEach((milestone) => {
+        if (previousPct < milestone && nextPct >= milestone) {
+            updates[`milestoneCycles.${milestone}`] = Number(currentCycles?.[String(milestone)] || 0) + 1;
+            changed = true;
+        }
+    });
+
+    return changed ? updates : null;
+}
+
+async function notifyGoalMilestonesFromUpdates(goal, goalId, milestoneCycleUpdates = null) {
+    if (!goal || !goalId || !milestoneCycleUpdates || typeof milestoneCycleUpdates !== 'object') return;
+
+    const completedCycle = Number(milestoneCycleUpdates['milestoneCycles.100'] || 0);
+    const halfwayCycle = Number(milestoneCycleUpdates['milestoneCycles.50'] || 0);
+    const uid = currentUser?.uid;
+    const engine = window.NotificationsEngine;
+
+    const triggerGoalAlert = async (title, message, milestone, cycle) => {
+        const cycleNumber = Number(cycle || 0);
+        if (!(cycleNumber > 0)) return;
+        const alertKey = `goal_${goalId}_${milestone}_cycle_${cycleNumber}`;
+        const notificationMeta = {
+            action: 'open_goal_edit',
+            goalId,
+            source: 'goals',
+            milestone,
+            cycle: cycleNumber,
+            notificationKey: alertKey
+        };
+
+        if (uid && engine?.hasNotified && engine?.triggerNotification) {
+            const alreadySent = await engine.hasNotified(uid, alertKey, notificationMeta);
+            if (alreadySent) return;
+            await engine.triggerNotification(uid, title, message, alertKey, notificationMeta);
+            return;
+        }
+
+        const alreadySent = localStorage.getItem(alertKey);
+        if (alreadySent) return;
+        if (window.createNotification) window.createNotification(title, message, alertKey, null, notificationMeta);
+        localStorage.setItem(alertKey, 'true');
+    };
+
+    if (completedCycle > 0) {
+        await triggerGoalAlert(
+            'Goal Completed! 🏆',
+            `Congratulations! You've reached your ₱${toFiniteAmount(goal.targetAmount).toLocaleString()} goal for ${goal.title}.`,
+            '100',
+            completedCycle
+        );
+        return;
+    }
+
+    if (halfwayCycle > 0) {
+        await triggerGoalAlert(
+            'Halfway There!',
+            `You're 50% through your goal for ${goal.title}. Keep it up!`,
+            '50',
+            halfwayCycle
+        );
+    }
 }
 
 function formatPeso(value) {
@@ -759,6 +844,8 @@ window.EditGoalView = {
         const txn = lastTransactions.find(t => t.id === activeTxnId);
         if (!txn) return window.showToast('Transaction not found');
         const diff = newAmount - (txn.amount || 0);
+        const nextGoalAmount = Math.max(0, toFiniteAmount(currentGoalData?.currentAmount) + diff);
+        const milestoneCycleUpdates = buildGoalMilestoneCycleUpdates(currentGoalData, nextGoalAmount);
 
         /* Loading state on save button */
         const btn = document.querySelector('#goals-txn-edit-modal .goals-modal-btn.goals-primary-btn');
@@ -783,11 +870,25 @@ window.EditGoalView = {
             });
             batch.update(goalRef, {
                 currentAmount: incrementFn(diff),
-                updatedAt: serverTimestamp()
+                updatedAt: serverTimestamp(),
+                ...(milestoneCycleUpdates || {})
             });
 
             this.closeModals();
             await batch.commit();
+
+            currentGoalData.currentAmount = nextGoalAmount;
+            if (milestoneCycleUpdates) {
+                if (!currentGoalData.milestoneCycles || typeof currentGoalData.milestoneCycles !== 'object') {
+                    currentGoalData.milestoneCycles = {};
+                }
+                Object.entries(milestoneCycleUpdates).forEach(([path, value]) => {
+                    const match = String(path || '').match(/^milestoneCycles\.(.+)$/);
+                    if (!match) return;
+                    currentGoalData.milestoneCycles[match[1]] = Number(value || 0);
+                });
+            }
+            await notifyGoalMilestonesFromUpdates(currentGoalData, currentGoalId, milestoneCycleUpdates);
 
             if (window.showToast) window.showToast('Transaction updated!');
             await this.loadAll();

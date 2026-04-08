@@ -1,10 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="app-shell-pending">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Smart Wallet</title>
     <meta name="application-name" content="Smart Wallet">
+    <style>
+        html.app-shell-pending,
+        html.app-shell-pending body {
+            background: #ffffff;
+        }
+
+        html.app-shell-pending body > * {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        html.app-shell-ready body > * {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transition: opacity 0.18s ease;
+        }
+    </style>
     <meta name="description" content="Smart Wallet — Your personal finance tracker. Track expenses, sync bank transactions from Gmail, set budgets, and visualize your spending.">
     <link rel="icon" type="image/png" href="applogo.png?v=4">
     <link rel="apple-touch-icon" href="applogo.png?v=4">
@@ -75,12 +94,28 @@
                     try {
                         const { StatusBar } = window.Capacitor.Plugins;
                         await StatusBar.setBackgroundColor({ color: '#00000000' });
-                        await StatusBar.setStyle({ style: 'LIGHT' }); // dark icons on light bg
+                        await StatusBar.setStyle({ style: 'DARK' }); // dark icons on light bg
                         await StatusBar.setOverlaysWebView({ overlay: true });
                     } catch (e) { console.warn('StatusBar Plugin error:', e); }
                 }
             };
+            window.forceNativeStatusBarDark = initStatusBar;
             initStatusBar();
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') initStatusBar();
+            });
+            window.addEventListener('focus', initStatusBar);
+            window.addEventListener('pageshow', initStatusBar);
+            document.addEventListener('resume', initStatusBar, false);
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App && typeof window.Capacitor.Plugins.App.addListener === 'function') {
+                try {
+                    window.Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => {
+                        if (isActive) initStatusBar();
+                    });
+                } catch (e) {
+                    console.warn('App state listener error:', e);
+                }
+            }
         }
         
         document.addEventListener('DOMContentLoaded', () => {
@@ -269,7 +304,53 @@
         }
     </script>
 
-<link rel="stylesheet" href="index.css">
+<link rel="stylesheet" href="index.css" id="app-stylesheet">
+
+    <script>
+        (function() {
+            const root = document.documentElement;
+            const cssLink = document.getElementById('app-stylesheet');
+            let revealed = false;
+
+            const revealAppShell = () => {
+                if (revealed) return;
+                revealed = true;
+                requestAnimationFrame(() => {
+                    root.classList.remove('app-shell-pending');
+                    root.classList.add('app-shell-ready');
+                });
+            };
+
+            const waitForFonts = () => {
+                if (!document.fonts || typeof document.fonts.ready?.then !== 'function') {
+                    revealAppShell();
+                    return;
+                }
+
+                Promise.race([
+                    Promise.allSettled([
+                        document.fonts.ready,
+                        document.fonts.load('24px "Material Icons"')
+                    ]),
+                    new Promise(resolve => setTimeout(resolve, 1200))
+                ]).finally(revealAppShell);
+            };
+
+            if (cssLink) {
+                if (cssLink.sheet) {
+                    waitForFonts();
+                } else {
+                    cssLink.addEventListener('load', waitForFonts, { once: true });
+                    cssLink.addEventListener('error', revealAppShell, { once: true });
+                }
+            } else {
+                waitForFonts();
+            }
+
+            window.addEventListener('load', revealAppShell, { once: true });
+            window.setTimeout(revealAppShell, 1800);
+        })();
+    </script>
 
    
     <style>
@@ -2234,11 +2315,17 @@
                 
                 // Initialize Notifications for this user
                 if (!user.isAnonymous) {
+                    if (window.NotificationsEngine?.getNotificationInstallEpoch) {
+                        window.NotificationsEngine.getNotificationInstallEpoch(user.uid, true);
+                    }
                     if (window.setupNotifWatcher) window.setupNotifWatcher(user.uid);
                     
                     // Run Smart Notification Checks
                     if (window.NotificationsEngine) {
                         const uid = user.uid;
+                        window.NotificationsEngine.syncStoredInAppNotifications?.(uid);
+                        window.NotificationsEngine.replayMissedNotifications?.(uid);
+                        window.NotificationsEngine.backfillNotificationsFromState?.(uid);
                         // 1. Check recurring tuition (15th/30th)
                         window.NotificationsEngine.checkRecurringReminders(uid);
                         
@@ -2279,6 +2366,7 @@
                             data.obligations = [];
                         }
                         window.safeToSpendConfig = data;
+                        if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(data);
                         
                         // Sync salary targets and rule to localStorage for speed
                         // Priority: budgetSalaryTarget (New) -> salaryAmount (Legacy)
@@ -3157,6 +3245,11 @@
                         return b._createKey - a._createKey;
                     });
 
+                    const hasRealtimeAddedTxn = prevTxns.length > 0 && snap.docChanges().some(change => change.type === 'added');
+                    if (hasRealtimeAddedTxn && window.queueBudgetThresholdNotificationTrigger) {
+                        window.queueBudgetThresholdNotificationTrigger(uid, null, 'realtime_snapshot');
+                    }
+
                     const isSame = prevTxns.length === txns.length && 
                                    txns.every((t, i) => 
                                        prevTxns[i] && 
@@ -3499,9 +3592,47 @@
 
         window.atomeDataLoaded = false;
         window.bpiDataLoaded = false;
+        const SAFE_SPEND_CACHE_KEY = 'wallet_safe_to_spend_cache_v1';
+
+        window.cacheSafeSpendConfig = (config = window.safeToSpendConfig) => {
+            try {
+                if (!config || typeof config !== 'object') return;
+                localStorage.setItem(SAFE_SPEND_CACHE_KEY, JSON.stringify(config));
+            } catch (e) {
+                console.warn('Failed to cache safe-to-spend config', e);
+            }
+        };
+
+        window.restoreSafeSpendConfigFromCache = () => {
+            try {
+                const raw = localStorage.getItem(SAFE_SPEND_CACHE_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                if (!parsed || typeof parsed !== 'object') return null;
+                window.safeToSpendConfig = {
+                    savingsAmount: 3000,
+                    obligations: [],
+                    receipts: [],
+                    sections: [],
+                    ...parsed
+                };
+                if (!Array.isArray(window.safeToSpendConfig.obligations)) window.safeToSpendConfig.obligations = [];
+                if (!Array.isArray(window.safeToSpendConfig.receipts)) window.safeToSpendConfig.receipts = [];
+                if (!Array.isArray(window.safeToSpendConfig.sections)) window.safeToSpendConfig.sections = [];
+                return window.safeToSpendConfig;
+            } catch (e) {
+                console.warn('Failed to restore safe-to-spend cache', e);
+                return null;
+            }
+        };
+
+        window.restoreSafeSpendConfigFromCache();
 
         window.saveSafeSpendConfig = async (update) => {
             const uid = auth.currentUser?.uid;
+            const mergedConfig = { ...(window.safeToSpendConfig || {}), ...(update || {}) };
+            window.safeToSpendConfig = mergedConfig;
+            window.cacheSafeSpendConfig(mergedConfig);
             if (!uid) return;
             try {
                 await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), update, { merge: true });
@@ -4066,6 +4197,7 @@
 
         window.showBudgetTransactions = (type) => {
             const modal = document.getElementById('budget-txn-modal');
+            const modalContent = document.getElementById('budget-modal-content');
             const list = document.getElementById('budget-txn-list');
             const summary = document.getElementById('budget-txn-summary');
             const title = document.getElementById('budget-modal-title');
@@ -4073,8 +4205,23 @@
             if (!modal || !list) return;
 
             const isAlreadyOpen = modal.classList.contains('show');
+            if (modal._closeTimer) {
+                clearTimeout(modal._closeTimer);
+                modal._closeTimer = null;
+            }
+            modal.classList.remove('closing');
             modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('show'), 10);
+            if (modalContent) {
+                if (modalContent._closeTimer) {
+                    clearTimeout(modalContent._closeTimer);
+                    modalContent._closeTimer = null;
+                }
+                modalContent.classList.remove('closing');
+                modalContent.style.display = 'flex';
+                modalContent.style.transform = '';
+                modalContent.style.transition = '';
+            }
+            requestAnimationFrame(() => modal.classList.add('show'));
             list.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading transactions...</div>';
             if (summary) summary.innerHTML = '';
             
@@ -4085,7 +4232,9 @@
                 addBtn.onclick = () => window.openBudgetManualEntryModal(type);
             }
             
-            if (window.NavState && !isAlreadyOpen) window.NavState.pushModalState('budget-txn-modal', () => closeModals('budget-txn-modal', true));
+            if (window.NavState && !window.NavState.modalStack.some(m => m.id === 'budget-txn-modal')) {
+                window.NavState.pushModalState('budget-txn-modal', () => closeModals('budget-txn-modal', true));
+            }
 
             const filterEl = document.getElementById('chart-filter');
             const currentFilter = filterEl ? filterEl.value : 'this_month';
@@ -4195,6 +4344,13 @@
                     
                     // Only manual entries from our new collection are editable
                     const isEditable = t.account === 'budget_manual';
+                    const accountLabel = t.account === 'atome'
+                        ? 'Atome'
+                        : t.account === 'bpi'
+                            ? 'BPI'
+                            : (t.account === 'default_wallet' || t.account === 'wallet' || t.account === 'budget_manual' || !t.account)
+                                ? 'Wallet'
+                                : String(t.account).replace(/_/g, ' ');
 
                     const nameLen = display.name.length;
                     let fontSize = '11.2px'; // Fix 2026-03-28: Smaller font size (12.5px -> 11.5px)
@@ -4229,7 +4385,7 @@
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div class="line-clamp-3" style="font-size: ${fontSize}; font-weight: 800; color: #1e293b; margin-bottom: 1px; letter-spacing: 0.2px; text-transform: uppercase; line-height: 1.3;">${display.name}</div> <!-- updated 2026-03-31 - enabled 3-line clamping - 2026-03-31 -->
-                                <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${dateStr} • ${display.category}${isEditable ? ' • CASH LOG' : ''}</div>
+                                <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${dateStr} • ${display.category} • ${accountLabel}${isEditable ? ' • CASH LOG' : ''}</div>
                                 ${displayNote ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayNote}</div>` : ''}
                             </div>
                             <div style="text-align: right; display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0;"> <!-- updated 2026-03-28 - used margin-left, gap and flex-shrink to prevent overlapping - 2026-03-28 -->
@@ -5921,6 +6077,7 @@ Be direct, practical, and helpful.`;
             'Income': { color: '#16a34a', darkColor: '#16a34a', class: 'cat-income' },
             'Other': { color: '#64748b', darkColor: '#475569', class: 'cat-financial' }
         };
+        window.categoryConfig = categoryConfig;
 
         function refreshChart(txns, pastTotal = 0) {
             const chartSection = document.getElementById('chart-section');
@@ -8432,6 +8589,7 @@ Be direct, practical, and helpful.`;
         function saveReceiptsData() {
             localStorage.setItem('wallet_receipts_backup', JSON.stringify(window.safeToSpendConfig.receipts));
             localStorage.setItem('wallet_receipt_sections_backup', JSON.stringify(window.receiptSections));
+            if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig({ ...window.safeToSpendConfig, sections: window.receiptSections });
             
             const uid = auth.currentUser?.uid;
             if (uid) {
@@ -8716,6 +8874,7 @@ Be direct, practical, and helpful.`;
                 newItem.addEventListener('mouseleave', endTouch);
             });
         }
+        window.setupLongPressHandlers = setupLongPressHandlers;
         
         function showIOSMenu(item, event) {
             if (window.modalOpen) return; // Prevent if already open
@@ -8998,10 +9157,34 @@ Be direct, practical, and helpful.`;
             // OPTIMISTIC UPDATE
             const idx = window.allTxns.findIndex(t => t.id === id);
             const originalState = isCurrentlyExcluded;
+            const txnBeforeToggle = idx > -1 ? window.allTxns[idx] : null;
+            const getTxnAffectedBudgetCategories = (txn) => {
+                if (!txn) return [];
+                const categories = new Set();
+                if (txn.budgetSplit) {
+                    if ((txn.budgetSplit.needs || 0) > 0) categories.add('needs');
+                    if ((txn.budgetSplit.wants || 0) > 0) categories.add('wants');
+                    if ((txn.budgetSplit.savings || 0) > 0) categories.add('savings');
+                } else {
+                    const manualBucket = ['needs', 'wants', 'savings'].includes(txn.manualBudgetCategory)
+                        ? txn.manualBudgetCategory
+                        : autoDetectClassification(txn.manualCategory);
+                    if (['needs', 'wants', 'savings'].includes(manualBucket)) categories.add(manualBucket);
+                }
+                return [...categories];
+            };
+            const affectedBudgetCategories = getTxnAffectedBudgetCategories(txnBeforeToggle);
             if (idx > -1) {
                 window.allTxns[idx].excluded = !isCurrentlyExcluded;
                 renderHistory(window.allTxns);
                 updateBalanceToThisMonth(window.allTxns);
+                if (isCurrentlyExcluded && affectedBudgetCategories.length && window.queueBudgetThresholdNotificationTrigger) {
+                    window.queueBudgetThresholdNotificationTrigger(auth.currentUser?.uid, affectedBudgetCategories, 'reinclude_txn');
+                }
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (isCurrentlyExcluded && window.forceBudgetNotificationCheck) {
+                    window.forceBudgetNotificationCheck();
+                }
                 // Also refresh charts/subscriptions if needed
                 if (window.detectSubscriptions) detectSubscriptions();
                 if (window.drawCashFlowChart) drawCashFlowChart();
@@ -10145,6 +10328,7 @@ Be direct, practical, and helpful.`;
                 modal.style.display = 'flex'; // Reset inline style from closeModals
                 modal.classList.add('show');
             }
+            window.storeManualTxnModalBaseline();
             window.modalOpen = true;
             
             if (window.NavState) window.NavState.pushModalState('manual-txn-modal', () => closeModals(true));
@@ -10281,6 +10465,7 @@ Be direct, practical, and helpful.`;
                 modal.style.display = 'flex'; // Reset inline style from closeModals
                 modal.classList.add('show');
             }
+            window.storeManualTxnModalBaseline();
             window.modalOpen = true;
             
             // Push history state if not already handled by replaceModalState
@@ -10507,6 +10692,48 @@ Be direct, practical, and helpful.`;
             return Number.isFinite(amount) ? amount : 0;
         }
 
+        function captureManualTxnModalState() {
+            const readValue = (id) => document.getElementById(id)?.value?.trim?.() || '';
+            const readSplitAmount = (id) => parseCurrencyAmount(readValue(id));
+            return {
+                editingTxnId: window.editingTxnId || null,
+                amount: parseCurrencyAmount(readValue('manual-amt')),
+                merchant: readValue('manual-merchant'),
+                note: readValue('manual-note'),
+                date: readValue('manual-date'),
+                account: readValue('manual-account'),
+                excluded: !!document.getElementById('manual-exclude-toggle')?.checked,
+                manualCategory: selectedManualCatId || '',
+                manualClassification: window.currentManualClassification || '',
+                txnType: manualTxnType || 'expense',
+                splitNeeds: readSplitAmount('split-needs'),
+                splitWants: readSplitAmount('split-wants'),
+                splitSavings: readSplitAmount('split-savings'),
+                splitNa: readSplitAmount('split-na')
+            };
+        }
+
+        window.storeManualTxnModalBaseline = () => {
+            window.manualTxnModalBaseline = captureManualTxnModalState();
+        };
+
+        window.isManualTxnModalPristine = () => {
+            const current = captureManualTxnModalState();
+            const baseline = window.manualTxnModalBaseline;
+
+            if (!baseline) {
+                return current.amount <= 0 &&
+                    !current.merchant &&
+                    !current.note &&
+                    current.splitNeeds <= 0 &&
+                    current.splitWants <= 0 &&
+                    current.splitSavings <= 0 &&
+                    current.splitNa <= 0;
+            }
+
+            return JSON.stringify(current) === JSON.stringify(baseline);
+        };
+
         window.saveManualTxn = async () => {
             if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is in "Local Mode". Sign in with Google to permanently save this to the cloud?')) {
@@ -10581,11 +10808,7 @@ Be direct, practical, and helpful.`;
                     budgetSplit: budgetSplit
                 };
 
-                const ensurePostSaveBudgetNotifications = async () => {
-                    const engine = window.NotificationsEngine;
-                    const snapshot = window.lastBudgetNotificationSnapshot;
-                    if (!engine || !snapshot || !uid) return;
-
+                const getAffectedBudgetCategories = () => {
                     const affectedCategories = new Set();
                     if (budgetSplit) {
                         if ((budgetSplit.needs || 0) > 0) affectedCategories.add('needs');
@@ -10599,8 +10822,16 @@ Be direct, practical, and helpful.`;
                             affectedCategories.add(manualBucket);
                         }
                     }
+                    return [...affectedCategories];
+                };
+                const affectedBudgetCategories = getAffectedBudgetCategories();
 
-                    if (!affectedCategories.size) return;
+                const ensurePostSaveBudgetNotifications = async () => {
+                    const engine = window.NotificationsEngine;
+                    const snapshot = window.lastBudgetNotificationSnapshot;
+                    if (!engine || !snapshot || !uid) return;
+
+                    if (!affectedBudgetCategories.length) return;
 
                     const monthKey = engine.getCurrentMonthKey ? engine.getCurrentMonthKey() : (() => {
                         const now = new Date();
@@ -10628,7 +10859,7 @@ Be direct, practical, and helpful.`;
                         savings: { label: 'Savings', current: snapshot.savingsThresholdTotal, limit: snapshot.savingsLimit }
                     };
 
-                    for (const categoryKey of affectedCategories) {
+                    for (const categoryKey of affectedBudgetCategories) {
                         const info = categorySnapshotMap[categoryKey];
                         if (!info || !Number.isFinite(info.current) || !Number.isFinite(info.limit) || info.limit <= 0) continue;
 
@@ -10647,7 +10878,7 @@ Be direct, practical, and helpful.`;
 
                         let hasRemote = false;
                         try {
-                            hasRemote = engine.hasNotified ? await engine.hasNotified(uid, notifType) : false;
+                            hasRemote = engine.hasNotified ? await engine.hasNotified(uid, notifType, meta) : false;
                         } catch (e) {}
 
                         const hasLocal = engine.hasStoredInAppNotification ? engine.hasStoredInAppNotification(notifType, meta) : false;
@@ -10655,7 +10886,9 @@ Be direct, practical, and helpful.`;
                         if (!hasRemote) {
                             await engine.triggerNotification(uid, copy.title, copy.body, notifType, meta);
                         } else {
-                            if (!hasLocal && window.createNotification) {
+                            if (!hasLocal && engine.ensureStoredInAppNotification) {
+                                engine.ensureStoredInAppNotification(copy.title, copy.body, notifType, meta);
+                            } else if (!hasLocal && window.createNotification) {
                                 window.createNotification(copy.title, copy.body, notifType, null, meta);
                             }
                             if (engine.deliverLocalNotification && !engine.wasDeliveredLocally(uid, notifType, notifType)) {
@@ -10671,12 +10904,26 @@ Be direct, practical, and helpful.`;
                 };
 
                 const syncOptimisticTxnState = (txnId) => {
+                    const optimisticCreatedAtMs = Date.now();
                     const txnRecord = {
                         id: txnId,
                         ...updateData,
-                        account: selectedAccount
+                        account: selectedAccount,
+                        createdAtMs: optimisticCreatedAtMs
                     };
-                    const sortTxns = (items) => [...items].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    const getCreatedAtMs = (txn) => {
+                        if (!txn) return 0;
+                        if (Number.isFinite(Number(txn.createdAtMs || 0)) && Number(txn.createdAtMs || 0) > 0) return Number(txn.createdAtMs);
+                        if (typeof txn.createdAt?.toMillis === 'function') return txn.createdAt.toMillis();
+                        if (typeof txn.createdAt?.seconds === 'number') return (txn.createdAt.seconds * 1000) + Math.floor((txn.createdAt.nanoseconds || 0) / 1000000);
+                        const parsed = new Date(txn.createdAt || 0).getTime();
+                        return Number.isFinite(parsed) ? parsed : 0;
+                    };
+                    const sortTxns = (items) => [...items].sort((a, b) => {
+                        const dateDelta = new Date(b.date) - new Date(a.date);
+                        if (dateDelta !== 0) return dateDelta;
+                        return getCreatedAtMs(b) - getCreatedAtMs(a);
+                    });
                     const upsertTxn = (items, txn) => {
                         const list = Array.isArray(items) ? [...items] : [];
                         const idx = list.findIndex(item => item.id === txn.id);
@@ -10722,6 +10969,7 @@ Be direct, practical, and helpful.`;
                 };
 
                 // Use the selected account in the modal
+                let shouldReloadAfterSuccessfulEdit = false;
                 const col = getCollectionName(selectedAccount);
 
                 if (window.editingTxnId) {
@@ -10746,6 +10994,7 @@ Be direct, practical, and helpful.`;
                                 createdAt: serverTimestamp()
                             });
                             syncOptimisticTxnState(window.editingTxnId);
+                            shouldReloadAfterSuccessfulEdit = true;
                             showToast('Transaction moved & updated');
                         }
                     } else {
@@ -10757,6 +11006,7 @@ Be direct, practical, and helpful.`;
                         } else {
                             await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
                             syncOptimisticTxnState(window.editingTxnId);
+                            shouldReloadAfterSuccessfulEdit = true;
                             showToast('Transaction updated');
                         }
                     }
@@ -10781,12 +11031,20 @@ Be direct, practical, and helpful.`;
                 }
                 
                 window.editingTxnId = null;
+                window.manualTxnModalBaseline = null;
                 const manualModalContent = document.getElementById('manual-modal-content');
                 if (manualModalContent) {
                     manualModalContent.style.transform = '';
                     manualModalContent.style.transition = '';
                 }
                 closeModals('manual-txn-modal', true);
+
+                if (shouldReloadAfterSuccessfulEdit) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 180);
+                    return;
+                }
 
                 // Refresh budget modal if it was open (logic derived from current state)
                 const budgetModal = document.getElementById('budget-txn-modal');
@@ -10798,6 +11056,9 @@ Be direct, practical, and helpful.`;
                      }
                 }
                 
+                if (affectedBudgetCategories.length && window.queueBudgetThresholdNotificationTrigger) {
+                    window.queueBudgetThresholdNotificationTrigger(uid, affectedBudgetCategories, 'manual_save');
+                }
                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                 if (window.forceBudgetNotificationCheck) {
                     await window.forceBudgetNotificationCheck();
@@ -10840,7 +11101,6 @@ Be direct, practical, and helpful.`;
                 'manual-txn-modal', 
                 'cat-modal',
                 'app-dialog',
-                'budget-modal-content', 
                 'budget-txn-modal', 
                 'account-select-modal',
                 'budget-manual-entry-modal',
@@ -10891,15 +11151,20 @@ Be direct, practical, and helpful.`;
             if (el) {
                 el.classList.add('closing');
                 if (window.NavState) window.NavState.popModalState(targetToClose);
-                setTimeout(() => {
+                clearTimeout(el._closeTimer);
+                el._closeTimer = setTimeout(() => {
                     // CRITICAL RACE CONDITION FIX: 
                     // If the modal was re-opened (has 'show' class) while this timeout was pending, 
                     // do NOT hide it or remove the 'show' class.
                     if (el.classList.contains('show') && !el.classList.contains('closing')) {
                         return;
                     }
+                    if (targetToClose === 'manual-txn-modal') {
+                        window.manualTxnModalBaseline = null;
+                    }
                     el.classList.remove('show', 'closing');
                     el.style.display = 'none';
+                    el._closeTimer = null;
                     cleanupModalState(wasModalOpen, isFromHistory);
                 }, 300);
             }
@@ -10986,9 +11251,11 @@ Be direct, practical, and helpful.`;
 
         // NEW: TRANSACTION FILTERS & LOGO TOGGLE
         let showLogos = true;
+        window.showLogos = true;
         
         window.toggleLogos = () => {
             showLogos = !showLogos;
+            window.showLogos = showLogos;
             const icon = document.getElementById('logo-toggle-icon');
             const wrapper = document.querySelector('.logo-toggle-wrapper');
             
@@ -12651,6 +12918,7 @@ Be direct, practical, and helpful.`;
                 <i class="material-icons" onclick="toggleNotificationCenter()" style="cursor: pointer; color: #64748b;">arrow_back</i>
                 <h2 style="margin: 0; font-size: 1.25rem; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">Notifications</h2>
             </div>
+            <button class="notification-clear-btn" onclick="clearAllNotifications()">Clear All</button>
         </div>
         <div id="notification-list" class="notification-scroll-area">
             <!-- Notifications will be injected here -->
@@ -12698,16 +12966,7 @@ Be direct, practical, and helpful.`;
                             console.warn('Realtime notification bridge failed:', err);
                         });
                     }
-                    let unreadCount = 0;
-                    snapshot.forEach(doc => {
-                        if (!doc.data().isRead) unreadCount++;
-                    });
-                    
-                    const badge = document.getElementById('unread-count');
-                    if (badge) {
-                        badge.innerText = unreadCount;
-                        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
-                    }
+                    if (window.updateUnreadCount) window.updateUnreadCount();
                     
                     // Also trigger a re-render if sidebar is open
                     const sidebar = document.getElementById('notification-center');
@@ -13070,9 +13329,11 @@ Be direct, practical, and helpful.`;
 
         window.initCalendarSwipe = function() {
             const card = document.getElementById('main-calendar-card');
-            if (!card || card.dataset.swipeBound === 'true') return;
-
-            card.dataset.swipeBound = 'true';
+            const grid = card ? card.querySelector('.calendar-grid') : null;
+            const header = card ? card.querySelector('.calendar-header') : null;
+            const summaryPills = document.querySelector('#view-calendar .summary-pills');
+            const swipeTargets = [card, grid, header, summaryPills].filter(Boolean);
+            if (!swipeTargets.length || swipeTargets.every(el => el.dataset.swipeBound === 'true')) return;
 
             let startX = 0;
             let startY = 0;
@@ -13096,6 +13357,7 @@ Be direct, practical, and helpful.`;
                 dragOffset = 0;
                 axis = null;
                 dragging = true;
+                if (typeof event.stopPropagation === 'function') event.stopPropagation();
                 window.setCalendarCardOffset(0, true);
             };
 
@@ -13113,6 +13375,7 @@ Be direct, practical, and helpful.`;
 
                 if (axis !== 'x') return;
                 if (event.cancelable) event.preventDefault();
+                if (typeof event.stopPropagation === 'function') event.stopPropagation();
 
                 dragOffset = Math.max(-56, Math.min(56, dx * 0.35));
                 window.setCalendarCardOffset(dragOffset, true);
@@ -13129,10 +13392,14 @@ Be direct, practical, and helpful.`;
                 }
             };
 
-            card.addEventListener('touchstart', onStart, { passive: true });
-            card.addEventListener('touchmove', onMove, { passive: false });
-            card.addEventListener('touchend', onEnd);
-            card.addEventListener('touchcancel', onEnd);
+            swipeTargets.forEach((target) => {
+                if (target.dataset.swipeBound === 'true') return;
+                target.dataset.swipeBound = 'true';
+                target.addEventListener('touchstart', onStart, { passive: true, capture: true });
+                target.addEventListener('touchmove', onMove, { passive: false, capture: true });
+                target.addEventListener('touchend', onEnd, { capture: true });
+                target.addEventListener('touchcancel', onEnd, { capture: true });
+            });
         };
 
         window.openCalendarModal = function(date) {

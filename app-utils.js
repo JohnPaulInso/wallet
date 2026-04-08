@@ -276,15 +276,19 @@ export function triggerHaptic(type = 'light') {
  */
 export function createNotification(title, message, type = 'info', action = null, meta = null) {
     const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    const createdAtMs = Date.now();
     const newNotif = {
-        id: Date.now(),
+        id: createdAtMs,
         title,
         message,
         type,
         time: new Date().toISOString(),
+        createdAtMs,
         unread: true,
         action: action ? { label: action.label, callbackString: action.callbackString } : null,
-        meta: meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null
+        meta: meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null,
+        remoteId: null,
+        remoteSynced: false
     };
 
     notifications.unshift(newNotif);
@@ -300,6 +304,13 @@ export function createNotification(title, message, type = 'info', action = null,
         }
     }
     window.dispatchEvent(new CustomEvent('notification-created', { detail: newNotif }));
+
+    const syncUid = window.auth?.currentUser?.isAnonymous ? null : window.auth?.currentUser?.uid;
+    if (syncUid && window.NotificationsEngine?.syncStoredNotificationToFirestore) {
+        window.NotificationsEngine.syncStoredNotificationToFirestore(syncUid, newNotif).catch((e) => {
+            console.warn('Failed to sync local notification to Firestore:', e);
+        });
+    }
     
     // Also show a toast for immediate feedback if it's high priority
     if (type === 'warning' || type === 'error') {
@@ -315,17 +326,14 @@ export function createNotification(title, message, type = 'info', action = null,
 export function cleanAIText(text) {
     if (!text) return '';
     
-    // We now allow bolding with ** for the user
     let cleaned = text
         .replace(/###/g, '') // Remove headers
         .replace(/#{1,6}\s?/g, '') // Remove headers
         .replace(/`/g, '') // Remove backticks
         .replace(/(^|[\n])\s*[-*]\s+/g, '$1') // Only remove list bullets at start of lines
         .replace(/\n\n/g, '<br><br>') // Ensure double breaks are preserved
+        .replace(/<\/?strong>/gi, '')
         .trim();
-
-    // Convert **text** to <strong>text</strong> and ensure proper spacing
-    cleaned = cleaned.replace(/\s?\*\*\s?(.*?)\s?\*\*\s?/g, ' <strong>$1</strong> ');
     
     // De-duplicate spaces and fix spaces before common punctuation
     cleaned = cleaned
@@ -343,8 +351,9 @@ export function cleanAIText(text) {
 
     // Final cleanup
     cleaned = cleaned
-        .replace(/\*(.*?)\*/g, '$1') // Handle single asterisks
-        .replace(/\*/g, '')          // Final sweep
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/\*/g, '')
         .replace(/\s+/g, ' ')        // Collapse multiple spaces
         .trim();
     

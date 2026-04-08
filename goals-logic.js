@@ -15,6 +15,7 @@
     let selectedGoalId = null;
     let selectedIcon = 'savings';
     let dynamicMonthlySavings = 0; // Added for dynamic forecasts (2026-04-03)
+    const getGoalsCacheKey = (uid) => `wallet_goals_cache_${uid || 'guest'}`;
     
     const IDS = {
         listContainer: 'goals-list-container',
@@ -63,15 +64,96 @@
         { id: 'emergency', label: 'Emergency', icon: 'emergency', bg: '#fee2e2', color: '#ef4444' }
     ];
 
+    const GOAL_NOTIFICATION_MILESTONES = [50, 100];
+
+    function getGoalMilestoneCycles(goal) {
+        if (!goal || typeof goal !== 'object' || !goal.milestoneCycles || typeof goal.milestoneCycles !== 'object') {
+            return {};
+        }
+        return goal.milestoneCycles;
+    }
+
+    function getGoalMilestoneCycle(goal, milestone) {
+        const cycles = getGoalMilestoneCycles(goal);
+        const value = Number(cycles?.[String(milestone)] || 0);
+        return Number.isFinite(value) && value > 0 ? value : 0;
+    }
+
+    function buildGoalMilestoneCycleUpdates(goal, nextAmount) {
+        const safeGoal = goal || {};
+        const targetAmount = Number(safeGoal.targetAmount || 0);
+        if (!(targetAmount > 0)) return null;
+
+        const previousAmount = Number(safeGoal.currentAmount || 0);
+        const nextValue = Number(nextAmount || 0);
+        const previousPct = (previousAmount / targetAmount) * 100;
+        const nextPct = (nextValue / targetAmount) * 100;
+        const currentCycles = getGoalMilestoneCycles(safeGoal);
+        const updates = {};
+        let changed = false;
+
+        GOAL_NOTIFICATION_MILESTONES.forEach((milestone) => {
+            if (previousPct < milestone && nextPct >= milestone) {
+                const nextCycle = Number(currentCycles?.[String(milestone)] || 0) + 1;
+                updates[`milestoneCycles.${milestone}`] = nextCycle;
+                changed = true;
+            }
+        });
+
+        return changed ? updates : null;
+    }
+
+    function getGoalMilestoneSnapshotKey(uid, goalId) {
+        return `smartwallet_goal_milestone_snapshot_${uid || 'guest'}_${goalId}`;
+    }
+
+    function getGoalMilestoneSequenceKey(uid, goalId, milestone) {
+        return `smartwallet_goal_milestone_seq_${uid || 'guest'}_${goalId}_${milestone}`;
+    }
+
+    function readGoalMilestoneSnapshot(uid, goalId) {
+        try {
+            const raw = JSON.parse(localStorage.getItem(getGoalMilestoneSnapshotKey(uid, goalId)) || '{}');
+            return {
+                pct50: Number(raw?.pct50 || 0),
+                pct100: Number(raw?.pct100 || 0)
+            };
+        } catch (e) {
+            return { pct50: 0, pct100: 0 };
+        }
+    }
+
+    function writeGoalMilestoneSnapshot(uid, goalId, pct) {
+        try {
+            const normalizedPct = Number.isFinite(Number(pct)) ? Number(pct) : 0;
+            localStorage.setItem(getGoalMilestoneSnapshotKey(uid, goalId), JSON.stringify({
+                pct50: normalizedPct,
+                pct100: normalizedPct
+            }));
+        } catch (e) {
+            console.warn('Failed to persist goal milestone snapshot:', e);
+        }
+    }
+
+    function nextGoalMilestoneSequence(uid, goalId, milestone) {
+        const key = getGoalMilestoneSequenceKey(uid, goalId, milestone);
+        const nextValue = Number(localStorage.getItem(key) || '0') + 1;
+        localStorage.setItem(key, String(nextValue));
+        return nextValue;
+    }
+
     window.GoalsView = {
         initialized: false,
         isPrivacyActive: (localStorage.getItem('wallet_privacy_mode') ?? localStorage.getItem('balance_hidden')) === 'true',
         suppressNextTapUntil: 0,
         unsubscribeGoals: null,
+        pendingGoalAlertRetries: {},
 
         init: function() {
             if (this.initialized) return;
             console.log("🎯 Initializing Goals View (Parity Mode)...");
+            const cachedUid = localStorage.getItem('wallet_last_uid');
+            if (cachedUid) this.loadCachedGoals(cachedUid);
             
             // Extract Firebase from global window.FirebaseModule [FIXED: 2026-04-05 - Antigravity]
             const fm = window.FirebaseModule || {};
@@ -104,6 +186,30 @@
             this.initialized = true;
         },
 
+        loadCachedGoals: function(uid) {
+            if (!uid) return;
+            try {
+                const raw = localStorage.getItem(getGoalsCacheKey(uid));
+                if (!raw) return;
+                const cachedGoals = JSON.parse(raw);
+                if (!Array.isArray(cachedGoals)) return;
+                goals = cachedGoals;
+                this.render();
+                this.hideSkeletons();
+            } catch (e) {
+                console.warn('Failed to load cached goals:', e);
+            }
+        },
+
+        writeCachedGoals: function(uid, items) {
+            if (!uid) return;
+            try {
+                localStorage.setItem(getGoalsCacheKey(uid), JSON.stringify(Array.isArray(items) ? items : []));
+            } catch (e) {
+                console.warn('Failed to cache goals:', e);
+            }
+        },
+
         // --- DATA FETCHING ---
         loadGoals: function() {
             if (!currentUser || !db) return; // Guard clause for incomplete initialization
@@ -124,11 +230,12 @@
                 
                 // Fallback sorting if order is missing
                 goals.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                
+                this.writeCachedGoals(currentUser.uid, goals);
                 this.render();
                 this.hideSkeletons();
             }, (error) => {
                 console.error("Error loading goals:", error);
+                this.loadCachedGoals(currentUser?.uid || localStorage.getItem('wallet_last_uid'));
             });
         },
 
@@ -158,6 +265,124 @@
                 return;
             }
             this.loadGoals();
+        },
+
+        applyLocalGoalState: function(goalId, nextAmount, milestoneCycleUpdates = null) {
+            const goal = goals.find(item => item.id === goalId);
+            if (!goal) return;
+
+            goal.currentAmount = Math.max(0, Number(nextAmount || 0));
+
+            if (milestoneCycleUpdates && typeof milestoneCycleUpdates === 'object') {
+                if (!goal.milestoneCycles || typeof goal.milestoneCycles !== 'object') {
+                    goal.milestoneCycles = {};
+                }
+                Object.entries(milestoneCycleUpdates).forEach(([path, value]) => {
+                    const match = String(path || '').match(/^milestoneCycles\.(.+)$/);
+                    if (!match) return;
+                    goal.milestoneCycles[match[1]] = Number(value || 0);
+                });
+            }
+
+            if (currentUser?.uid) {
+                this.writeCachedGoals(currentUser.uid, goals);
+            }
+        },
+
+        processGoalMilestonesForGoal: function(goalId) {
+            const goal = goals.find(item => item.id === goalId);
+            if (!goal || goal.isExcluded === true) return;
+
+            const pct = goal.targetAmount > 0 ? (goal.currentAmount || 0) / goal.targetAmount : 0;
+            const pctValue = pct * 100;
+            const uid = currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+            const snapshot = readGoalMilestoneSnapshot(uid, goal.id);
+
+            if (snapshot.pct100 < 100 && pctValue >= 100) {
+                const cycle = nextGoalMilestoneSequence(uid, goal.id, '100');
+                writeGoalMilestoneSnapshot(uid, goal.id, pctValue);
+                this.checkAndTriggerGoalAlert(
+                    goal.id,
+                    'Goal Completed! 🏆',
+                    `Congratulations! You've reached your ₱${goal.targetAmount.toLocaleString()} goal for ${goal.title}.`,
+                    'success',
+                    '100',
+                    cycle
+                );
+                return;
+            }
+
+            if (snapshot.pct50 < 50 && pctValue >= 50) {
+                const cycle = nextGoalMilestoneSequence(uid, goal.id, '50');
+                writeGoalMilestoneSnapshot(uid, goal.id, pctValue);
+                this.checkAndTriggerGoalAlert(
+                    goal.id,
+                    'Halfway There!',
+                    `You're 50% through your goal for ${goal.title}. Keep it up!`,
+                    'success',
+                    '50',
+                    cycle
+                );
+                return;
+            }
+
+            writeGoalMilestoneSnapshot(uid, goal.id, pctValue);
+            const completeCycle = getGoalMilestoneCycle(goal, '100');
+            const halfwayCycle = getGoalMilestoneCycle(goal, '50');
+
+            if (pct >= 1 && completeCycle > 0) {
+                this.checkAndTriggerGoalAlert(
+                    goal.id,
+                    'Goal Completed! 🏆',
+                    `Congratulations! You've reached your ₱${goal.targetAmount.toLocaleString()} goal for ${goal.title}.`,
+                    'success',
+                    '100',
+                    completeCycle
+                );
+                return;
+            }
+
+            if (pct >= 0.5 && halfwayCycle > 0) {
+                this.checkAndTriggerGoalAlert(
+                    goal.id,
+                    'Halfway There!',
+                    `You're 50% through your goal for ${goal.title}. Keep it up!`,
+                    'success',
+                    '50',
+                    halfwayCycle
+                );
+            }
+        },
+
+        notifyGoalMilestonesFromUpdates: function(goalId, milestoneCycleUpdates = null) {
+            const goal = goals.find(item => item.id === goalId);
+            if (!goal || !milestoneCycleUpdates || typeof milestoneCycleUpdates !== 'object') return;
+
+            const completedCycle = Number(milestoneCycleUpdates['milestoneCycles.100'] || 0);
+            const halfwayCycle = Number(milestoneCycleUpdates['milestoneCycles.50'] || 0);
+
+            if (completedCycle > 0) {
+                this.checkAndTriggerGoalAlert(
+                    goal.id,
+                    'Goal Completed! 🏆',
+                    `Congratulations! You've reached your ₱${goal.targetAmount.toLocaleString()} goal for ${goal.title}.`,
+                    'success',
+                    '100',
+                    completedCycle
+                );
+                return;
+            }
+
+            if (halfwayCycle > 0) {
+                this.checkAndTriggerGoalAlert(
+                    goal.id,
+                    'Halfway There!',
+                    `You're 50% through your goal for ${goal.title}. Keep it up!`,
+                    'success',
+                    '50',
+                    halfwayCycle
+                );
+            }
         },
 
         hideSkeletons: function() {
@@ -429,10 +654,12 @@
             // Milestone Alerts & Confetti - Re-introduced for parity (2026-04-03)
             goals.filter(g => g.isExcluded !== true).forEach(g => {
                 const pct = g.targetAmount > 0 ? (g.currentAmount || 0) / g.targetAmount : 0;
-                if (pct >= 1) {
-                    this.checkAndTriggerGoalAlert(g.id, 'Goal Completed! 🏆', `Congratulations! You've reached your ₱${g.targetAmount.toLocaleString()} goal for ${g.title}.`, 'success', '100');
-                } else if (pct >= 0.5) {
-                    this.checkAndTriggerGoalAlert(g.id, 'Halfway There!', `You're 50% through your goal for ${g.title}. Keep it up!`, 'success', '50');
+                const completeCycle = getGoalMilestoneCycle(g, '100');
+                const halfwayCycle = getGoalMilestoneCycle(g, '50');
+                if (pct >= 1 && completeCycle > 0) {
+                    this.checkAndTriggerGoalAlert(g.id, 'Goal Completed! 🏆', `Congratulations! You've reached your ₱${g.targetAmount.toLocaleString()} goal for ${g.title}.`, 'success', '100', completeCycle);
+                } else if (pct >= 0.5 && halfwayCycle > 0) {
+                    this.checkAndTriggerGoalAlert(g.id, 'Halfway There!', `You're 50% through your goal for ${g.title}. Keep it up!`, 'success', '50', halfwayCycle);
                 }
             });
 
@@ -441,20 +668,37 @@
             this.updateForecast(remaining);
         },
 
-        checkAndTriggerGoalAlert: async function(goalId, title, message, type, milestone) {
-            const alertKey = `goal_${goalId}_${milestone}`;
+        checkAndTriggerGoalAlert: async function(goalId, title, message, type, milestone, cycle = 1, retryCount = 0) {
+            const cycleNumber = Number(cycle || 0);
+            if (!(cycleNumber > 0)) return;
+            const alertKey = `goal_${goalId}_${milestone}_cycle_${cycleNumber}`;
             const uid = window.auth?.currentUser?.uid;
             const notificationMeta = {
                 action: 'open_goal_edit',
                 goalId,
                 source: 'goals',
-                milestone
+                milestone,
+                cycle: cycleNumber,
+                notificationKey: alertKey
             };
 
-            if (uid && window.NotificationsEngine?.hasNotified && window.NotificationsEngine?.triggerNotification) {
-                const alreadySent = await window.NotificationsEngine.hasNotified(uid, alertKey);
+            if (uid) {
+                const engine = window.NotificationsEngine;
+                if (!(engine?.hasNotified && engine?.triggerNotification)) {
+                    if (retryCount >= 8) return;
+                    clearTimeout(this.pendingGoalAlertRetries[alertKey]);
+                    this.pendingGoalAlertRetries[alertKey] = window.setTimeout(() => {
+                        this.checkAndTriggerGoalAlert(goalId, title, message, type, milestone, cycleNumber, retryCount + 1);
+                    }, 250);
+                    return;
+                }
+
+                clearTimeout(this.pendingGoalAlertRetries[alertKey]);
+                delete this.pendingGoalAlertRetries[alertKey];
+
+                const alreadySent = await engine.hasNotified(uid, alertKey, notificationMeta);
                 if (alreadySent) return;
-                await window.NotificationsEngine.triggerNotification(uid, title, message, alertKey, notificationMeta);
+                await engine.triggerNotification(uid, title, message, alertKey, notificationMeta);
             } else {
                 const alreadySent = localStorage.getItem(alertKey);
                 if (alreadySent) return;
@@ -553,7 +797,7 @@
             }
         },
 
-        openDepositModal: function(id) {
+        openDepositModal: function(id, prefillAmount = '') {
             selectedGoalId = id;
             const goal = goals.find(g => g.id === id);
             if (!goal) return;
@@ -570,7 +814,20 @@
                 confirmBtn.onclick = () => this.executeDeposit();
                 confirmBtn.innerText = "Confirm Deposit";
             }
-            if (amountInput) amountInput.value = '';
+            if (amountInput) {
+                amountInput.value = '';
+                const digitsOnly = String(prefillAmount || '').replace(/\D/g, '');
+                if (digitsOnly) {
+                    amountInput.value = parseInt(digitsOnly, 10).toLocaleString();
+                }
+                amountInput.onkeydown = (event) => {
+                    if (['-', '−', '–', '—'].includes(event.key)) {
+                        event.preventDefault();
+                        const currentDigits = String(amountInput.value || '').replace(/\D/g, '');
+                        this.switchDepositToWithdrawModal(currentDigits);
+                    }
+                };
+            }
 
             const modal = document.getElementById(IDS.depositModal);
             if (modal) {
@@ -584,6 +841,26 @@
                 if (window.NavState) window.NavState.pushModalState(IDS.depositModal, () => this.closeModals());
                 if (amountInput) window.setTimeout(() => amountInput.focus(), 120);
             }
+        },
+
+        switchDepositToWithdrawModal: function(prefillAmount = '') {
+            const depositModal = document.getElementById(IDS.depositModal);
+            if (depositModal) {
+                depositModal.classList.remove('show');
+                depositModal.style.display = 'none';
+            }
+            if (window.NavState) window.NavState.popModalState(IDS.depositModal);
+            this.openWithdrawModal(selectedGoalId, prefillAmount);
+        },
+
+        switchWithdrawToDepositModal: function(prefillAmount = '') {
+            const withdrawModal = document.getElementById(IDS.withdrawModal);
+            if (withdrawModal) {
+                withdrawModal.classList.remove('show');
+                withdrawModal.style.display = 'none';
+            }
+            if (window.NavState) window.NavState.popModalState(IDS.withdrawModal);
+            this.openDepositModal(selectedGoalId, prefillAmount);
         },
 
         closeModals: function() {
@@ -652,7 +929,7 @@
             const amountVal = amountInput.value.replace(/,/g, '');
             const amount = parseFloat(amountVal);
 
-            if (isNaN(amount) || amount === 0) {
+            if (isNaN(amount) || amount <= 0) {
                 if (window.showAppDialog) {
                     window.showAppDialog({ title: 'Invalid Amount', message: 'Please enter a valid amount.' });
                 } else {
@@ -671,13 +948,17 @@
 
             try {
                 /* --- Atomic batch: goal balance + transaction record in one round-trip --- */
+                const goal = goals.find(g => g.id === selectedGoalId);
                 const goalRef = doc(db, `users/${currentUser.uid}/goals`, selectedGoalId);
                 const historyRef = doc(collection(db, `users/${currentUser.uid}/goals/${selectedGoalId}/transactions`));
+                const nextAmount = Number(goal?.currentAmount || 0) + amount;
+                const milestoneCycleUpdates = buildGoalMilestoneCycleUpdates(goal, nextAmount);
 
                 const batch = writeBatch(db);
                 batch.update(goalRef, {
                     currentAmount: increment(amount),
-                    updatedAt: serverTimestamp()
+                    updatedAt: serverTimestamp(),
+                    ...(milestoneCycleUpdates || {})
                 });
                 batch.set(historyRef, {
                     type: amount > 0 ? 'deposit' : 'withdrawal',
@@ -690,6 +971,8 @@
                 this.closeModals();
 
                 await batch.commit();
+                this.applyLocalGoalState(selectedGoalId, nextAmount, milestoneCycleUpdates);
+                this.processGoalMilestonesForGoal(selectedGoalId);
 
                 /* --- Success feedback --- */
                 if (window.showToast) window.showToast(amount > 0 ? 'Deposit successful!' : 'Withdrawal successful!');
@@ -717,7 +1000,7 @@
         },
 
         // --- NEW: WITHDRAWAL LOGIC [2026-04-05 - Antigravity] ---
-        openWithdrawModal: function(id) {
+        openWithdrawModal: function(id, prefillAmount = '') {
             selectedGoalId = id || selectedGoalId;
             const goal = goals.find(g => g.id === selectedGoalId);
             if (!goal) return;
@@ -726,7 +1009,20 @@
             const title = document.getElementById(IDS.withdrawTitle);
             const amountInput = document.getElementById(IDS.withdrawAmount);
             if (title) title.innerText = `Withdraw from ${goal.title}`;
-            if (amountInput) amountInput.value = '';
+            if (amountInput) {
+                amountInput.value = '';
+                const digitsOnly = String(prefillAmount || '').replace(/\D/g, '');
+                if (digitsOnly) {
+                    amountInput.value = parseInt(digitsOnly, 10).toLocaleString();
+                }
+                amountInput.onkeydown = (event) => {
+                    if (['+', '＋'].includes(event.key)) {
+                        event.preventDefault();
+                        const currentDigits = String(amountInput.value || '').replace(/\D/g, '');
+                        this.switchWithdrawToDepositModal(currentDigits);
+                    }
+                };
+            }
 
             const modal = document.getElementById(IDS.withdrawModal);
             if (modal) {
@@ -755,8 +1051,10 @@
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="material-icons spin" style="font-size:16px;margin-right:8px">refresh</i> PROCESSING...'; }
 
             try {
+                const goal = goals.find(g => g.id === selectedGoalId);
                 const goalRef = doc(db, `users/${currentUser.uid}/goals`, selectedGoalId);
                 const historyRef = doc(collection(db, `users/${currentUser.uid}/goals/${selectedGoalId}/transactions`));
+                const nextAmount = Math.max(0, Number(goal?.currentAmount || 0) - amount);
 
                 const batch = writeBatch(db);
                 batch.update(goalRef, {
@@ -772,6 +1070,8 @@
 
                 this.closeModals();
                 await batch.commit();
+                this.applyLocalGoalState(selectedGoalId, nextAmount);
+                this.processGoalMilestonesForGoal(selectedGoalId);
 
                 if (window.showToast) window.showToast('Withdrawal successful!');
 
@@ -884,8 +1184,32 @@
         },
 
         formatCurrencyInput: function(input) {
-            // [FIXED: 2026-04-05 - Permit leading minus for withdrawals - Antigravity]
-            let isNeg = input.value.startsWith('-');
+            const rawValue = String(input?.value || '');
+            const isDepositField = input && input.id === IDS.depositAmount;
+            const isWithdrawField = input && input.id === IDS.withdrawAmount;
+            const normalizedValue = rawValue.replace(/[−–—]/g, '-').replace(/＋/g, '+');
+            const hasNegativeSign = /-/.test(normalizedValue);
+            const hasPositiveSign = /\+/.test(normalizedValue);
+
+            if (isDepositField && hasNegativeSign) {
+                const digitsOnly = normalizedValue.replace(/\D/g, '');
+                input.value = digitsOnly ? `-${parseInt(digitsOnly, 10).toLocaleString()}` : '-';
+                window.requestAnimationFrame(() => {
+                    this.switchDepositToWithdrawModal(digitsOnly);
+                });
+                return;
+            }
+
+            if (isWithdrawField && hasPositiveSign) {
+                const digitsOnly = normalizedValue.replace(/\D/g, '');
+                input.value = digitsOnly ? `+${parseInt(digitsOnly, 10).toLocaleString()}` : '+';
+                window.requestAnimationFrame(() => {
+                    this.switchWithdrawToDepositModal(digitsOnly);
+                });
+                return;
+            }
+
+            let isNeg = isWithdrawField && hasNegativeSign;
             let val = input.value.replace(/\D/g, '');
             if (val === '') {
                 input.value = isNeg ? '-' : '';

@@ -178,6 +178,27 @@ const NavState = {
             return null;
         }
     },
+
+    getActiveSPAIndex() {
+        const viewport = document.getElementById('view-viewport');
+        if (!viewport) return 0;
+        if (typeof this.lastSPAIndex === 'number') return this.lastSPAIndex;
+        return Math.round(viewport.scrollLeft / Math.max(viewport.clientWidth, 1));
+    },
+
+    getActiveSPAView() {
+        const viewport = document.getElementById('view-viewport');
+        if (!viewport) return null;
+        const views = viewport.querySelectorAll('.view-section');
+        return views[this.getActiveSPAIndex()] || null;
+    },
+
+    scrollActiveSPAViewToTop() {
+        const activeView = this.getActiveSPAView();
+        if (!activeView || activeView.scrollTop <= 4) return false;
+        activeView.scrollTo({ top: 0, behavior: 'smooth' });
+        return true;
+    },
     
     // ===== NAVIGATION BEHAVIOR =====
     
@@ -943,6 +964,14 @@ const NavState = {
             }
             
             const isMainPage = currentPage === 'index.html' || currentPage === '/' || currentPage === '';
+            if (isMainPage) {
+                const activeTabIndex = this.getActiveSPAIndex();
+                if (activeTabIndex > 0 && typeof window.scrollToView === 'function') {
+                    console.log(` Back button: Returning to Wallet tab from SPA tab ${activeTabIndex}`);
+                    window.scrollToView(0);
+                    return;
+                }
+            }
             if (!isMainPage) {
                 const target = parentMap[currentPage] || 'index.html';
                 console.log(` Back button: Navigating to parent: ${target}`);
@@ -973,11 +1002,18 @@ const NavState = {
                         return;
                     }
 
-                    // 1. Context Feature: Save on Back for Transaction Modal
-                    // If the New/Edit Transaction modal is open, trigger SAVE instead of close
+                    // 1. Context Feature: close untouched transaction modal, save only if edited
                     const manualModal = document.getElementById('manual-txn-modal');
                     if (manualModal && manualModal.classList.contains('show')) {
-                        console.log('🔙 Save on Back: Triggering saveManualTxn()');
+                        const isPristine = typeof window.isManualTxnModalPristine === 'function'
+                            ? window.isManualTxnModalPristine()
+                            : false;
+                        if (isPristine && window.closeModals) {
+                            console.log('Back on pristine transaction modal: closing sheet');
+                            window.closeModals('manual-txn-modal', true);
+                            return;
+                        }
+                        console.log('Back on edited transaction modal: triggering saveManualTxn()');
                         if (window.saveManualTxn) {
                             window.saveManualTxn();
                             return;
@@ -994,21 +1030,33 @@ const NavState = {
                         }
                     }
 
-                    // 3. Scroll to Top Enhancement: If scrolled down, scroll to top first
-                    const scroller = document.querySelector('.mobile-wrapper') || window;
-                    if (scroller.scrollTop > 50 || window.scrollY > 50) {
-                        console.log('🔙 Scrolling to top before navigating back');
-                        scroller.scrollTo({ top: 0, behavior: 'smooth' });
-                        return;
-                    }
 
                     // 4. Check for common UI modals using global flags or .show class
                     const iosMenu = document.getElementById('ios-menu');
                     const notificationSidebar = document.querySelector('.notification-sidebar.active') || document.getElementById('notification-center');
-                    const hasVisibleModal = window.modalOpen || 
-                                          document.querySelector('.modal-overlay.show, .dialog-overlay.show, .custom-modal.show, .login-modal-overlay.show, .dialog-overlay') ||
-                                          (notificationSidebar && notificationSidebar.classList.contains('active')) ||
-                                          (iosMenu && iosMenu.classList.contains('show'));
+                    const isActuallyVisible = (el) => {
+                        if (!el) return false;
+                        const computed = window.getComputedStyle ? window.getComputedStyle(el) : null;
+                        const displayVisible = computed ? computed.display !== 'none' : true;
+                        const visibilityVisible = computed ? computed.visibility !== 'hidden' : true;
+                        const opacityVisible = computed ? Number.parseFloat(computed.opacity || '1') > 0.01 : true;
+                        return displayVisible && visibilityVisible && opacityVisible;
+                    };
+                    const visibleOverlay = Array.from(
+                        document.querySelectorAll('.modal-overlay, .dialog-overlay, .custom-modal, .login-modal-overlay')
+                    ).find((el) => {
+                        const hasOpenState = el.classList.contains('show') || el.classList.contains('active');
+                        const hasVisibleDisplay = el.style.display === 'flex' || el.style.display === 'block';
+                        return (hasOpenState || hasVisibleDisplay) && isActuallyVisible(el);
+                    });
+
+                    if (window.modalOpen && !visibleOverlay) {
+                        window.modalOpen = false;
+                    }
+
+                    const hasVisibleModal = !!visibleOverlay ||
+                                          (notificationSidebar && notificationSidebar.classList.contains('active') && isActuallyVisible(notificationSidebar)) ||
+                                          (iosMenu && iosMenu.classList.contains('show') && isActuallyVisible(iosMenu));
                     
                     if (hasVisibleModal) {
                         console.log('📱 Visible modal detected via .show or window.modalOpen');
@@ -1041,16 +1089,24 @@ const NavState = {
                         }
                     }
 
-                    // 2.6 NEW: Scroll to Top on Main Page - Added 2026-04-02
-                    const scrollPos = window.scrollY || document.documentElement.scrollTop;
+                    // 2.6 SPA Back Flow: Wallet tab first, then wallet scroll-top, then exit prompt
                     const path = window.location.pathname;
                     const isMainPage = path.endsWith('index.html') || path === '/' || path === '' || currentPage === 'index.html';
-                    
-                    if (isMainPage && scrollPos > 200) {
-                        console.log('📜 [Back to Top] Scrolling up before exit prompt'); // Back button scrolls up first // 2026-04-02
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    const activeTabIndex = isMainPage ? this.getActiveSPAIndex() : 0;
+
+                    if (isMainPage && activeTabIndex > 0 && typeof window.scrollToView === 'function') {
+                        lastBackPress = 0;
+                        console.log('Returning to Wallet tab from SPA tab ' + activeTabIndex);
+                        window.scrollToView(0);
                         return;
                     }
+
+                    if (isMainPage && this.scrollActiveSPAViewToTop()) {
+                        console.log('[Back to Top] Scrolling active SPA view to top before exit prompt');
+                        lastBackPress = 0;
+                        return;
+                    }
+
 
                     // 3. Page Navigation Logic
                     if (!isMainPage) {

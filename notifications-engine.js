@@ -5,6 +5,9 @@
 
 import {
     db,
+    doc,
+    getDoc,
+    setDoc,
     collection,
     addDoc,
     serverTimestamp,
@@ -19,6 +22,7 @@ const NOTIFICATIONS_COLLECTION = "notifications";
 const LOCAL_NOTIF_CACHE_KEY = "smartwallet_local_notif_cache_v1";
 const LOCAL_NOTIF_LAST_SYNC_PREFIX = "smartwallet_local_notif_last_sync_";
 const BUDGET_THRESHOLD_STATE_PREFIX = "smartwallet_budget_threshold_state_";
+const LOCAL_NOTIF_INSTALL_EPOCH_PREFIX = "smartwallet_notif_install_epoch_";
 
 export const NotificationsEngine = {
     getLocalNotificationsPlugin() {
@@ -85,6 +89,8 @@ export const NotificationsEngine = {
     },
 
     getCreatedAtMillis(data) {
+        const createdAtMs = Number(data?.createdAtMs || 0);
+        if (Number.isFinite(createdAtMs) && createdAtMs > 0) return createdAtMs;
         const createdAt = data?.createdAt;
         if (!createdAt) return 0;
         if (typeof createdAt.toMillis === "function") return createdAt.toMillis();
@@ -138,11 +144,75 @@ export const NotificationsEngine = {
         return Number.isFinite(stored) ? stored : 0;
     },
 
+    getNotificationInstallEpoch(uid, initializeIfMissing = true) {
+        const key = `${LOCAL_NOTIF_INSTALL_EPOCH_PREFIX}${uid || "guest"}`;
+        const existing = Number(localStorage.getItem(key) || "0");
+        if (Number.isFinite(existing) && existing > 0) return existing;
+        if (!initializeIfMissing) return 0;
+        const now = Date.now();
+        localStorage.setItem(key, String(now));
+        return now;
+    },
+
+    isNotificationVisibleForCurrentInstall(uid, createdAtMs) {
+        const installEpoch = this.getNotificationInstallEpoch(uid, true);
+        if (!installEpoch) return true;
+        return Number(createdAtMs || 0) >= installEpoch;
+    },
+
     setBudgetThresholdState(uid, categoryKey, monthKey, thresholdPct) {
         localStorage.setItem(
             this.getBudgetThresholdStateKey(uid, categoryKey, monthKey),
             String(Number.isFinite(thresholdPct) ? thresholdPct : 0)
         );
+    },
+
+    getBudgetThresholdTier(category, current, limitAmount) {
+        if (!Number.isFinite(current) || !Number.isFinite(limitAmount) || limitAmount <= 0) return null;
+        const pct = (current / limitAmount) * 100;
+        const categoryLabel = String(category || 'Budget');
+        const tiers = [
+            {
+                pct: 100,
+                title: "Limit Reached",
+                body: `Red Alert: You've hit 100% of your ${categoryLabel} budget!`
+            },
+            {
+                pct: 90,
+                title: "Orange Alert",
+                body: `Critical Level: Only P${Math.floor(limitAmount - current).toLocaleString()} left for ${categoryLabel}.`
+            },
+            {
+                pct: 70,
+                title: "Heads up",
+                body: `Heads up: You've used 70% of your ${categoryLabel} budget.`
+            }
+        ];
+        return tiers.find((tier) => pct >= tier.pct) || null;
+    },
+
+    ensureBudgetThresholdInApp(uid, category, current, limitAmount) {
+        const tier = this.getBudgetThresholdTier(category, current, limitAmount);
+        if (!tier) return false;
+
+        const monthKey = this.getCurrentMonthKey();
+        const categoryKey = this.normalizeCategoryKey(category);
+        const notifType = `threshold_${categoryKey}_${tier.pct}_${monthKey}`;
+        const meta = {
+            action: "open_budget_overview",
+            category: categoryKey,
+            thresholdPct: tier.pct,
+            monthKey
+        };
+
+        const hasLocal = this.hasStoredInAppNotification(notifType, meta);
+        if (!hasLocal) {
+            this.ensureStoredInAppNotification(tier.title, tier.body, notifType, meta);
+        }
+
+        const existing = this.getBudgetThresholdState(uid, categoryKey, monthKey);
+        this.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(existing, tier.pct));
+        return !hasLocal;
     },
 
     getStoredInAppNotifications() {
@@ -154,17 +224,199 @@ export const NotificationsEngine = {
         }
     },
 
+    writeStoredInAppNotifications(items) {
+        try {
+            localStorage.setItem("smartwallet_notifications", JSON.stringify(Array.isArray(items) ? items : []));
+        } catch (e) {
+            console.warn("Failed to persist in-app notifications:", e);
+        }
+    },
+
+    sanitizeNotificationDocToken(value, fallback = "general") {
+        const normalized = String(value || fallback)
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "");
+        return normalized || fallback;
+    },
+
+    getStoredNotificationDocId(item = {}) {
+        if (item?.remoteId) return String(item.remoteId);
+        const persistentDocId = this.getPersistentNotificationDocId(item?.type || "general", item?.meta || null);
+        if (persistentDocId) return persistentDocId;
+        const typeKey = this.sanitizeNotificationDocToken(item?.type || "general");
+        const timeMs = Number(item?.createdAtMs || new Date(item?.time || Date.now()).getTime() || Date.now());
+        const localId = this.sanitizeNotificationDocToken(item?.id || "local");
+        return `notif_${typeKey}_${timeMs}_${localId}`.slice(0, 140);
+    },
+
+    getPersistentNotificationDocId(type = "general", meta = null) {
+        const safeMeta = this.sanitizeMeta(meta);
+        const explicitKey = safeMeta?.notificationKey || safeMeta?.dedupeKey || safeMeta?.remoteKey || null;
+        const typeText = String(type || "general");
+        const typeKey = this.sanitizeNotificationDocToken(explicitKey || typeText);
+
+        if (explicitKey) return `notif_persist_${typeKey}`.slice(0, 140);
+        if (/^threshold_[a-z0-9_]+_(70|90|100)_(\d{4}-\d{2})$/i.test(typeText)) {
+            return `notif_threshold_${typeKey}`.slice(0, 140);
+        }
+        if (/^goal_[a-z0-9_-]+_(50|75|100|1000)$/i.test(typeText)) {
+            return `notif_goal_${typeKey}`.slice(0, 140);
+        }
+        return null;
+    },
+
+    normalizeStoredNotificationPayload(item = {}) {
+        const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || Date.now()).getTime() || Date.now());
+        const isRead = typeof item?.isRead === "boolean"
+            ? item.isRead
+            : !Boolean(item?.unread);
+        const safeMeta = this.sanitizeMeta(item?.meta || null);
+        const safeAction = this.sanitizeMeta(item?.action || null);
+        const payload = {
+            title: item?.title || "Notification",
+            body: item?.body || item?.message || "",
+            type: item?.type || "general",
+            isRead,
+            createdAt: new Date(createdAtMs),
+            createdAtMs
+        };
+        if (safeMeta) payload.meta = safeMeta;
+        if (safeAction) payload.action = safeAction;
+        return payload;
+    },
+
+    markStoredNotificationRemoteState(matchItem = {}, remoteId = null) {
+        try {
+            const items = this.getStoredInAppNotifications();
+            const matchMeta = JSON.stringify(this.sanitizeMeta(matchItem?.meta || null));
+            let changed = false;
+            const updated = items.map((item) => {
+                const itemMeta = JSON.stringify(this.sanitizeMeta(item?.meta || null));
+                const sameBody = String(item?.body || item?.message || "") === String(matchItem?.body || matchItem?.message || "");
+                const sameTitle = String(item?.title || "") === String(matchItem?.title || "");
+                const sameType = String(item?.type || "general") === String(matchItem?.type || "general");
+                const sameTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0) === Number(matchItem?.createdAtMs || new Date(matchItem?.time || 0).getTime() || 0);
+                if (!changed && sameTitle && sameBody && sameType && itemMeta === matchMeta && sameTime) {
+                    changed = true;
+                    return {
+                        ...item,
+                        remoteId: remoteId || item.remoteId || this.getStoredNotificationDocId(item),
+                        remoteSynced: true
+                    };
+                }
+                return item;
+            });
+            if (changed) this.writeStoredInAppNotifications(updated);
+        } catch (e) {
+            console.warn("Failed to update stored notification remote state:", e);
+        }
+    },
+
+    async syncStoredNotificationToFirestore(uid, item = {}) {
+        if (!uid || !item) return null;
+        const docId = this.getStoredNotificationDocId(item);
+        const payload = this.normalizeStoredNotificationPayload(item);
+        try {
+            await setDoc(doc(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`, docId), {
+                ...payload,
+                syncedFromLocal: true,
+                syncedAt: serverTimestamp()
+            }, { merge: true });
+            this.markStoredNotificationRemoteState(item, docId);
+            return docId;
+        } catch (e) {
+            console.warn("Failed to sync stored notification to Firestore:", e);
+            return null;
+        }
+    },
+
+    async syncStoredInAppNotifications(uid, maxItems = 200) {
+        if (!uid) return;
+        const items = this.getStoredInAppNotifications()
+            .slice(0, maxItems)
+            .filter((item) => !item?.remoteSynced);
+        for (const item of items) {
+            await this.syncStoredNotificationToFirestore(uid, item);
+        }
+    },
+
+    sameThresholdMeta(left = null, right = null) {
+        if (!left || !right) return false;
+        const sameCategory = String(left.category || "") === String(right.category || "");
+        const sameMonth = String(left.monthKey || "") === String(right.monthKey || "");
+        const sameThreshold = Number(left.thresholdPct || 0) === Number(right.thresholdPct || 0);
+        if (!sameCategory || !sameMonth || !sameThreshold) return false;
+
+        const leftCycle = Number(left.cycle || 0);
+        const rightCycle = Number(right.cycle || 0);
+        if (leftCycle > 0 || rightCycle > 0) {
+            return leftCycle === rightCycle;
+        }
+        return true;
+    },
+
     hasStoredInAppNotification(type, meta = null) {
         const items = this.getStoredInAppNotifications();
         return items.some((item) => {
             if (item?.type === type) return true;
             if (!meta || !item?.meta) return false;
-            return (
-                item.meta.category === meta.category
-                && String(item.meta.monthKey || "") === String(meta.monthKey || "")
-                && Number(item.meta.thresholdPct || 0) === Number(meta.thresholdPct || 0)
-            );
+            return this.sameThresholdMeta(item.meta, meta);
         });
+    },
+
+    ensureStoredInAppNotification(title, message, type = "general", meta = null) {
+        try {
+            const items = this.getStoredInAppNotifications();
+            const hasExact = items.some((item) => {
+                if ((item?.type || "general") !== type) return false;
+                const itemMeta = item?.meta || null;
+                if (meta && itemMeta) {
+                    return this.sameThresholdMeta(itemMeta, meta);
+                }
+                return (item?.title || "") === title && (item?.message || "") === message;
+            });
+            if (hasExact) return false;
+
+            const newNotif = {
+                id: Date.now() + Math.floor(Math.random() * 1000),
+                title,
+                message,
+                type,
+                time: new Date().toISOString(),
+                createdAtMs: Date.now(),
+                unread: true,
+                action: null,
+                meta: meta && typeof meta === "object" ? JSON.parse(JSON.stringify(meta)) : null,
+                remoteId: null,
+                remoteSynced: false
+            };
+
+            items.unshift(newNotif);
+            this.writeStoredInAppNotifications(items);
+
+            if (typeof window.updateUnreadCount === "function") {
+                try {
+                    window.updateUnreadCount();
+                } catch (e) {
+                    console.warn("Immediate unread update failed:", e);
+                }
+            }
+
+            window.dispatchEvent(new CustomEvent("notification-created", { detail: newNotif }));
+
+            const syncUid = window.auth?.currentUser?.isAnonymous ? null : window.auth?.currentUser?.uid;
+            if (syncUid) {
+                this.syncStoredNotificationToFirestore(syncUid, newNotif).catch((e) => {
+                    console.warn("Immediate stored notification sync failed:", e);
+                });
+            }
+            return true;
+        } catch (e) {
+            console.warn("Failed to store in-app notification:", e);
+            return false;
+        }
     },
 
     async deliverLocalNotification(uid, fallbackId, title, body, type = "general", createdAtMs = Date.now(), meta = null) {
@@ -204,37 +456,52 @@ export const NotificationsEngine = {
         let notifId = `local-${Date.now()}`;
         const createdAtMs = Date.now();
         const safeMeta = this.sanitizeMeta(meta);
-        let mirrored = false;
-        const mirrorInApp = () => {
-            if (mirrored || !window.createNotification) return;
-            mirrored = true;
-            if (!window.createNotification) return;
-            try {
-                window.createNotification(title, body, type, null, safeMeta);
-            } catch (fallbackErr) {
-                console.warn("In-app notification mirror failed:", fallbackErr);
-            }
-        };
+        const persistentDocId = this.getPersistentNotificationDocId(type, safeMeta);
 
-        // Make notifications visible immediately instead of waiting on Firestore latency.
-        mirrorInApp();
+        if (persistentDocId) {
+            try {
+                const existingDoc = await getDoc(doc(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`, persistentDocId));
+                if (existingDoc.exists()) {
+                    return persistentDocId;
+                }
+            } catch (e) {
+                console.warn("Persistent notification lookup failed:", e);
+            }
+        }
+
+        this.ensureStoredInAppNotification(title, body, type, safeMeta);
         await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
 
         try {
-            const userNotifsRef = collection(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`);
             const payload = {
                 title,
                 body,
                 type,
                 isRead: false,
-                createdAt: serverTimestamp()
+                createdAt: new Date(createdAtMs),
+                createdAtMs
             };
             if (safeMeta) payload.meta = safeMeta;
-            const notifDoc = await addDoc(userNotifsRef, payload);
-            notifId = notifDoc.id;
+
+            if (persistentDocId) {
+                await setDoc(doc(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`, persistentDocId), payload, { merge: true });
+                notifId = persistentDocId;
+            } else {
+                const userNotifsRef = collection(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`);
+                const notifDoc = await addDoc(userNotifsRef, payload);
+                notifId = notifDoc.id;
+            }
+
+            this.markStoredNotificationRemoteState({
+                title,
+                body,
+                type,
+                meta: safeMeta,
+                createdAtMs
+            }, notifId);
             await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
             console.log(`Notification triggered: ${title}`);
-            return notifDoc.id;
+            return notifId;
         } catch (e) {
             console.error("Error triggering notification:", e);
             await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
@@ -310,8 +577,136 @@ export const NotificationsEngine = {
         }
     },
 
+    async backfillNotificationsFromState(uid) {
+        if (!uid) return;
+
+        try {
+            const progressSnap = await getDoc(doc(db, `users/${uid}/config/budget_progress_tracker`));
+            if (progressSnap.exists()) {
+                const data = progressSnap.data() || {};
+                const monthKey = String(data.monthKey || this.getCurrentMonthKey());
+                const filterVal = String(data.filterVal || "this_month");
+                if (filterVal === "this_month") {
+                    const categories = [
+                        { key: "needs", label: "Needs", pct: Number(data["needs-pct"] || 0) },
+                        { key: "wants", label: "Wants", pct: Number(data["wants-pct"] || 0) },
+                        { key: "savings", label: "Savings", pct: Number(data["savings-pct"] || 0) }
+                    ];
+
+                    for (const item of categories) {
+                        const thresholdPct = item.pct >= 100 ? 100 : item.pct >= 90 ? 90 : item.pct >= 70 ? 70 : 0;
+                        if (!thresholdPct) continue;
+
+                        const notifType = `threshold_${item.key}_${thresholdPct}_${monthKey}`;
+                        const meta = {
+                            action: "open_budget_overview",
+                            category: item.key,
+                            thresholdPct,
+                            monthKey
+                        };
+                        const alreadyNotified = await this.hasNotified(uid, notifType, meta);
+                        if (alreadyNotified) continue;
+
+                        let title = "Heads up";
+                        let body = `Heads up: You've used 70% of your ${item.label} budget.`;
+                        if (thresholdPct >= 100) {
+                            title = "Limit Reached";
+                            body = `Red Alert: You've hit 100% of your ${item.label} budget!`;
+                        } else if (thresholdPct >= 90) {
+                            title = "Orange Alert";
+                            body = `Critical Level: Your ${item.label} budget is already at ${Math.floor(item.pct)}%.`;
+                        }
+
+                        this.ensureStoredInAppNotification(title, body, notifType, meta);
+                        await this.syncStoredNotificationToFirestore(uid, {
+                            title,
+                            message: body,
+                            type: notifType,
+                            unread: true,
+                            createdAtMs: Date.now(),
+                            meta
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Budget notification backfill failed:", e);
+        }
+
+        try {
+            const goalsSnap = await getDocs(collection(db, `users/${uid}/goals`));
+            for (const goalDoc of goalsSnap.docs) {
+                const goal = goalDoc.data() || {};
+                const goalId = goalDoc.id;
+                const targetAmount = Number(goal.targetAmount || 0);
+                const currentAmount = Number(goal.currentAmount || 0);
+                if (!(targetAmount > 0)) continue;
+
+                const pct = (currentAmount / targetAmount) * 100;
+                const cycles = (goal.milestoneCycles && typeof goal.milestoneCycles === "object") ? goal.milestoneCycles : {};
+                const completedCycle = Number(cycles["100"] || 0);
+                const halfwayCycle = Number(cycles["50"] || 0);
+
+                if (pct >= 100 && completedCycle > 0) {
+                    const type = `goal_${goalId}_100`;
+                    const meta = {
+                        action: "open_goal_edit",
+                        goalId,
+                        source: "goals",
+                        milestone: "100",
+                        cycle: completedCycle,
+                        notificationKey: type
+                    };
+                    const alreadyNotified = await this.hasNotified(uid, type, meta);
+                    if (!alreadyNotified) {
+                        const title = "Goal Completed! 🏆";
+                        const body = `Congratulations! You've reached your ₱${targetAmount.toLocaleString()} goal for ${goal.title}.`;
+                        this.ensureStoredInAppNotification(title, body, type, meta);
+                        await this.syncStoredNotificationToFirestore(uid, {
+                            title,
+                            message: body,
+                            type,
+                            unread: true,
+                            createdAtMs: Date.now(),
+                            meta
+                        });
+                    }
+                }
+
+                if (pct >= 50 && halfwayCycle > 0) {
+                    const type = `goal_${goalId}_50`;
+                    const meta = {
+                        action: "open_goal_edit",
+                        goalId,
+                        source: "goals",
+                        milestone: "50",
+                        cycle: halfwayCycle,
+                        notificationKey: type
+                    };
+                    const alreadyNotified = await this.hasNotified(uid, type, meta);
+                    if (!alreadyNotified) {
+                        const title = "Halfway There!";
+                        const body = `You're 50% through your goal for ${goal.title}. Keep it up!`;
+                        this.ensureStoredInAppNotification(title, body, type, meta);
+                        await this.syncStoredNotificationToFirestore(uid, {
+                            title,
+                            message: body,
+                            type,
+                            unread: true,
+                            createdAtMs: Date.now(),
+                            meta
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Goal notification backfill failed:", e);
+        }
+    },
+
     async checkBudgetThresholds(uid, category, current, limitAmount) {
         if (!uid || !Number.isFinite(current) || !Number.isFinite(limitAmount) || limitAmount <= 0) return;
+        this.ensureBudgetThresholdInApp(uid, category, current, limitAmount);
         const pct = (current / limitAmount) * 100;
         const monthKey = this.getCurrentMonthKey();
         const categoryKey = this.normalizeCategoryKey(category);
@@ -332,7 +727,14 @@ export const NotificationsEngine = {
         let highestMissingTier = null;
         for (const tier of eligibleTiers) {
             const notifType = `threshold_${categoryKey}_${tier.pct}_${monthKey}`;
-            const alreadyNotified = await this.hasNotified(uid, notifType);
+            const meta = {
+                action: "open_budget_overview",
+                category: categoryKey,
+                thresholdPct: tier.pct,
+                monthKey
+            };
+            const alreadyStored = this.hasStoredInAppNotification(notifType, meta);
+            const alreadyNotified = alreadyStored || await this.hasNotified(uid, notifType, meta);
             if (!alreadyNotified) {
                 highestMissingTier = tier;
                 break;
@@ -363,12 +765,8 @@ export const NotificationsEngine = {
                 monthKey
             };
 
-            if (!this.hasStoredInAppNotification(notifType, meta) && window.createNotification) {
-                try {
-                    window.createNotification(currentTier.label, currentTier.body, notifType, null, meta);
-                } catch (fallbackErr) {
-                    console.warn("Budget threshold in-app recovery failed:", fallbackErr);
-                }
+            if (!this.hasStoredInAppNotification(notifType, meta)) {
+                this.ensureStoredInAppNotification(currentTier.label, currentTier.body, notifType, meta);
             }
 
             if (!this.wasDeliveredLocally(uid, notifType, notifType)) {
@@ -498,8 +896,14 @@ export const NotificationsEngine = {
         }
     },
 
-    async hasNotified(uid, type) {
+    async hasNotified(uid, type, meta = null) {
         try {
+            const persistentDocId = this.getPersistentNotificationDocId(type, meta);
+            if (persistentDocId) {
+                const existingDoc = await getDoc(doc(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`, persistentDocId));
+                if (existingDoc.exists()) return true;
+            }
+
             const q = query(
                 collection(db, `users/${uid}/${NOTIFICATIONS_COLLECTION}`),
                 where("type", "==", type),

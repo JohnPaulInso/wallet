@@ -29,7 +29,7 @@ export function formatLocalDate(date) {
 }
 
 // Show toast notification
-export function showToast(msg) {
+export function showToast(msg, duration = 3000) {
     const toast = document.getElementById('toast-box');
     const msgEl = document.getElementById('toast-msg');
     
@@ -39,7 +39,8 @@ export function showToast(msg) {
     }
     msgEl.innerText = msg;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 3000);
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
 }
 
 // Category Configuration (Shared across UI and helper logic)
@@ -276,6 +277,26 @@ export function triggerHaptic(type = 'light') {
  */
 export function createNotification(title, message, type = 'info', action = null, meta = null) {
     const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
+    const safeMeta = meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null;
+    const hasExact = notifications.some((item) => {
+        if (String(item?.type || 'info') !== String(type || 'info')) return false;
+
+        if (safeMeta && item?.meta) {
+            const sameThresholdMeta =
+                String(item.meta.category || '') === String(safeMeta.category || '')
+                && String(item.meta.monthKey || '') === String(safeMeta.monthKey || '')
+                && Number(item.meta.thresholdPct || 0) === Number(safeMeta.thresholdPct || 0)
+                && Number(item.meta.cycle || 0) === Number(safeMeta.cycle || 0)
+                && String(item.meta.notificationKey || '') === String(safeMeta.notificationKey || '');
+            if (sameThresholdMeta) return true;
+        }
+
+        return String(item?.title || '') === String(title || '')
+            && String(item?.message || '') === String(message || '');
+    });
+
+    if (hasExact) return false;
+
     const createdAtMs = Date.now();
     const newNotif = {
         id: createdAtMs,
@@ -286,7 +307,7 @@ export function createNotification(title, message, type = 'info', action = null,
         createdAtMs,
         unread: true,
         action: action ? { label: action.label, callbackString: action.callbackString } : null,
-        meta: meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null,
+        meta: safeMeta,
         remoteId: null,
         remoteSynced: false
     };

@@ -9,6 +9,87 @@ import { LocalAI } from "./local-ai.js";
 let switchSyncTimer = null;
 let keyboardViewportBridgeInitialized = false;
 
+function resolveFocusableTarget(targetOrId) {
+    if (typeof targetOrId === 'string') {
+        return document.getElementById(targetOrId);
+    }
+    return targetOrId instanceof HTMLElement ? targetOrId : null;
+}
+
+function getModalScrollHost(target) {
+    if (!(target instanceof HTMLElement)) return null;
+    return target.closest('.custom-modal, .dialog-card, .goals-modal-card, .accounts-modal-content, .calendar-modal-content');
+}
+
+function keepFieldVisibleInModal(target, behavior = 'smooth') {
+    if (!(target instanceof HTMLElement)) return;
+    if (!target.matches('input, textarea, select, [contenteditable="true"]')) return;
+
+    const modal = target.closest('.modal-overlay.show, .dialog-overlay.show, .goals-modal-overlay.show, .accounts-modal-overlay.visible');
+    if (!modal) return;
+
+    const viewport = window.visualViewport;
+    const viewportTop = viewport?.offsetTop || 0;
+    const viewportHeight = viewport?.height || window.innerHeight || document.documentElement.clientHeight || 0;
+    const viewportBottom = viewportTop + viewportHeight;
+    const keyboardLift = Math.max(0, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-keyboard-lift')) || 0);
+    const targetRect = target.getBoundingClientRect();
+    const visibleTop = viewportTop + Math.max(14, keyboardLift > 0 ? 10 : 24);
+    const visibleBottom = viewportBottom - Math.max(14, keyboardLift > 0 ? 18 : 24);
+    const scrollHost = getModalScrollHost(target);
+
+    if (scrollHost instanceof HTMLElement) {
+        const hostRect = scrollHost.getBoundingClientRect();
+        const hostTopLimit = Math.max(hostRect.top + 16, visibleTop);
+        const hostBottomLimit = Math.min(hostRect.bottom - 16, visibleBottom);
+        let delta = 0;
+
+        if (targetRect.bottom > hostBottomLimit) {
+            delta = targetRect.bottom - hostBottomLimit;
+        } else if (targetRect.top < hostTopLimit) {
+            delta = targetRect.top - hostTopLimit;
+        }
+
+        if (Math.abs(delta) > 1) {
+            scrollHost.scrollTo({
+                top: Math.max(0, scrollHost.scrollTop + delta),
+                behavior
+            });
+        }
+        return;
+    }
+
+    if (targetRect.top < visibleTop || targetRect.bottom > visibleBottom) {
+        target.scrollIntoView({ block: 'center', inline: 'nearest', behavior });
+    }
+}
+
+function focusFieldWithoutPageJump(targetOrId, delay = 0) {
+    const runFocus = () => {
+        const target = resolveFocusableTarget(targetOrId);
+        if (!(target instanceof HTMLElement)) return;
+
+        try {
+            target.focus({ preventScroll: true });
+        } catch (error) {
+            target.focus();
+        }
+
+        window.setTimeout(() => keepFieldVisibleInModal(target, 'smooth'), 40);
+        window.setTimeout(() => keepFieldVisibleInModal(target, 'smooth'), 220);
+    };
+
+    if (delay > 0) {
+        window.setTimeout(runFocus, delay);
+        return;
+    }
+
+    runFocus();
+}
+
+window.focusFieldWithoutPageJump = focusFieldWithoutPageJump;
+window.keepFieldVisibleInModal = keepFieldVisibleInModal;
+
 function triggerSoftFadeInElement(el) {
     if (!el) return;
     el.classList.remove('fade-in-soft');
@@ -88,8 +169,14 @@ function initKeyboardViewportBridge() {
         const keyboardLift = rawLift > 90 ? rawLift : 0;
 
         root.style.setProperty('--app-visual-height', `${Math.round(visualHeight)}px`);
+        root.style.setProperty('--app-visual-offset-top', `${Math.round(offsetTop)}px`);
         root.style.setProperty('--app-keyboard-lift', `${keyboardLift}px`);
         document.body?.classList.toggle('keyboard-active', keyboardLift > 0);
+
+        const activeField = document.activeElement;
+        if (activeField instanceof HTMLElement) {
+            window.requestAnimationFrame(() => keepFieldVisibleInModal(activeField, 'smooth'));
+        }
     };
 
     const centerFocusedField = (target) => {
@@ -99,9 +186,10 @@ function initKeyboardViewportBridge() {
         if (!modal) return;
         window.setTimeout(() => {
             try {
-                target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+                keepFieldVisibleInModal(target, 'smooth');
             } catch (e) {}
         }, 140);
+        window.setTimeout(() => keepFieldVisibleInModal(target, 'smooth'), 260);
     };
 
     const viewport = window.visualViewport;
@@ -1871,6 +1959,141 @@ function getBalanceViewport() {
     return document.getElementById('cardCarouselScroll');
 }
 
+function isDesktopWalletLayout() {
+    return typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(min-width: 1100px)').matches;
+}
+
+function syncWalletDesktopLayout() {
+    const container = document.querySelector('#view-wallet .mui-container');
+    if (!container) return;
+
+    const layoutOrder = [
+        '#safe-spend-widget',
+        '#triple-progress-widget',
+        '.insight-row',
+        '.monthly-summary-card',
+        '#offline-queue-card',
+        '#chart-section',
+        '.trend-card',
+        '.recent-header',
+        '.search-container',
+        '#loading-spinner',
+        '#history-container',
+        '#subscription-section',
+        '#analytics-section',
+        '#cat-budget-widget',
+        '.data-mgmt-card',
+        '.troubleshoot-card',
+        '#admin-controls',
+        '#log-container',
+        '.footer-credits'
+    ];
+
+    const firstMatch = (selector) => container.querySelector(selector);
+    const allDataCards = container.querySelectorAll('.data-mgmt-card');
+    const elements = {
+        safe: firstMatch('#safe-spend-widget'),
+        budget: firstMatch('#triple-progress-widget'),
+        insights: firstMatch('.insight-row'),
+        summary: firstMatch('.monthly-summary-card'),
+        offline: firstMatch('#offline-queue-card'),
+        chart: firstMatch('#chart-section'),
+        trend: firstMatch('.trend-card'),
+        recent: firstMatch('.recent-header'),
+        search: firstMatch('.search-container'),
+        loading: firstMatch('#loading-spinner'),
+        history: firstMatch('#history-container'),
+        subscription: firstMatch('#subscription-section'),
+        analytics: firstMatch('#analytics-section'),
+        category: firstMatch('#cat-budget-widget'),
+        dataMgmt: allDataCards[0] || null,
+        troubleshoot: container.querySelector('.troubleshoot-card'),
+        admin: firstMatch('#admin-controls'),
+        log: firstMatch('#log-container'),
+        footer: firstMatch('.footer-credits')
+    };
+
+    let shell = container.querySelector('.wallet-desktop-shell');
+
+    if (!isDesktopWalletLayout()) {
+        if (shell) {
+            const moveBack = (el) => { if (el) container.appendChild(el); };
+            layoutOrder.forEach((selector) => {
+                if (selector === '.data-mgmt-card') {
+                    moveBack(elements.dataMgmt);
+                    return;
+                }
+                const el = firstMatch(selector);
+                moveBack(el);
+            });
+            shell.remove();
+        }
+        return;
+    }
+
+    if (!shell) {
+        shell = document.createElement('div');
+        shell.className = 'wallet-desktop-shell';
+        shell.innerHTML = `
+            <div class="wallet-desktop-main">
+                <div class="wallet-desktop-left"></div>
+                <div class="wallet-desktop-right"></div>
+            </div>
+            <div class="wallet-desktop-bottom">
+                <div class="wallet-desktop-bottom-main"></div>
+                <div class="wallet-desktop-bottom-side"></div>
+            </div>
+            <div class="wallet-desktop-utility"></div>
+        `;
+        container.prepend(shell);
+    }
+
+    const left = shell.querySelector('.wallet-desktop-left');
+    const right = shell.querySelector('.wallet-desktop-right');
+    const bottomMain = shell.querySelector('.wallet-desktop-bottom-main');
+    const bottomSide = shell.querySelector('.wallet-desktop-bottom-side');
+    const utility = shell.querySelector('.wallet-desktop-utility');
+
+    [elements.safe, elements.insights, elements.summary, elements.offline].forEach((el) => { if (el) left.appendChild(el); });
+    [elements.budget, elements.chart, elements.trend].forEach((el) => { if (el) right.appendChild(el); });
+    [elements.recent, elements.search, elements.loading, elements.history].forEach((el) => { if (el) bottomMain.appendChild(el); });
+    [elements.subscription, elements.analytics, elements.category].forEach((el) => { if (el) bottomSide.appendChild(el); });
+    [elements.dataMgmt, elements.troubleshoot, elements.admin, elements.log, elements.footer].forEach((el) => { if (el) utility.appendChild(el); });
+
+    const chartSection = elements.chart;
+    if (chartSection) {
+        const chartContainer = chartSection.querySelector('.chart-container');
+        const chartLegend = chartSection.querySelector('#chart-legend');
+        let chartCluster = chartSection.querySelector('.chart-desktop-cluster');
+
+        if (isDesktopWalletLayout()) {
+            if (chartContainer && chartLegend) {
+                if (!chartCluster) {
+                    chartCluster = document.createElement('div');
+                    chartCluster.className = 'chart-desktop-cluster';
+                }
+                chartSection.appendChild(chartCluster);
+                chartCluster.appendChild(chartContainer);
+                chartCluster.appendChild(chartLegend);
+            }
+        } else if (chartCluster) {
+            if (chartContainer) chartSection.appendChild(chartContainer);
+            if (chartLegend) chartSection.appendChild(chartLegend);
+            chartCluster.remove();
+        }
+    }
+}
+
+function updateBalanceViewportMode(cardCount = getBalanceCards().length) {
+    const viewport = getBalanceViewport();
+    if (!viewport) return;
+    const useStaticRow = isDesktopWalletLayout() && cardCount <= 3;
+    viewport.classList.toggle('desktop-static-row', useStaticRow);
+    viewport.classList.toggle('desktop-carousel-row', isDesktopWalletLayout() && cardCount > 3);
+}
+
 function getCardSnapLeft(card, viewport = getBalanceViewport()) {
     if (!card || !viewport) return 0;
     const rawLeft = card.offsetLeft - ((viewport.clientWidth - card.offsetWidth) / 2);
@@ -1910,6 +2133,7 @@ function syncActiveAccountChrome(accId, accounts = window.walletAccounts || []) 
 function snapToBalanceCard(card, behavior = 'smooth') {
     const viewport = getBalanceViewport();
     if (!viewport || !card) return;
+    if (viewport.classList.contains('desktop-static-row')) return;
     viewport.scrollTo({ left: getCardSnapLeft(card, viewport), behavior });
 }
 
@@ -1946,6 +2170,7 @@ function settleBalanceCards() {
 export function updateBalanceCardsUI(accounts) {
     const container = document.getElementById('dynamic-balance-cards');
     if (!container) return;
+    syncWalletDesktopLayout();
 
     if (window.accountCardObserver?.disconnect) {
         try { window.accountCardObserver.disconnect(); } catch (e) {}
@@ -2032,6 +2257,7 @@ export function updateBalanceCardsUI(accounts) {
     }).join('');
 
     const renderedCards = container.querySelectorAll('.balance-card');
+    updateBalanceViewportMode(accounts.length);
     renderedCards.forEach((card) => {
         window.requestAnimationFrame(() => triggerSoftFadeInElement(card));
     });
@@ -2049,11 +2275,47 @@ export function scrollToActiveCard(accId, behavior = 'smooth') {
         snapToBalanceCard(card, behavior);
     }
 }
+
+function hydrateAccountViewFromCache(accId) {
+    const uid = auth.currentUser?.uid || localStorage.getItem('wallet_last_uid');
+    if (!uid || !accId) return false;
+
+    const cacheKey = `wallet_cache_${uid}_${accId}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    if (!cachedData) return false;
+
+    try {
+        const cache = JSON.parse(cachedData);
+        if (!Array.isArray(cache.txns) || (Date.now() - cache.timestamp >= 86400000)) return false;
+
+        window.allTxns = cache.txns;
+        if (window.renderHistory) window.renderHistory(cache.txns);
+        if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(cache.txns, accId);
+        if (window.updateInsightCards) window.updateInsightCards(cache.txns);
+        if (window.renderCalendar) window.renderCalendar(cache.txns);
+
+        const filterEl = document.getElementById('chart-filter');
+        if (filterEl) {
+            filterEl.value = 'this_month';
+            window.requestAnimationFrame(() => {
+                if (window.filterChart) window.filterChart();
+            });
+        }
+        return true;
+    } catch (error) {
+        console.warn('hydrateAccountViewFromCache failed', error);
+        return false;
+    }
+}
 // Account Switcher Management
 export function switchAccount(id, silentRestore = false, forceReload = false) {
     const resolvedId = resolveActiveAccountId(window.walletAccounts, id);
     if (resolvedId === window.currentAccount && !forceReload) return;
+    window.currentAccount = resolvedId;
+    localStorage.setItem('wallet_current_account', resolvedId);
     syncActiveAccountChrome(resolvedId, window.walletAccounts || []);
+    applyAccountTheme(resolvedId, window.walletAccounts || []);
+    updateHeaderIcon(resolvedId);
     window.__lastSettledWalletAccount = resolvedId;
     scrollToActiveCard(resolvedId);
     if (!silentRestore) triggerHaptic('bump');
@@ -2061,13 +2323,18 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
     // Toggle Safe to Spend Widget Visibility
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
-        // Safe to Spend is specifically for BPI account
-        safeSpendWidget.style.display = (resolvedId === 'bpi') ? 'block' : 'none';
-        if (resolvedId === 'bpi') updateSafeSpendUI();
+        const shouldShowSafeSpend = resolvedId === 'bpi' || isDesktopWalletLayout();
+        safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
+        if (shouldShowSafeSpend) updateSafeSpendUI();
     }
 
     // Trigger data reload for the new account
-    import('./app-data.js').then(m => m.loadData());
+    hydrateAccountViewFromCache(resolvedId);
+    import('./app-data.js').then(m => m.loadData({
+        preserveBudgetWidget: isDesktopWalletLayout(),
+        preserveViewState: true,
+        reason: 'account_switch'
+    }));
 
     // Auto-sync if token is fresh
     if (!silentRestore && (resolvedId === 'atome' || resolvedId === 'bpi')) {
@@ -2105,7 +2372,7 @@ export function applyUserView(user) {
     
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
-        safeSpendWidget.style.display = isBPI ? 'block' : 'none';
+        safeSpendWidget.style.display = (isBPI || isDesktopWalletLayout()) ? 'block' : 'none';
     }
 }
 
@@ -2178,17 +2445,40 @@ export function setupAccountSwitcher() {
     const viewport = document.getElementById('cardCarouselScroll');
     const cards = getBalanceCards();
     if (!viewport || cards.length === 0) return;
+    updateBalanceViewportMode(cards.length);
+    let hasDragged = false;
+    const isStaticDesktopRow = () => viewport.classList.contains('desktop-static-row');
+
+    const bindCardTaps = () => {
+        cards.forEach((card) => {
+            if (card.dataset.desktopTapBound === 'true') return;
+            card.dataset.desktopTapBound = 'true';
+            card.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (hasDragged) return;
+                const accountId = card.dataset.account;
+                if (!accountId) return;
+                switchAccount(accountId);
+            });
+        });
+    };
 
     if (viewport.__walletAccountSwitcherBound) {
-        settleToNearestBalanceCard('auto', { skipReload: true });
+        bindCardTaps();
+        if (!isStaticDesktopRow()) {
+            settleToNearestBalanceCard('auto', { skipReload: true });
+        } else {
+            ensureActiveBalanceCard(resolveActiveAccountId(window.walletAccounts, window.currentAccount));
+        }
         return;
     }
 
     let isDown = false;
     let startX;
     let scrollLeft;
-    let hasDragged = false;
     const queueSettle = (behavior = 'smooth') => {
+        if (isStaticDesktopRow()) return;
         window.clearTimeout(viewport.__walletSettleTimer);
         viewport.__walletSettleTimer = window.setTimeout(() => {
             viewport.style.scrollSnapType = 'x mandatory';
@@ -2197,6 +2487,7 @@ export function setupAccountSwitcher() {
     };
 
     viewport.addEventListener('mousedown', (e) => {
+        if (isStaticDesktopRow()) return;
         isDown = true;
         viewport.style.cursor = 'grabbing';
         viewport.style.scrollSnapType = 'none';
@@ -2206,6 +2497,7 @@ export function setupAccountSwitcher() {
     });
 
     viewport.addEventListener('mouseleave', () => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         isDown = false;
         viewport.style.cursor = 'grab';
@@ -2213,6 +2505,7 @@ export function setupAccountSwitcher() {
     });
 
     viewport.addEventListener('mouseup', () => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         isDown = false;
         viewport.style.cursor = 'grab';
@@ -2220,6 +2513,7 @@ export function setupAccountSwitcher() {
     });
 
     viewport.addEventListener('mousemove', (e) => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         e.preventDefault();
         const x = e.pageX - viewport.offsetLeft;
@@ -2229,6 +2523,7 @@ export function setupAccountSwitcher() {
     });
 
     viewport.addEventListener('touchstart', (e) => {
+        if (isStaticDesktopRow()) return;
         startX = e.touches[0].pageX - viewport.offsetLeft;
         scrollLeft = viewport.scrollLeft;
         isDown = true;
@@ -2237,6 +2532,7 @@ export function setupAccountSwitcher() {
     }, { passive: true });
 
     viewport.addEventListener('touchmove', (e) => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         const x = e.touches[0].pageX - viewport.offsetLeft;
         const walk = (x - startX) * 1.5;
@@ -2245,17 +2541,42 @@ export function setupAccountSwitcher() {
     }, { passive: true });
 
     viewport.addEventListener('touchend', () => {
+        if (isStaticDesktopRow()) return;
         isDown = false;
         queueSettle();
     }, { passive: true });
 
     viewport.addEventListener('scroll', () => {
         if (isDown) return;
+        if (viewport.classList.contains('desktop-static-row')) return;
         queueSettle('smooth');
     }, { passive: true });
 
+    bindCardTaps();
+
     viewport.__walletAccountSwitcherBound = true;
-    settleToNearestBalanceCard('auto', { skipReload: true });
+    if (!isStaticDesktopRow()) {
+        settleToNearestBalanceCard('auto', { skipReload: true });
+    } else {
+        ensureActiveBalanceCard(resolveActiveAccountId(window.walletAccounts, window.currentAccount));
+    }
+}
+
+if (typeof window !== 'undefined' && !window.__walletDesktopResizeBound) {
+    window.__walletDesktopResizeBound = true;
+    window.addEventListener('resize', () => {
+        syncWalletDesktopLayout();
+        updateBalanceViewportMode();
+    }, { passive: true });
+}
+
+if (typeof document !== 'undefined') {
+    const bootWalletDesktopLayout = () => syncWalletDesktopLayout();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootWalletDesktopLayout, { once: true });
+    } else {
+        bootWalletDesktopLayout();
+    }
 }
 
 export function updateHeaderIcon(account) {
@@ -3077,14 +3398,12 @@ function ensureSavedBudgetPctNotifications() {
     const candidate = selectBudgetThresholdCandidate(uid, pctMap);
     if (!candidate) return false;
 
-    const cycle = nextBudgetThresholdCycle(uid, candidate.categoryKey, monthKey, candidate.threshold);
-    const notifType = `threshold_${candidate.categoryKey}_${candidate.threshold}_${monthKey}_cycle_${cycle}`;
+    const notifType = `threshold_${candidate.categoryKey}_${candidate.threshold}_${monthKey}`;
     const meta = {
         action: 'open_budget_overview',
         category: candidate.categoryKey,
         thresholdPct: candidate.threshold,
         monthKey,
-        cycle,
         notificationKey: notifType
     };
     if (window.NotificationsEngine?.hasStoredInAppNotification?.(notifType, meta)) {
@@ -3131,14 +3450,12 @@ function ensureBudgetThresholdNotificationFromPct(uid, categoryKey, label, pct, 
     if (!threshold) return false;
 
     const monthKey = getBudgetProgressMonthKey();
-    const cycle = nextBudgetThresholdCycle(uid, categoryKey, monthKey, threshold);
-    const notifType = `threshold_${categoryKey}_${threshold}_${monthKey}_cycle_${cycle}`;
+    const notifType = `threshold_${categoryKey}_${threshold}_${monthKey}`;
     const meta = {
         action: 'open_budget_overview',
         category: categoryKey,
         thresholdPct: threshold,
         monthKey,
-        cycle,
         notificationKey: notifType
     };
 
@@ -3413,15 +3730,13 @@ async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
         const threshold = [100, 90, 70].find(level => prevPct < level && nextPct >= level);
         if (!threshold) continue;
 
-        const cycle = nextBudgetThresholdCycle(uid, key, monthKey, threshold);
-        const notificationKey = `threshold_${key}_${threshold}_${monthKey}_cycle_${cycle}`;
+        const notificationKey = `threshold_${key}_${threshold}_${monthKey}`;
         const notifType = notificationKey;
         const meta = {
             action: 'open_budget_overview',
             category: key,
             thresholdPct: threshold,
             monthKey,
-            cycle,
             notificationKey
         };
 
@@ -3450,7 +3765,9 @@ function getNotifDedupKey(item = {}) {
 }
 
 function getLimitedNotificationItems(items = [], limitCount = 10) {
-    return [...items].sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0)).slice(0, limitCount);
+    return collapseThresholdNotificationItems(items)
+        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))
+        .slice(0, limitCount);
 }
 
 function formatNotifTimestamp(createdAtMs) {
@@ -3716,20 +4033,34 @@ export function updateUnreadCount(markRead = false) {
     (async () => {
         try {
             const uid = window.auth.currentUser.uid;
+            
+            // [FIX: 2026-04-10] REMOVED backfillNotificationsFromState call from here to prevent infinite recursion loop - Antigravity
+            // Backfilling is now exclusively handled during initial load or when opening the notification center.
+            /* 
             if (window.NotificationsEngine?.backfillNotificationsFromState) {
                 await window.NotificationsEngine.backfillNotificationsFromState(uid);
             }
+            */
+
             const notifRef = window.collection(window.db, `users/${uid}/notifications`);
             const snap = await window.getDocs(window.query(notifRef, window.orderBy('createdAt', 'desc'), window.limit(30)));
-            let remoteUnread = 0;
-            const remoteKeys = new Set();
-
+            const remoteItems = [];
             snap.forEach(docSnap => {
                 const data = docSnap.data() || {};
-                if (!data.isRead) remoteUnread++;
-                remoteKeys.add(getNotifDedupKey(data));
+                remoteItems.push({
+                    id: docSnap.id,
+                    title: data.title || 'Notification',
+                    body: data.body || '',
+                    type: data.type || 'general',
+                    isRead: Boolean(data.isRead),
+                    createdAtMs: Number(data.createdAtMs || 0) || (data.createdAt?.toDate ? data.createdAt.toDate().getTime() : 0) || Date.now(),
+                    meta: data.meta || null
+                });
             });
 
+            const collapsedRemoteItems = getLimitedNotificationItems(remoteItems, 1000);
+            const remoteUnread = collapsedRemoteItems.filter(item => !item.isRead).length;
+            const remoteKeys = new Set(collapsedRemoteItems.map(item => getNotifDedupKey(item)));
             const uniqueLocalUnread = localUnread.filter(item => !remoteKeys.has(getNotifDedupKey(item))).length;
             const unreadCount = remoteUnread + uniqueLocalUnread;
             paintBadge(unreadCount);

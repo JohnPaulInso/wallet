@@ -37,9 +37,33 @@ function getCachedBalanceForAccount(accId) {
 // Load Data with Real-time Listeners
 window.unsubscribeSnapshot = null;
 window.isDataLoading = false; 
-export async function loadData(providedUid = null) {
+function normalizeLoadRequest(providedUidOrOptions = null, maybeOptions = null) {
+    let providedUid = null;
+    let options = {};
+
+    if (typeof providedUidOrOptions === 'string') {
+        providedUid = providedUidOrOptions;
+    } else if (providedUidOrOptions && typeof providedUidOrOptions === 'object' && !Array.isArray(providedUidOrOptions)) {
+        options = { ...providedUidOrOptions };
+    }
+
+    if (maybeOptions && typeof maybeOptions === 'object' && !Array.isArray(maybeOptions)) {
+        options = { ...options, ...maybeOptions };
+    }
+
+    if (!providedUid && typeof options.uid === 'string') {
+        providedUid = options.uid;
+    }
+
+    return { providedUid, options };
+}
+
+export async function loadData(providedUidOrOptions = null, maybeOptions = null) {
+    const { providedUid, options } = normalizeLoadRequest(providedUidOrOptions, maybeOptions);
     const uid = providedUid || auth.currentUser?.uid;
     if (!uid) return;
+    const preserveBudgetWidget = Boolean(options.preserveBudgetWidget);
+    const preserveViewState = Boolean(options.preserveViewState);
 
     // PREVENT REDUNDANT CALLS: Early exit if already loading this specific account
     const loadKey = `${uid}_${window.currentAccount}`;
@@ -53,16 +77,20 @@ export async function loadData(providedUid = null) {
     const container = document.getElementById('history-container');
     const spinner = document.getElementById('loading-spinner');
     
-    // Clear existing data to trigger skeletons/placeholders
-    // Modified 2026-03-27: Clear ALL buckets and reset live-data flag
-    window.allTxns = null; 
-    window.walletTxns = null;
-    window.budgetManualTxns = undefined;
-    window.hasBudgetLiveData = false;
-    window.budgetLoadStartTime = Date.now();
-    
-    if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-    else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+    if (!preserveViewState) {
+        window.allTxns = null;
+    }
+
+    if (!preserveBudgetWidget) {
+        // Modified 2026-03-27: Clear ALL buckets and reset live-data flag
+        window.walletTxns = null;
+        window.budgetManualTxns = undefined;
+        window.hasBudgetLiveData = false;
+        window.budgetLoadStartTime = Date.now();
+        
+        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+        else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+    }
     
     // Clear existing listener if any
     if (window.unsubscribeSnapshot) {
@@ -92,8 +120,10 @@ export async function loadData(providedUid = null) {
                 }
                 if (window.updateInsightCards) window.updateInsightCards(cache.txns);
                 if (window.renderCalendar) window.renderCalendar();
-                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (!preserveBudgetWidget) {
+                    if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                    else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                }
                 hasValidCache = true;
 
                 // Robust Chart Initialization with slight delay to ensure DOM readiness
@@ -193,8 +223,10 @@ export async function loadData(providedUid = null) {
                 if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount);
                 if (window.updateInsightCards) window.updateInsightCards(txns);
                 if (window.renderCalendar) window.renderCalendar();
-                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (!preserveBudgetWidget) {
+                    if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                    else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                }
                 
                 // Ensure chart is still rendered if it's currently empty
                 const filterEl = document.getElementById('chart-filter');
@@ -229,10 +261,12 @@ export async function loadData(providedUid = null) {
             if (window.updateInsightCards) window.updateInsightCards(txns);
             if (window.renderCalendar) window.renderCalendar();
             
-            // Modified 2026-03-27: Signal that we have live data for the budget widget
-            window.hasBudgetLiveData = true;
-            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-            else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+            if (!preserveBudgetWidget) {
+                // Modified 2026-03-27: Signal that we have live data for the budget widget
+                window.hasBudgetLiveData = true;
+                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+            }
 
             if (txns.length === 0) {
                 // EMPTY STATE
@@ -275,7 +309,7 @@ export async function loadData(providedUid = null) {
                    setTimeout(() => { if (window.filterChart) window.filterChart(); }, 50);
                 }
             }
-            if (window.syncWidgets) window.syncWidgets();
+            if (!preserveBudgetWidget && window.syncWidgets) window.syncWidgets();
         }, (error) => {
             log('Snapshot Error: ' + error.message, 'error');
             window.isDataLoading = false;

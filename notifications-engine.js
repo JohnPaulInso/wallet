@@ -65,18 +65,31 @@ export const NotificationsEngine = {
         }
     },
 
-    getLocalNotifKey(uid, type, fallbackId = "") {
-        return `${uid || "guest"}:${type || fallbackId || "general"}`;
+    getStableNotificationKey(type = "general", meta = null, fallbackId = "") {
+        const safeMeta = this.sanitizeMeta(meta);
+        const explicitKey = safeMeta?.notificationKey || safeMeta?.dedupeKey || safeMeta?.remoteKey || "";
+        if (explicitKey) return String(explicitKey);
+
+        const persistentDocId = this.getPersistentNotificationDocId(type, safeMeta);
+        if (persistentDocId) return persistentDocId;
+
+        if (fallbackId) return String(fallbackId);
+        if (type) return String(type);
+        return "general";
     },
 
-    wasDeliveredLocally(uid, type, fallbackId = "") {
-        const cache = this.getLocalCache();
-        return Boolean(cache[this.getLocalNotifKey(uid, type, fallbackId)]);
+    getLocalNotifKey(uid, type, fallbackId = "", meta = null) {
+        return `${uid || "guest"}:${this.getStableNotificationKey(type, meta, fallbackId)}`;
     },
 
-    markDeliveredLocally(uid, type, fallbackId = "", createdAtMs = Date.now()) {
+    wasDeliveredLocally(uid, type, fallbackId = "", meta = null) {
         const cache = this.getLocalCache();
-        cache[this.getLocalNotifKey(uid, type, fallbackId)] = createdAtMs;
+        return Boolean(cache[this.getLocalNotifKey(uid, type, fallbackId, meta)]);
+    },
+
+    markDeliveredLocally(uid, type, fallbackId = "", createdAtMs = Date.now(), meta = null) {
+        const cache = this.getLocalCache();
+        cache[this.getLocalNotifKey(uid, type, fallbackId, meta)] = createdAtMs;
         this.setLocalCache(cache);
 
         if (uid) {
@@ -218,7 +231,12 @@ export const NotificationsEngine = {
     getStoredInAppNotifications() {
         try {
             const raw = JSON.parse(localStorage.getItem("smartwallet_notifications") || "[]");
-            return Array.isArray(raw) ? raw : [];
+            const items = Array.isArray(raw) ? raw : [];
+            const deduped = this.dedupeStoredInAppNotifications(items);
+            if (deduped.length !== items.length) {
+                this.writeStoredInAppNotifications(deduped);
+            }
+            return deduped;
         } catch (e) {
             return [];
         }
@@ -226,10 +244,32 @@ export const NotificationsEngine = {
 
     writeStoredInAppNotifications(items) {
         try {
-            localStorage.setItem("smartwallet_notifications", JSON.stringify(Array.isArray(items) ? items : []));
+            localStorage.setItem("smartwallet_notifications", JSON.stringify(this.dedupeStoredInAppNotifications(Array.isArray(items) ? items : [])));
         } catch (e) {
             console.warn("Failed to persist in-app notifications:", e);
         }
+    },
+
+    getStoredNotificationIdentity(item = {}) {
+        const safeMeta = this.sanitizeMeta(item?.meta || null);
+        const type = String(item?.type || "general");
+        const title = String(item?.title || "");
+        const body = String(item?.body || item?.message || "");
+        return this.getStableNotificationKey(type, safeMeta, `${type}|${title}|${body}`);
+    },
+
+    dedupeStoredInAppNotifications(items = []) {
+        const seen = new Set();
+        const deduped = [];
+
+        for (const item of items || []) {
+            const key = this.getStoredNotificationIdentity(item);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(item);
+        }
+
+        return deduped;
     },
 
     sanitizeNotificationDocToken(value, fallback = "general") {
@@ -422,7 +462,7 @@ export const NotificationsEngine = {
     async deliverLocalNotification(uid, fallbackId, title, body, type = "general", createdAtMs = Date.now(), meta = null) {
         const plugin = this.getLocalNotificationsPlugin();
         if (!plugin) return false;
-        if (this.wasDeliveredLocally(uid, type, fallbackId)) return true;
+        if (this.wasDeliveredLocally(uid, type, fallbackId, meta)) return true;
 
         const allowed = await this.ensureLocalPermissions();
         if (!allowed) return false;
@@ -435,11 +475,13 @@ export const NotificationsEngine = {
                         body,
                         id: this.createNativeNotificationId(`${uid}:${type}:${fallbackId}`),
                         schedule: { at: new Date(Date.now() + 450) },
+                        smallIcon: "ic_stat_wallet",
+                        iconColor: "#111827",
                         extra: { notifId: fallbackId, type, uid, meta: this.sanitizeMeta(meta) }
                     }
                 ]
             });
-            this.markDeliveredLocally(uid, type, fallbackId, createdAtMs);
+            this.markDeliveredLocally(uid, type, fallbackId, createdAtMs, meta);
             return true;
         } catch (e) {
             console.warn("LocalNotification failed:", e);
@@ -469,8 +511,9 @@ export const NotificationsEngine = {
             }
         }
 
+        // [FIX: 2026-04-10] Removed redundant immediate local delivery call to prevent duplicate alerts - Antigravity
         this.ensureStoredInAppNotification(title, body, type, safeMeta);
-        await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
+        // await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
 
         try {
             const payload = {
@@ -604,6 +647,10 @@ export const NotificationsEngine = {
                             thresholdPct,
                             monthKey
                         };
+                        // [FIX: 2026-04-10] Check PERSISTENT local state tracker before re-triggering backfill - Antigravity
+                        const localState = this.getBudgetThresholdState(uid, item.key, monthKey);
+                        if (localState >= thresholdPct) continue;
+
                         const alreadyNotified = await this.hasNotified(uid, notifType, meta);
                         if (alreadyNotified) continue;
 
@@ -618,14 +665,9 @@ export const NotificationsEngine = {
                         }
 
                         this.ensureStoredInAppNotification(title, body, notifType, meta);
-                        await this.syncStoredNotificationToFirestore(uid, {
-                            title,
-                            message: body,
-                            type: notifType,
-                            unread: true,
-                            createdAtMs: Date.now(),
-                            meta
-                        });
+                        // [FIX: 2026-04-10] Prevent duplicate threshold notifications during backfill - Antigravity
+                        await this.triggerNotification(uid, title, body, notifType, meta);
+                        this.setBudgetThresholdState(uid, item.key, monthKey, Math.max(localState, thresholdPct));
                     }
                 }
             }
@@ -658,19 +700,21 @@ export const NotificationsEngine = {
                         notificationKey: type
                     };
                     const alreadyNotified = await this.hasNotified(uid, type, meta);
-                    if (!alreadyNotified) {
-                        const title = "Goal Completed! 🏆";
-                        const body = `Congratulations! You've reached your ₱${targetAmount.toLocaleString()} goal for ${goal.title}.`;
-                        this.ensureStoredInAppNotification(title, body, type, meta);
-                        await this.syncStoredNotificationToFirestore(uid, {
-                            title,
-                            message: body,
-                            type,
-                            unread: true,
-                            createdAtMs: Date.now(),
-                            meta
-                        });
+                    
+                    // [FIX: 2026-04-10] Check Goal Notif Tracker to prevent spamming on clear history - Antigravity
+                    const goalTrackKey = `goal_notif_${goalId}_${completedCycle}`;
+                    if (localStorage.getItem(goalTrackKey) || alreadyNotified) {
+                        if (!localStorage.getItem(goalTrackKey)) localStorage.setItem(goalTrackKey, "1");
+                        continue;
                     }
+
+                    const title = "Goal Completed! 🏆";
+                    const body = `Congratulations! You've reached your ₱${targetAmount.toLocaleString()} goal for ${goal.title}.`;
+                    this.ensureStoredInAppNotification(title, body, type, meta);
+                    // [FIX: 2026-04-10] Use centralized triggerNotification for goal milestones to ensure stable deduplication - Antigravity
+                    await this.triggerNotification(uid, title, body, type, meta);
+                    // Mark as locally triggered
+                    localStorage.setItem(goalTrackKey, "1");
                 }
 
                 if (pct >= 50 && halfwayCycle > 0) {
@@ -684,19 +728,21 @@ export const NotificationsEngine = {
                         notificationKey: type
                     };
                     const alreadyNotified = await this.hasNotified(uid, type, meta);
-                    if (!alreadyNotified) {
-                        const title = "Halfway There!";
-                        const body = `You're 50% through your goal for ${goal.title}. Keep it up!`;
-                        this.ensureStoredInAppNotification(title, body, type, meta);
-                        await this.syncStoredNotificationToFirestore(uid, {
-                            title,
-                            message: body,
-                            type,
-                            unread: true,
-                            createdAtMs: Date.now(),
-                            meta
-                        });
+
+                    // [FIX: 2026-04-10] Goal 50% Milestone persistent deduplication - Antigravity
+                    const goalTrackKeyHalf = `goal_notif_${goalId}_half_${halfwayCycle}`;
+                    if (localStorage.getItem(goalTrackKeyHalf) || alreadyNotified) {
+                        if (!localStorage.getItem(goalTrackKeyHalf)) localStorage.setItem(goalTrackKeyHalf, "1");
+                        continue;
                     }
+
+                    const title = "Halfway There!";
+                    const body = `You're 50% through your goal for ${goal.title}. Keep it up!`;
+                    this.ensureStoredInAppNotification(title, body, type, meta);
+                    // [FIX: 2026-04-10] Use centralized triggerNotification for 50% milestone to ensure stable local delivery - Antigravity
+                    await this.triggerNotification(uid, title, body, type, meta);
+                    // Mark as locally triggered
+                    localStorage.setItem(goalTrackKeyHalf, "1");
                 }
             }
         } catch (e) {
@@ -769,7 +815,7 @@ export const NotificationsEngine = {
                 this.ensureStoredInAppNotification(currentTier.label, currentTier.body, notifType, meta);
             }
 
-            if (!this.wasDeliveredLocally(uid, notifType, notifType)) {
+            if (!this.wasDeliveredLocally(uid, notifType, notifType, meta)) {
                 const delivered = await this.deliverLocalNotification(
                     uid,
                     notifType,
@@ -780,7 +826,7 @@ export const NotificationsEngine = {
                     meta
                 );
                 if (!delivered) {
-                    this.markDeliveredLocally(uid, notifType, notifType, Date.now());
+                    this.markDeliveredLocally(uid, notifType, notifType, Date.now(), meta);
                 }
             }
         }

@@ -41,12 +41,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     
     <!-- AUTH PERFORMANCE OPTIMIZATION (PRELOADS) -->
-    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js">
-    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js">
-    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js">
-    <link rel="modulepreload" href="app-ui.js">
-    <link rel="modulepreload" href="config.js">
-    <link rel="modulepreload" href="local-ai.js">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" crossorigin="anonymous">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" crossorigin="anonymous">
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js" crossorigin="anonymous">
+    <link rel="modulepreload" href="./app-ui.js">
+    <link rel="modulepreload" href="./config.js">
+    <link rel="modulepreload" href="./local-ai.js">
     
     <!-- SPEED UP FIREBASE AUTH POPUP -->
     <link rel="preconnect" href="https://accounts.google.com">
@@ -983,7 +983,7 @@
 
             <div id="history-container"></div>
 
-            <div style="margin: 20px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div>
+            <!-- <div class="wallet-mobile-divider" style="margin: 20px 0 16px; height: 1px; background: rgba(0,0,0,0.05); width: 100%;"></div> -->
 
             <!-- CATEGORY BUDGET LIMITER WIDGET -->
             <div id="cat-budget-widget" class="cat-budget-card" style="display: none;margin: 40px 0px 20px;">
@@ -999,7 +999,7 @@
             </div>
 
             <!-- VISIBLE DIVIDER ABOVE ANALYTICS -->
-            <div style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div>
+            <!-- <div class="wallet-mobile-divider" style="margin: 20px 0px 10px; height: 1px; background: #f1f5f9; width: 100%;"></div> -->
 
             <!-- ANALYTICS CARD (MOVED FROM TOP) -->
             <div class="analytics-card" id="analytics-section" style="margin: 20px 0px 20px; padding: 15px; border-radius: 16px;">
@@ -1111,7 +1111,9 @@
                 <style>
              
                 </style>
-                <div class="main-content">
+                <!-- [FIX: 2026-04-10] RESTORED WIDTH FOR CALENDAR PAGE - Antigravity -->
+                <!-- Detailed Class: .main-content | Function: Main responsive container for Calendar Tab content -->
+                <div class="main-content" id="calendar-main-view-container"> 
                     <!-- [MODIFIED 2026-04-03] Page Title outside the card per USER request -->
                     <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 2px; margin-top: 0px; font-family: 'Montserrat', sans-serif !important; letter-spacing: -0.5px;">Calendar</h2>
                     <div class="calendar-card" id="main-calendar-card">
@@ -2077,7 +2079,7 @@
 
 
         // UNIFIED PROMISE-BASED DIALOG SYSTEM
-        window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, extraContent = null, customActions = null, callback = null }) => {
+        window.showAppDialog = ({ title = 'Alert', message = '', input = false, value = '', confirm = false, extraContent = null, customActions = null, callback = null, uppercaseInput = false }) => {
             return new Promise((resolve) => {
                 const overlay = document.getElementById('app-dialog');
                 const titleEl = document.getElementById('dialog-title');
@@ -2093,7 +2095,17 @@
                 const actionsCont = overlay.querySelector('.dialog-actions');
                 const cancelBtn = document.getElementById('dialog-cancel-btn');
                 const okBtn = document.getElementById('dialog-ok-btn');
-                
+                const forceUppercase = () => {
+                    const nextValue = String(inputEl.value || '').toUpperCase();
+                    if (nextValue === inputEl.value) return;
+                    const start = inputEl.selectionStart;
+                    const end = inputEl.selectionEnd;
+                    inputEl.value = nextValue;
+                    if (typeof start === 'number' && typeof end === 'number') {
+                        inputEl.setSelectionRange(start, end);
+                    }
+                };
+
                 if (customActions) {
                     okBtn.style.display = 'none';
                     cancelBtn.style.display = 'none';
@@ -2126,9 +2138,18 @@
                 if (input) {
                     inputCont.style.display = 'block';
                     inputEl.value = value;
-                    setTimeout(() => inputEl.focus(), 300);
+                    if (uppercaseInput) forceUppercase();
+                    inputEl.style.textTransform = uppercaseInput ? 'uppercase' : '';
+                    inputEl.oninput = uppercaseInput ? forceUppercase : null;
+                    if (window.focusFieldWithoutPageJump) {
+                        window.focusFieldWithoutPageJump(inputEl, 300);
+                    } else {
+                        setTimeout(() => inputEl.focus(), 300);
+                    }
                 } else {
                     inputCont.style.display = 'none';
+                    inputEl.style.textTransform = '';
+                    inputEl.oninput = null;
                 }
 
                 if (window.NavState) window.NavState.pushModalState('app-dialog', () => close(null));
@@ -2142,6 +2163,8 @@
                     cancelBtn.onclick = null;
                     overlay.onclick = null;
                     overlay.querySelectorAll('.custom-dialog-btn').forEach(b => b.remove());
+                    inputEl.oninput = null;
+                    inputEl.style.textTransform = '';
                     
                     if (callback) callback(res);
                     resolve(res);
@@ -2655,6 +2678,21 @@
             return target;
         }
 
+        function isDesktopSafeSpendMode() {
+            return !!(window.matchMedia && window.matchMedia('(min-width: 1100px)').matches);
+        }
+
+        function updateLegacyBalanceViewportMode(cardCount) {
+            const viewport = document.getElementById('cardCarouselScroll');
+            if (!viewport) return;
+            const count = typeof cardCount === 'number'
+                ? cardCount
+                : document.querySelectorAll('.balance-card[data-account]').length;
+            const useStaticRow = isDesktopSafeSpendMode() && count <= 3;
+            viewport.classList.toggle('desktop-static-row', useStaticRow);
+            viewport.classList.toggle('desktop-carousel-row', isDesktopSafeSpendMode() && count > 3);
+        }
+
         function updateBalanceCardsUI(accounts) {
             const container = document.getElementById('dynamic-balance-cards');
             if (!container) return;
@@ -2719,15 +2757,54 @@
                 </div>
                 `;
             }).join('');
-            
+            updateLegacyBalanceViewportMode(accounts.length);
+
+            const safeSpendWidget = document.getElementById('safe-spend-widget');
+            if (safeSpendWidget) {
+                const shouldShowSafeSpend = (activeAccountId === 'bpi') || isDesktopSafeSpendMode();
+                safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
+            }
             setupAccountSwitcher(); // Re-bind observer to new cards
             ensureActiveBalanceCard(activeAccountId);
         }
 
         function scrollToActiveCard(accId) {
             const card = ensureActiveBalanceCard(accId);
-            if (card) {
+            const viewport = document.getElementById('cardCarouselScroll');
+            if (card && viewport && !viewport.classList.contains('desktop-static-row')) {
                 card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        function hydrateAccountViewFromCache(accountId) {
+            const uid = auth.currentUser?.uid;
+            if (!uid || !accountId) return false;
+
+            const cacheKey = `wallet_cache_${uid}_${accountId}`;
+            const cachedData = localStorage.getItem(cacheKey);
+            if (!cachedData) return false;
+
+            try {
+                const cache = JSON.parse(cachedData);
+                if (!cache.txns || (Date.now() - cache.timestamp >= 86400000)) return false;
+
+                window.allTxns = cache.txns;
+                renderHistory(cache.txns);
+                updateBalanceToThisMonth(cache.txns, accountId);
+                if (window.updateInsightCards) window.updateInsightCards(cache.txns);
+                if (window.renderCalendar) window.renderCalendar(cache.txns);
+
+                const filterEl = document.getElementById('chart-filter');
+                if (filterEl) {
+                    filterEl.value = 'this_month';
+                    requestAnimationFrame(() => {
+                        if (typeof filterChart === 'function') filterChart();
+                    });
+                }
+                return true;
+            } catch (e) {
+                console.warn('Cache hydration failed for account switch', e);
+                return false;
             }
         }
 
@@ -2752,20 +2829,21 @@
             
             console.log("🔄 [Switching Account] to:", resolvedId);
             
-            // [FIXED: 2026-04-05] State Clearing: Reset transactions before loading new account to avoid flicker
-            window.allTxns = [];
             window.currentAccount = resolvedId;
             localStorage.setItem('wallet_current_account', resolvedId);
             ensureActiveBalanceCard(resolvedId);
+            scrollToActiveCard(resolvedId);
             
             if (window.walletAccounts) applyAccountTheme(resolvedId, window.walletAccounts);
+            if (typeof updateHeaderIcon === 'function') updateHeaderIcon(resolvedId);
             
             // Toggle Safe to Spend Widget Visibility
             const safeSpendWidget = document.getElementById('safe-spend-widget');
             if (safeSpendWidget) {
                 // Safe to Spend is specifically for BPI account
-                safeSpendWidget.style.display = (resolvedId === 'bpi') ? 'block' : 'none';
-                if (resolvedId === 'bpi') updateSafeSpendUI();
+            const shouldShowSafeSpend = (resolvedId === 'bpi') || isDesktopSafeSpendMode();
+            safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
+            if (shouldShowSafeSpend) updateSafeSpendUI();
             }
 
             // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
@@ -2786,7 +2864,8 @@
                 }
             }
 
-            loadData();
+            hydrateAccountViewFromCache(resolvedId);
+            loadData({ preserveBudgetWidget: isDesktopSafeSpendMode(), preserveViewState: true, reason: 'desktop_card_click' });
         };
 
         function applyUserView(user) {
@@ -2798,7 +2877,7 @@
             const safeSpendWidget = document.getElementById('safe-spend-widget');
             if (safeSpendWidget) {
                 const isBPI = window.currentAccount === 'bpi';
-                safeSpendWidget.style.display = isBPI ? 'block' : 'none';
+            safeSpendWidget.style.display = (isBPI || isDesktopSafeSpendMode()) ? 'block' : 'none';
             }
 
             // SHOW/HIDE GATE
@@ -2928,15 +3007,16 @@
         function setupAccountSwitcher() {
             // Removed loadSavedCardsToIndex call as it's now dynamic
             const viewport = document.getElementById('cardCarouselScroll');
-            const cards = document.querySelectorAll('.balance-card');
+            const cards = Array.from(document.querySelectorAll('.balance-card'));
             if (!viewport || cards.length === 0) return;
+            updateLegacyBalanceViewportMode(cards.length);
+            let hasDragged = false;
 
             // DRAG & SWIPE LOGIC (Both Touch + PC Mouse)
             if (!viewport.__accountSwipeBound) {
                 let isDown = false;
                 let startX;
                 let scrollLeft;
-                let hasDragged = false;
 
                 // MOUSE EVENTS (PC Swipe)
                 viewport.addEventListener('mousedown', (e) => {
@@ -2964,6 +3044,7 @@
 
                 viewport.addEventListener('mousemove', (e) => {
                     if (!isDown) return;
+                    if (viewport.classList.contains('desktop-static-row')) return;
                     e.preventDefault();
                     const x = e.pageX - viewport.offsetLeft;
                     const walk = (x - startX) * 1.5; // Drag speed
@@ -2977,6 +3058,9 @@
                     scrollLeft = viewport.scrollLeft;
                     isDown = true;
                     hasDragged = false;
+                    if (viewport.classList.contains('desktop-static-row')) {
+                        isDown = false;
+                    }
                 }, { passive: true });
 
                 viewport.addEventListener('touchend', () => {
@@ -2985,6 +3069,17 @@
 
                 viewport.__accountSwipeBound = true;
             }
+
+            cards.forEach((card) => {
+                if (card.dataset.desktopClickBound === 'true') return;
+                card.dataset.desktopClickBound = 'true';
+                card.addEventListener('click', () => {
+                    if (hasDragged) return;
+                    const account = card.dataset.account;
+                    if (!account) return;
+                    window.switchAccount(account);
+                });
+            });
 
             if (window.accountCardObserver) {
                 window.accountCardObserver.disconnect();
@@ -2997,6 +3092,7 @@
                     .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 
                 if (!bestEntry) return;
+                if (viewport.classList.contains('desktop-static-row')) return;
 
                 const account = bestEntry.target.dataset.account;
 
@@ -3055,8 +3151,9 @@
                             // Toggle Safe to Spend Widget Visibility
                             const safeSpendWidget = document.getElementById('safe-spend-widget');
                             if (safeSpendWidget) {
-                                safeSpendWidget.style.display = (account === 'bpi') ? 'block' : 'none';
-                                if (account === 'bpi') updateSafeSpendUI();
+            const shouldShowSafeSpend = ((account === 'bpi') || isDesktopSafeSpendMode());
+            safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
+                                if (shouldShowSafeSpend) updateSafeSpendUI();
                             }
 
                             // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
@@ -3118,9 +3215,23 @@
         window.unsubscribeSnapshot = null; // Store listener to detach later
         window.isDataLoading = false; 
 
-        async function loadData(providedUid = null) {
+        async function loadData(providedUidOrOptions = null, maybeOptions = null) {
+            let providedUid = null;
+            let options = {};
+            if (typeof providedUidOrOptions === 'string') {
+                providedUid = providedUidOrOptions;
+            } else if (providedUidOrOptions && typeof providedUidOrOptions === 'object' && !Array.isArray(providedUidOrOptions)) {
+                options = { ...providedUidOrOptions };
+            }
+            if (maybeOptions && typeof maybeOptions === 'object' && !Array.isArray(maybeOptions)) {
+                options = { ...options, ...maybeOptions };
+            }
+            if (!providedUid && typeof options.uid === 'string') {
+                providedUid = options.uid;
+            }
             const uid = providedUid || auth.currentUser?.uid;
             if (!uid) return;
+            const preserveBudgetWidget = Boolean(options.preserveBudgetWidget);
 
             // PREVENT REDUNDANT CALLS: Early exit if already loading this specific account
             const loadKey = `${uid}_${window.currentAccount}`;
@@ -3266,8 +3377,10 @@
 
                         if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount);
                         if (window.updateInsightCards) window.updateInsightCards(txns);
-                        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-                        else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                        if (!preserveBudgetWidget) {
+                            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                            else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                        }
                         
                         // [FIXED: 2026-04-05] Sync Guard: Even if data matches cache, ensure all tabs redraw to show the correct account's data
                         if (window.renderCalendar) window.renderCalendar();
@@ -3290,7 +3403,7 @@
                     
                     // Store globally & Cache with timestamp
                     window.allTxns = txns;
-                    window.hasBudgetLiveData = true;
+                    if (!preserveBudgetWidget) window.hasBudgetLiveData = true;
                     
                     // [NEW] Trigger Calendar Render if available - 2026-04-02
                     if (typeof window.renderCalendar === 'function') {
@@ -3312,7 +3425,7 @@
                     if (spinner) spinner.style.display = 'none';
                     
                     updateBalanceToThisMonth(txns, syncAccount); 
-                    if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
+                    if (!preserveBudgetWidget && window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
 
                     if (txns.length === 0) {
                         // EMPTY STATE
@@ -3686,9 +3799,10 @@
         window.updateSafeSpendUI = () => {
              const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
              const isBPI = window.currentAccount === 'bpi';
+             const allowDesktopSafeSpend = isDesktopSafeSpendMode();
              const widget = document.getElementById('safe-spend-widget');
              
-             if (!widget || !isAdmin || !isBPI) {
+             if (!widget || !isAdmin || (!isBPI && !allowDesktopSafeSpend)) {
                  if (widget) widget.style.display = 'none';
                  return;
              }
@@ -4481,7 +4595,11 @@
             modal.style.display = 'flex';
             setTimeout(() => {
                 modal.classList.add('show');
-                document.getElementById('budget-manual-amt').focus();
+                if (window.focusFieldWithoutPageJump) {
+                    window.focusFieldWithoutPageJump('budget-manual-amt');
+                } else {
+                    document.getElementById('budget-manual-amt').focus();
+                }
             }, 10);
             if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => closeModals('budget-manual-entry-modal', true));
         };
@@ -4498,7 +4616,14 @@
             updateBudgetManualCatUI(display.category);
             
             document.getElementById('budget-manual-entry-modal').style.display = 'flex';
-            setTimeout(() => document.getElementById('budget-manual-entry-modal').classList.add('show'), 10);
+            setTimeout(() => {
+                document.getElementById('budget-manual-entry-modal').classList.add('show');
+                if (window.focusFieldWithoutPageJump) {
+                    window.focusFieldWithoutPageJump('budget-manual-amt');
+                } else {
+                    document.getElementById('budget-manual-amt').focus();
+                }
+            }, 10);
             if (window.NavState) window.NavState.pushModalState('budget-manual-entry-modal', () => closeModals('budget-manual-entry-modal', true));
         };
 
@@ -5085,6 +5210,9 @@
             const modal = document.getElementById('obligation-modal');
             document.getElementById('ob-type-selector').style.display = 'none'; // Hide type selector for standard obligations
             modal.classList.add('show');
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump(titleInput, 140);
+            }
 
             saveBtn.onclick = async () => {
                 const title = titleInput.value.trim() || 'Obligation';
@@ -7359,7 +7487,11 @@ Be direct, practical, and helpful.`;
                 // Use setTimeout to ensure the value is set after the modal starts showing
                 setTimeout(() => {
                     amountInput.value = currentLimit;
-                    amountInput.focus();
+                    if (window.focusFieldWithoutPageJump) {
+                        window.focusFieldWithoutPageJump(amountInput);
+                    } else {
+                        amountInput.focus();
+                    }
                 }, 50);
                 if (selectionArea) selectionArea.style.display = 'none';
                 
@@ -7430,7 +7562,11 @@ Be direct, practical, and helpful.`;
             // Force clear and focus
             setTimeout(() => {
                 amountInput.value = '';
-                amountInput.focus();
+                if (window.focusFieldWithoutPageJump) {
+                    window.focusFieldWithoutPageJump(amountInput);
+                } else {
+                    amountInput.focus();
+                }
             }, 100);
 
             saveBtn.onclick = async () => {
@@ -8045,6 +8181,26 @@ Be direct, practical, and helpful.`;
         let calcHistory = "";
         let receiptsModalAccount = null;
 
+        function normalizeReceiptText(value) {
+            return String(value || '').trim().toUpperCase();
+        }
+
+        function bindReceiptUppercaseInput(inputEl) {
+            if (!inputEl || inputEl.dataset.uppercaseBound === 'true') return;
+            inputEl.dataset.uppercaseBound = 'true';
+            inputEl.style.textTransform = 'uppercase';
+            inputEl.addEventListener('input', () => {
+                const nextValue = String(inputEl.value || '').toUpperCase();
+                if (nextValue === inputEl.value) return;
+                const start = inputEl.selectionStart;
+                const end = inputEl.selectionEnd;
+                inputEl.value = nextValue;
+                if (typeof start === 'number' && typeof end === 'number') {
+                    inputEl.setSelectionRange(start, end);
+                }
+            });
+        }
+
         window.setupBalanceLongPress = () => {
             document.querySelectorAll('.balance-amount').forEach(el => {
                 let timer = null;
@@ -8153,6 +8309,15 @@ Be direct, practical, and helpful.`;
         document.addEventListener('DOMContentLoaded', () => {
             const receiptsHandle = document.getElementById('receipts-drag-handle');
             const receiptsContent = document.querySelector('#receipts-modal .receipts-content');
+            const receiptTitleInput = document.getElementById('ob-input-title');
+            bindReceiptUppercaseInput(receiptTitleInput);
+            document.querySelectorAll('.calc-btn').forEach((btn) => {
+                const clearPressedState = () => btn.blur();
+                btn.addEventListener('mouseup', clearPressedState);
+                btn.addEventListener('mouseleave', clearPressedState);
+                btn.addEventListener('touchend', clearPressedState, { passive: true });
+                btn.addEventListener('touchcancel', clearPressedState, { passive: true });
+            });
             if (!receiptsHandle || !receiptsContent) return;
 
             let startY = 0;
@@ -8361,6 +8526,9 @@ Be direct, practical, and helpful.`;
             setObType('expense');
             modal.classList.add('show');
             if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump(titleInput, 140);
+            }
 
             saveBtn.onclick = () => {
                 const title = titleInput.value.trim() || "New Receipt";
@@ -8393,6 +8561,9 @@ Be direct, practical, and helpful.`;
             document.getElementById('ob-type-selector').style.display = 'flex';
             modal.classList.add('show');
             if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump(titleInput, 140);
+            }
 
             saveBtn.onclick = () => {
                 const title = titleInput.value.trim() || "New Item";
@@ -8420,7 +8591,7 @@ Be direct, practical, and helpful.`;
 
             const newReceipt = {
                 id: 'rcpt_' + Date.now(),
-                title: title,
+                title: normalizeReceiptText(title) || 'NEW RECEIPT',
                 amount: amount,
                 type: type,
                 included: true,
@@ -8438,10 +8609,11 @@ Be direct, practical, and helpful.`;
                 title: 'New Section',
                 message: 'Enter a name for this section:',
                 input: true,
+                uppercaseInput: true,
                 placeholder: 'e.g. Groceries, Bills...',
                 callback: (name) => {
                     if (name === false) return;
-                    const sectionName = (name || '').trim() || 'Section ' + (window.receiptSections.length + 1);
+                    const sectionName = normalizeReceiptText(name) || ('SECTION ' + (window.receiptSections.length + 1));
                     const newId = Date.now();
                     window.receiptSections.push({ id: newId, name: sectionName });
                     window.currentReceiptSectionId = newId;
@@ -8463,10 +8635,11 @@ Be direct, practical, and helpful.`;
                 title: 'Rename Section',
                 message: 'Enter a new name:',
                 input: true,
+                uppercaseInput: true,
                 value: currentName,
                 callback: (name) => {
                     if (name === false) return;
-                    const newName = (name || '').trim();
+                    const newName = normalizeReceiptText(name);
                     if (!newName) return;
                     
                     if (sec) {
@@ -8537,11 +8710,49 @@ Be direct, practical, and helpful.`;
             }
         };
 
-        window.deleteReceipt = (id) => {
+        window.pendingReceiptDeleteId = null;
+
+        window.openReceiptDeleteModal = (id) => {
+            const rcpt = window.safeToSpendConfig?.receipts?.find(r => r.id === id);
+            const modal = document.getElementById('receipt-delete-sheet-modal');
+            const message = document.getElementById('receipt-delete-sheet-message');
+            if (!rcpt || !modal || !message) return;
+
+            window.pendingReceiptDeleteId = id;
+            message.innerText = `Delete "${rcpt.title}" from this section?`;
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => modal.classList.add('show'));
+            if (window.NavState) window.NavState.pushModalState('receipt-delete-sheet-modal', () => closeReceiptDeleteModal(true));
+        };
+
+        window.closeReceiptDeleteModal = (fromPopState = false) => {
+            const modal = document.getElementById('receipt-delete-sheet-modal');
+            if (!modal) return;
+
+            modal.classList.remove('show');
+            window.pendingReceiptDeleteId = null;
+            setTimeout(() => {
+                if (!modal.classList.contains('show')) modal.style.display = 'none';
+            }, 220);
+
+            if (!fromPopState && window.NavState) {
+                window.NavState.popModalState('receipt-delete-sheet-modal');
+            }
+        };
+
+        window.confirmReceiptDelete = () => {
+            const id = window.pendingReceiptDeleteId;
+            if (!id) return;
             window.safeToSpendConfig.receipts = window.safeToSpendConfig.receipts.filter(r => r.id !== id);
             saveReceiptsData();
             updateReceiptsUI();
+            window.pendingReceiptDeleteId = null;
+            closeReceiptDeleteModal();
             showToast("Receipt deleted");
+        };
+
+        window.deleteReceipt = (id) => {
+            openReceiptDeleteModal(id);
         };
 
         window.editReceipt = (id) => {
@@ -8559,7 +8770,7 @@ Be direct, practical, and helpful.`;
 
             titleDisplay.innerText = "Edit Item";
             if (msgDisplay) msgDisplay.innerText = "Update the title, amount or type.";
-            titleInput.value = rcpt.title;
+            titleInput.value = normalizeReceiptText(rcpt.title);
             amountInput.value = rcpt.amount;
             document.getElementById('ob-type-selector').style.display = 'flex';
             // Sync modal with reality - USER REQUEST 2026-03-27
@@ -8567,9 +8778,12 @@ Be direct, practical, and helpful.`;
             
             modal.classList.add('show');
             if (window.NavState) window.NavState.pushModalState('obligation-modal', () => closeObligationModal(true));
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump(titleInput, 140);
+            }
 
             saveBtn.onclick = () => {
-                const title = titleInput.value.trim() || "Edited Item";
+                const title = normalizeReceiptText(titleInput.value) || "EDITED ITEM";
                 const amount = parseFloat(amountInput.value);
                 if (isNaN(amount)) {
                     showToast("Please enter a valid amount");
@@ -8709,30 +8923,30 @@ Be direct, practical, and helpful.`;
                 // Section Header & Structure
                 const sectionHeaderHtml = `
                     <div class="receipt-section ${isActive ? 'active' : ''}" id="sec-${sId}" style="margin-bottom: 20px; background: #f8fafc; border: 1.5px solid #f1f5f9; border-radius: 16px; padding: 12px; transition: all 0.2s;">
-                        <div class="receipt-section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
+                        <div class="receipt-section-header" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #f1f5f9;">
                             <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
                                 <div onclick="renameReceiptSection('${sId}')" style="font-size: 11.5px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Tap to rename">${sectionName}</div>
-                                <i class="material-icons" onclick="renameReceiptSection('${sId}')" style="font-size: 14px; color: #94a3b8; cursor: pointer;">edit</i>
+                                <i class="material-icons" onclick="renameReceiptSection('${sId}')" style="font-size: 14px; color: #94a3b8; cursor: pointer; flex-shrink: 0;">edit</i>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-                                <div style="font-size: 11.5px; font-weight: 800; color: ${sectionNet >= 0 ? '#10b981' : '#ef4444'}; white-space: nowrap;">
+                            <div class="receipt-section-actions">
+                                <div class="receipt-section-total" style="font-size: 11.5px; font-weight: 800; color: ${sectionNet >= 0 ? '#10b981' : '#ef4444'}; white-space: nowrap;">
                                     ${sectionNet < 0 ? '-' : ''}₱${Math.abs(sectionNet).toLocaleString(undefined, {minimumFractionDigits:2})}
                                 </div>
-                                <i class="material-icons" onclick="deleteReceiptSection('${sId}')" style="font-size: 20px; color: #ef4444; cursor: pointer; padding: 4px; opacity: 0.7;" title="Delete Section">delete_outline</i>
+                                <i class="material-icons receipt-section-delete-btn" onclick="deleteReceiptSection('${sId}')" title="Delete Section">delete_outline</i>
                             </div>
                         </div>
                 `;
 
                 let sectionHtml = sectionHeaderHtml;
-                sectionHtml += itemsHtml;
-
-                // Per-section Add Receipt button
                 sectionHtml += `
-                    <div onclick="addManualReceipt('${sId}')" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; margin-top: 8px; border-radius: 12px; border: 1.5px dashed #d1d5db; color: #64748b; font-size: 10.5px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.01); text-transform: uppercase; letter-spacing: 0.3px;">
+                    <div onclick="addManualReceipt('${sId}')" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; margin: 0 0 8px 0; border-radius: 12px; border: 1.5px dashed #d1d5db; color: #64748b; font-size: 10.5px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: rgba(0,0,0,0.01); text-transform: uppercase; letter-spacing: 0.3px;">
                         <i class="material-icons" style="font-size: 16px;">add_circle_outline</i>
                         Add Receipt
                     </div>
-                </div>`;
+                `;
+                sectionHtml += itemsHtml;
+
+                sectionHtml += `</div>`;
                 
                 html += sectionHtml;
             });
@@ -9463,6 +9677,7 @@ Be direct, practical, and helpful.`;
         // DELETE LOGIC
         let currentTxnId = null;
         let currentDeletionAccount = null;
+        let deleteConfirmLocked = false;
 
         window.runThanosSnap = (el, callback) => {
             if (!el) return callback();
@@ -9530,6 +9745,13 @@ Be direct, practical, and helpful.`;
             currentTxnId = id;
             currentDeletionAccount = accId || window.currentAccount;
             const delModal = document.getElementById('delete-modal');
+            const confirmBtn = document.getElementById('delete-confirm-btn');
+            deleteConfirmLocked = false;
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.style.pointerEvents = 'auto';
+                confirmBtn.style.opacity = '1';
+            }
             if (delModal) {
                 delModal.style.display = 'flex'; // Reset inline style
                 delModal.classList.add('show');
@@ -9629,6 +9851,7 @@ Be direct, practical, and helpful.`;
         };
 
         window.confirmDelete = async () => {
+            if (deleteConfirmLocked) return;
              if (auth.currentUser?.isAnonymous) {
                 if (confirm('Your data is in "Local Mode". Sign in with Google to sync deletions to the cloud?')) {
                     handleAuthClick();
@@ -9636,6 +9859,21 @@ Be direct, practical, and helpful.`;
                 }
             }
             if (!currentTxnId) return;
+            deleteConfirmLocked = true;
+            const confirmBtn = document.getElementById('delete-confirm-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.style.pointerEvents = 'none';
+                confirmBtn.style.opacity = '0.55';
+            }
+            setTimeout(() => {
+                deleteConfirmLocked = false;
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.style.pointerEvents = 'auto';
+                    confirmBtn.style.opacity = '1';
+                }
+            }, 1200);
             // CAPTURE LOCAL COPIES BEFORE closeModals() clears them
             const txnId = currentTxnId;
             const accId = currentDeletionAccount;
@@ -9931,7 +10169,11 @@ Be direct, practical, and helpful.`;
             document.querySelector('.fab')?.classList.add('blur-active');
             document.querySelector('.bottom-nav')?.classList.add('blur-active');
             if (window.NavState) window.NavState.pushModalState('edit-price', () => closeModals(true));
-            setTimeout(() => input.focus(), 100);
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump(input, 100);
+            } else {
+                setTimeout(() => input.focus(), 100);
+            }
 
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') savePrice();
@@ -9994,11 +10236,12 @@ Be direct, practical, and helpful.`;
 
         /* See listener above for save-note-btn, replaced to include title casing */
 
-        function showToast(msg) {
+        function showToast(msg, duration = 3000) {
             const toast = document.getElementById('toast-box');
             document.getElementById('toast-msg').innerText = msg;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
         }
 
         function displayCategoryName(id) {
@@ -10336,7 +10579,11 @@ Be direct, practical, and helpful.`;
             // Remove global blur to fix blurry modal content issues
             // document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
             
-            setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump('manual-amt', 300);
+            } else {
+                setTimeout(() => document.getElementById('manual-amt').focus(), 300);
+            }
             
             // Add Enter key to save transaction
             const handleEnterKey = (e) => {
@@ -10475,7 +10722,11 @@ Be direct, practical, and helpful.`;
             
             // Removed global blurring to match manual modal fix
             
-            setTimeout(() => document.getElementById('manual-amt').focus(), 100);
+            if (window.focusFieldWithoutPageJump) {
+                window.focusFieldWithoutPageJump('manual-amt', 100);
+            } else {
+                setTimeout(() => document.getElementById('manual-amt').focus(), 100);
+            }
             
             // ... (handleEnterKey logic remains the same)
             
@@ -10593,6 +10844,24 @@ Be direct, practical, and helpful.`;
                     hint.style.display = 'block';
                 } else {
                     hint.style.display = 'none';
+                }
+            }
+
+            const total = parseCurrencyAmount(document.getElementById('manual-amt')?.value);
+            if (total > 4000) {
+                const splitMap = {
+                    'needs': 'split-needs',
+                    'wants': 'split-wants',
+                    'savings': 'split-savings',
+                    'n/a': 'split-na'
+                };
+                const targetId = splitMap[category];
+                ['split-needs', 'split-wants', 'split-savings', 'split-na'].forEach((id) => {
+                    const input = document.getElementById(id);
+                    if (input) input.value = (id === targetId) ? total.toFixed(2) : '0';
+                });
+                if (targetId && window.updateSplitRemaining) {
+                    window.updateSplitRemaining(targetId);
                 }
             }
         };
@@ -11114,7 +11383,8 @@ Be direct, practical, and helpful.`;
                 'cat-budget-modal',
                 'delete-modal',
                 'auth-trouble-modal',
-                'ai-modal' // added 2026-03-31 - 2026-03-31
+                'ai-modal',
+                'receipt-delete-sheet-modal' // added 2026-04-10 - dedicated receipt delete sheet
             ];
             
             let targetToClose = null;
@@ -12007,7 +12277,7 @@ Be direct, practical, and helpful.`;
             <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">You can undo this within 7 seconds.</p>
             <div class="modal-actions" style="justify-content: center; gap: 16px;">
                 <div class="cancel-link" onclick="closeModals()">CANCEL</div>
-                <button class="mui-btn mui-btn--raised" onclick="confirmDelete()" style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
+                <button id="delete-confirm-btn" class="mui-btn mui-btn--raised" onclick="confirmDelete()" style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
             </div>
         </div>
     </div>
@@ -12072,7 +12342,6 @@ Be direct, practical, and helpful.`;
             <div class="receipts-header">
                 <div class="receipts-drag-handle" id="receipts-drag-handle"></div>
                 <div class="receipts-header-row">
-                    <div class="receipts-header-spacer"></div>
                     <div class="receipts-title-box">
                         <div class="receipts-title">Receipts & Calculator</div>
                         <div class="receipts-subtitle" id="receipts-acc-name">BUDGET BREAKDOWN</div>
@@ -12149,6 +12418,17 @@ Be direct, practical, and helpful.`;
                     <span class="summary-label" style="font-size: 12px; color: #1e293b;">TOTAL</span>
                     <span id="summary-total-net" class="summary-value" style="font-size: 16px; font-weight: 900;">₱0.00</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="receipt-delete-sheet-modal" class="receipt-delete-sheet-overlay" onclick="if(event.target === this) closeReceiptDeleteModal()">
+        <div class="receipt-delete-sheet-card" onclick="event.stopPropagation()">
+            <div class="receipt-delete-sheet-title">Delete Receipt?</div>
+            <div id="receipt-delete-sheet-message" class="receipt-delete-sheet-message">Delete this receipt from this section?</div>
+            <div class="receipt-delete-sheet-actions">
+                <button class="receipt-delete-sheet-btn receipt-delete-sheet-btn--cancel" onclick="closeReceiptDeleteModal()">Cancel</button>
+                <button class="receipt-delete-sheet-btn receipt-delete-sheet-btn--confirm" onclick="confirmReceiptDelete()">Confirm</button>
             </div>
         </div>
     </div>
@@ -13618,5 +13898,4 @@ Be direct, practical, and helpful.`;
     <script src="nav-state.js"></script>
 </body>
 </html>
-
 

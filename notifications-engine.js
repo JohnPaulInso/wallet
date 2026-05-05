@@ -17,6 +17,7 @@ import {
     getDocs,
     where
 } from "./firebase-config.js";
+import { repairTextArtifacts, repairNotificationTextArtifacts } from "./app-utils.js";
 
 const NOTIFICATIONS_COLLECTION = "notifications";
 const LOCAL_NOTIF_CACHE_KEY = "smartwallet_local_notif_cache_v1";
@@ -251,11 +252,53 @@ export const NotificationsEngine = {
     },
 
     getStoredNotificationIdentity(item = {}) {
-        const safeMeta = this.sanitizeMeta(item?.meta || null);
-        const type = String(item?.type || "general");
-        const title = String(item?.title || "");
-        const body = String(item?.body || item?.message || "");
-        return this.getStableNotificationKey(type, safeMeta, `${type}|${title}|${body}`);
+        try {
+            const safeMeta = this.sanitizeMeta(item?.meta || null);
+            const type = String(item?.type || "general");
+            const title = repairTextArtifacts(String(item?.title || ""));
+            const body = repairTextArtifacts(String(item?.body || item?.message || ""));
+            const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || Date.now()).getTime() || Date.now());
+            const createdAt = createdAtMs > 0 ? new Date(createdAtMs) : null;
+            const createdMonthKey = createdAt && !Number.isNaN(createdAt.getTime())
+                ? createdAt.toISOString().slice(0, 7)
+                : "";
+
+            if (type === "monthly_comparison" && safeMeta?.monthKey) {
+                return `monthly:${safeMeta.monthKey}`;
+            }
+
+            if (type === "daily_summary" && safeMeta?.dayKey) {
+                return `daily:${safeMeta.dayKey}`;
+            }
+
+            if (/^daily summary$/i.test(title)) {
+                const dayKey = new Date(createdAtMs).toISOString().slice(0, 10);
+                return `daily:${dayKey}`;
+            }
+
+            if (
+                /^tuition reminder$/i.test(title)
+                || (/friendly reminder/i.test(body) && /tuition/i.test(body))
+                || /tuition'?s due today\/tomorrow/i.test(body)
+            ) {
+                const monthKey = String(safeMeta?.monthKey || safeMeta?.dueMonthKey || createdMonthKey || "");
+                if (monthKey) return `tuition:${monthKey}`;
+                return "tuition:general";
+            }
+
+            if (/summary$/i.test(title)) {
+                return `summary:${title.toLowerCase()}`;
+            }
+
+            return this.getStableNotificationKey(type, safeMeta, `${type}|${title}|${body}`);
+        } catch (error) {
+            console.warn("Stored notification identity generation failed:", error);
+            return this.getStableNotificationKey(
+                String(item?.type || "general"),
+                item?.meta || null,
+                String(item?.id || item?.createdAtMs || Date.now())
+            );
+        }
     },
 
     dedupeStoredInAppNotifications(items = []) {
@@ -293,16 +336,31 @@ export const NotificationsEngine = {
 
     getPersistentNotificationDocId(type = "general", meta = null) {
         const safeMeta = this.sanitizeMeta(meta);
-        const explicitKey = safeMeta?.notificationKey || safeMeta?.dedupeKey || safeMeta?.remoteKey || null;
         const typeText = String(type || "general");
+
+        if (typeText === "monthly_comparison" && safeMeta?.monthKey) {
+            return `notif_monthly_${this.sanitizeNotificationDocToken(safeMeta.monthKey)}`.slice(0, 140);
+        }
+
+        if (typeText === "daily_summary" && safeMeta?.dayKey) {
+            return `notif_daily_${this.sanitizeNotificationDocToken(safeMeta.dayKey)}`.slice(0, 140);
+        }
+
+        // Goal milestones: single stable id per type + cycle (ignore notificationKey so backfill and
+        // checkGoalMilestones never split across notif_persist_* vs notif_goal_*).
+        if (/^goal_[a-z0-9_-]+_(50|75|100|1000)$/i.test(typeText)) {
+            const cycle = Number(safeMeta?.cycle || 0);
+            const base = cycle > 0 ? `${typeText}_cycle_${cycle}` : typeText;
+            const typeKey = this.sanitizeNotificationDocToken(base);
+            return `notif_goal_${typeKey}`.slice(0, 140);
+        }
+
+        const explicitKey = safeMeta?.notificationKey || safeMeta?.dedupeKey || safeMeta?.remoteKey || null;
         const typeKey = this.sanitizeNotificationDocToken(explicitKey || typeText);
 
         if (explicitKey) return `notif_persist_${typeKey}`.slice(0, 140);
         if (/^threshold_[a-z0-9_]+_(70|90|100)_(\d{4}-\d{2})$/i.test(typeText)) {
             return `notif_threshold_${typeKey}`.slice(0, 140);
-        }
-        if (/^goal_[a-z0-9_-]+_(50|75|100|1000)$/i.test(typeText)) {
-            return `notif_goal_${typeKey}`.slice(0, 140);
         }
         return null;
     },
@@ -315,8 +373,8 @@ export const NotificationsEngine = {
         const safeMeta = this.sanitizeMeta(item?.meta || null);
         const safeAction = this.sanitizeMeta(item?.action || null);
         const payload = {
-            title: item?.title || "Notification",
-            body: item?.body || item?.message || "",
+            title: repairTextArtifacts(item?.title || "Notification"),
+            body: repairTextArtifacts(item?.body || item?.message || ""),
             type: item?.type || "general",
             isRead,
             createdAt: new Date(createdAtMs),
@@ -399,15 +457,21 @@ export const NotificationsEngine = {
 
     hasStoredInAppNotification(type, meta = null) {
         const items = this.getStoredInAppNotifications();
+        const targetMeta = this.sanitizeMeta(meta);
         return items.some((item) => {
-            if (item?.type === type) return true;
-            if (!meta || !item?.meta) return false;
-            return this.sameThresholdMeta(item.meta, meta);
+            if ((item?.type || "general") !== type) return false;
+            if (!targetMeta) return true;
+            const itemMeta = this.sanitizeMeta(item?.meta || null);
+            if (!itemMeta) return false;
+            if (this.sameThresholdMeta(itemMeta, targetMeta)) return true;
+            return this.getStableNotificationKey(type, itemMeta, "") === this.getStableNotificationKey(type, targetMeta, "");
         });
     },
 
     ensureStoredInAppNotification(title, message, type = "general", meta = null) {
         try {
+            const safeTitle = repairTextArtifacts(title || "Notification");
+            const safeMessage = repairNotificationTextArtifacts(message || "", safeTitle);
             const items = this.getStoredInAppNotifications();
             const hasExact = items.some((item) => {
                 if ((item?.type || "general") !== type) return false;
@@ -415,14 +479,14 @@ export const NotificationsEngine = {
                 if (meta && itemMeta) {
                     return this.sameThresholdMeta(itemMeta, meta);
                 }
-                return (item?.title || "") === title && (item?.message || "") === message;
+                return (item?.title || "") === safeTitle && (item?.message || "") === safeMessage;
             });
             if (hasExact) return false;
 
             const newNotif = {
                 id: Date.now() + Math.floor(Math.random() * 1000),
-                title,
-                message,
+                title: safeTitle,
+                message: safeMessage,
                 type,
                 time: new Date().toISOString(),
                 createdAtMs: Date.now(),
@@ -494,6 +558,8 @@ export const NotificationsEngine = {
      */
     async triggerNotification(uid, title, body, type = "general", meta = null) {
         if (!uid) return;
+        const safeTitle = repairTextArtifacts(title || "Notification");
+        const safeBody = repairNotificationTextArtifacts(body || "", safeTitle);
 
         let notifId = `local-${Date.now()}`;
         const createdAtMs = Date.now();
@@ -512,13 +578,13 @@ export const NotificationsEngine = {
         }
 
         // [FIX: 2026-04-10] Removed redundant immediate local delivery call to prevent duplicate alerts - Antigravity
-        this.ensureStoredInAppNotification(title, body, type, safeMeta);
+        this.ensureStoredInAppNotification(safeTitle, safeBody, type, safeMeta);
         // await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
 
         try {
             const payload = {
-                title,
-                body,
+                title: safeTitle,
+                body: safeBody,
                 type,
                 isRead: false,
                 createdAt: new Date(createdAtMs),
@@ -536,18 +602,18 @@ export const NotificationsEngine = {
             }
 
             this.markStoredNotificationRemoteState({
-                title,
-                body,
+                title: safeTitle,
+                body: safeBody,
                 type,
                 meta: safeMeta,
                 createdAtMs
             }, notifId);
-            await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
-            console.log(`Notification triggered: ${title}`);
+            await this.deliverLocalNotification(uid, notifId, safeTitle, safeBody, type, createdAtMs, safeMeta);
+            console.log(`Notification triggered: ${safeTitle}`);
             return notifId;
         } catch (e) {
             console.error("Error triggering notification:", e);
-            await this.deliverLocalNotification(uid, notifId, title, body, type, createdAtMs, safeMeta);
+            await this.deliverLocalNotification(uid, notifId, safeTitle, safeBody, type, createdAtMs, safeMeta);
             return notifId;
         }
     },
@@ -571,6 +637,7 @@ export const NotificationsEngine = {
                 const data = docSnap.data() || {};
                 const createdAtMs = this.getCreatedAtMillis(data);
                 if (!createdAtMs) return;
+                if (!this.isNotificationVisibleForCurrentInstall(uid, createdAtMs)) return;
                 newestSeen = Math.max(newestSeen, createdAtMs);
                 if (lastSync && createdAtMs <= lastSync) return;
                 if (this.wasDeliveredLocally(uid, data.type, docSnap.id)) return;
@@ -605,6 +672,7 @@ export const NotificationsEngine = {
                 if (change.type !== "added") continue;
                 const data = change.doc.data() || {};
                 const createdAtMs = this.getCreatedAtMillis(data) || Date.now();
+                if (!this.isNotificationVisibleForCurrentInstall(uid, createdAtMs)) continue;
                 await this.deliverLocalNotification(
                     uid,
                     change.doc.id,
@@ -627,9 +695,17 @@ export const NotificationsEngine = {
             const progressSnap = await getDoc(doc(db, `users/${uid}/config/budget_progress_tracker`));
             if (progressSnap.exists()) {
                 const data = progressSnap.data() || {};
-                const monthKey = String(data.monthKey || this.getCurrentMonthKey());
+                const currentMonthKey = this.getCurrentMonthKey();
+                const monthKey = String(data.monthKey || currentMonthKey);
                 const filterVal = String(data.filterVal || "this_month");
-                if (filterVal === "this_month") {
+                if (filterVal === "this_month" && monthKey === currentMonthKey) {
+                    const liveSnapshot = window.lastBudgetNotificationSnapshot;
+                    const snapshotMatchesCurrentMonth = Boolean(
+                        liveSnapshot
+                        && liveSnapshot.liveReady
+                        && liveSnapshot.filterVal === "this_month"
+                        && String(liveSnapshot.monthKey || "") === currentMonthKey
+                    );
                     const categories = [
                         { key: "needs", label: "Needs", pct: Number(data["needs-pct"] || 0) },
                         { key: "wants", label: "Wants", pct: Number(data["wants-pct"] || 0) },
@@ -639,34 +715,27 @@ export const NotificationsEngine = {
                     for (const item of categories) {
                         const thresholdPct = item.pct >= 100 ? 100 : item.pct >= 90 ? 90 : item.pct >= 70 ? 70 : 0;
                         if (!thresholdPct) continue;
-
-                        const notifType = `threshold_${item.key}_${thresholdPct}_${monthKey}`;
-                        const meta = {
-                            action: "open_budget_overview",
-                            category: item.key,
-                            thresholdPct,
-                            monthKey
-                        };
-                        // [FIX: 2026-04-10] Check PERSISTENT local state tracker before re-triggering backfill - Antigravity
                         const localState = this.getBudgetThresholdState(uid, item.key, monthKey);
-                        if (localState >= thresholdPct) continue;
-
-                        const alreadyNotified = await this.hasNotified(uid, notifType, meta);
-                        if (alreadyNotified) continue;
-
-                        let title = "Heads up";
-                        let body = `Heads up: You've used 70% of your ${item.label} budget.`;
-                        if (thresholdPct >= 100) {
-                            title = "Limit Reached";
-                            body = `Red Alert: You've hit 100% of your ${item.label} budget!`;
-                        } else if (thresholdPct >= 90) {
-                            title = "Orange Alert";
-                            body = `Critical Level: Your ${item.label} budget is already at ${Math.floor(item.pct)}%.`;
+                        if (!snapshotMatchesCurrentMonth) {
+                            if (localState > 0) {
+                                this.setBudgetThresholdState(uid, item.key, monthKey, 0);
+                            }
+                            continue;
                         }
 
-                        this.ensureStoredInAppNotification(title, body, notifType, meta);
-                        // [FIX: 2026-04-10] Prevent duplicate threshold notifications during backfill - Antigravity
-                        await this.triggerNotification(uid, title, body, notifType, meta);
+                        const livePctMap = {
+                            needs: Number(liveSnapshot.needsPct || 0),
+                            wants: Number(liveSnapshot.wantsPct || 0),
+                            savings: Number(liveSnapshot.savingsPct || 0)
+                        };
+                        const livePct = Number(livePctMap[item.key] || 0);
+                        if (!Number.isFinite(livePct) || livePct < thresholdPct) {
+                            if (localState > 0 && livePct < 70) {
+                                this.setBudgetThresholdState(uid, item.key, monthKey, 0);
+                            }
+                            continue;
+                        }
+
                         this.setBudgetThresholdState(uid, item.key, monthKey, Math.max(localState, thresholdPct));
                     }
                 }
@@ -771,6 +840,24 @@ export const NotificationsEngine = {
         if (!eligibleTiers.length) return;
 
         let highestMissingTier = null;
+        const hasHundredTier = eligibleTiers.some(tier => tier.pct === 100);
+        if (hasHundredTier) {
+            const hundredType = `threshold_${categoryKey}_100_${monthKey}`;
+            const hundredMeta = {
+                action: "open_budget_overview",
+                category: categoryKey,
+                thresholdPct: 100,
+                monthKey
+            };
+            const hundredAlready = this.hasStoredInAppNotification(hundredType, hundredMeta)
+                || await this.hasNotified(uid, hundredType, hundredMeta);
+            if (hundredAlready) {
+                // Once 100% is reached/notified, skip lower-tier notifications for same month cycle.
+                this.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(lastThreshold, 100));
+                return;
+            }
+        }
+
         for (const tier of eligibleTiers) {
             const notifType = `threshold_${categoryKey}_${tier.pct}_${monthKey}`;
             const meta = {
@@ -836,68 +923,74 @@ export const NotificationsEngine = {
     },
 
     async checkVelocity(uid, category, dailyTotal, monthlyLimit) {
-        if (monthlyLimit <= 0) return;
-        const velocityPct = (dailyTotal / monthlyLimit) * 100;
-
-        if (velocityPct >= 20) {
-            const alreadyNotified = await this.hasNotifiedToday(uid, `velocity_${category}`);
-            if (!alreadyNotified) {
-                await this.triggerNotification(
-                    uid,
-                    "High Velocity",
-                    `You've used ${Math.round(velocityPct)}% of your '${category}' budget in one day. Take a 48-hour breather?`,
-                    `velocity_${category}`
-                );
-            }
-        }
+        // Disabled: daily-style velocity alerts were noisy for users.
+        return;
     },
 
     async checkRecurringReminders(uid) {
-        const today = new Date();
-        const dd = today.getDate();
-
-        const isMonthEnd = (dt) => {
-            const nextDay = new Date(dt.getTime() + 86400000);
-            return nextDay.getDate() === 1;
-        };
-
-        if (dd === 15 || isMonthEnd(today)) {
-            const alreadyNotified = await this.hasNotifiedToday(uid, `recurring_tuition_${dd}`);
-            if (!alreadyNotified) {
-                await this.triggerNotification(
-                    uid,
-                    "Tuition Reminder",
-                    "Friendly reminder: Tuition is due today/tomorrow. Ensure funds are ready!",
-                    `recurring_tuition_${dd}`
-                );
-            }
-        }
+        // Disabled per product requirement: no daily/recurring reminders.
+        return;
     },
 
-    async checkGoalMilestones(uid, goalId, title, current, target) {
+    async checkGoalMilestones(uid, goalId, title, current, target, milestoneCycles = null) {
         if (target <= 0) return;
         const pct = (current / target) * 100;
+        const cycles = (milestoneCycles && typeof milestoneCycles === "object") ? milestoneCycles : {};
 
         const milestones = [
-            { pct: 100, label: "Goal Reached!", body: `Congratulations! You've reached your P${target.toLocaleString()} goal for '${title}'!` },
-            { pct: 75, label: "Almost There!", body: `You are 75% focused on '${title}'! Only a bit more to go.` },
-            { pct: 50, label: "Halfway Point", body: `Boom! You're 50% done with '${title}'. Keep that momentum!` },
-            { pct: 0, threshold: 1000, label: "Milestone Achieved", body: `First P1,000 saved for '${title}'! This is just the beginning.` }
+            {
+                pct: 100,
+                cycleKey: "100",
+                label: "Goal Completed! 🏆",
+                body: `Congratulations! You've reached your ₱${target.toLocaleString()} goal for ${title}.`
+            },
+            {
+                pct: 75,
+                cycleKey: "75",
+                label: "Almost There!",
+                body: `You are 75% focused on '${title}'! Only a bit more to go.`
+            },
+            {
+                pct: 50,
+                cycleKey: "50",
+                label: "Halfway There!",
+                body: `You're 50% through your goal for ${title}. Keep it up!`
+            },
+            {
+                pct: 0,
+                threshold: 1000,
+                cycleKey: "1000",
+                label: "Milestone Achieved",
+                body: `First P1,000 saved for '${title}'! This is just the beginning.`
+            }
         ];
 
-        for (const meta of milestones) {
+        for (const m of milestones) {
             let hit = false;
-            if (meta.threshold) hit = current >= meta.threshold && (current - meta.threshold) < 1000;
-            else hit = pct >= meta.pct;
+            if (m.threshold) hit = current >= m.threshold && (current - m.threshold) < 1000;
+            else hit = pct >= m.pct;
 
-            if (hit) {
-                const key = `goal_${goalId}_${meta.pct || meta.threshold}`;
-                const alreadyNotified = await this.hasNotified(uid, key);
-                if (!alreadyNotified) {
-                    await this.triggerNotification(uid, meta.label, meta.body, key);
-                }
-                break;
+            if (!hit) continue;
+
+            const suffix = m.threshold || m.pct;
+            const type = `goal_${goalId}_${suffix}`;
+            const cycleRaw = Number(cycles[m.cycleKey] || 0);
+            const cycle = cycleRaw > 0 ? cycleRaw : 1;
+
+            const meta = {
+                action: "open_goal_edit",
+                goalId,
+                source: "goals",
+                milestone: String(suffix),
+                cycle,
+                notificationKey: type
+            };
+
+            const alreadyNotified = await this.hasNotified(uid, type, meta);
+            if (!alreadyNotified) {
+                await this.triggerNotification(uid, m.label, m.body, type, meta);
             }
+            break;
         }
     },
 
@@ -905,19 +998,26 @@ export const NotificationsEngine = {
         const today = new Date();
         if (today.getDate() !== 1) return;
 
-        const alreadyNotified = await this.hasNotifiedToday(uid, "monthly_comparison");
-        if (alreadyNotified) return;
-
         try {
             const lastMonth = new Date();
             lastMonth.setMonth(lastMonth.getMonth() - 1);
             const monthName = lastMonth.toLocaleString("default", { month: "long" });
+            const monthKey = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
+            const meta = {
+                action: "open_budget_overview",
+                monthKey,
+                notificationKey: `monthly_comparison_${monthKey}`
+            };
+            const alreadyNotified = this.hasStoredInAppNotification("monthly_comparison", meta)
+                || await this.hasNotified(uid, "monthly_comparison", meta);
+            if (alreadyNotified) return;
 
             await this.triggerNotification(
                 uid,
                 `${monthName} Summary`,
                 `New month, new goals! Check your ${monthName} report to see if you beat your 'Best Month' record.`,
-                "monthly_comparison"
+                "monthly_comparison",
+                meta
             );
         } catch (e) {
             console.error("Monthly check failed", e);

@@ -58,7 +58,22 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <!-- CAPACITOR CORE (REQUIRED FOR NATIVE PLUGINS) -->
-    <script src="capacitor.js"></script>
+    <script>
+        window.Capacitor = window.Capacitor || {
+            isNative: false,
+            isNativePlatform: () => false,
+            Plugins: {}
+        };
+        (function loadCapacitorWhenNeeded() {
+            const isBrowserPreview = location.protocol.startsWith('http')
+                && (location.hostname === '127.0.0.1' || location.hostname === 'localhost');
+            if (isBrowserPreview) return;
+            const script = document.createElement('script');
+            script.src = 'capacitor.js';
+            script.onerror = () => console.warn('capacitor.js not available in this environment');
+            document.head.appendChild(script);
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -855,7 +870,7 @@
             <div id="chart-section" class="chart-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
                     <h3 class="dash-section-title" style="margin: 0; text-decoration: none;">Expenses structure</h3>
-                    <select id="chart-filter" onchange="filterChart()" class="mui-btn mui-btn--flat dash-filter-select">
+                    <select id="chart-filter" onchange="window.filterChart && window.filterChart()" class="mui-btn mui-btn--flat dash-filter-select">
                         <option value="this_month" selected>This Month</option>
                         <option value="today">Today</option>
                         <option value="this_week">This Week</option>
@@ -1115,7 +1130,7 @@
                 <!-- Detailed Class: .main-content | Function: Main responsive container for Calendar Tab content -->
                 <div class="main-content" id="calendar-main-view-container"> 
                     <!-- [MODIFIED 2026-04-03] Page Title outside the card per USER request -->
-                    <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 2px; margin-top: 0px; font-family: 'Montserrat', sans-serif !important; letter-spacing: -0.5px;">Calendar</h2>
+                    <h2 class="calendar-view-title">Calendar</h2>
                     <div class="calendar-card" id="main-calendar-card">
                         <div class="calendar-header">
                             <!-- [FIX: ID Updated to match calendar-logic.js - 2026-04-02] -->
@@ -1159,6 +1174,19 @@
                             <span>Back to Dashboard</span>
                         </button>
                     </div>
+                    <aside id="calendar-desktop-sidebar" class="calendar-desktop-sidebar" aria-live="polite">
+                        <div class="calendar-desktop-sidebar-header">
+                            <div class="calendar-desktop-sidebar-label">Selected Date</div>
+                            <div id="calendar-desktop-title" class="calendar-desktop-sidebar-title">Select a day</div>
+                        </div>
+                        <div id="calendar-desktop-body" class="calendar-desktop-sidebar-body">
+                            <div class="calendar-desktop-empty">
+                                <span class="calendar-desktop-empty-icon"><i class="material-icons">event_note</i></span>
+                                <span>Choose a date to view its transactions and day totals.</span>
+                            </div>
+                        </div>
+                        <div id="calendar-desktop-footer" class="calendar-desktop-sidebar-footer"></div>
+                    </aside>
                 </div>
             </div>
             <!-- [FIX: Restored SPA Viewport Nesting by removing stray </div> and garbage lines - 2026-04-02] -->
@@ -1690,30 +1718,30 @@
 
     <!-- CATEGORY BUDGET MODAL (TOP LEVEL) -->
     <div id="cat-budget-modal" class="modal-overlay" onclick="closeModals()">
-        <div class="custom-modal" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
-            <div class="modal-header" style="text-align: left; margin-bottom: 20px;">
-                <h3 id="cat-budget-modal-title" style="margin: 0; font-size: 1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
+        <div class="custom-modal cat-budget-modal-card" onclick="event.stopPropagation()" style="max-width: 380px; border-radius: 20px; padding: 24px;">
+            <div class="modal-header cat-budget-modal-header" style="text-align: left; margin-bottom: 20px;">
+                <h3 id="cat-budget-modal-title" class="cat-budget-modal-title" style="margin: 0; font-size: 1rem; font-weight: 800; color: #1e293b; letter-spacing: -0.5px;">Category Limit</h3>
             </div>
             
             <div class="modal-body">
-                <div id="cat-budget-selection-area" style="margin-bottom: 20px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Select Category</div>
-                    <div class="cat-grid" id="budget-cat-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px;">
+                <div id="cat-budget-selection-area" class="cat-budget-selection-area" style="margin-bottom: 20px;">
+                    <div class="cat-budget-section-label" style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Select Category</div>
+                    <div class="cat-grid cat-budget-grid" id="budget-cat-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 240px; overflow-y: auto; padding: 2px;">
                         <!-- Categories injected via JS -->
                     </div>
                 </div>
                 
-                <div style="margin-bottom: 10px;">
-                    <div style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Budget Amount (PHP)</div>
-                    <div style="position: relative;">
+                <div class="cat-budget-amount-block" style="margin-bottom: 10px;">
+                    <div class="cat-budget-section-label cat-budget-amount-label" style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Budget Amount (PHP)</div>
+                    <div class="cat-budget-input-wrap" style="position: relative;">
                         <span style="position: absolute; left: 16px; top: 12px; font-weight: 800; color: #0f172a; font-size: 16px;">₱</span>
-                        <input type="number" id="budget-cat-amount" placeholder="0.00" step="100" style="width: 100%; border: 2px solid #f1f5f9; border-radius: 12px; padding: 10px 12px 10px 32px; font-size: 18px; font-weight: 800; color: #0f172a; outline: none; transition: border-color 0.2s;">
+                        <input type="number" id="budget-cat-amount" class="cat-budget-amount-input" placeholder="0.00" step="100" style="width: 100%; border: 2px solid #f1f5f9; border-radius: 12px; padding: 10px 12px 10px 32px; font-size: 18px; font-weight: 800; color: #0f172a; outline: none; transition: border-color 0.2s;">
                     </div>
                 </div>
             </div>
             
-            <div class="modal-actions" style="margin-top: 24px;">
-                <button id="save-cat-budget-btn" class="mui-btn mui-btn--raised" style="width: 100%; background: #1e293b; color: #fff; border-radius: 12px; height: 48px; font-weight: 800; text-transform: none; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Save Limit</button>
+            <div class="modal-actions cat-budget-modal-actions" style="margin-top: 24px;">
+                <button id="save-cat-budget-btn" class="mui-btn mui-btn--raised cat-budget-save-btn" style="width: 100%; background: #1e293b; color: #fff; border-radius: 12px; height: 48px; font-weight: 800; text-transform: none; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Save Limit</button>
             </div>
         </div>
     </div>
@@ -1804,7 +1832,72 @@
         const TOKEN_REFRESH_COOLDOWN = 30000; // 30 seconds minimum between refresh attempts
         let switchSyncTimer = null; // Debounce timer for account-switch syncs
         let lastObserverLoadTime = 0; // Debounce guard for observer loadData calls
-        const OBSERVER_LOAD_DEBOUNCE = 500; // ms between observer-triggered loadData calls
+        let lastObserverLoadAccount = null; // Immediate loadData when active card account changes
+        const OBSERVER_LOAD_DEBOUNCE = 700; // ms between observer-triggered loadData calls
+        const ACCOUNT_SWITCH_OBSERVER_LOCK_MS = 900;
+        window.pendingSyncRequest = window.pendingSyncRequest || null;
+
+        function lockObserverAccountReload(accountId, duration = ACCOUNT_SWITCH_OBSERVER_LOCK_MS) {
+            window.__accountSwitchObserverLock = {
+                accountId,
+                until: Date.now() + duration
+            };
+        }
+
+        function isObserverAccountReloadLocked(accountId) {
+            const lock = window.__accountSwitchObserverLock;
+            return Boolean(lock && lock.accountId === accountId && lock.until > Date.now());
+        }
+        window.lockObserverAccountReload = lockObserverAccountReload;
+
+        /** Gmail inbox sync is heavy; defer it so switching accounts feels instant on desktop/tablet. */
+        function scheduleDeferredInboxSyncForAccount(accountId) {
+            if (accountId !== 'atome' && accountId !== 'bpi') return;
+            const token = localStorage.getItem('g_access_token');
+            const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0', 10);
+            const TOKEN_MAX_AGE = 50 * 60 * 1000;
+            if (!token || Date.now() - tokenIssuedAt >= TOKEN_MAX_AGE) return;
+            if (switchSyncTimer) clearTimeout(switchSyncTimer);
+            switchSyncTimer = setTimeout(() => {
+                if (window.currentAccount !== accountId || window.isSyncing) return;
+                const run = () => {
+                    if (window.currentAccount !== accountId || window.isSyncing) return;
+                    handleScan(8, false);
+                };
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(run, { timeout: 12000 });
+                } else {
+                    setTimeout(run, 400);
+                }
+            }, 2800);
+        }
+        window.suppressNextWelcomeModal = Boolean(window.suppressNextWelcomeModal);
+
+        const setPendingSyncRequest = (limit = 25, manualTrigger = true, reason = 'auth_required', from401 = false) => {
+            const safeLimit = Number.isFinite(Number(limit)) ? Math.max(1, Number(limit)) : 25;
+            window.pendingSyncRequest = {
+                limit: safeLimit,
+                manualTrigger: Boolean(manualTrigger),
+                reason,
+                from401: Boolean(from401),
+                account: window.currentAccount || 'atome',
+                createdAt: Date.now()
+            };
+            // Backward compatibility for legacy paths still reading these flags.
+            window.pendingSyncLimit = safeLimit;
+            window.pendingSyncManual = Boolean(manualTrigger);
+            window.refreshTriggeredBy401 = Boolean(from401);
+            if (from401) window.suppressNextWelcomeModal = true;
+        };
+
+        const consumePendingSyncRequest = () => {
+            const req = window.pendingSyncRequest ? { ...window.pendingSyncRequest } : null;
+            window.pendingSyncRequest = null;
+            window.pendingSyncLimit = null;
+            window.pendingSyncManual = false;
+            window.refreshTriggeredBy401 = false;
+            return req;
+        };
 
         // --- CORE AUTH HANDLERS (Moved early for reliability) ---
         
@@ -1824,17 +1917,16 @@
                             if (resp.error === 'immediate_failed') {
                                 // If silent refresh failed but it was a manual action (sync button/pull to refresh),
                                 // escalate to an interactive prompt for better user experience.
-                                if (window.pendingSyncManual) {
+                                if (window.pendingSyncRequest?.manualTrigger || window.pendingSyncManual) {
                                     console.log('🔄 Silent refresh failed for manual action. Requesting interactive login...');
-                                    window.requestInteractiveGmailSyncAuth(window.pendingSyncLimit || 25, true);
+                                    window.requestInteractiveGmailSyncAuth(window.pendingSyncRequest?.limit || window.pendingSyncLimit || 25, true);
                                     return;
                                 }
                                 console.log('🔇 Silent refresh failed. Will retry on next manual sync.');
                             } else {
                                 log('Google Auth failed: ' + resp.error, 'error');
                             }
-                            window.pendingSyncLimit = null;
-                            window.pendingSyncManual = false;
+                            consumePendingSyncRequest();
                             return;
                         }
 
@@ -1862,18 +1954,11 @@
                             log(`Moderate sync planned for ${window.currentAccount}...`);
                         }
 
-                        // FIX 3: If refresh was triggered by a 401 during handleScan,
-                        // DON'T re-trigger handleScan — breaks the resync loop
-                        if (window.refreshTriggeredBy401) {
-                            console.log('🔇 Token refreshed after 401. Skipping auto-sync to prevent loop.');
-                            window.refreshTriggeredBy401 = false;
-                            window.pendingSyncLimit = null;
-                            window.pendingSyncManual = false;
-                        } else if (window.pendingSyncLimit) {
-                            const limit = Math.max(window.pendingSyncLimit, syncLimit);
-                            window.pendingSyncLimit = null;
-                            window.pendingSyncManual = false;
-                            handleScan(limit, true);
+                        const pendingSync = consumePendingSyncRequest();
+                        if (pendingSync) {
+                            const limit = Math.max(pendingSync.limit || 25, syncLimit);
+                            // Resume the exact user intent after auth renewal (same as pressing sync button).
+                            handleScan(limit, pendingSync.manualTrigger !== false);
                         } else {
                             handleScan(syncLimit);
                         }
@@ -2032,16 +2117,13 @@
             loadData();
 
             // RESUME PENDING SYNC (If triggered by 401 refresh)
-            if (window.pendingSyncLimit) {
+            const pendingSync = consumePendingSyncRequest();
+            if (pendingSync) {
                 console.log('🔄 Resuming sync after re-authentication...');
-                const limit = window.pendingSyncLimit;
-                const manual = window.pendingSyncManual;
-                window.pendingSyncLimit = null;
-                window.pendingSyncManual = false;
                 
                 // Small delay to ensure everything is settled
                 setTimeout(() => {
-                    if (typeof handleScan === 'function') handleScan(limit, manual);
+                    if (typeof handleScan === 'function') handleScan(pendingSync.limit || 25, pendingSync.manualTrigger !== false);
                 }, 1000);
             }
             
@@ -2053,8 +2135,8 @@
                 
                 if (titleEl) titleEl.textContent = `Welcome, ${userName}!`;
                 
-                if (window.refreshTriggeredBy401) {
-                    window.refreshTriggeredBy401 = false; // Reset the flag
+                if (window.suppressNextWelcomeModal) {
+                    window.suppressNextWelcomeModal = false;
                     log('Skipping welcome modal due to background re-authentication.');
                 } else if (typeof showLoginModal === 'function') {
                     showLoginModal();
@@ -2349,14 +2431,16 @@
                         window.NotificationsEngine.syncStoredInAppNotifications?.(uid);
                         window.NotificationsEngine.replayMissedNotifications?.(uid);
                         window.NotificationsEngine.backfillNotificationsFromState?.(uid);
-                        // 1. Check recurring tuition (15th/30th)
-                        window.NotificationsEngine.checkRecurringReminders(uid);
-                        
-                        // 2. Check 1st of month comparison
+                        // Check 1st of month comparison
                         const today = new Date();
                         if (today.getDate() === 1) {
                             window.NotificationsEngine.checkMonthlyComparison(uid);
                         }
+                    }
+                    if (window.checkDailySummary) {
+                        setTimeout(() => {
+                            try { window.checkDailySummary(); } catch (error) { console.warn('Auth daily summary check failed:', error); }
+                        }, 1200);
                     }
                 }
 
@@ -2456,11 +2540,11 @@
                         
                         applyAccountTheme(window.currentAccount, accounts);
                         
-                        // Only load data if Fast Path didn't already trigger for this UID
-                        if (!window.fastPathTriggered || window.currentAccount !== localStorage.getItem('wallet_current_account')) {
-                            loadData(); 
-                            if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
-                        }
+                        // Always run the canonical loader here.
+                        // loadData() already dedupes in-flight requests, so this safely recovers
+                        // if the desktop fast-path import/render path failed earlier.
+                        loadData();
+                        if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
                         window.fastPathTriggered = false; // Reset for future changes
                         
                         // AUTO-LOGIN GMAIL: Check token validity for users
@@ -2669,6 +2753,30 @@
             return defaultAcc ? defaultAcc.id : list[0].id;
         }
 
+        function holdBudgetWidgetForAccountSwitch() {
+            window.__freezeBudgetWidgetUI = true;
+            window.__skipBudgetRefreshOnNextChartFilter = true;
+            window.__preserveBudgetWidgetVisuals = true;
+            window.__suspendBudgetWidgetRefresh = true;
+            window.clearTimeout(window.__budgetWidgetAccountSwitchReleaseTimer);
+        }
+
+        function releaseBudgetWidgetAfterAccountSwitch(delay = 260) {
+            window.clearTimeout(window.__budgetWidgetAccountSwitchReleaseTimer);
+            window.__budgetWidgetAccountSwitchReleaseTimer = window.setTimeout(() => {
+                window.__freezeBudgetWidgetUI = false;
+                window.__suspendBudgetWidgetRefresh = false;
+                window.__skipBudgetRefreshOnNextChartFilter = false;
+                window.__preserveBudgetWidgetVisuals = false;
+                window.budgetLoadStartTime = Date.now() - 3000;
+                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+            }, delay);
+        }
+
+        window.holdBudgetWidgetForAccountSwitch = holdBudgetWidgetForAccountSwitch;
+        window.releaseBudgetWidgetAfterAccountSwitch = releaseBudgetWidgetAfterAccountSwitch;
+
         function ensureActiveBalanceCard(accId) {
             const cards = Array.from(document.querySelectorAll('.balance-card'));
             if (!cards.length) return null;
@@ -2757,6 +2865,9 @@
                 </div>
                 `;
             }).join('');
+            if (window.repairTextArtifacts) {
+                container.innerHTML = window.repairTextArtifacts(container.innerHTML);
+            }
             updateLegacyBalanceViewportMode(accounts.length);
 
             const safeSpendWidget = document.getElementById('safe-spend-widget');
@@ -2796,9 +2907,8 @@
 
                 const filterEl = document.getElementById('chart-filter');
                 if (filterEl) {
-                    filterEl.value = 'this_month';
                     requestAnimationFrame(() => {
-                        if (typeof filterChart === 'function') filterChart();
+                        applyStoredDashboardFilterSelection();
                     });
                 }
                 return true;
@@ -2828,6 +2938,9 @@
             if (resolvedId === window.currentAccount && !forceReload) return;
             
             console.log("🔄 [Switching Account] to:", resolvedId);
+            window.__freezeBudgetWidgetUI = true;
+            window.__skipBudgetRefreshOnNextChartFilter = true;
+            window.__preserveBudgetWidgetVisuals = true;
             
             window.currentAccount = resolvedId;
             localStorage.setItem('wallet_current_account', resolvedId);
@@ -2846,26 +2959,11 @@
             if (shouldShowSafeSpend) updateSafeSpendUI();
             }
 
-            // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
-            if (!silentRestore && (resolvedId === 'atome' || resolvedId === 'bpi')) {
-                const token = localStorage.getItem('g_access_token');
-                const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
-                const tokenAge = Date.now() - tokenIssuedAt;
-                const TOKEN_MAX_AGE = 50 * 60 * 1000; // 50 minutes
-                if (token && tokenAge < TOKEN_MAX_AGE) {
-                    // Debounce: Cancel any pending sync and schedule a new one
-                    if (switchSyncTimer) clearTimeout(switchSyncTimer);
-                    switchSyncTimer = setTimeout(() => {
-                        log(`🔄 Auto-sync check for ${resolvedId} wallet on switch...`);
-                        handleScan(5, false);
-                    }, 800);
-                } else {
-                    console.log(`⏭️ Token expired/missing for ${resolvedId}. Skipping auto-sync on switch.`);
-                }
+            if (!silentRestore) {
+                scheduleDeferredInboxSyncForAccount(resolvedId);
             }
 
-            hydrateAccountViewFromCache(resolvedId);
-            loadData({ preserveBudgetWidget: isDesktopSafeSpendMode(), preserveViewState: true, reason: 'desktop_card_click' });
+            loadData({ preserveBudgetWidget: true, preserveViewState: false, reason: 'account_switch' });
         };
 
         function applyUserView(user) {
@@ -2966,6 +3064,11 @@
                 trendPath.setAttribute('stroke', theme.trend);
                 trendPath.style.transition = 'stroke 0.5s ease';
             }
+
+            const trendPathCompare = document.getElementById('trendPathCompare');
+            if (trendPathCompare) {
+                trendPathCompare.style.transition = 'stroke 0.5s ease';
+            }
             
             const trendTotal = document.getElementById('trend-period-total');
             if(trendTotal) {
@@ -2997,6 +3100,11 @@
             // 6. Update Chart Summary Heading (Optional dramatic effect)
             const summaryAmount = document.getElementById('expenses-total-summary');
             // if(summaryAmount) summaryAmount.style.color = theme.trend;
+
+            // Keep trend chart paint synced immediately after account switch/theme change.
+            if (Array.isArray(window.allTxns) && window.allTxns.length && typeof drawTrendChart === 'function') {
+                try { drawTrendChart(window.allTxns); } catch (e) {}
+            }
         };
 
         // DYNAMIC CARDS LOADER
@@ -3005,12 +3113,43 @@
         }
 
         function setupAccountSwitcher() {
+            if (window.setupAccountSwitcher && window.setupAccountSwitcher !== setupAccountSwitcher) {
+                window.setupAccountSwitcher();
+                return;
+            }
             // Removed loadSavedCardsToIndex call as it's now dynamic
             const viewport = document.getElementById('cardCarouselScroll');
             const cards = Array.from(document.querySelectorAll('.balance-card'));
             if (!viewport || cards.length === 0) return;
             updateLegacyBalanceViewportMode(cards.length);
             let hasDragged = false;
+            let gestureOriginCard = null;
+
+            const getNearestCard = () => {
+                const viewportCenter = viewport.scrollLeft + (viewport.clientWidth / 2);
+                let closest = cards[0];
+                let closestDistance = Number.POSITIVE_INFINITY;
+                cards.forEach((card) => {
+                    const center = card.offsetLeft + (card.offsetWidth / 2);
+                    const distance = Math.abs(center - viewportCenter);
+                    if (distance < closestDistance) {
+                        closest = card;
+                        closestDistance = distance;
+                    }
+                });
+                return closest;
+            };
+
+            const getGestureLimitedCard = () => {
+                const nearestCard = getNearestCard();
+                if (!gestureOriginCard || cards.length < 2) return nearestCard;
+                const originIndex = cards.findIndex((card) => card === gestureOriginCard);
+                const nearestIndex = cards.findIndex((card) => card === nearestCard);
+                if (originIndex === -1 || nearestIndex === -1) return nearestCard;
+                const minIndex = Math.max(0, originIndex - 1);
+                const maxIndex = Math.min(cards.length - 1, originIndex + 1);
+                return cards[Math.max(minIndex, Math.min(maxIndex, nearestIndex))] || nearestCard;
+            };
 
             // DRAG & SWIPE LOGIC (Both Touch + PC Mouse)
             if (!viewport.__accountSwipeBound) {
@@ -3020,43 +3159,60 @@
 
                 // MOUSE EVENTS (PC Swipe)
                 viewport.addEventListener('mousedown', (e) => {
+                    if (window.__useModuleWalletSwitcher) return;
                     isDown = true;
                     viewport.style.cursor = 'grabbing';
                     viewport.style.scrollSnapType = 'none'; // Disable snapping while dragging
                     startX = e.pageX - viewport.offsetLeft;
                     scrollLeft = viewport.scrollLeft;
+                    gestureOriginCard = getNearestCard();
                     hasDragged = false;
                 });
 
                 viewport.addEventListener('mouseleave', () => {
+                    if (window.__useModuleWalletSwitcher) return;
                     if (!isDown) return;
                     isDown = false;
                     viewport.style.cursor = 'grab';
                     viewport.style.scrollSnapType = 'x mandatory';
+                    if (!viewport.classList.contains('desktop-static-row')) {
+                        const targetCard = getGestureLimitedCard();
+                        if (targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        gestureOriginCard = null;
+                    }
                 });
 
                 viewport.addEventListener('mouseup', () => {
+                    if (window.__useModuleWalletSwitcher) return;
                     if (!isDown) return;
                     isDown = false;
                     viewport.style.cursor = 'grab';
                     viewport.style.scrollSnapType = 'x mandatory';
+                    if (!viewport.classList.contains('desktop-static-row')) {
+                        const targetCard = getGestureLimitedCard();
+                        if (targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        gestureOriginCard = null;
+                    }
                 });
 
                 viewport.addEventListener('mousemove', (e) => {
+                    if (window.__useModuleWalletSwitcher) return;
                     if (!isDown) return;
                     if (viewport.classList.contains('desktop-static-row')) return;
                     e.preventDefault();
                     const x = e.pageX - viewport.offsetLeft;
-                    const walk = (x - startX) * 1.5; // Drag speed
-                    if (Math.abs(walk) > 5) hasDragged = true;
+                    const walk = (x - startX) * 1.18; // Easier swipe response
+                    if (Math.abs(walk) > 3) hasDragged = true;
                     viewport.scrollLeft = scrollLeft - walk;
                 });
 
                 // TOUCH EVENTS
                 viewport.addEventListener('touchstart', (e) => {
+                    if (window.__useModuleWalletSwitcher) return;
                     startX = e.touches[0].pageX - viewport.offsetLeft;
                     scrollLeft = viewport.scrollLeft;
                     isDown = true;
+                    gestureOriginCard = getNearestCard();
                     hasDragged = false;
                     if (viewport.classList.contains('desktop-static-row')) {
                         isDown = false;
@@ -3064,7 +3220,13 @@
                 }, { passive: true });
 
                 viewport.addEventListener('touchend', () => {
+                    if (window.__useModuleWalletSwitcher) return;
                     isDown = false;
+                    if (!viewport.classList.contains('desktop-static-row')) {
+                        const targetCard = getGestureLimitedCard();
+                        if (targetCard) targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        gestureOriginCard = null;
+                    }
                 }, { passive: true });
 
                 viewport.__accountSwipeBound = true;
@@ -3074,6 +3236,7 @@
                 if (card.dataset.desktopClickBound === 'true') return;
                 card.dataset.desktopClickBound = 'true';
                 card.addEventListener('click', () => {
+                    if (window.__useModuleWalletSwitcher) return;
                     if (hasDragged) return;
                     const account = card.dataset.account;
                     if (!account) return;
@@ -3087,6 +3250,7 @@
 
             // SWIPE OBSERVER
             const observer = new IntersectionObserver((entries) => {
+                if (window.__useModuleWalletSwitcher) return;
                 const bestEntry = entries
                     .filter(entry => entry.isIntersecting)
                     .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
@@ -3100,6 +3264,9 @@
                 if (window.isInitialLoading) return;
 
                 if (window.currentAccount !== account) {
+                    if (isObserverAccountReloadLocked(account)) {
+                        return;
+                    }
                     window.currentAccount = account;
                     localStorage.setItem('wallet_current_account', account);
                             
@@ -3156,32 +3323,20 @@
                                 if (shouldShowSafeSpend) updateSafeSpendUI();
                             }
 
-                            // FIX 2: AUTO-SYNC only if token is still fresh (prevents 401 cascade)
-                            if (account === 'atome' || account === 'bpi') {
-                                const token = localStorage.getItem('g_access_token');
-                                const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
-                                const tokenAge = Date.now() - tokenIssuedAt;
-                                const TOKEN_MAX_AGE = 50 * 60 * 1000; // 50 minutes
-                                if (token && tokenAge < TOKEN_MAX_AGE) {
-                                    if (switchSyncTimer) clearTimeout(switchSyncTimer);
-                                    switchSyncTimer = setTimeout(() => {
-                                        log(`🔄 Auto-sync check for ${account} wallet on swipe...`);
-                                        handleScan(5, false);
-                                    }, 800);
-                                } else {
-                                    console.log(`⏭️ Token expired/missing for ${account}. Skipping auto-sync on swipe.`);
-                                }
-                            }
+                            scheduleDeferredInboxSyncForAccount(account);
 
-                            // FIX 4: Debounced loadData from observer
+                            // Debounced loadData — but always run immediately when the active account changes
                             const now = Date.now();
-                            if (now - lastObserverLoadTime > OBSERVER_LOAD_DEBOUNCE) {
+                            const accountChanged = account !== lastObserverLoadAccount;
+                            lastObserverLoadAccount = account;
+                            if (accountChanged || now - lastObserverLoadTime > OBSERVER_LOAD_DEBOUNCE) {
                                 lastObserverLoadTime = now;
-                                loadData();
+                                holdBudgetWidgetForAccountSwitch();
+                                loadData({ preserveBudgetWidget: true, preserveViewState: false, reason: 'desktop_swipe_observer' });
                             }
                 }
             }, { 
-                threshold: 0.55, // FIX 5: Lower threshold to prevent double-swipe requirement
+                threshold: 0.42, // Easier snap recognition for lighter swipes
                 root: viewport
             });
 
@@ -3232,6 +3387,14 @@
             const uid = providedUid || auth.currentUser?.uid;
             if (!uid) return;
             const preserveBudgetWidget = Boolean(options.preserveBudgetWidget);
+            const reason = typeof options.reason === 'string' ? options.reason : '';
+            const fastAccountSwitch = reason === 'account_switch' || reason === 'desktop_swipe_observer';
+            if (preserveBudgetWidget) {
+                holdBudgetWidgetForAccountSwitch();
+            } else {
+                window.__preserveBudgetWidgetVisuals = false;
+                window.__suspendBudgetWidgetRefresh = false;
+            }
 
             // PREVENT REDUNDANT CALLS: Early exit if already loading this specific account
             const loadKey = `${uid}_${window.currentAccount}`;
@@ -3241,6 +3404,12 @@
             }
             window.lastLoadKey = loadKey;
             window.isDataLoading = true;
+            window.walletDataPrimedLoadKey = null;
+
+            const preserveVs = options.preserveViewState !== false;
+            if (!preserveVs) {
+                window.allTxns = null;
+            }
 
             window.historyLimit = 4; 
             const container = document.getElementById('history-container');
@@ -3267,28 +3436,32 @@
                     const now = Date.now();
                     // 24 hour expiry (86400000 ms)
                     if (cache.txns && (now - cache.timestamp < 86400000)) {
-                        window.allTxns = cache.txns;
-                        renderHistory(cache.txns);
-                        updateBalanceToThisMonth(cache.txns);
-                        
-                        // [FIXED: 2026-04-05] Instant Calendar Refresh: Redraw calendar from cache immediately
-                        if (window.renderCalendar) {
-                            console.log("⚡ [Calendar] Immediate cache redraw triggered by loadData");
-                            window.renderCalendar(cache.txns);
-                        }
-                        
-                        hasValidCache = true;
-                        
-                        // Robust Chart Initialization with slight delay to ensure DOM readiness
-                        setTimeout(() => {
-                            const filterEl = document.getElementById('chart-filter');
-                            if (filterEl) {
-                                filterEl.value = 'this_month';
-                                filterChart();
+                        const applyCacheToUi = () => {
+                            window.allTxns = cache.txns;
+                            renderHistory(cache.txns);
+                            updateBalanceToThisMonth(cache.txns);
+                            if (window.updateInsightCards) window.updateInsightCards(cache.txns);
+                            if (window.renderCalendar) window.renderCalendar(cache.txns);
+                            if (!preserveBudgetWidget) {
+                                if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                                else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                             }
-                        }, 100);
-                        
-                        if (spinner) spinner.style.display = 'none'; 
+                        };
+                        applyCacheToUi();
+
+                        hasValidCache = true;
+
+                        const kickChartFilter = () => {
+                            applyStoredDashboardFilterSelection();
+                            if (preserveBudgetWidget) releaseBudgetWidgetAfterAccountSwitch();
+                        };
+                        if (fastAccountSwitch) {
+                            requestAnimationFrame(() => requestAnimationFrame(kickChartFilter));
+                        } else {
+                            setTimeout(kickChartFilter, 30);
+                        }
+
+                        if (spinner) spinner.style.display = 'none';
                     }
                 } catch(e) { console.warn("Cache error", e); }
             }
@@ -3298,19 +3471,19 @@
                 if (!hasValidCache) {
                     spinner.style.display = 'block';
                 } else {
-                    // Cache exists: Only show spinner if data takes >500ms to arrive
+                    // Cache exists: Only show spinner if data still takes a while
                     clearTimeout(window.spinnerTimeout);
                     window.spinnerTimeout = setTimeout(() => {
                         if (window.isDataLoading && spinner) {
                             spinner.style.display = 'block';
                             log('Cloud sync taking longer than expected...');
                         }
-                    }, 500);
+                    }, 220);
                 }
             }
 
             try {
-                const isAnon = auth.currentUser.isAnonymous;
+                const isAnon = !!auth.currentUser?.isAnonymous;
                 
                 const syncStatusText = document.getElementById('syncStatusText');
                 if (syncStatusText) syncStatusText.innerText = isAnon ? 'Local Storage Only' : 'Cloud Live Sync';
@@ -3374,6 +3547,7 @@
 
                     if (isSame && document.getElementById('history-container').children.length > 0) {
                         log(`Snapshot matches cache for ${syncAccount}. Render skipped.`);
+                        window.walletDataPrimedLoadKey = loadKey;
 
                         if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount);
                         if (window.updateInsightCards) window.updateInsightCards(txns);
@@ -3386,13 +3560,11 @@
                         if (window.renderCalendar) window.renderCalendar();
                         if (window.AccountsView && window.AccountsView.init) window.AccountsView.init();
                         
-                        // Ensure chart is still rendered if it's currently empty
-                        const filterEl = document.getElementById('chart-filter');
-                        const chartVal = document.getElementById('chart-total-val');
-                        if (filterEl && (filterEl.value !== 'this_month' || (chartVal && chartVal.innerText === '0'))) {
-                           filterEl.value = 'this_month';
-                           filterChart();
-                        }
+                        // Always rehydrate the chart stack after cache/snapshot reuse.
+                        // Skeleton placeholders do not equal "0", so gating on text content can leave
+                        // the chart cards stuck forever even though transaction data is present.
+                        applyStoredDashboardFilterSelection();
+                        if (preserveBudgetWidget) releaseBudgetWidgetAfterAccountSwitch();
 
                         spinner.style.display = 'none';
                         return;
@@ -3403,6 +3575,7 @@
                     
                     // Store globally & Cache with timestamp
                     window.allTxns = txns;
+                    window.walletDataPrimedLoadKey = loadKey;
                     if (!preserveBudgetWidget) window.hasBudgetLiveData = true;
                     
                     // [NEW] Trigger Calendar Render if available - 2026-04-02
@@ -3461,12 +3634,13 @@
                         if (window.filterTxnList) filterTxnList();
 
                         // Always default chart filter to 'this_month' on fresh data load/page return
-                        const defaultFilter = 'this_month';
                         const filterEl = document.getElementById('chart-filter');
                         if (filterEl) {
-                           filterEl.value = defaultFilter;
                            // Use a small delay if coming from fresh load to ensure components are ready
-                           setTimeout(() => filterChart(), 50);
+                           setTimeout(() => {
+                               applyStoredDashboardFilterSelection();
+                               if (preserveBudgetWidget) releaseBudgetWidgetAfterAccountSwitch();
+                           }, 50);
                         }
                     }
                 }, (error) => {
@@ -3475,6 +3649,81 @@
                     if (spinner) spinner.style.display = 'none';
                     clearTimeout(window.spinnerTimeout);
                 });
+
+                // Cold cache (e.g. after "clear data"): onSnapshot can feel slow vs mobile. Prime UI with one getDocs read in parallel.
+                if (!hasValidCache) {
+                    getDocs(q).then((snap) => {
+                        if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) return;
+                        if (window.walletDataPrimedLoadKey === loadKey) return;
+                        let txns = [];
+                        snap.docs.forEach((d) => {
+                            const data = d.data();
+                            if (data.deleted) return;
+                            const dateVal = new Date(data.date).getTime() || 0;
+                            const createVal = data.createdAt ?
+                                (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : 0;
+                            txns.push({ id: d.id, _sortKey: dateVal, _createKey: createVal, ...data });
+                        });
+                        txns.sort((a, b) => {
+                            if (b._sortKey !== a._sortKey) return b._sortKey - a._sortKey;
+                            return b._createKey - a._createKey;
+                        });
+                        window.walletDataPrimedLoadKey = loadKey;
+                        window.allTxns = txns;
+                        if (!preserveBudgetWidget) window.hasBudgetLiveData = true;
+                        if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                        const currentAccCacheKey = `wallet_cache_${uid}_${syncAccount}`;
+                        const cacheTxns = txns.map(({ _sortKey, _createKey, ...t }) => t);
+                        localStorage.setItem(currentAccCacheKey, JSON.stringify({ txns: cacheTxns, timestamp: Date.now() }));
+                        window.isDataLoading = false;
+                        clearTimeout(window.spinnerTimeout);
+                        if (spinner) spinner.style.display = 'none';
+                        updateBalanceToThisMonth(txns, syncAccount);
+                        if (!preserveBudgetWidget && window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI();
+                        if (window.updateInsightCards) window.updateInsightCards(txns);
+                        if (txns.length === 0) {
+                            const expEl = document.getElementById('expenses-total-summary');
+                            if (expEl) expEl.innerText = 'PHP 0.00';
+                            const trendEl = document.getElementById('trend-period-total');
+                            if (trendEl) trendEl.innerText = 'PHP 0.00';
+                            const chartVal = document.getElementById('chart-total-val');
+                            if (chartVal) chartVal.innerText = '0';
+                            let cachedBalance = null;
+                            try {
+                                const cachedBalances = JSON.parse(localStorage.getItem('wallet_cached_balances') || '{}');
+                                cachedBalance = typeof cachedBalances[syncAccount] === 'number' ? cachedBalances[syncAccount] : null;
+                            } catch (e) {}
+                            const balanceEl = document.querySelector(`.balance-card[data-account="${syncAccount}"] .balance-amount`) || document.getElementById(`${syncAccount}-balance`);
+                            if (balanceEl && cachedBalance === null) {
+                                balanceEl.innerText = 'PHP 0.00';
+                                balanceEl.dataset.raw = 'PHP 0.00';
+                                balanceEl.classList.add('privacy-mask');
+                                if (localStorage.getItem('balance_hidden') === 'true') balanceEl.innerText = '******';
+                            }
+                            if (window.drawPieChart) window.drawPieChart([], 0);
+                            if (window.drawTrendChart) window.drawTrendChart([]);
+                            if (container) {
+                                container.innerHTML = `
+                            <div style="text-align:center; padding:60px 20px; color:#64748b; background: white; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                                <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">inbox</i>
+                                <p style="margin:0; font-weight: 500;">No transactions found.</p>
+                                <p style="font-size: 13px; margin: 10px 0 0;">Click "Scan Gmail" to sync your Atome payments.</p>
+                            </div>`;
+                            }
+                        } else {
+                            renderHistory(txns);
+                            if (window.filterTxnList) filterTxnList();
+                            requestAnimationFrame(() => {
+                                applyStoredDashboardFilterSelection();
+                                if (preserveBudgetWidget) releaseBudgetWidgetAfterAccountSwitch();
+                            });
+                        }
+                        if (!preserveBudgetWidget) {
+                            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                            else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                        }
+                    }).catch((e) => console.warn('getDocs account prime failed', e));
+                }
 
                 // Clear loading state after listener is successfully attached
                 // The actual data processing happens in the listener
@@ -3558,14 +3807,16 @@
          };
 
          // DEBOUNCED BUDGET UPDATE (2026-03-27: Prevent multi-wallet flicker)
-         window.budgetUpdateTimer = null;
-         window.debouncedUpdateBudget = () => {
-             if (window.budgetUpdateTimer) clearTimeout(window.budgetUpdateTimer);
-             window.budgetUpdateTimer = setTimeout(() => {
-                 if (window.updateTripleProgressBar) window.updateTripleProgressBar();
-                 if (window.syncWidgets) window.syncWidgets();
-             }, 150);
-         };
+        window.budgetUpdateTimer = null;
+        window.debouncedUpdateBudget = () => {
+            if (window.__freezeBudgetWidgetUI || (window.__suspendBudgetWidgetRefresh && window.__preserveBudgetWidgetVisuals)) return;
+            if (window.budgetUpdateTimer) clearTimeout(window.budgetUpdateTimer);
+            window.budgetUpdateTimer = setTimeout(() => {
+                if (window.__freezeBudgetWidgetUI || (window.__suspendBudgetWidgetRefresh && window.__preserveBudgetWidgetVisuals)) return;
+                if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                if (window.syncWidgets) window.syncWidgets();
+            }, 150);
+        };
 
          window.watchAtomeBalance = () => {
              const uid = auth.currentUser?.uid;
@@ -4352,7 +4603,8 @@
 
             const filterEl = document.getElementById('chart-filter');
             const currentFilter = filterEl ? filterEl.value : 'this_month';
-            const now = new Date();
+            const monthContext = window.getDashboardMonthContext ? window.getDashboardMonthContext() : null;
+            const now = monthContext?.referenceDate ? new Date(monthContext.referenceDate) : new Date();
 
             let filtered = [];
             const collectFrom = (txns, account) => {
@@ -4642,7 +4894,7 @@
                 'Vehicle': { bg: '#ede9fe', color: '#8b5cf6' },
                 'Food & Drinks': { bg: '#fef9c3', color: '#eab308' },
                 'Life & Entertainment': { bg: '#d1fae5', color: '#10b981' },
-                'Service': { bg: '#fce7f3', color: '#d946ef' },
+                'Service': { bg: '#fdf4ff', color: '#d946ef' },
                 'Trade Copier': { bg: '#cffafe', color: '#06b6d4' },
                 'Trading Expenses': { bg: '#fee2e2', color: '#ef4444' },
                 'Financial Expenses': { bg: '#fee2e2', color: '#ef4444' }, // updated 2026-03-31 - standardized category name - 2026-03-31
@@ -4677,7 +4929,7 @@
                 'Vehicle': { bg: '#ede9fe', color: '#8b5cf6' },
                 'Food & Drinks': { bg: '#fef9c3', color: '#eab308' },
                 'Life & Entertainment': { bg: '#d1fae5', color: '#10b981' },
-                'Service': { bg: '#fce7f3', color: '#d946ef' },
+                'Service': { bg: '#fdf4ff', color: '#d946ef' },
                 'Trade Copier': { bg: '#cffafe', color: '#06b6d4' },
                 'Trading Expenses': { bg: '#fee2e2', color: '#ef4444' },
                 'Financial Expenses': { bg: '#fee2e2', color: '#ef4444' }, // updated 2026-03-31 - standardized category name - 2026-03-31
@@ -5346,13 +5598,15 @@
 
         // Dashboard rendering logic is now centralized in app-ui.js
         function updateBalanceToThisMonth(txns, account) {
-            if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, account);
+            const impl = window.__appUiUpdateBalanceToThisMonth;
+            if (typeof impl === 'function') return impl(txns, account);
         }
 
 
         // Insight cards logic moved to app-ui.js
         function updateInsightCards(txns) {
-            if (window.updateInsightCards) window.updateInsightCards(txns);
+            const impl = window.__appUiUpdateInsightCards;
+            if (typeof impl === 'function') return impl(txns);
         }
 
         async function syncWidgets() {
@@ -6157,31 +6411,152 @@ Be direct, practical, and helpful.`;
             return false;
         };
 
+        function getDashboardPeriodLabel() {
+            const context = window.getDashboardMonthContext ? window.getDashboardMonthContext() : null;
+            if (!context) return 'This Month';
+            return context.explicitMonth ? context.labelTitle : 'This Month';
+        }
+
+        function applyStoredDashboardFilterSelection() {
+            const filterEl = document.getElementById('chart-filter');
+            if (!filterEl) return;
+            const preferred = window.getStoredDashboardMonthSelection ? (window.getStoredDashboardMonthSelection() || 'this_month') : 'this_month';
+            const preferredSelector = 'option[value="' + preferred + '"]';
+            if (/^\d{4}-\d{2}$/.test(preferred) && !filterEl.querySelector(preferredSelector)) {
+                const context = window.getDashboardMonthContext ? window.getDashboardMonthContext(preferred) : null;
+                const option = document.createElement('option');
+                option.value = preferred;
+                option.textContent = (context && context.labelTitle) ? context.labelTitle : preferred;
+                const insertBeforeEl = filterEl.querySelector('option[value="last_6_months"]') || null;
+                filterEl.insertBefore(option, insertBeforeEl);
+            }
+            const nextValue = (preferred && filterEl.querySelector(preferredSelector)) ? preferred : 'this_month';
+            filterEl.value = nextValue;
+            if (window.filterChart) window.filterChart();
+            else refreshDashboardChartsFallback(window.allTxns);
+        }
+
+        function repairStaticSymbolArtifacts() {
+            document.querySelectorAll('.calc-btn.orange').forEach((btn) => {
+                const action = btn.getAttribute('onclick') || '';
+                if (action.includes("calcInput('/')")) btn.textContent = '\u00F7';
+                if (action.includes("calcInput('*')")) btn.textContent = '\u00D7';
+                if (action.includes("calcInput('-')")) btn.textContent = '\u2212';
+            });
+        }
+        requestAnimationFrame(() => repairStaticSymbolArtifacts());
+        function refreshMonthSyncedDashboardWidgets() {
+            try {
+                if (typeof window.updateInsightCards === 'function') window.updateInsightCards(window.allTxns);
+            } catch (error) {
+                console.warn('updateInsightCards sync failed:', error);
+            }
+            try {
+                if (typeof window.refreshTrendChart === 'function') window.refreshTrendChart();
+            } catch (error) {
+                console.warn('refreshTrendChart sync failed:', error);
+            }
+            try {
+                if (typeof window.drawCashFlowChart === 'function') window.drawCashFlowChart();
+            } catch (error) {
+                console.warn('drawCashFlowChart sync failed:', error);
+            }
+            try {
+                if (typeof window.detectSubscriptions === 'function') window.detectSubscriptions();
+            } catch (error) {
+                console.warn('detectSubscriptions sync failed:', error);
+            }
+            try {
+                if (typeof window.updateCategoryBudgetsUI === 'function') window.updateCategoryBudgetsUI();
+            } catch (error) {
+                console.warn('updateCategoryBudgetsUI sync failed:', error);
+            }
+        }
+
+        function refreshDashboardChartsFallback(sourceTxns = null) {
+            const allTxns = Array.isArray(sourceTxns) ? sourceTxns : (Array.isArray(window.allTxns) ? window.allTxns : []);
+            const filterEl = document.getElementById('chart-filter');
+            const filter = filterEl ? filterEl.value : 'this_month';
+
+            let filtered = allTxns;
+            let past = [];
+
+            try {
+                if (typeof window.checkPeriod === 'function') {
+                    filtered = allTxns.filter(t => window.checkPeriod(t, filter, 0));
+                    past = allTxns.filter(t => window.checkPeriod(t, filter, 1));
+                }
+            } catch (error) {
+                console.warn('Chart period filtering failed, using unfiltered fallback:', error);
+                filtered = allTxns;
+                past = [];
+            }
+
+            let pastTotal = 0;
+            try {
+                pastTotal = past.reduce((sum, t) => {
+                    if (t.excluded || t.refund || t.reimbursed) return sum;
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    if (mapped.category === 'Income') return sum;
+                    return sum + (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                }, 0);
+            } catch (error) {
+                console.warn('Past-period total computation failed:', error);
+                pastTotal = 0;
+            }
+
+            try {
+                refreshChart(filtered, pastTotal);
+            } catch (error) {
+                console.warn('refreshChart fallback failed:', error);
+            }
+
+            try {
+                drawTrendChart(allTxns);
+            } catch (error) {
+                console.warn('drawTrendChart fallback failed:', error);
+            }
+        }
+
         // FILTERING LOGIC
         window.filterChart = () => {
-            const filterEl = document.getElementById('chart-filter');
-            const filter = filterEl.value;
+            try {
+                const filterEl = document.getElementById('chart-filter');
+                if (!filterEl) {
+                    return;
+                }
 
-            if (!window.allTxns) return;
+                const filter = filterEl.value;
+                if (window.persistDashboardMonthSelection) window.persistDashboardMonthSelection(filter);
+                if (!window.allTxns) return;
 
-            const filtered = window.allTxns.filter(t => window.checkPeriod(t, filter, 0));
-            const past = window.allTxns.filter(t => window.checkPeriod(t, filter, 1));
-            
-            const pastTotal = past.reduce((sum, t) => {
-                 if (t.excluded || t.refund || t.reimbursed) return sum;
-                 const mapped = getMerchantDisplay(t.merchant, t);
-                 if (mapped.category === 'Income') return sum;
-                 return sum + (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-            }, 0);
+                const skipBudgetRefresh = Boolean(window.__skipBudgetRefreshOnNextChartFilter);
+                window.__skipBudgetRefreshOnNextChartFilter = false;
+                const filtered = window.allTxns.filter(t => window.checkPeriod(t, filter, 0));
+                const past = window.allTxns.filter(t => window.checkPeriod(t, filter, 1));
+                const pastTotal = past.reduce((sum, t) => {
+                    if (t.excluded || t.refund || t.reimbursed) return sum;
+                    const mapped = getMerchantDisplay(t.merchant, t);
+                    if (mapped.category === 'Income') return sum;
+                    return sum + (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                }, 0);
 
-            refreshChart(filtered, pastTotal);
-            
-            // Re-render history to apply highlights if needed
-            renderHistory(window.allTxns);
-            
-            // Sync Triple Progress Bar with current filter
-            if (typeof updateTripleProgressBar === 'function') {
-                updateTripleProgressBar();
+                refreshChart(filtered, pastTotal);
+                window.__suspendBudgetWidgetRefresh = skipBudgetRefresh;
+                try {
+                    renderHistory(window.allTxns);
+                } finally {
+                    window.__suspendBudgetWidgetRefresh = false;
+                }
+                refreshMonthSyncedDashboardWidgets();
+
+                if (!skipBudgetRefresh && typeof updateTripleProgressBar === 'function') {
+                    updateTripleProgressBar();
+                }
+            } catch (error) {
+                console.warn('filterChart failed, using chart fallback renderer:', error);
+                refreshDashboardChartsFallback(window.allTxns);
+                refreshMonthSyncedDashboardWidgets();
             }
         };
 
@@ -6309,7 +6684,9 @@ Be direct, practical, and helpful.`;
             const labelsContainer = document.getElementById('trend-labels');
             if (labelsContainer) labelsContainer.innerHTML = '';
 
-            const now = new Date();
+            const dashboardContext = window.getDashboardMonthContext ? window.getDashboardMonthContext() : null;
+            const now = dashboardContext?.referenceDate ? new Date(dashboardContext.referenceDate) : new Date();
+            const selectedMonthLabel = dashboardContext?.labelTitle || now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             let periodTotal = 0;
             let dataPoints = [];
             let dataPointsCompare = [];
@@ -6448,9 +6825,8 @@ Be direct, practical, and helpful.`;
 
             const monthLabelEl = document.getElementById('trend-month-label');
             if (monthLabelEl) {
-                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                if (filter === 'this_vs_prev') monthLabelEl.innerText = "Current vs Previous Month";
-                else if (filter === 'this_month') monthLabelEl.innerText = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+                if (filter === 'this_vs_prev') monthLabelEl.innerText = `${selectedMonthLabel.toUpperCase()} VS PREVIOUS MONTH`;
+                else if (filter === 'this_month') monthLabelEl.innerText = selectedMonthLabel.toUpperCase();
                 else if (filter === 'this_week') monthLabelEl.innerText = "This Week";
                 else monthLabelEl.innerText = filter.replace(/_/g, ' ').toUpperCase();
             }
@@ -6488,23 +6864,8 @@ Be direct, practical, and helpful.`;
                 if (pathEl) pathEl.setAttribute('d', d);
             };
 
-            let trendColor = window.currentThemeTrend || '#3b82f6';
-            const isDarkMode = document.body.classList.contains('dark-mode');
-            
-            // PRIORITY: If we have a distinctive theme color (like BPI Red #931B1B), use it.
-            // If it's a generic dark color or unset, use accessibility defaults.
-            const isGenericColor = !window.currentThemeTrend || window.currentThemeTrend === '#121212' || window.currentThemeTrend === '#1e293b';
-            
-            if (isGenericColor) {
-                if (isDarkMode) {
-                    trendColor = '#ffffff';
-                } else {
-                    trendColor = '#1e293b'; // Standard visibility
-                }
-            } else {
-                // Keep the account's vibrant theme color (e.g. BPI Red)
-                trendColor = window.currentThemeTrend;
-            }
+            // Always match active account card theme.
+            const trendColor = window.currentThemeTrend || '#3b82f6';
 
             drawPath(dataPoints, path, area, dots, false);
             if (filter === 'this_vs_prev') {
@@ -6655,14 +7016,13 @@ Be direct, practical, and helpful.`;
             
             svgGroup.innerHTML = '';
             legend.innerHTML = '';
-
             const centerX = 120; 
             const centerY = 120;
             const radius = 90; 
             const strokeWidth = 40; 
             const circumference = 2 * Math.PI * radius;
-            
-            const totalFormatted = total > 0 ? `₱${Math.round(total).toLocaleString()}` : "₱0";
+            const peso = '\u20B1';
+            const totalFormatted = total > 0 ? `${peso}${Math.round(total).toLocaleString()}` : `${peso}0`;
 
             // State-based Label Logic
             if (totalLabel && totalVal) {
@@ -6675,11 +7035,9 @@ Be direct, practical, and helpful.`;
                     const seg = segments.find(s => s.name === selectedCategoryName);
                     if (seg) {
                         totalLabel.innerText = seg.name;
-                        const valText = `₱${Math.round(seg.value).toLocaleString()}`;
+                        const valText = `${peso}${Math.round(seg.value).toLocaleString()}`;
                         totalVal.dataset.raw = valText;
                         totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
-                        
-                        // Calculate percentage
                         if (totalPct) {
                             const pct = total > 0 ? ((seg.value / total) * 100).toFixed(2) : "0.00";
                             totalPct.innerText = parseFloat(pct) > 0 ? `${pct}%` : '';
@@ -7019,15 +7377,22 @@ Be direct, practical, and helpful.`;
         function renderHistory(txns) {
             window.allTxns = txns;
             
-            // Update Triple Progress Bar when data is rendered
-            if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+            // Update Triple Progress Bar when data is rendered, unless this pass is
+            // only syncing account-specific widgets during a desktop account switch.
+            if (!window.__suspendBudgetWidgetRefresh && window.updateTripleProgressBar) {
+                window.updateTripleProgressBar();
+            }
             const container = document.getElementById('history-container');
             const fragment = document.createDocumentFragment();
             
             // Check visibility state ONCE at the start for consistency
             const isHidden = localStorage.getItem('balance_hidden') === 'true';
             
-            drawTrendChart(txns);
+            try {
+                drawTrendChart(txns);
+            } catch (error) {
+                console.warn('renderHistory trend refresh failed:', error);
+            }
 
             const groups = {};
             txns.forEach(t => {
@@ -7132,7 +7497,7 @@ Be direct, practical, and helpful.`;
                     else if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) logo = 'logos/mcdo.png';
                     else if (mUpper.includes('SHELL')) logo = 'logos/shell.png';
                     else if (mUpper.includes('SHOPEE')) logo = 'logos/shopee.png';
-                    else if (mUpper.includes('LAZADA')) logo = 'logos/lazada.jpg';
+                    else if (mUpper.includes('LAZADA')) logo = 'logos/lazada.png';
                     else if (mUpper.includes('GLOBE') || mUpper.includes('GOMO')) logo = 'logos/globe.png';
                     else if (mUpper.includes('SM') || mUpper.includes('SM STORE')) logo = 'logos/sm.png';
                     else if (mUpper.includes('SPOTIFY')) logo = 'logos/spotify.png';
@@ -7274,11 +7639,11 @@ Be direct, practical, and helpful.`;
                 }, 10);
             }
 
-            // FEATURE UPDATES (NEW)
-            updateBudgetUI();
-            drawCashFlowChart();
-            detectSubscriptions();
-            updateCategoryBudgetsUI();
+            // FEATURE UPDATES
+            try { updateBudgetUI(); } catch (error) { console.warn('updateBudgetUI failed:', error); }
+            try { drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart failed:', error); }
+            try { detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions failed:', error); }
+            try { updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI failed:', error); }
         }
 
         // CATEGORY BUDGET LIMITER LOGIC
@@ -7289,6 +7654,7 @@ Be direct, practical, and helpful.`;
             const listContainer = document.getElementById('cat-budget-list');
             const account = window.currentAccount;
             const uid = auth.currentUser?.uid;
+            const periodLabel = getDashboardPeriodLabel();
 
             try {
                 if (!widget || !listContainer) return;
@@ -7301,6 +7667,16 @@ Be direct, practical, and helpful.`;
                 // FORCE SHOW: Remove restrictive visibleAccounts check
                 widget.style.setProperty('display', 'block', 'important');
                 console.log(`[Category Limits] Forced show for account: ${account}`);
+
+                const budgetHeader = widget.querySelector('.cat-budget-header');
+                let periodEl = document.getElementById('cat-budget-period-label');
+                if (budgetHeader && !periodEl) {
+                    periodEl = document.createElement('div');
+                    periodEl.id = 'cat-budget-period-label';
+                    periodEl.style.cssText = 'font-size:10px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.8px; margin-left:auto;';
+                    budgetHeader.appendChild(periodEl);
+                }
+                if (periodEl) periodEl.textContent = periodLabel.toUpperCase();
 
                 // Get limits from Firestore
                 const budgetRef = doc(db, "users", uid, "config", `budgets_${account}`);
@@ -7322,7 +7698,8 @@ Be direct, practical, and helpful.`;
                     return;
                 }
 
-                const now = new Date();
+                const monthContext = window.getDashboardMonthContext ? window.getDashboardMonthContext() : null;
+                const now = monthContext?.referenceDate ? new Date(monthContext.referenceDate) : new Date();
                 const year = now.getFullYear();
                 const month = now.getMonth();
 
@@ -7417,6 +7794,9 @@ Be direct, practical, and helpful.`;
                 }).join('');
 
                 listContainer.innerHTML = itemsHTML;
+                if (window.repairTextArtifacts) {
+                    listContainer.innerHTML = window.repairTextArtifacts(listContainer.innerHTML);
+                }
             } catch (err) {
                 console.error("[Category Limits] UI Update Failed:", err);
             }
@@ -7727,8 +8107,7 @@ Be direct, practical, and helpful.`;
         // GMAIL SCAN (OPTIMIZED WITH PARALLELISM + CONCURRENCY GUARD)
         window.isSyncing = false; // Persistent flag
         window.requestInteractiveGmailSyncAuth = (limit = 25, manualTrigger = true) => {
-            window.pendingSyncLimit = limit;
-            window.pendingSyncManual = manualTrigger;
+            setPendingSyncRequest(limit, manualTrigger, 'interactive_auth', false);
             window.isSilentRefresh = false;
 
             if (window.Capacitor && window.Capacitor.isNativePlatform() && typeof handleAuthClick === 'function') {
@@ -7879,9 +8258,7 @@ Be direct, practical, and helpful.`;
                             
                             // For APK users, explicit re-login is often more reliable than silent background refresh
                             if (isNativeApp) {
-                                window.pendingSyncLimit = limit;
-                                window.pendingSyncManual = manualTrigger;
-                                window.refreshTriggeredBy401 = true;
+                                setPendingSyncRequest(limit, manualTrigger, 'token_refresh_401', true);
                                 log('🔄 Session expired. Triggering re-authentication...');
                                 window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
                                 throw new Error('Unauthorized - APK re-auth requested');
@@ -7891,9 +8268,7 @@ Be direct, practical, and helpful.`;
                         if (tokenClient) {
                             tokenRefreshInProgress = true;
                             lastTokenRefreshAttempt = now;
-                            window.pendingSyncLimit = limit;
-                            window.pendingSyncManual = manualTrigger;
-                            window.refreshTriggeredBy401 = true;
+                            setPendingSyncRequest(limit, manualTrigger, 'token_refresh_401', true);
 
                             // NATIVE (APK) ESCALATION: Silent refresh ('none') always fails in native webviews.
                             // If it's a manual action (Sync button, PTR), we PROMPT.
@@ -10488,6 +10863,10 @@ Be direct, practical, and helpful.`;
                 box.style.background = '#f8fafc';
                 box.style.color = '#64748b';
             }
+
+            if (!window.editingTxnId && typeof window.setManualClassification === 'function') {
+                window.setManualClassification(val === 'bpi' ? 'n/a' : 'wants');
+            }
         };
 
         window.updateManualExcludeUI = (isExcluded) => {
@@ -10542,9 +10921,7 @@ Be direct, practical, and helpful.`;
             // Default Category & Classification
             selectedManualCatId = 'Shopping'; // Changed from 'Financial Expenses' to 'Shopping' (more wants-oriented) [FIXED: 2026-04-05]
             setTxnType('expense');
-            // FIX 2026-03-27: Default classification — 'n/a' for BPI (bank txns), 'wants' for others
-            // FIX 2026-04-05: Force default to 'wants' as per user request
-            setManualClassification('wants');
+            setManualClassification(activeAcc === 'bpi' ? 'n/a' : 'wants');
             
             // Set Date Input to Today
             const d = formatLocalDate(new Date());
@@ -11096,6 +11473,10 @@ Be direct, practical, and helpful.`;
                 const affectedBudgetCategories = getAffectedBudgetCategories();
 
                 const ensurePostSaveBudgetNotifications = async () => {
+                    // Threshold notifications are centralized in NotificationsEngine/app-ui.
+                    // Keep this no-op to prevent duplicate entries from multi-source emits.
+                    return;
+
                     const engine = window.NotificationsEngine;
                     const snapshot = window.lastBudgetNotificationSnapshot;
                     if (!engine || !snapshot || !uid) return;
@@ -11910,8 +12291,12 @@ Be direct, practical, and helpful.`;
             if (!container || !window.allTxns) return;
             const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
+            const monthContext = window.getDashboardMonthContext ? window.getDashboardMonthContext() : null;
+            const periodLabel = monthContext?.explicitMonth ? monthContext.labelTitle : 'This Month';
+            const peso = '₱';
+
             // Context: Current month for comparison
-            const now = new Date(); 
+            const now = monthContext?.referenceDate ? new Date(monthContext.referenceDate) : new Date(); 
             const targetMonth = now.getMonth();
             const targetYear = now.getFullYear();
 
@@ -11953,7 +12338,7 @@ Be direct, practical, and helpful.`;
                     else if (mLower.includes('shell')) iconPath = 'logos/shell.png';
                     else if (mLower.includes('petron')) iconPath = 'logos/petron.png';
                     else if (mLower.includes('seaoil')) iconPath = 'logos/seaoil.png';
-                    else if (mLower.includes('lazada')) iconPath = 'logos/lazada.jpg';
+                    else if (mLower.includes('lazada')) iconPath = 'logos/lazada.png';
                     else if (mLower.includes('globe') || mLower.includes('gomo')) iconPath = 'logos/globe.png';
                     else if (mLower.includes('tiktok')) iconPath = 'logos/tiktokshop.png';
                     else if (mLower.includes('watsons')) iconPath = 'logos/watsons.png';
@@ -12102,12 +12487,14 @@ Be direct, practical, and helpful.`;
             const subLimitEl = document.getElementById('sub-limit-label');
             
             if (subTotalEl) {
-                subTotalEl.dataset.raw = totalText;
-                subTotalEl.innerText = isHidden ? '******' : totalText;
+                const safeTotalText = `\u20B1${totalCurrent.toLocaleString(undefined, {minimumFractionDigits:2})} spent`;
+                subTotalEl.dataset.raw = safeTotalText;
+                subTotalEl.innerText = isHidden ? '******' : safeTotalText;
             }
             if (subLimitEl) {
-                subLimitEl.dataset.raw = limitText;
-                subLimitEl.innerText = isHidden ? '******' : limitText;
+                const safeLimitText = `${periodLabel.toUpperCase()} • TARGET \u20B1${limit.toLocaleString(undefined, {maximumFractionDigits:0})}`;
+                subLimitEl.dataset.raw = safeLimitText;
+                subLimitEl.innerText = isHidden ? '******' : safeLimitText;
             }
             
             const totalPerc = limit > 0 ? (totalCurrent / limit) * 100 : 0;
@@ -12172,7 +12559,7 @@ Be direct, practical, and helpful.`;
                 else if (merchantName.includes('MCDO') || merchantName.includes('MCDONALDS')) logo = 'logos/mcdo.png';
                 else if (merchantName.includes('SHELL')) logo = 'logos/shell.png';
                 else if (merchantName.includes('SHOPEE')) logo = 'logos/shopee.png';
-                else if (merchantName.includes('LAZADA')) logo = 'logos/lazada.jpg';
+                else if (merchantName.includes('LAZADA')) logo = 'logos/lazada.png';
                 else if (merchantName.includes('GLOBE') || merchantName.includes('GOMO')) logo = 'logos/globe.png';
                 else if (merchantName.includes('SM ') || merchantName.includes('SM STORE') || merchantName.includes('SM SUPERMARKET')) logo = 'logos/sm.png';
                 else if (merchantName.includes('SPOTIFY')) logo = 'logos/spotify.png';
@@ -12457,7 +12844,7 @@ Be direct, practical, and helpful.`;
 
     <!-- DUPLICATE TRANSACTION MODAL -->
     <div id="duplicate-modal" class="modal-overlay" style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
-        <div class="custom-modal" id="duplicate-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+        <div class="custom-modal" id="duplicate-modal-content" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px 24px calc(env(safe-area-inset-bottom, 24px) + 42px); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
             <div class="modal-header" style="font-weight: 800; font-size: 18px; color: #1e293b;">Duplicate Transaction</div>
             <p style="color: #64748b; font-size: 13px; margin: 8px 0 16px;">Select which accounts to duplicate this transaction into.</p>
             <div class="modal-body">
@@ -13085,9 +13472,15 @@ Be direct, practical, and helpful.`;
                 return;
             }
             
+            const authRef = window.auth;
+            if (!authRef) {
+                console.log('Biometric: Firebase auth not ready yet, skipping');
+                return;
+            }
+
             // NEW: Wait for Firebase Auth to confirm non-anonymous status to prevent lockout during redirect
-            if (auth.currentUser && auth.currentUser.isAnonymous) {
-                console.log('🔐 Biometric: Anonymous session detected, skipping security check');
+            if (authRef.currentUser && authRef.currentUser.isAnonymous) {
+                console.log('Biometric: Anonymous session detected, skipping security check');
                 return;
             }
             
@@ -13529,17 +13922,23 @@ Be direct, practical, and helpful.`;
                 // O(1) Lookup instead of Filter [2026-04-03]
                 const dayData = txnByDay[dateStr] || { income: 0, expense: 0 };
                 
-                // Build amount chips
-                let chipsHTML = '<div class="day-amounts">';
+                // Build amount chips only when values exist to avoid empty placeholders.
+                let chipsHTML = '';
+                let hasChips = false;
+                let chipRows = [];
                 if (dayData.expense > 0) {
                     const fmt = dayData.expense >= 1000 ? `-${(dayData.expense/1000).toFixed(1)}k` : `-${Math.round(dayData.expense)}`;
-                    chipsHTML += `<div class="amount-chip expense">${fmt}</div>`;
+                    chipRows.push(`<div class="amount-chip expense">${fmt}</div>`);
+                    hasChips = true;
                 }
                 if (dayData.income > 0) {
                     const fmt = dayData.income >= 1000 ? `+${(dayData.income/1000).toFixed(1)}k` : `+${Math.round(dayData.income)}`;
-                    chipsHTML += `<div class="amount-chip income">${fmt}</div>`;
+                    chipRows.push(`<div class="amount-chip income">${fmt}</div>`);
+                    hasChips = true;
                 }
-                chipsHTML += '</div>';
+                if (hasChips) {
+                    chipsHTML = `<div class="day-amounts">${chipRows.join('')}</div>`;
+                }
 
                 cell.innerHTML = `<span class="day-num">${d}</span>${chipsHTML}`;
                 cell.onclick = () => {
@@ -13549,6 +13948,17 @@ Be direct, practical, and helpful.`;
                     window.selectedCalendarDate = new Date(year, month, d);
                     window.openCalendarModal(window.selectedCalendarDate);
                 };
+                fragment.appendChild(cell);
+            }
+
+            // Keep a fixed 6-row calendar body (42 day cells) for stable desktop sizing
+            const renderedDayCells = firstDay + daysInMonth;
+            const normalizedDayCells = Math.max(42, Math.ceil(renderedDayCells / 7) * 7);
+            const trailingDays = normalizedDayCells - renderedDayCells;
+            for (let d = 1; d <= trailingDays; d++) {
+                const cell = document.createElement('div');
+                cell.className = 'day-cell other-month';
+                cell.innerHTML = `<span class="day-num">${d}</span>`;
                 fragment.appendChild(cell);
             }
 
@@ -13682,133 +14092,167 @@ Be direct, practical, and helpful.`;
             });
         };
 
+        window.isCalendarDesktopSidebar = function() {
+            return !!(window.matchMedia && window.matchMedia('(min-width: 768px)').matches);
+        };
+
+        window.renderCalendarDayDetails = function(date, containerRefs = {}) {
+            const bodyEl = containerRefs.bodyEl;
+            const titleEl = containerRefs.titleEl;
+            const footerEl = containerRefs.footerEl;
+            const useDesktopSidebar = Boolean(containerRefs.desktopSidebar);
+            if (!bodyEl || !footerEl) return;
+
+            if (titleEl) {
+                titleEl.innerText = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            const dateStr = window.getLocalISO(date);
+            const dayTxns = (window.allTxns || []).filter(t => window.getLocalISO(t.date) === dateStr && !t.refund);
+
+            if (dayTxns.length === 0) {
+                bodyEl.innerHTML = useDesktopSidebar
+                    ? `<div class="no-txns calendar-desktop-empty"><span class="calendar-desktop-empty-icon"><i class="material-icons">event_note</i></span><span>No transactions for this day.</span></div>`
+                    : `<div class="no-txns" style="text-align:center; padding:40px; color:#94a3b8; font-weight:600;">No transactions for this day.</div>`;
+                footerEl.innerHTML = '';
+                return;
+            }
+
+            bodyEl.innerHTML = '';
+            const fragment = document.createDocumentFragment();
+            let totalIn = 0;
+            let totalOut = 0;
+
+            dayTxns.sort((a, b) => (new Date(b.date || 0)) - (new Date(a.date || 0)));
+
+            const groups = {};
+            dayTxns.forEach(t => {
+                const mapped = typeof getMerchantDisplay === 'function' ? getMerchantDisplay(t.merchant, t) : { category: 'Other' };
+                const cat = mapped.category;
+                if (!groups[cat]) groups[cat] = { transactions: [], info: mapped };
+                groups[cat].transactions.push({ ...t, mapped });
+
+                const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                if (cat === 'Income') totalIn += amt; else totalOut += amt;
+            });
+
+            Object.keys(groups).forEach(catName => {
+                const group = groups[catName];
+                const header = document.createElement('div');
+                header.className = "modal-category-group-header";
+                header.innerText = catName;
+                fragment.appendChild(header);
+
+                group.transactions.forEach(t => {
+                    const amt = Math.abs(window.robustParseFloat(t.manualAmount !== undefined ? t.manualAmount : t.amount));
+                    const isInc = t.mapped.category === 'Income';
+
+                    let logoBadge = '';
+                    const merchName = (t.merchant || '').toUpperCase();
+                    let logoSrc = null;
+                    if (merchName.includes('JOLLIBEE')) logoSrc = 'logos/jollibee.png';
+                    else if (merchName.includes('MCDO') || merchName.includes('MCDONALDS')) logoSrc = 'logos/mcdo.png';
+                    else if (merchName.includes('SHELL')) logoSrc = 'logos/shell.png';
+                    else if (merchName.includes('SHOPEE')) logoSrc = 'logos/shopee.png';
+                    else if (merchName.includes('LAZADA')) logoSrc = 'logos/lazada.png';
+                    else if (merchName.includes('GLOBE') || merchName.includes('GOMO')) logoSrc = 'logos/globe.png';
+                    else if (merchName.includes('SM ') || merchName.includes('SM STORE') || merchName.includes('SM SUPERMARKET')) logoSrc = 'logos/sm.png';
+                    else if (merchName.includes('SPOTIFY')) logoSrc = 'logos/spotify.png';
+                    else if (merchName.includes('TIKTOK')) logoSrc = 'logos/tiktokshop.png';
+                    else if (merchName.includes('TECFUEL') || merchName.includes('TEC FUEL')) logoSrc = 'logos/tecfuel.png';
+                    else if (merchName.includes('TRADERS')) logoSrc = 'logos/tradersconnect.png';
+                    else if (merchName.includes('AYALA')) logoSrc = 'logos/ayala.png';
+                    else if (merchName.includes('JNL') || merchName.includes('JL')) logoSrc = 'logos/jandlmall.png';
+                    else if (merchName.includes('J AND L') || merchName.includes('JNL')) logoSrc = 'logos/jandlmall.png';
+                    else if (merchName.includes('MR DIY')) logoSrc = 'logos/mrdiy.png';
+                    else if (merchName.includes('WATSONS')) logoSrc = 'logos/watsons.png';
+
+                    if (logoSrc) logoBadge = `<div class="brand-badge"><img src="${logoSrc}" alt="badge"></div>`;
+
+                    const card = document.createElement('div');
+                    card.className = 'calendar-txn-chip';
+                    card.innerHTML = `
+                        <div class="history-icon ${t.mapped.catClass || ''}">
+                            <i class="material-icons">${t.mapped.icon}</i>
+                            ${logoBadge}
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div class="txn-merch-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.merchant || 'Unknown'}</div>
+                            <div class="txn-meta-info" style="display:flex; gap:4px;">
+                                <span>${window.getLocalISO(t.date) || 'Date Missing'}</span> • <span>${t.mapped.category}</span>
+                            </div>
+                            ${t.notes ? `<div class="txn-note-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.notes}</div>` : ''}
+                            ${t.accountName ? `<div style="font-size:8px; color:#94a3b8; font-weight:500; margin-top:1px;">${t.accountName}</div>` : ''}
+                        </div>
+                        <div style="text-align:right; margin-left:12px; flex-shrink:0;">
+                            <div class="txn-amount-val ${isInc ? 'income' : 'expense'}">
+                                ${isInc ? '+' : '-'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </div>
+                        </div>
+                    `;
+                    fragment.appendChild(card);
+                });
+            });
+
+            bodyEl.appendChild(fragment);
+            const netBalance = totalIn - totalOut;
+            footerEl.innerHTML = `
+                <div class="modal-footer-card">
+                    <div class="footer-row">
+                        <span>Total Expenses</span>
+                        <span class="val expense">- ₱${totalOut.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="footer-row">
+                        <span>Total Income</span>
+                        <span class="val income">+ ₱${totalIn.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="footer-net">
+                        <span>Net Balance</span>
+                        <span class="val ${netBalance >= 0 ? 'income' : 'expense'}">
+                            ${netBalance >= 0 ? '+' : ''} ₱${netBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+                </div>
+            `;
+        };
+
         window.openCalendarModal = function(date) {
+            if (!date) return;
+
+            if (window.isCalendarDesktopSidebar()) {
+                const sidebar = document.getElementById('calendar-desktop-sidebar');
+                const sidebarBody = document.getElementById('calendar-desktop-body');
+                const sidebarTitle = document.getElementById('calendar-desktop-title');
+                const sidebarFooter = document.getElementById('calendar-desktop-footer');
+                if (!sidebar || !sidebarBody || !sidebarFooter) return;
+
+                window.renderCalendarDayDetails(date, {
+                    bodyEl: sidebarBody,
+                    titleEl: sidebarTitle,
+                    footerEl: sidebarFooter,
+                    desktopSidebar: true
+                });
+
+                sidebar.classList.add('active');
+                return;
+            }
+
             const modal = document.getElementById('calendar-txn-modal');
             const modalBody = document.getElementById('modal-body');
             const modalTitle = document.getElementById('modal-date-title');
-            const modalFooter = document.getElementById('calendar-modal-footer-summary'); // [FIXED 2026-04-03] Matched ID with HTML
-            
-            if (!modal || !modalBody) return;
+            const modalFooter = document.getElementById('calendar-modal-footer-summary');
+            if (!modal || !modalBody || !modalFooter) return;
 
-            // [FIXED 2026-04-03] Update title text instead of overwriting parent innerHTML to prevent element destruction
-            if (modalTitle) {
-                // [REFINED 2026-04-03] Full date format per Image 2: Wednesday, Apr 1, 2026
-                modalTitle.innerText = date.toLocaleDateString('en-US', {weekday:'long', month:'short', day:'numeric', year:'numeric'});
-            }
-            
-            const dateStr = window.getLocalISO(date); // [REVERT: Fixed UTC off-by-one - 2026-04-03]
-            const dayTxns = (window.allTxns || []).filter(t => window.getLocalISO(t.date) === dateStr && !t.refund);
-            
-            if (dayTxns.length === 0) {
-                modalBody.innerHTML = `<div class="no-txns" style="text-align:center; padding:40px; color:#94a3b8; font-weight:600;">No transactions for this day.</div>`;
-                modalFooter.innerHTML = '';
-            } else {
-                modalBody.innerHTML = '';
-                const fragment = document.createDocumentFragment();
-                let totalIn = 0;
-                let totalOut = 0;
+            window.renderCalendarDayDetails(date, {
+                bodyEl: modalBody,
+                titleEl: modalTitle,
+                footerEl: modalFooter,
+                desktopSidebar: false
+            });
 
-                dayTxns.sort((a,b) => (new Date(b.date || 0)) - (new Date(a.date || 0)));
-
-                const groups = {};
-                dayTxns.forEach(t => {
-                    const mapped = typeof getMerchantDisplay === 'function' ? getMerchantDisplay(t.merchant, t) : {category: 'Other'};
-                    const cat = mapped.category;
-                    if (!groups[cat]) groups[cat] = { transactions: [], info: mapped };
-                    groups[cat].transactions.push({ ...t, mapped });
-                    
-                    const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                    if (cat === 'Income') totalIn += amt; else totalOut += amt;
-                });
-
-                Object.keys(groups).forEach(catName => {
-                    const group = groups[catName];
-                    const header = document.createElement('div');
-                    header.className = "modal-category-group-header"; 
-                    header.innerText = catName;
-                    fragment.appendChild(header);
-
-                    group.transactions.forEach(t => {
-                        const amt = Math.abs(window.robustParseFloat(t.manualAmount !== undefined ? t.manualAmount : t.amount));
-                        const isInc = t.mapped.category === 'Income';
-                        
-                        // [REFINED 2026-04-03] Merchant Logo Injection Logic
-                        let logoBadge = '';
-                        const merchName = (t.merchant || '').toUpperCase();
-                        let logoSrc = null;
-                        if (merchName.includes('JOLLIBEE')) logoSrc = 'logos/jollibee.png';
-                        else if (merchName.includes('MCDO') || merchName.includes('MCDONALDS')) logoSrc = 'logos/mcdo.png';
-                        else if (merchName.includes('SHELL')) logoSrc = 'logos/shell.png';
-                        else if (merchName.includes('SHOPEE')) logoSrc = 'logos/shopee.png';
-                        else if (merchName.includes('LAZADA')) logoSrc = 'logos/lazada.jpg';
-                        else if (merchName.includes('GLOBE') || merchName.includes('GOMO')) logoSrc = 'logos/globe.png';
-                        else if (merchName.includes('SM ') || merchName.includes('SM STORE') || merchName.includes('SM SUPERMARKET')) logoSrc = 'logos/sm.png';
-                        else if (merchName.includes('SPOTIFY')) logoSrc = 'logos/spotify.png';
-                        else if (merchName.includes('TIKTOK')) logoSrc = 'logos/tiktokshop.png';
-                        else if (merchName.includes('TECFUEL') || merchName.includes('TEC FUEL')) logoSrc = 'logos/tecfuel.png';
-                        else if (merchName.includes('TRADERS')) logoSrc = 'logos/tradersconnect.png';
-                        else if (merchName.includes('AYALA')) logoSrc = 'logos/ayala.png';
-                        else if (merchName.includes('JNL') || merchName.includes('JL')) logoSrc = 'logos/jandlmall.png';
-                        else if (merchName.includes('J AND L') || merchName.includes('JNL')) logoSrc = 'logos/jandlmall.png';
-                        else if (merchName.includes('MR DIY')) logoSrc = 'logos/mrdiy.png';
-                        else if (merchName.includes('WATSONS')) logoSrc = 'logos/watsons.png';
-
-                        if (logoSrc) {
-                            logoBadge = `<div class="brand-badge"><img src="${logoSrc}" alt="badge"></div>`;
-                        }
-
-                        const card = document.createElement('div');
-                        card.className = 'calendar-txn-chip';
-                        // [REFINED PER SNIPPET 2026-04-03] Exact structure from USER snippet matching 'needs'
-                        card.innerHTML = `
-                            <div class="history-icon ${t.mapped.catClass || ''}">
-                                <i class="material-icons">${t.mapped.icon}</i>
-                                ${logoBadge}
-                            </div>
-                            <div style="flex:1; min-width:0;">
-                                <div class="txn-merch-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.merchant || 'Unknown'}</div>
-                                <div class="txn-meta-info" style="display:flex; gap:4px;">
-                                    <span>${window.getLocalISO(t.date) || 'Date Missing'}</span> • <span>${t.mapped.category}</span>
-                                </div>
-                                ${t.notes ? `<div class="txn-note-text" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.notes}</div>` : ''}
-                                ${t.accountName ? `<div style="font-size:8px; color:#94a3b8; font-weight:500; margin-top:1px;">${t.accountName}</div>` : ''}
-                            </div>
-                            <div style="text-align:right; margin-left:12px; flex-shrink:0;">
-                                <div class="txn-amount-val ${isInc ? 'income' : 'expense'}">
-                                    ${isInc ? '+' : '-'} ₱${amt.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                </div>
-                            </div>
-                        `;
-                        fragment.appendChild(card);
-                    });
-                });
-                modalBody.appendChild(fragment);
-
-                const netBalance = totalIn - totalOut;
-                modalFooter.innerHTML = `
-                    <div class="modal-footer-card">
-                        <div class="footer-row">
-                            <span>Total Expenses</span>
-                            <span class="val expense">- ₱${totalOut.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div class="footer-row">
-                            <span>Total Income</span>
-                            <span class="val income">+ ₱${totalIn.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div class="footer-net">
-                            <span>Net Balance</span>
-                            <span class="val ${netBalance >= 0 ? 'income' : 'expense'}">
-                                ${netBalance >= 0 ? '+' : ''} ₱${netBalance.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                            </span>
-                        </div>
-                    </div>
-                `;
-            }
-
-            modal.style.display = 'flex'; 
+            modal.style.display = 'flex';
             setTimeout(() => {
                 modal.classList.add('show');
-                // [NEW 2026-04-03] Initialize Native Gestre Controller
                 window.setupModalGestures();
             }, 10);
             if (window.NavState) window.NavState.pushModalState('calendar-txn-modal', () => window.closeCalendarModal());
@@ -13865,6 +14309,11 @@ Be direct, practical, and helpful.`;
         };
 
         window.closeCalendarModal = function() {
+            if (window.isCalendarDesktopSidebar()) {
+                const sidebar = document.getElementById('calendar-desktop-sidebar');
+                if (sidebar) sidebar.classList.remove('active');
+                return;
+            }
             const modal = document.getElementById('calendar-txn-modal');
             if (!modal) return;
             modal.classList.remove('show');

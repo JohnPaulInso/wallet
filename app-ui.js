@@ -2,12 +2,145 @@
  * UI Rendering and Management for the Wallet App
  */
 import { db, auth, doc, setDoc, onSnapshot, getDoc, serverTimestamp } from "./firebase-config.js";
-import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, triggerHaptic, createNotification, cleanAIText, animateNumber } from "./app-utils.js";
+import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, triggerHaptic, createNotification, cleanAIText, animateNumber, repairTextArtifacts, repairNotificationTextArtifacts } from "./app-utils.js";
 import { CONFIG } from "./config.js";
 import { LocalAI } from "./local-ai.js";
 
 let switchSyncTimer = null;
 let keyboardViewportBridgeInitialized = false;
+const DASHBOARD_MONTH_FILTER_KEY = 'smartwallet_dashboard_month_filter';
+const DASHBOARD_MONTH_FILTER_TS_KEY = 'smartwallet_dashboard_month_filter_ts';
+const DASHBOARD_MONTH_FILTER_TTL_MS = 90 * 60 * 1000;
+const pesoSymbol = '\u20B1';
+const txnBullet = '\u2022';
+const maskedAccountNumber = `${txnBullet.repeat(4)} ${txnBullet.repeat(4)} ${txnBullet.repeat(4)} `;
+
+function isExplicitYearMonthFilter(value) {
+    return /^\d{4}-\d{2}$/.test(String(value || '').trim());
+}
+
+function normalizeDashboardFilterValue(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) return 'this_month';
+    return normalized;
+}
+
+function getStoredDashboardMonthSelection() {
+    try {
+        const value = localStorage.getItem(DASHBOARD_MONTH_FILTER_KEY);
+        const ts = Number(localStorage.getItem(DASHBOARD_MONTH_FILTER_TS_KEY) || '0');
+        if (!value || !ts || (Date.now() - ts) > DASHBOARD_MONTH_FILTER_TTL_MS) {
+            localStorage.removeItem(DASHBOARD_MONTH_FILTER_KEY);
+            localStorage.removeItem(DASHBOARD_MONTH_FILTER_TS_KEY);
+            return null;
+        }
+        return normalizeDashboardFilterValue(value);
+    } catch (error) {
+        return null;
+    }
+}
+
+function persistDashboardMonthSelection(value) {
+    const normalized = normalizeDashboardFilterValue(value);
+    try {
+        localStorage.setItem(DASHBOARD_MONTH_FILTER_KEY, normalized);
+        localStorage.setItem(DASHBOARD_MONTH_FILTER_TS_KEY, String(Date.now()));
+    } catch (error) {}
+    return normalized;
+}
+
+function rehydrateDashboardFromCurrentTxns() {
+    if (!Array.isArray(window.allTxns)) return;
+    try { updateBalanceToThisMonth(window.allTxns, window.currentAccount); } catch (error) { console.warn('rehydrate balance failed:', error); }
+    try { updateInsightCards(window.allTxns); } catch (error) { console.warn('rehydrate insights failed:', error); }
+    try {
+        if (typeof window.filterChart === 'function') window.filterChart();
+        else drawTrendChart(window.allTxns);
+    } catch (error) { console.warn('rehydrate chart filter failed:', error); }
+    try { drawCashFlowChart(); } catch (error) { console.warn('rehydrate cash flow failed:', error); }
+    try { detectSubscriptions(); } catch (error) { console.warn('rehydrate recurring failed:', error); }
+    try { updateCategoryBudgetsUI(); } catch (error) { console.warn('rehydrate category budgets failed:', error); }
+    try {
+        if (!window.__freezeBudgetWidgetUI) {
+            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+            else updateTripleProgressBar();
+        }
+    } catch (error) { console.warn('rehydrate budget failed:', error); }
+}
+
+function getDashboardMonthContext(filterValue = null) {
+    const activeValue = normalizeDashboardFilterValue(
+        filterValue
+        || document.getElementById('chart-filter')?.value
+        || getStoredDashboardMonthSelection()
+        || 'this_month'
+    );
+    const explicitMonth = isExplicitYearMonthFilter(activeValue);
+    const referenceDate = explicitMonth
+        ? (() => {
+            const [year, month] = activeValue.split('-').map(Number);
+            return new Date(year, month - 1, 1);
+        })()
+        : new Date();
+    const previousDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1);
+    const labelTitle = referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return {
+        filterValue: activeValue,
+        explicitMonth,
+        referenceDate,
+        previousDate,
+        year: referenceDate.getFullYear(),
+        monthIndex: referenceDate.getMonth(),
+        monthKey: `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, '0')}`,
+        labelTitle,
+        labelUpper: labelTitle.toUpperCase(),
+        labelShort: referenceDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
+    };
+}
+
+function isRecentBudgetNotificationSnapshot(snapshot) {
+    const generatedAtMs = Number(snapshot?.generatedAtMs || 0);
+    return generatedAtMs > 0 && (Date.now() - generatedAtMs) <= 120000;
+}
+
+function isCurrentBudgetNotificationSnapshot(snapshot) {
+    if (!snapshot || !snapshot.liveReady) return false;
+    if (!isRecentBudgetNotificationSnapshot(snapshot)) return false;
+    if (snapshot.filterVal !== 'this_month') return false;
+    const currentMonthKey = getBudgetProgressMonthKey();
+    return String(snapshot?.monthKey || '') === currentMonthKey;
+}
+
+if (typeof window !== 'undefined') {
+    window.getStoredDashboardMonthSelection = getStoredDashboardMonthSelection;
+    window.persistDashboardMonthSelection = persistDashboardMonthSelection;
+    window.getDashboardMonthContext = getDashboardMonthContext;
+}
+
+/** Gmail inbox sync is heavy; defer it so account switches stay responsive. */
+function scheduleDeferredInboxSyncForAccount(accountId) {
+    if (typeof window === 'undefined') return;
+    if (accountId !== 'atome' && accountId !== 'bpi') return;
+    const token = localStorage.getItem('g_access_token');
+    const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0', 10);
+    const TOKEN_MAX_AGE = 50 * 60 * 1000;
+    if (!token || Date.now() - tokenIssuedAt >= TOKEN_MAX_AGE) return;
+    if (switchSyncTimer) clearTimeout(switchSyncTimer);
+    switchSyncTimer = setTimeout(() => {
+        if (window.currentAccount !== accountId || window.isSyncing) return;
+        import('./app-data.js').then((m) => {
+            const run = () => {
+                if (window.currentAccount !== accountId || window.isSyncing) return;
+                if (m.handleScan) m.handleScan(8, false);
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(run, { timeout: 12000 });
+            } else {
+                setTimeout(run, 400);
+            }
+        });
+    }, 2800);
+}
 
 function resolveFocusableTarget(targetOrId) {
     if (typeof targetOrId === 'string') {
@@ -259,7 +392,9 @@ export function renderHistory(txns) {
             </div>
         `;
 
-        
+        header.innerHTML = repairTextArtifacts(header.innerHTML);
+        header.innerHTML = repairTextArtifacts(header.innerHTML);
+
         const content = document.createElement('div');
         content.className = `month-content ${isCollapsed ? 'collapsed' : ''}`;
         
@@ -351,7 +486,7 @@ export function renderHistory(txns) {
                 </div>`;
         });
         
-        content.innerHTML = contentHTML;
+        content.innerHTML = repairTextArtifacts(contentHTML);
         header.onclick = () => {
             const isNowCollapsed = content.classList.toggle('collapsed');
             header.classList.toggle('collapsed', isNowCollapsed);
@@ -552,7 +687,7 @@ function renderHistoryClean(txns) {
                 </div>`;
         });
 
-        content.innerHTML = contentHTML;
+        content.innerHTML = repairTextArtifacts(contentHTML);
         header.onclick = () => {
             const isNowCollapsed = content.classList.toggle('collapsed');
             header.classList.toggle('collapsed', isNowCollapsed);
@@ -606,6 +741,17 @@ function renderHistoryClean(txns) {
             });
         }, 10);
     }
+
+    // Keep the key dashboard widgets alive when the module-based loader renders
+    // history through the bridged `window.renderHistory` path.
+    if (!window.__suspendBudgetWidgetRefresh && typeof window.updateTripleProgressBar === 'function') {
+        try { window.updateTripleProgressBar(); } catch (error) { console.warn('updateTripleProgressBar failed:', error); }
+    }
+    try { if (typeof window.updateBudgetUI === 'function') window.updateBudgetUI(); } catch (error) { console.warn('updateBudgetUI failed:', error); }
+    try { if (typeof window.drawCashFlowChart === 'function') window.drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart failed:', error); }
+    try { if (typeof window.detectSubscriptions === 'function') window.detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions failed:', error); }
+    try { if (typeof window.updateCategoryBudgetsUI === 'function') window.updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI failed:', error); }
+    try { if (typeof window.updateInsightCards === 'function') window.updateInsightCards(window.allTxns || txns); } catch (error) { console.warn('updateInsightCards failed:', error); }
 }
 
 // Update Triple Progress Bar
@@ -613,6 +759,10 @@ export function updateTripleProgressBar() {
     const user = auth.currentUser;
     const widget = document.getElementById('triple-progress-widget');
     if (!widget) return;
+    if (window.__freezeBudgetWidgetUI || (window.__suspendBudgetWidgetRefresh && window.__preserveBudgetWidgetVisuals)) {
+        widget.style.display = 'block';
+        return;
+    }
     
     // Always show widget by default (as per user request for instant load)
     widget.style.display = 'block';
@@ -640,7 +790,9 @@ export function updateTripleProgressBar() {
     );
     const atomeReady = isMultiWallet ? (window.walletTxns.atome !== undefined) : (window.allTxns !== null);
     const bpiReady = isMultiWallet ? (window.walletTxns.bpi !== undefined) : (window.allTxns !== null);
-    const currentReady = isCurrentAccountBucketSeparate ? Array.isArray(window.allTxns) : true;
+    const currentReady = isCurrentAccountBucketSeparate
+        ? (Array.isArray(window.allTxns) || Boolean(window.__preserveBudgetWidgetVisuals))
+        : true;
     const manualReady = (window.budgetManualTxns !== undefined);
 
     // Categories are only "Live Ready" if ALL their possible sources are loaded (Atomic Readiness)
@@ -657,6 +809,15 @@ export function updateTripleProgressBar() {
         }, 2600);
     }
     const isTimeoutFallback = (Date.now() - window.budgetLoadStartTime > 2500);
+    const preserveVisuals = Boolean(window.__preserveBudgetWidgetVisuals);
+
+    if (preserveVisuals && !isAggregatedReady && !isTimeoutFallback) {
+        widget.style.display = 'block';
+        return;
+    }
+    if (preserveVisuals && (isAggregatedReady || isTimeoutFallback)) {
+        window.__preserveBudgetWidgetVisuals = false;
+    }
 
     const canUseLiveNeeds = isAggregatedReady; 
     const canUseLiveWants = isAggregatedReady; 
@@ -664,9 +825,10 @@ export function updateTripleProgressBar() {
 
     if (canUseLiveNeeds || canUseLiveWants || canUseLiveSavings) {
         // Live aggregation
-        const now = new Date();
         const filterEl = document.getElementById('chart-filter');
-        const currentFilter = filterEl ? filterEl.value : 'this_month';
+        const monthContext = getDashboardMonthContext(filterEl ? filterEl.value : null);
+        const now = monthContext.referenceDate;
+        const currentFilter = monthContext.filterValue;
 
         const aggregateFrom = (txns, account) => {
             txns.forEach(t => {
@@ -814,7 +976,8 @@ export function updateTripleProgressBar() {
 
     const filterEl = document.getElementById('chart-filter');
     const filterVal = filterEl ? filterEl.value : 'this_month';
-    const now = new Date();
+    const monthContext = getDashboardMonthContext(filterVal);
+    const now = monthContext.referenceDate;
     
     // Monthly Budget Label Update (Modified 2026-03-27)
     const monthDisplay = document.getElementById('triple-month-display');
@@ -824,6 +987,7 @@ export function updateTripleProgressBar() {
         const currentYear = now.getFullYear();
 
         if (filterVal === 'this_month') monthDisplay.innerText = `${currentMonthName} ${currentYear}`;
+        else if (isExplicitYearMonthFilter(filterVal)) monthDisplay.innerText = getDashboardMonthContext(filterVal).labelUpper;
         else if (filterVal === 'today') monthDisplay.innerText = `TODAY, ${currentMonthName.slice(0,3)} ${now.getDate()}`;
         else if (filterVal === 'this_week' || filterVal === 'last_week' || filterVal === 'last_7_days') monthDisplay.innerText = `WEEKLY BUDGET`;
         else if (filterVal === 'first_15' || filterVal === 'last_15') monthDisplay.innerText = `15-DAY BUDGET`;
@@ -862,6 +1026,9 @@ export function updateTripleProgressBar() {
         window.lastBudgetNotificationSnapshot = {
             uid: user?.uid || null,
             filterVal,
+            monthKey: monthContext.monthKey,
+            liveReady: isAggregatedReady,
+            generatedAtMs: Date.now(),
             needsReadyToDisplay,
             wantsReadyToDisplay,
             savingsReadyToDisplay,
@@ -885,6 +1052,7 @@ export function updateTripleProgressBar() {
             budgetNotifUid
             && filterVal === 'this_month'
             && window.NotificationsEngine
+            && isAggregatedReady
         );
 
         if (allReadyToDisplay && !canRunBudgetNotifications) {
@@ -1316,18 +1484,6 @@ export function updateTripleProgressBar() {
         }
 }
 
-function checkAndTriggerAlert(alertKey, title, message, type) {
-    const today = new Date().toDateString();
-    const lastAlert = localStorage.getItem(`alert_${alertKey}_last`);
-    
-    // Only trigger once per day to avoid spamming
-    if (lastAlert !== today) {
-        createNotification(title, message, type);
-        localStorage.setItem(`alert_${alertKey}_last`, today);
-    }
-}
-
-
 // Charting Functions
 export function drawPieChart(segments, total, isUpdate = false) {
     const svgGroup = document.getElementById('pieContent');
@@ -1346,8 +1502,8 @@ export function drawPieChart(segments, total, isUpdate = false) {
     const radius = 90; 
     const strokeWidth = 40; 
     const circumference = 2 * Math.PI * radius;
-    
-    const totalFormatted = total > 0 ? `ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(total).toLocaleString()}` : "ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±0";
+    const peso = '\u20B1';
+    const totalFormatted = total > 0 ? `${peso}${Math.round(total).toLocaleString()}` : `${peso}0`;
 
     // State-based Label Logic
     if (totalLabel && totalVal) {
@@ -1360,7 +1516,7 @@ export function drawPieChart(segments, total, isUpdate = false) {
             const seg = segments.find(s => s.name === window.selectedCategoryName);
             if (seg) {
                 totalLabel.innerText = seg.name;
-                const valText = `ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(seg.value).toLocaleString()}`;
+                const valText = `${peso}${Math.round(seg.value).toLocaleString()}`;
                 totalVal.dataset.raw = valText;
                 totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
                 if (totalPct) {
@@ -1376,6 +1532,11 @@ export function drawPieChart(segments, total, isUpdate = false) {
                 if (totalPct) totalPct.innerText = '';
             }
         }
+    }
+
+    if (totalVal) {
+        totalVal.innerText = repairTextArtifacts(totalVal.innerText || '');
+        totalVal.dataset.raw = repairTextArtifacts(totalVal.dataset.raw || totalVal.innerText || '');
     }
 
     const bgLayer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -1468,20 +1629,30 @@ export function drawTrendChart(txns) {
     const path = document.getElementById('trendPath');
     const area = document.getElementById('trendArea');
     const totalEl = document.getElementById('trend-period-total');
-    if (!path || txns.length === 0) return;
+    if (!path || !area || !Array.isArray(txns)) return;
 
     // Simplified Trend Chart Implementation
     const dataPoints = new Array(4).fill(0);
-    const now = new Date();
+    const monthContext = typeof window.getDashboardMonthContext === 'function'
+        ? window.getDashboardMonthContext()
+        : null;
+    const now = monthContext?.referenceDate ? new Date(monthContext.referenceDate) : new Date();
+    let periodTotal = 0;
     txns.forEach(t => {
         const d = new Date(t.date);
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && !t.excluded) {
             const week = Math.floor((d.getDate() - 1) / 7);
             if (week >= 0 && week < 4) {
-                 dataPoints[week] += Math.abs(t.amount || 0);
+                 const amount = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                 dataPoints[week] += amount;
+                 periodTotal += amount;
             }
         }
     });
+
+    if (totalEl) {
+        totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
 
     const max = Math.max(...dataPoints, 500) * 1.2;
     const w = 400, h = 130, padding = 20;
@@ -1741,16 +1912,7 @@ export async function updateCategoryBudgetsUI() {
         }
         
         const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
-        
-        // Category Alert Triggers
-        if (limit > 0) {
-            const catLabel = displayCategoryName(cat);
-            if (pct >= 100) {
-                checkAndTriggerAlert(`cat_budget_${cat}_100`, `${catLabel} Limit Reached`, `You've maxed out your ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()} budget for ${catLabel}.`, 'error');
-            } else if (pct >= 80) {
-                checkAndTriggerAlert(`cat_budget_${cat}_80`, `${catLabel} Warning`, `You've used 80% of your ${catLabel} budget.`, 'warning');
-            }
-        }
+
         return `
             <div class="cat-budget-item">
                 <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(spent).toLocaleString()} / ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()}</span></div>
@@ -2121,6 +2283,47 @@ function getNearestBalanceCard(viewport = getBalanceViewport()) {
     return closest;
 }
 
+function getBalanceCardIndex(card, cards = getBalanceCards()) {
+    if (!card || !Array.isArray(cards) || !cards.length) return -1;
+    return cards.findIndex((entry) => entry === card);
+}
+
+function getGestureLimitedBalanceCard(originCard, viewport = getBalanceViewport()) {
+    const cards = getBalanceCards();
+    const nearestCard = getNearestBalanceCard(viewport);
+    if (!originCard || !nearestCard || cards.length < 2) return nearestCard;
+
+    const originIndex = getBalanceCardIndex(originCard, cards);
+    const nearestIndex = getBalanceCardIndex(nearestCard, cards);
+    if (originIndex === -1 || nearestIndex === -1) return nearestCard;
+
+    const minIndex = Math.max(0, originIndex - 1);
+    const maxIndex = Math.min(cards.length - 1, originIndex + 1);
+    const clampedIndex = Math.max(minIndex, Math.min(maxIndex, nearestIndex));
+    return cards[clampedIndex] || nearestCard;
+}
+
+function holdBudgetWidgetForAccountSwitch() {
+    window.__freezeBudgetWidgetUI = true;
+    window.__skipBudgetRefreshOnNextChartFilter = true;
+    window.__preserveBudgetWidgetVisuals = true;
+    window.__suspendBudgetWidgetRefresh = true;
+    window.clearTimeout(window.__budgetWidgetAccountSwitchReleaseTimer);
+}
+
+function releaseBudgetWidgetAfterAccountSwitch(delay = 260) {
+    window.clearTimeout(window.__budgetWidgetAccountSwitchReleaseTimer);
+    window.__budgetWidgetAccountSwitchReleaseTimer = window.setTimeout(() => {
+        window.__freezeBudgetWidgetUI = false;
+        window.__suspendBudgetWidgetRefresh = false;
+        window.__skipBudgetRefreshOnNextChartFilter = false;
+        window.__preserveBudgetWidgetVisuals = false;
+        window.budgetLoadStartTime = Date.now() - 3000;
+        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+        else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+    }, delay);
+}
+
 function syncActiveAccountChrome(accId, accounts = window.walletAccounts || []) {
     if (!accId) return;
     window.currentAccount = accId;
@@ -2138,13 +2341,17 @@ function snapToBalanceCard(card, behavior = 'smooth') {
 }
 
 function settleToNearestBalanceCard(behavior = 'smooth', options = {}) {
-    const card = getNearestBalanceCard();
+    const card = options.originCard
+        ? getGestureLimitedBalanceCard(options.originCard)
+        : getNearestBalanceCard();
     if (!card) return;
+    const accountId = card.dataset.account;
+    if (!accountId) return;
     snapToBalanceCard(card, behavior);
-    syncActiveAccountChrome(card.dataset.account, window.walletAccounts || []);
-    if (options.skipReload || window.__lastSettledWalletAccount === card.dataset.account) return;
-    window.__lastSettledWalletAccount = card.dataset.account;
-    import('./app-data.js').then((m) => m.loadData());
+    syncActiveAccountChrome(accountId, window.walletAccounts || []);
+    if (options.skipReload || window.__lastSettledWalletAccount === accountId) return;
+    window.__lastSettledWalletAccount = accountId;
+    switchAccount(accountId, false, true);
 }
 
 function releaseInstantActiveCards(container) {
@@ -2199,7 +2406,7 @@ export function updateBalanceCardsUI(accounts) {
 
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
-    container.innerHTML = accounts.map(acc => {
+    container.innerHTML = accounts.map((acc, index) => {
         const isAtome = acc.id === 'atome';
         const isBPI = acc.id === 'bpi';
         const isActiveCard = acc.id === activeAccountId;
@@ -2207,7 +2414,7 @@ export function updateBalanceCardsUI(accounts) {
         
         return `
         <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
-            <div class="card-shimmer"></div> <!-- .card-shimmer - Added 2026-03-27 - subtle intermittent shimmer effect -->
+            <div class="card-shimmer" style="animation-delay: ${index * 1.8}s;"></div>
             ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
             ${isBPI ? '<div class="bpi-rays"></div>' : ''}
             
@@ -2256,7 +2463,17 @@ export function updateBalanceCardsUI(accounts) {
         `;
     }).join('');
 
+    container.innerHTML = repairTextArtifacts(container.innerHTML);
     const renderedCards = container.querySelectorAll('.balance-card');
+    renderedCards.forEach((card) => {
+        const accountId = card.dataset.account;
+        if (accountId === 'bpi') return;
+        const account = accounts.find((item) => item.id === accountId);
+        const numberEl = card.querySelector('.card-number');
+        if (account && numberEl) {
+            numberEl.textContent = `${maskedAccountNumber}${account.last4 || '0000'}`;
+        }
+    });
     updateBalanceViewportMode(accounts.length);
     renderedCards.forEach((card) => {
         window.requestAnimationFrame(() => triggerSoftFadeInElement(card));
@@ -2296,7 +2513,12 @@ function hydrateAccountViewFromCache(accId) {
 
         const filterEl = document.getElementById('chart-filter');
         if (filterEl) {
-            filterEl.value = 'this_month';
+            const preferredFilter = getStoredDashboardMonthSelection() || 'this_month';
+            if (filterEl.querySelector(`option[value="${preferredFilter}"]`)) {
+                filterEl.value = preferredFilter;
+            } else {
+                filterEl.value = 'this_month';
+            }
             window.requestAnimationFrame(() => {
                 if (window.filterChart) window.filterChart();
             });
@@ -2311,7 +2533,11 @@ function hydrateAccountViewFromCache(accId) {
 export function switchAccount(id, silentRestore = false, forceReload = false) {
     const resolvedId = resolveActiveAccountId(window.walletAccounts, id);
     if (resolvedId === window.currentAccount && !forceReload) return;
+    holdBudgetWidgetForAccountSwitch();
     window.currentAccount = resolvedId;
+    if (typeof window.lockObserverAccountReload === 'function') {
+        window.lockObserverAccountReload(resolvedId);
+    }
     localStorage.setItem('wallet_current_account', resolvedId);
     syncActiveAccountChrome(resolvedId, window.walletAccounts || []);
     applyAccountTheme(resolvedId, window.walletAccounts || []);
@@ -2328,23 +2554,15 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
         if (shouldShowSafeSpend) updateSafeSpendUI();
     }
 
-    // Trigger data reload for the new account
-    hydrateAccountViewFromCache(resolvedId);
+    // Trigger data reload for the new account (cache path inside loadData is the single source of truth)
     import('./app-data.js').then(m => m.loadData({
-        preserveBudgetWidget: isDesktopWalletLayout(),
-        preserveViewState: true,
+        preserveBudgetWidget: true,
+        preserveViewState: false,
         reason: 'account_switch'
     }));
 
-    // Auto-sync if token is fresh
-    if (!silentRestore && (resolvedId === 'atome' || resolvedId === 'bpi')) {
-        const token = localStorage.getItem('g_access_token');
-        const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
-        const tokenAge = Date.now() - tokenIssuedAt;
-        const TOKEN_MAX_AGE = 50 * 60 * 1000;
-        if (token && tokenAge < TOKEN_MAX_AGE) {
-            import('./app-data.js').then(m => m.handleScan(25, false));
-        }
+    if (!silentRestore) {
+        scheduleDeferredInboxSyncForAccount(resolvedId);
     }
 }
 
@@ -2352,6 +2570,11 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
 export function applyAccountTheme(accId, accounts) {
     const acc = accounts.find(a => a.id === accId);
     if (!acc) return;
+
+    // Keep all theme-driven UI (including trend chart color) synced to active account.
+    if (typeof applyTheme === 'function') {
+        applyTheme(accId);
+    }
     
     document.documentElement.style.setProperty('--wallet-card-bg', acc.color);
     document.documentElement.style.setProperty('--dynamic-button-color', acc.color);
@@ -2445,6 +2668,7 @@ export function setupAccountSwitcher() {
     const viewport = document.getElementById('cardCarouselScroll');
     const cards = getBalanceCards();
     if (!viewport || cards.length === 0) return;
+    window.__useModuleWalletSwitcher = true;
     updateBalanceViewportMode(cards.length);
     let hasDragged = false;
     const isStaticDesktopRow = () => viewport.classList.contains('desktop-static-row');
@@ -2477,13 +2701,16 @@ export function setupAccountSwitcher() {
     let isDown = false;
     let startX;
     let scrollLeft;
-    const queueSettle = (behavior = 'smooth') => {
+    let gestureOriginCard = null;
+    const queueSettle = (behavior = 'auto') => {
         if (isStaticDesktopRow()) return;
         window.clearTimeout(viewport.__walletSettleTimer);
         viewport.__walletSettleTimer = window.setTimeout(() => {
+            viewport.classList.remove('cards-dragging');
             viewport.style.scrollSnapType = 'x mandatory';
-            settleToNearestBalanceCard(behavior);
-        }, 110);
+            settleToNearestBalanceCard(behavior, { originCard: gestureOriginCard });
+            gestureOriginCard = null;
+        }, 12);
     };
 
     viewport.addEventListener('mousedown', (e) => {
@@ -2491,8 +2718,10 @@ export function setupAccountSwitcher() {
         isDown = true;
         viewport.style.cursor = 'grabbing';
         viewport.style.scrollSnapType = 'none';
+        viewport.classList.add('cards-dragging');
         startX = e.pageX - viewport.offsetLeft;
         scrollLeft = viewport.scrollLeft;
+        gestureOriginCard = getNearestBalanceCard(viewport);
         hasDragged = false;
     });
 
@@ -2517,8 +2746,8 @@ export function setupAccountSwitcher() {
         if (!isDown) return;
         e.preventDefault();
         const x = e.pageX - viewport.offsetLeft;
-        const walk = (x - startX) * 1.5;
-        if (Math.abs(walk) > 5) hasDragged = true;
+        const walk = (x - startX) * 1.45;
+        if (Math.abs(walk) > 2) hasDragged = true;
         viewport.scrollLeft = scrollLeft - walk;
     });
 
@@ -2527,29 +2756,26 @@ export function setupAccountSwitcher() {
         startX = e.touches[0].pageX - viewport.offsetLeft;
         scrollLeft = viewport.scrollLeft;
         isDown = true;
+        gestureOriginCard = getNearestBalanceCard(viewport);
         hasDragged = false;
         viewport.style.scrollSnapType = 'none';
+        viewport.classList.add('cards-dragging');
     }, { passive: true });
 
     viewport.addEventListener('touchmove', (e) => {
         if (isStaticDesktopRow()) return;
         if (!isDown) return;
+        e.preventDefault();
         const x = e.touches[0].pageX - viewport.offsetLeft;
-        const walk = (x - startX) * 1.5;
-        if (Math.abs(walk) > 5) hasDragged = true;
+        const walk = (x - startX) * 1.45;
+        if (Math.abs(walk) > 2) hasDragged = true;
         viewport.scrollLeft = scrollLeft - walk;
-    }, { passive: true });
+    }, { passive: false });
 
     viewport.addEventListener('touchend', () => {
         if (isStaticDesktopRow()) return;
         isDown = false;
         queueSettle();
-    }, { passive: true });
-
-    viewport.addEventListener('scroll', () => {
-        if (isDown) return;
-        if (viewport.classList.contains('desktop-static-row')) return;
-        queueSettle('smooth');
     }, { passive: true });
 
     bindCardTaps();
@@ -2629,6 +2855,7 @@ export function updateBalanceToThisMonth(txns, targetAccount) {
     // Update insights using the specific view transactions (usually this month)
     updateInsightCards(txns);
 }
+window.__appUiUpdateBalanceToThisMonth = updateBalanceToThisMonth;
 
 export function updateInsightCards(txns) {
     const dailyAvgEl = document.getElementById('daily-avg-val');
@@ -2729,9 +2956,10 @@ export function updateInsightCards(txns) {
     };
 
     try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
+        const monthContext = getDashboardMonthContext();
+        const now = monthContext.referenceDate;
+        const year = monthContext.year;
+        const month = monthContext.monthIndex;
 
         const filterExpenseTxn = (targetYear, targetMonth) => rawTxns.filter((t) => {
             if (!t || t.deleted || t.excluded || t.refund || t.reimbursed) return false;
@@ -2742,7 +2970,7 @@ export function updateInsightCards(txns) {
         });
 
         const thisMonthTxns = filterExpenseTxn(year, month);
-        const lmDate = new Date(year, month - 1, 1);
+        const lmDate = new Date(monthContext.previousDate.getFullYear(), monthContext.previousDate.getMonth(), 1);
         const lastMonthTxns = filterExpenseTxn(lmDate.getFullYear(), lmDate.getMonth());
 
         const thisMonthTotal = thisMonthTxns.reduce((sum, t) => sum + getAmt(t), 0);
@@ -2766,7 +2994,9 @@ export function updateInsightCards(txns) {
                 dailyAvgSub.textContent = `${pct > 0 ? arrowUp : arrowDown} ${Math.abs(pct).toFixed(0)}% vs last month`;
                 dailyAvgSub.className = `insight-sub ${pct > 0 ? 'up' : 'down'}`;
             } else {
-                dailyAvgSub.textContent = `BASED ON ${daysInMonth} DAYS`;
+                dailyAvgSub.textContent = monthContext.explicitMonth
+                    ? `BASED ON ${monthContext.labelShort}`
+                    : `BASED ON ${daysInMonth} DAYS`;
                 dailyAvgSub.className = 'insight-sub neutral';
             }
             triggerSoftFadeInElement(dailyAvgSub);
@@ -2844,6 +3074,7 @@ export function updateInsightCards(txns) {
         setZeroState();
     }
 }
+window.__appUiUpdateInsightCards = updateInsightCards;
 window.updateInsightCards = updateInsightCards;
 
 export function initPrivacyLock() {
@@ -2877,9 +3108,11 @@ export function drawCashFlowChart() {
     const container = document.getElementById('cashflow-bars');
     if (!container || !window.allTxns) return;
 
+    const monthContext = getDashboardMonthContext();
+    const referenceDate = monthContext.referenceDate;
     const months = [];
     for (let i = 5; i >= 0; i--) {
-        const d = new Date();
+        const d = new Date(referenceDate);
         d.setDate(1);
         d.setMonth(d.getMonth() - i);
         months.push({
@@ -2920,31 +3153,67 @@ export function drawCashFlowChart() {
             </div>
         `;
     });
-    container.innerHTML = html;
+    container.innerHTML = repairTextArtifacts(html);
 }
 
 function checkDailySummary() {
-    const lastSummary = localStorage.getItem('last_daily_summary_date');
-    const today = new Date().toDateString();
-    
-    if (lastSummary === today || !window.allTxns) return;
-    
+    const uid = window.auth?.currentUser?.uid;
+    if (!uid || window.auth?.currentUser?.isAnonymous) return;
+    const engine = window.NotificationsEngine;
+    if (!engine?.triggerNotification) return;
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = yesterday.toDateString();
-    
-    let ySpent = 0;
-    window.allTxns.forEach(t => {
-        const d = new Date(t.date);
-        if (d.toDateString() === yStr && !t.excluded && !t.refund) {
-            ySpent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-        }
-    });
-    
-    if (ySpent > 0) {
-        createNotification('Daily Summary', `Yesterday you spent ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(ySpent).toLocaleString()}. Check your trends to see how you're doing!`, 'info');
-        localStorage.setItem('last_daily_summary_date', today);
+    yesterday.setHours(0, 0, 0, 0);
+    const todayStart = new Date(yesterday);
+    todayStart.setDate(todayStart.getDate() + 1);
+
+    const allSources = [];
+    const seen = new Set();
+    const pushTxn = (txn, sourceKey = 'default') => {
+        if (!txn || typeof txn !== 'object') return;
+        const txnId = String(txn.id || '');
+        const key = `${sourceKey}:${txnId}:${txn.date || ''}:${txn.merchant || txn.name || ''}:${txn.amount || txn.manualAmount || 0}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        allSources.push(txn);
+    };
+
+    if (window.walletTxns && typeof window.walletTxns === 'object') {
+        Object.entries(window.walletTxns).forEach(([account, txns]) => {
+            (Array.isArray(txns) ? txns : []).forEach((txn) => pushTxn(txn, account));
+        });
     }
+    (Array.isArray(window.budgetManualTxns) ? window.budgetManualTxns : []).forEach((txn) => pushTxn(txn, 'budget_manual'));
+    (Array.isArray(window.allTxns) ? window.allTxns : []).forEach((txn) => pushTxn(txn, window.currentAccount || 'current'));
+
+    let spentYesterday = 0;
+    allSources.forEach((txn) => {
+        if (txn.excluded || txn.refund || txn.reimbursed) return;
+        const txnDate = new Date(txn.date);
+        if (Number.isNaN(txnDate.getTime())) return;
+        if (txnDate < yesterday || txnDate >= todayStart) return;
+        const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(txn.merchant || txn.name, txn) : null;
+        if (mapped?.category === 'Income') return;
+        const amount = Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : txn.amount) || 0);
+        spentYesterday += amount;
+    });
+
+    if (spentYesterday <= 4000) return;
+
+    const dayKey = formatLocalDate(yesterday);
+    const meta = {
+        action: 'open_budget_overview',
+        dayKey,
+        spentAmount: Math.round(spentYesterday * 100) / 100,
+        threshold: 4000,
+        notificationKey: `daily_summary_${dayKey}`
+    };
+    const title = 'Daily Summary';
+    const body = `Yesterday you spent \u20B1${Math.round(spentYesterday).toLocaleString()}. Check your trends to see how you're doing!`;
+
+    engine.triggerNotification(uid, title, body, 'daily_summary', meta)
+        .catch((error) => console.warn('Daily summary notification failed:', error));
 }
 
 export function detectSubscriptions() {
@@ -3037,7 +3306,7 @@ export function detectSubscriptions() {
     }
 
     section.style.display = 'block';
-    container.innerHTML = subs.sort((a,b) => b.currentMonthSpend - a.currentMonthSpend).map(g => {
+    container.innerHTML = repairTextArtifacts(subs.sort((a,b) => b.currentMonthSpend - a.currentMonthSpend).map(g => {
         const perc = g.averageSpend > 0 ? (g.currentMonthSpend / g.averageSpend) * 100 : 0;
         const statusColor = g.currentMonthSpend > g.averageSpend ? '#ef4444' : '#10b981';
         return `
@@ -3054,18 +3323,7 @@ export function detectSubscriptions() {
                 </div>
             </div>
         `;
-    }).join('');
-
-    // Subscription Reminder Trigger
-    subs.forEach(s => {
-        if (s.currentMonthSpend === 0 && s.averageSpend > 0) {
-            // Predict if due soon (heuristic: if middle of month and not paid)
-            const day = new Date().getDate();
-            if (day >= 10 && day <= 25) {
-                checkAndTriggerAlert(`sub_${s.name.replace(/\s+/g, '_')}`, 'Upcoming Bill', `${s.name} is usually paid around this time (Avg: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(s.averageSpend).toLocaleString()}).`, 'info');
-            }
-        }
-    });
+    }).join(''));
 }
 
 // Profile Dropdown Management
@@ -3088,6 +3346,92 @@ export function toggleProfileDropdown(e) {
 }
 
 // Notification Center Management
+function getNotifClearWatermarkKey(uid) {
+    return `smartwallet_notifications_cleared_at_${uid || 'guest'}`;
+}
+
+function readNotifClearWatermark(uid) {
+    const value = Number(localStorage.getItem(getNotifClearWatermarkKey(uid)) || '0');
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function passesNotificationInstallEpoch(uid, createdAtMs) {
+    const engine = window.NotificationsEngine;
+    if (!engine?.isNotificationVisibleForCurrentInstall) return true;
+    const ms = Number(createdAtMs || 0);
+    if (!Number.isFinite(ms) || ms <= 0) return true;
+    return engine.isNotificationVisibleForCurrentInstall(uid, ms);
+}
+
+function writeNotifClearWatermark(uid, ts = Date.now()) {
+    try {
+        localStorage.setItem(getNotifClearWatermarkKey(uid), String(ts));
+    } catch (e) {}
+}
+
+function isNotifOlderThanClear(item, watermarkMs) {
+    const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+    return watermarkMs > 0 && createdAtMs > 0 && createdAtMs <= watermarkMs;
+}
+
+function getNotifRenderCacheKey(uid) {
+    return `smartwallet_notification_render_cache_${uid || 'guest'}`;
+}
+
+function readNotifRenderCache(uid) {
+    try {
+        const raw = JSON.parse(localStorage.getItem(getNotifRenderCacheKey(uid)) || '[]');
+        return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function writeNotifRenderCache(uid, items) {
+    try {
+        const safe = Array.isArray(items) ? items.slice(0, 40) : [];
+        localStorage.setItem(getNotifRenderCacheKey(uid), JSON.stringify(safe));
+    } catch (e) {}
+}
+
+function renderNotificationItemsIntoList(list, items) {
+    window.__notificationActionMap = {};
+    list.innerHTML = getLimitedNotificationItems(items)
+        .map(data => {
+            const id = data.id;
+            const safeTitle = repairTextArtifacts(String(data.title || 'Notification'));
+            const safeBody = repairNotificationTextArtifacts(String(data.body || ''), safeTitle);
+            window.__notificationActionMap[id] = {
+                action: data.action || null,
+                meta: data.meta || null,
+                isLocalFallback: Boolean(data.isLocalFallback)
+            };
+            return `
+                <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${id}')">
+                    <div class="notif-icon ${getNotifTone(data)}">
+                        <i class="material-icons">${getNotifIcon(data)}</i>
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-title">${safeTitle}</div>
+                        <div class="notif-body">${safeBody}</div>
+                        <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
+                    </div>
+                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${id}')">
+                        <i class="material-icons">more_vert</i>
+                    </div>
+                    <div class="notif-dropdown" id="notif-dropdown-${id}" onclick="event.stopPropagation()">
+                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${id}')">
+                            <i class="material-icons">mark_as_unread</i> Mark as Unread
+                        </div>
+                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${id}')">
+                            <i class="material-icons">delete_outline</i> Delete Alert
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+}
+
 export function toggleNotificationCenter(e) {
     if (e) e.stopPropagation();
     const sidebar = document.getElementById('notification-center');
@@ -3102,6 +3446,12 @@ export function toggleNotificationCenter(e) {
     
     if (isActive) {
         renderNotifications();
+        // Opening the center should consume unread state immediately.
+        setTimeout(() => {
+            if (typeof window.markAllNotificationsRead === 'function') {
+                window.markAllNotificationsRead();
+            }
+        }, 120);
         triggerHaptic('light');
         
         // Push modal state for universal back button
@@ -3121,7 +3471,7 @@ function seedBudgetThresholdNotificationsFromSnapshot() {
     const snapshot = window.lastBudgetNotificationSnapshot;
     const engine = window.NotificationsEngine;
     const uid = snapshot?.uid || window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
-    if (!snapshot || snapshot.filterVal !== 'this_month' || !uid || !engine?.ensureBudgetThresholdInApp) return;
+    if (!isCurrentBudgetNotificationSnapshot(snapshot) || !uid || !engine?.ensureBudgetThresholdInApp) return;
 
     ensureBudgetThresholdLocalFallback('Needs', snapshot.needsTotal, snapshot.needsLimit);
     ensureBudgetThresholdLocalFallback('Wants', snapshot.wantsTotal, snapshot.wantsLimit);
@@ -3146,7 +3496,7 @@ export async function forceBudgetNotificationCheck() {
 
     const snapshot = window.lastBudgetNotificationSnapshot;
     const uid = snapshot?.uid || window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
-    if (!snapshot || snapshot.filterVal !== 'this_month' || !uid || !window.NotificationsEngine) return;
+    if (!isCurrentBudgetNotificationSnapshot(snapshot) || !uid || !window.NotificationsEngine) return;
 
     seedBudgetThresholdNotificationsFromSnapshot();
 
@@ -3183,8 +3533,8 @@ function getLocalFallbackNotifications() {
         if (!Array.isArray(raw)) return [];
         return raw.map(item => ({
             id: `local-${item.id}`,
-            title: item.title || 'Notification',
-            body: item.message || '',
+            title: repairTextArtifacts(item.title || 'Notification'),
+            body: repairNotificationTextArtifacts(item.message || '', item.title || 'Notification'),
             type: item.type || 'general',
             isRead: item.unread === false,
             createdAtMs: Number(new Date(item.time).getTime()) || Date.now(),
@@ -3339,6 +3689,158 @@ function collapseThresholdNotificationItems(items) {
             )
         ) {
             grouped.set(groupKey, { item, meta, score: currentScore, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function getGoalNotifMeta(item) {
+    const type = String(item?.type || '');
+    const m = type.match(/^goal_(.+)_(50|75|100|1000)$/i);
+    if (!m) return null;
+    return {
+        goalId: m[1],
+        milestone: m[2],
+        cycle: Number(item?.meta?.cycle || 0)
+    };
+}
+
+function collapseGoalNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const g = getGoalNotifMeta(item);
+        if (!g) {
+            passthrough.push(item);
+            continue;
+        }
+        const groupKey = `${g.goalId}|${g.milestone}|${g.cycle}`;
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing) {
+            grouped.set(groupKey, { item, time: currentTime });
+            continue;
+        }
+        const currentIsRemote = !item?.isLocalFallback;
+        const existingIsRemote = !existing.item?.isLocalFallback;
+        if (
+            currentTime > existing.time
+            || (
+                currentTime === existing.time
+                && currentIsRemote
+                && !existingIsRemote
+            )
+        ) {
+            grouped.set(groupKey, { item, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function getMonthlySummaryNotifKey(item) {
+    const rawTitle = repairTextArtifacts(String(item?.title || ''));
+    const monthKey = String(item?.meta?.monthKey || '');
+    if (monthKey && String(item?.type || '') === 'monthly_comparison') {
+        return `monthly:${monthKey}`;
+    }
+    if (/summary$/i.test(rawTitle)) {
+        return `summary:${rawTitle.toLowerCase()}`;
+    }
+    return null;
+}
+
+function getDailySummaryNotifKey(item) {
+    const rawTitle = repairTextArtifacts(String(item?.title || ''));
+    const rawBody = repairTextArtifacts(String(item?.body || item?.message || ''));
+    if (!/^daily summary$/i.test(rawTitle) && !/^yesterday you spent/i.test(rawBody)) {
+        return null;
+    }
+    const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+    if (!createdAtMs) return `daily:${rawTitle.toLowerCase()}`;
+    return `daily:${new Date(createdAtMs).toISOString().slice(0, 10)}`;
+}
+
+function getTuitionReminderNotifKey(item) {
+    try {
+        const rawTitle = repairTextArtifacts(String(item?.title || ''));
+        const rawBody = repairTextArtifacts(String(item?.body || item?.message || ''));
+        if (
+            !/^tuition reminder$/i.test(rawTitle)
+            && !(/friendly reminder/i.test(rawBody) && /tuition/i.test(rawBody))
+            && !/tuition'?s due today\/tomorrow/i.test(rawBody)
+        ) {
+            return null;
+        }
+        const explicitMonthKey = String(item?.meta?.monthKey || item?.meta?.dueMonthKey || '');
+        if (explicitMonthKey) return `tuition:${explicitMonthKey}`;
+        const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        if (!createdAtMs) return 'tuition:general';
+        const createdDate = new Date(createdAtMs);
+        if (Number.isNaN(createdDate.getTime())) return 'tuition:general';
+        return `tuition:${createdDate.toISOString().slice(0, 7)}`;
+    } catch (error) {
+        console.warn('Tuition reminder key generation failed:', error);
+        return null;
+    }
+}
+
+function collapseMonthlySummaryNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const groupKey = getMonthlySummaryNotifKey(item);
+        if (!groupKey) {
+            passthrough.push(item);
+            continue;
+        }
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing || currentTime > existing.time) {
+            grouped.set(groupKey, { item, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function collapseTuitionReminderNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const groupKey = getTuitionReminderNotifKey(item);
+        if (!groupKey) {
+            passthrough.push(item);
+            continue;
+        }
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing || currentTime > existing.time) {
+            grouped.set(groupKey, { item, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function collapseDailySummaryNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const groupKey = getDailySummaryNotifKey(item);
+        if (!groupKey) {
+            passthrough.push(item);
+            continue;
+        }
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing || currentTime > existing.time) {
+            grouped.set(groupKey, { item, time: currentTime });
         }
     }
 
@@ -3706,9 +4208,10 @@ async function persistBudgetProgress(uid, monthKey, filterVal, snapshot) {
 }
 
 async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
-    if (!snapshot) return;
+    if (!snapshot || snapshot.filterVal !== 'this_month' || !snapshot.liveReady) return;
 
-    const monthKey = getBudgetProgressMonthKey();
+    const monthKey = String(snapshot.monthKey || getBudgetProgressMonthKey());
+    if (monthKey !== getBudgetProgressMonthKey()) return;
     const current = {
         needs: roundBudgetPct(snapshot.needsPct),
         wants: roundBudgetPct(snapshot.wantsPct),
@@ -3761,13 +4264,43 @@ async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
 }
 
 function getNotifDedupKey(item = {}) {
+    const goalGroup = getGoalNotifMeta(item);
+    if (goalGroup) {
+        return `goal:${goalGroup.goalId}:${goalGroup.milestone}:${goalGroup.cycle}`;
+    }
+    const meta = item?.meta || {};
+    const key = meta.notificationKey || meta.dedupeKey || meta.remoteKey || '';
+    if (key) return `key:${key}`;
+    const category = String(meta.category || '');
+    const threshold = Number(meta.thresholdPct || 0);
+    const monthKey = String(meta.monthKey || '');
+    const cycle = Number(meta.cycle || 0);
+    if (category && threshold > 0 && monthKey) {
+        return `threshold:${category}:${threshold}:${monthKey}:${cycle}`;
+    }
     return `${item.type || 'general'}|${item.title || ''}|${item.body || item.message || ''}`;
 }
 
 function getLimitedNotificationItems(items = [], limitCount = 10) {
-    return collapseThresholdNotificationItems(items)
-        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))
-        .slice(0, limitCount);
+    try {
+        return collapseGoalNotificationItems(
+            collapseMonthlySummaryNotificationItems(
+                collapseTuitionReminderNotificationItems(
+                    collapseDailySummaryNotificationItems(
+                        collapseThresholdNotificationItems(items)
+                    )
+                )
+            )
+        )
+            .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))
+            .slice(0, limitCount);
+    } catch (error) {
+        console.warn('Notification collapse pipeline failed:', error);
+        return (Array.isArray(items) ? items : [])
+            .slice()
+            .sort((a, b) => (b?.createdAtMs || 0) - (a?.createdAtMs || 0))
+            .slice(0, limitCount);
+    }
 }
 
 function formatNotifTimestamp(createdAtMs) {
@@ -3784,42 +4317,27 @@ function formatNotifTimestamp(createdAtMs) {
 export async function renderNotifications() {
     const list = document.getElementById('notification-list');
     if (!list) return;
-    const localFallbacks = getLocalFallbackNotifications();
+    const uidForWatermark = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+    const clearWatermark = readNotifClearWatermark(uidForWatermark);
+    const localFallbacks = getLocalFallbackNotifications()
+        .filter(item => !isNotifOlderThanClear(item, clearWatermark))
+        .filter(item => passesNotificationInstallEpoch(uidForWatermark, item.createdAtMs));
+    const cachedRendered = readNotifRenderCache(uidForWatermark)
+        .filter(item => !isNotifOlderThanClear(item, clearWatermark))
+        .filter(item => passesNotificationInstallEpoch(uidForWatermark, item.createdAtMs));
+    const immediateItems = getLimitedNotificationItems([...cachedRendered, ...localFallbacks], 30);
+
+    if (immediateItems.length) {
+        renderNotificationItemsIntoList(list, immediateItems);
+    }
 
     if (!window.db || !window.auth.currentUser) {
+        if (immediateItems.length) {
+            return;
+        }
         if (localFallbacks.length) {
-            window.__notificationActionMap = {};
-            list.innerHTML = getLimitedNotificationItems(localFallbacks)
-                .map(data => {
-                    window.__notificationActionMap[data.id] = {
-                        action: data.action || null,
-                        meta: data.meta || null,
-                        isLocalFallback: true
-                    };
-                    return `
-                    <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${data.id}')">
-                        <div class="notif-icon ${getNotifTone(data)}">
-                            <i class="material-icons">${getNotifIcon(data)}</i>
-                        </div>
-                        <div class="notif-content">
-                            <div class="notif-title">${data.title}</div>
-                            <div class="notif-body">${data.body}</div>
-                            <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
-                        </div>
-                        <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${data.id}')">
-                            <i class="material-icons">more_vert</i>
-                        </div>
-                        <div class="notif-dropdown" id="notif-dropdown-${data.id}" onclick="event.stopPropagation()">
-                            <div class="notif-dropdown-item" onclick="window.markNotifUnread('${data.id}')">
-                                <i class="material-icons">mark_as_unread</i> Mark as Unread
-                            </div>
-                            <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${data.id}')">
-                                <i class="material-icons">delete_outline</i> Delete Alert
-                            </div>
-                        </div>
-                    </div>
-                `;
-                }).join('');
+            renderNotificationItemsIntoList(list, localFallbacks);
+            writeNotifRenderCache(uidForWatermark, localFallbacks);
             return;
         }
         list.innerHTML = `
@@ -3831,11 +4349,13 @@ export async function renderNotifications() {
         return;
     }
 
-    list.innerHTML = `
-        <div class="notifications-loading">
-            <div class="notifications-loading-spinner" aria-hidden="true"></div>
-        </div>
-    `;
+    if (!immediateItems.length) {
+        list.innerHTML = `
+            <div class="notifications-loading">
+                <div class="notifications-loading-spinner" aria-hidden="true"></div>
+            </div>
+        `;
+    }
 
     try {
         const { collection, getDocs, query, orderBy, limit } = window;
@@ -3843,7 +4363,9 @@ export async function renderNotifications() {
         if (window.NotificationsEngine?.syncStoredInAppNotifications) {
             await window.NotificationsEngine.syncStoredInAppNotifications(uid);
         }
-        if (window.NotificationsEngine?.backfillNotificationsFromState) {
+        // Prevent immediate replay of older notifications right after user clears them.
+        const shouldBackfill = !clearWatermark || (Date.now() - clearWatermark) > (60 * 1000);
+        if (shouldBackfill && window.NotificationsEngine?.backfillNotificationsFromState) {
             await window.NotificationsEngine.backfillNotificationsFromState(uid);
         }
         const notifRef = collection(window.db, `users/${uid}/notifications`);
@@ -3863,9 +4385,10 @@ export async function renderNotifications() {
         snap.forEach(docSnap => {
             const data = docSnap.data() || {};
             const createdAtMs = Number(data.createdAtMs || 0) || (data.createdAt?.toDate ? data.createdAt.toDate().getTime() : 0) || Date.now();
+            if (!passesNotificationInstallEpoch(uid, createdAtMs)) return;
             const key = getNotifDedupKey(data);
             remoteKeys.add(key);
-            items.push({
+            const remoteItem = {
                 id: docSnap.id,
                 title: data.title || 'Notification',
                 body: data.body || '',
@@ -3875,7 +4398,10 @@ export async function renderNotifications() {
                 isLocalFallback: false,
                 action: data.action || null,
                 meta: data.meta || null
-            });
+            };
+            if (!isNotifOlderThanClear(remoteItem, clearWatermark)) {
+                items.push(remoteItem);
+            }
         });
 
         localFallbacks.forEach(item => {
@@ -3893,81 +4419,17 @@ export async function renderNotifications() {
             return;
         }
 
-        let html = '';
-        getLimitedNotificationItems(items).forEach(data => {
-            const id = data.id;
-            const date = data.createdAtMs ? formatNotifTimestamp(data.createdAtMs) : 'Just now';
-            const isUnread = !data.isRead;
-            window.__notificationActionMap[id] = {
-                action: data.action || null,
-                meta: data.meta || null,
-                isLocalFallback: Boolean(data.isLocalFallback)
-            };
-
-            html += `
-                <div class="notif-item ${isUnread ? 'unread' : ''}" onclick="window.handleNotificationClick('${id}')">
-                    <div class="notif-icon ${getNotifTone(data)}">
-                        <i class="material-icons">${getNotifIcon(data)}</i>
-                    </div>
-                    <div class="notif-content">
-                        <div class="notif-title">${data.title}</div>
-                        <div class="notif-body">${data.body}</div>
-                        <div class="notif-date">${date}</div>
-                    </div>
-                    
-                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${id}')">
-                        <i class="material-icons">more_vert</i>
-                    </div>
-                    
-                    <div class="notif-dropdown" id="notif-dropdown-${id}" onclick="event.stopPropagation()">
-                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${id}')">
-                            <i class="material-icons">mark_as_unread</i> Mark as Unread
-                        </div>
-                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${id}')">
-                            <i class="material-icons">delete_outline</i> Delete Alert
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        list.innerHTML = html;
+        renderNotificationItemsIntoList(list, items);
+        writeNotifRenderCache(uidForWatermark, items);
 
     } catch (e) {
         console.error('Failed to fetch notifications from Firestore:', e);
-        const fallbackItems = getLocalFallbackNotifications();
+        const fallbackItems = getLocalFallbackNotifications().filter(item =>
+            passesNotificationInstallEpoch(uidForWatermark, item.createdAtMs)
+        );
         if (!fallbackItems.length) return;
-        window.__notificationActionMap = {};
-        list.innerHTML = getLimitedNotificationItems(fallbackItems)
-            .map(data => {
-                window.__notificationActionMap[data.id] = {
-                    action: data.action || null,
-                    meta: data.meta || null,
-                    isLocalFallback: true
-                };
-                return `
-                <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${data.id}')">
-                    <div class="notif-icon ${getNotifTone(data)}">
-                        <i class="material-icons">${getNotifIcon(data)}</i>
-                    </div>
-                    <div class="notif-content">
-                        <div class="notif-title">${data.title}</div>
-                        <div class="notif-body">${data.body}</div>
-                        <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
-                    </div>
-                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${data.id}')">
-                        <i class="material-icons">more_vert</i>
-                    </div>
-                    <div class="notif-dropdown" id="notif-dropdown-${data.id}" onclick="event.stopPropagation()">
-                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${data.id}')">
-                            <i class="material-icons">mark_as_unread</i> Mark as Unread
-                        </div>
-                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${data.id}')">
-                            <i class="material-icons">delete_outline</i> Delete Alert
-                        </div>
-                    </div>
-                </div>
-            `;
-            }).join('');
+        renderNotificationItemsIntoList(list, fallbackItems);
+        writeNotifRenderCache(uidForWatermark, fallbackItems);
     }
 }
 
@@ -4072,7 +4534,10 @@ export function updateUnreadCount(markRead = false) {
 
 export function clearAllNotifications() {
     const clearTask = async () => {
+        const uid = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+        writeNotifClearWatermark(uid, Date.now());
         writeLocalFallbackNotifications([]);
+        writeNotifRenderCache(uid, []);
 
         if (window.auth?.currentUser && window.db && window.collection && window.getDocs && window.deleteDoc && window.doc) {
             try {
@@ -4280,8 +4745,9 @@ export function initUI() {
     // Initial unread check
     updateUnreadCount();
 
-    // Check Daily Summary
-    checkDailySummary();
+    setTimeout(() => {
+        try { checkDailySummary(); } catch (error) { console.warn('Initial daily summary check failed:', error); }
+    }, 1400);
 
     // 1. Restore Profile from Cache (Instant UI)
     if (window.NavState) {
@@ -4302,16 +4768,13 @@ export function initUI() {
         // IMPORTANT: Trigger dashboard refresh once gate is open
         if (Array.isArray(window.allTxns)) {
             console.log('Loading Gate Open: Refreshing Dashboard...');
-            if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(window.allTxns);
-            if (window.updateInsightCards) {
-                window.updateInsightCards(window.allTxns);
-                requestAnimationFrame(() => {
-                    const summaryTotalEl = document.getElementById('summary-total');
-                    if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
-                        window.updateInsightCards(window.allTxns);
-                    }
-                });
-            }
+            rehydrateDashboardFromCurrentTxns();
+            requestAnimationFrame(() => {
+                const summaryTotalEl = document.getElementById('summary-total');
+                if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
+                    rehydrateDashboardFromCurrentTxns();
+                }
+            });
         }
     }, 200);
 }
@@ -4336,6 +4799,11 @@ function populateMonthFilter() {
             option.value = monthValue;
             option.textContent = monthName;
             last15Option.insertAdjacentElement('afterend', option);
+        }
+
+        const persistedValue = getStoredDashboardMonthSelection();
+        if (persistedValue && chartFilter.querySelector(`option[value="${persistedValue}"]`)) {
+            chartFilter.value = persistedValue;
         }
     }
 }
@@ -4369,9 +4837,17 @@ function setupFastPath() {
             if (window.updateBalanceCardsUI) window.updateBalanceCardsUI(accounts);
             if (window.applyAccountTheme) window.applyAccountTheme(cachedCurrent, accounts);
             
-            import('./app-data.js').then(m => {
-                window.fastPathTriggered = true;
-                if (m.loadData) m.loadData(lastUid);
+            import('./app-data.js').then(async (m) => {
+                try {
+                    window.fastPathTriggered = true;
+                    if (m.loadData) await m.loadData(lastUid);
+                } catch (error) {
+                    window.fastPathTriggered = false;
+                    console.warn('Fast path loadData failed', error);
+                }
+            }).catch((error) => {
+                window.fastPathTriggered = false;
+                console.warn('Fast path import failed', error);
             });
         } catch(e) { console.warn('Fast path failed', e); }
     }
@@ -4380,10 +4856,13 @@ function setupFastPath() {
 // LEGACY BRIDGING (Final Export to Global Scope)
 function bridgeGlobals() {
     console.log('ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Bridging exports to global scope...');
+    window.__useModuleWalletSwitcher = true;
     window.updateAccountSwitcherUI = updateAccountSwitcherUI;
     window.updateBalanceCardsUI = updateBalanceCardsUI;
     window.scrollToActiveCard = scrollToActiveCard;
     window.updateProfileUI = updateProfileUI;
+    window.__appUiUpdateBalanceToThisMonth = updateBalanceToThisMonth;
+    window.__appUiUpdateInsightCards = updateInsightCards;
     window.updateBalanceToThisMonth = updateBalanceToThisMonth;
     window.updateInsightCards = updateInsightCards;
     window.handleLocalModeNudge = handleLocalModeNudge;
@@ -4396,11 +4875,16 @@ function bridgeGlobals() {
     window.applyTheme = applyTheme;
     window.setupAccountSwitcher = setupAccountSwitcher;
     window.updateHeaderIcon = updateHeaderIcon;
+    window.holdBudgetWidgetForAccountSwitch = holdBudgetWidgetForAccountSwitch;
+    window.releaseBudgetWidgetAfterAccountSwitch = releaseBudgetWidgetAfterAccountSwitch;
+    window.__appUiUpdateBalanceToThisMonth = updateBalanceToThisMonth;
+    window.__appUiUpdateInsightCards = updateInsightCards;
     window.updateBalanceToThisMonth = updateBalanceToThisMonth;
     window.updateInsightCards = updateInsightCards;
     window.initPrivacyLock = initPrivacyLock;
     window.tryBiometricUnlock = tryBiometricUnlock;
     window.drawCashFlowChart = drawCashFlowChart;
+    window.checkDailySummary = checkDailySummary;
     window.toggleProfileDropdown = toggleProfileDropdown;
     window.getMerchantDisplay = getMerchantDisplay;
     window.displayCategoryName = displayCategoryName;
@@ -4422,13 +4906,9 @@ window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificatio
     console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Global bridge complete.');
     // If cached/live txns landed before app-ui finished wiring globals, paint the dashboard now.
     if (Array.isArray(window.allTxns)) {
-        updateBalanceToThisMonth(window.allTxns, window.currentAccount);
-        updateInsightCards(window.allTxns);
-        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-        else updateTripleProgressBar();
+        rehydrateDashboardFromCurrentTxns();
     }
 }
 
 // Run bridging immediately
 bridgeGlobals();
-

@@ -34,6 +34,32 @@ function getCachedBalanceForAccount(accId) {
     }
 }
 
+function getPreferredDashboardFilterValue() {
+    const preferred = window.getStoredDashboardMonthSelection?.() || 'this_month';
+    return typeof preferred === 'string' && preferred.trim() ? preferred : 'this_month';
+}
+
+function applyPreferredDashboardFilter() {
+    const filterEl = document.getElementById('chart-filter');
+    if (!filterEl) return;
+    const preferred = getPreferredDashboardFilterValue();
+    if (/^\d{4}-\d{2}$/.test(preferred) && !filterEl.querySelector(`option[value="${preferred}"]`)) {
+        const context = window.getDashboardMonthContext?.(preferred);
+        const option = document.createElement('option');
+        option.value = preferred;
+        option.textContent = context?.labelTitle || preferred;
+        const insertBeforeEl = filterEl.querySelector('option[value="last_6_months"]') || null;
+        filterEl.insertBefore(option, insertBeforeEl);
+    }
+    filterEl.value = filterEl.querySelector(`option[value="${preferred}"]`) ? preferred : 'this_month';
+    if (window.filterChart) window.filterChart();
+    try { if (window.updateInsightCards) window.updateInsightCards(window.allTxns || []); } catch (error) { console.warn('updateInsightCards rehydrate failed:', error); }
+    try { if (window.refreshTrendChart) window.refreshTrendChart(); } catch (error) { console.warn('refreshTrendChart rehydrate failed:', error); }
+    try { if (window.drawCashFlowChart) window.drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart rehydrate failed:', error); }
+    try { if (window.detectSubscriptions) window.detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions rehydrate failed:', error); }
+    try { if (window.updateCategoryBudgetsUI) window.updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI rehydrate failed:', error); }
+}
+
 // Load Data with Real-time Listeners
 window.unsubscribeSnapshot = null;
 window.isDataLoading = false; 
@@ -64,6 +90,30 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
     if (!uid) return;
     const preserveBudgetWidget = Boolean(options.preserveBudgetWidget);
     const preserveViewState = Boolean(options.preserveViewState);
+    const reason = typeof options.reason === 'string' ? options.reason : '';
+    const fastAccountSwitch = reason === 'account_switch' || reason === 'desktop_swipe_observer';
+    const hasSharedBudgetBuckets =
+        !!window.walletTxns
+        && window.walletTxns.atome !== undefined
+        && window.walletTxns.bpi !== undefined
+        && window.budgetManualTxns !== undefined;
+    if (preserveBudgetWidget) {
+        if (typeof window.holdBudgetWidgetForAccountSwitch === 'function') {
+            window.holdBudgetWidgetForAccountSwitch();
+        } else {
+            window.__skipBudgetRefreshOnNextChartFilter = true;
+            window.__freezeBudgetWidgetUI = true;
+            window.__preserveBudgetWidgetVisuals = true;
+            window.__suspendBudgetWidgetRefresh = true;
+        }
+        if (hasSharedBudgetBuckets) {
+            window.hasBudgetLiveData = true;
+            window.budgetLoadStartTime = Date.now() - 3000;
+        }
+    } else {
+        window.__preserveBudgetWidgetVisuals = false;
+        window.__suspendBudgetWidgetRefresh = false;
+    }
 
     // PREVENT REDUNDANT CALLS: Early exit if already loading this specific account
     const loadKey = `${uid}_${window.currentAccount}`;
@@ -73,6 +123,7 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
     }
     window.lastLoadKey = loadKey;
     window.isDataLoading = true;
+    window.walletDataPrimedLoadKey = null;
     window.historyLimit = 4; 
     const container = document.getElementById('history-container');
     const spinner = document.getElementById('loading-spinner');
@@ -82,11 +133,19 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
     }
 
     if (!preserveBudgetWidget) {
-        // Modified 2026-03-27: Clear ALL buckets and reset live-data flag
-        window.walletTxns = null;
-        window.budgetManualTxns = undefined;
+        // Keep shared budget buckets warm across account switches.
+        // The widget can still show a skeleton via `hasBudgetLiveData = false`,
+        // but we avoid stranding accounts like `default_wallet` while waiting for
+        // background watchers that already have valid shared data.
+        if (typeof window.walletTxns === 'undefined') window.walletTxns = null;
+        if (typeof window.budgetManualTxns === 'undefined') window.budgetManualTxns = [];
         window.hasBudgetLiveData = false;
         window.budgetLoadStartTime = Date.now();
+        window.clearTimeout(window.__budgetWidgetFallbackKickTimer);
+        window.__budgetWidgetFallbackKickTimer = window.setTimeout(() => {
+            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+            else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+        }, 2600);
         
         if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
         else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
@@ -126,16 +185,24 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                 }
                 hasValidCache = true;
 
-                // Robust Chart Initialization with slight delay to ensure DOM readiness
-                setTimeout(() => {
-                    const filterEl = document.getElementById('chart-filter');
-                    if (filterEl) {
-                        filterEl.value = 'this_month';
-                        if (window.filterChart) window.filterChart();
+                const kickChartFilter = () => {
+                    applyPreferredDashboardFilter();
+                    if (preserveBudgetWidget) {
+                        if (typeof window.releaseBudgetWidgetAfterAccountSwitch === 'function') {
+                            window.releaseBudgetWidgetAfterAccountSwitch();
+                        } else {
+                            window.__freezeBudgetWidgetUI = false;
+                            window.__suspendBudgetWidgetRefresh = false;
+                        }
                     }
-                }, 100);
+                };
+                if (fastAccountSwitch) {
+                    requestAnimationFrame(() => requestAnimationFrame(kickChartFilter));
+                } else {
+                    setTimeout(kickChartFilter, 30);
+                }
 
-                if (spinner) spinner.style.display = 'none'; 
+                if (spinner) spinner.style.display = 'none';
             }
         } catch(e) { console.warn("Cache error", e); }
     }
@@ -145,19 +212,19 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
         if (!hasValidCache) {
             spinner.style.display = 'block';
         } else {
-            // Cache exists: Only show spinner if data takes >500ms to arrive
+            // Cache exists: Only show spinner if data still takes a while
             clearTimeout(window.spinnerTimeout);
             window.spinnerTimeout = setTimeout(() => {
                 if (window.isDataLoading && spinner) {
                     spinner.style.display = 'block';
                     log('Cloud sync taking longer than expected...');
                 }
-            }, 500);
+            }, 220);
         }
     }
 
     try {
-        const isAnon = auth.currentUser.isAnonymous;
+        const isAnon = Boolean(auth.currentUser?.isAnonymous);
         
         const syncStatusText = document.querySelectorAll('.syncStatusText');
         syncStatusText.forEach(el => el.innerText = isAnon ? 'Local' : 'Live Sync');
@@ -219,6 +286,7 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
 
             if (isSame && document.getElementById('history-container').children.length > 0) {
                 log(`Snapshot matches cache for ${syncAccount}. Render skipped.`);
+                window.walletDataPrimedLoadKey = loadKey;
 
                 if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount);
                 if (window.updateInsightCards) window.updateInsightCards(txns);
@@ -228,12 +296,16 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                     else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                 }
                 
-                // Ensure chart is still rendered if it's currently empty
-                const filterEl = document.getElementById('chart-filter');
-                const chartVal = document.getElementById('chart-total-val');
-                if (filterEl && (filterEl.value !== 'this_month' || (chartVal && chartVal.innerText === '0'))) {
-                   filterEl.value = 'this_month';
-                   if (window.filterChart) window.filterChart();
+                // Always rehydrate the chart stack after cache/snapshot reuse.
+                // Skeleton placeholders do not equal "0", so text-based gating can strand the charts.
+                applyPreferredDashboardFilter();
+                if (preserveBudgetWidget) {
+                    if (typeof window.releaseBudgetWidgetAfterAccountSwitch === 'function') {
+                        window.releaseBudgetWidgetAfterAccountSwitch();
+                    } else {
+                        window.__freezeBudgetWidgetUI = false;
+                        window.__suspendBudgetWidgetRefresh = false;
+                    }
                 }
 
                 if (spinner) spinner.style.display = 'none';
@@ -242,6 +314,7 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
             
             // Store globally & Cache with timestamp
             window.allTxns = txns;
+            window.walletDataPrimedLoadKey = loadKey;
             const currentAccCacheKey = `wallet_cache_${uid}_${syncAccount}`;
             
             // Cleanup internal sort keys before caching
@@ -301,12 +374,16 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                 if (window.filterTxnList) window.filterTxnList();
 
                 // Always default chart filter to 'this_month' on fresh data load/page return
-                const defaultFilter = 'this_month';
-                const filterEl = document.getElementById('chart-filter');
-                if (filterEl) {
-                   filterEl.value = defaultFilter;
-                   // Use a small delay if coming from fresh load to ensure components are ready
-                   setTimeout(() => { if (window.filterChart) window.filterChart(); }, 50);
+                setTimeout(() => applyPreferredDashboardFilter(), 50);
+                if (preserveBudgetWidget) {
+                    setTimeout(() => {
+                        if (typeof window.releaseBudgetWidgetAfterAccountSwitch === 'function') {
+                            window.releaseBudgetWidgetAfterAccountSwitch();
+                        } else {
+                            window.__freezeBudgetWidgetUI = false;
+                            window.__suspendBudgetWidgetRefresh = false;
+                        }
+                    }, 60);
                 }
             }
             if (!preserveBudgetWidget && window.syncWidgets) window.syncWidgets();
@@ -316,6 +393,81 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
             if (spinner) spinner.style.display = 'none';
             clearTimeout(window.spinnerTimeout);
         });
+
+        if (!hasValidCache) {
+            getDocs(q).then((snap) => {
+                if (window.activeSyncId !== currentSyncId || syncAccount !== window.currentAccount) return;
+                if (window.walletDataPrimedLoadKey === loadKey) return;
+                let txns = [];
+                snap.docs.forEach((d) => {
+                    const data = d.data();
+                    if (data.deleted) return;
+                    const dateVal = new Date(data.date).getTime() || 0;
+                    const createVal = data.createdAt ?
+                        (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : 0;
+                    txns.push({ id: d.id, _sortKey: dateVal, _createKey: createVal, ...data });
+                });
+                txns.sort((a, b) => {
+                    if (b._sortKey !== a._sortKey) return b._sortKey - a._sortKey;
+                    return b._createKey - a._createKey;
+                });
+                window.walletDataPrimedLoadKey = loadKey;
+                window.allTxns = txns;
+                const currentAccCacheKey = `wallet_cache_${uid}_${syncAccount}`;
+                const cacheTxns = txns.map(({ _sortKey, _createKey, ...t }) => t);
+                localStorage.setItem(currentAccCacheKey, JSON.stringify({ txns: cacheTxns, timestamp: Date.now() }));
+                window.isDataLoading = false;
+                clearTimeout(window.spinnerTimeout);
+                if (spinner) spinner.style.display = 'none';
+                if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(txns, syncAccount);
+                if (window.updateInsightCards) window.updateInsightCards(txns);
+                if (window.renderCalendar) window.renderCalendar();
+                if (!preserveBudgetWidget) {
+                    window.hasBudgetLiveData = true;
+                    if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                    else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                }
+                if (txns.length === 0) {
+                    const expTotal = document.getElementById('expenses-total-summary');
+                    if (expTotal) expTotal.innerText = 'PHP 0.00';
+                    const trendTotal = document.getElementById('trend-period-total');
+                    if (trendTotal) trendTotal.innerText = 'PHP 0.00';
+                    const chartVal = document.getElementById('chart-total-val');
+                    if (chartVal) chartVal.innerText = '0';
+                    const cachedBalance = getCachedBalanceForAccount(window.currentAccount);
+                    const balanceEl = document.querySelector(`.balance-card[data-account="${window.currentAccount}"] .balance-amount`) || document.getElementById(`${window.currentAccount}-balance`);
+                    if (balanceEl && cachedBalance === null) {
+                        balanceEl.innerText = 'PHP 0.00';
+                        balanceEl.dataset.raw = 'PHP 0.00';
+                    }
+                    if (window.drawPieChart) window.drawPieChart([], 0);
+                    if (window.drawTrendChart) window.drawTrendChart([]);
+                    if (container) {
+                        container.innerHTML = `
+                        <div style="text-align:center; padding:60px 20px; color:#64748b; background: white; border-radius: 12px; border: 1px dashed #cbd5e1;">
+                            <i class="material-icons" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;">inbox</i>
+                            <p style="margin:0; font-weight: 500;">No transactions found.</p>
+                            <p style="font-size: 13px; margin: 10px 0 0;">Click "Scan Gmail" to sync your Atome payments.</p>
+                        </div>`;
+                    }
+                } else {
+                    if (window.renderHistory) window.renderHistory(txns);
+                    if (window.filterTxnList) window.filterTxnList();
+                    requestAnimationFrame(() => {
+                        applyPreferredDashboardFilter();
+                        if (preserveBudgetWidget) {
+                            if (typeof window.releaseBudgetWidgetAfterAccountSwitch === 'function') {
+                                window.releaseBudgetWidgetAfterAccountSwitch();
+                            } else {
+                                window.__freezeBudgetWidgetUI = false;
+                                window.__suspendBudgetWidgetRefresh = false;
+                            }
+                        }
+                    });
+                }
+                if (!preserveBudgetWidget && window.syncWidgets) window.syncWidgets();
+            }).catch((e) => log('getDocs prime failed: ' + (e && e.message), 'warn'));
+        }
 
         // Clear loading state after listener is successfully attached
         setTimeout(() => { 

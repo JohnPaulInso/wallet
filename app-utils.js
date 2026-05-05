@@ -28,16 +28,67 @@ export function formatLocalDate(date) {
     return `${year}-${month}-${day}`;
 }
 
+const TEXT_ARTIFACT_REPLACEMENTS = [
+    ['????????????????????????????????', '\u20B1'],
+    ['????????????????????????????????', '\u2022'],
+    ['????', '\u00F7'],
+    ['?????', '\u00D7'],
+    ['???????', '\u2212'],
+    ['??????????', '\uD83D\uDD14'],
+    ['??????????????????????????????????????????????????????????????????????', '\u20B1'],
+    ['???????', '\u20B1'],
+    ['???', '\u20B1'],
+    ['??????????????????????????????????????????????????????????????????????', '\u2022'],
+    ['???????', '\u2022'],
+    ['???????????', '\u2022'],
+    ['????', '\u2022'],
+    ['??', '']
+];
+
+export function repairTextArtifacts(text) {
+    if (text === null || text === undefined) return '';
+    if (typeof text !== 'string') return text;
+
+    let repaired = text;
+    TEXT_ARTIFACT_REPLACEMENTS.forEach(([bad, good]) => {
+        repaired = repaired.split(bad).join(good);
+    });
+
+    return repaired
+        .replace(/Ã¢â€šÂ±|ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±|Ã‚â‚±/g, '\u20B1')
+        .replace(/Ã¢â‚¬Â¢|ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢/g, '\u2022')
+        .replace(/Ã¢Ë†â€™|ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢|ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“/g, '\u2212')
+        .replace(/Ãƒâ€”/g, '\u00D7')
+        .replace(/ÃƒÂ·/g, '\u00F7')
+        .replace(/\uFFFD+/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+export function repairNotificationTextArtifacts(text, title = '') {
+    const repairedTitle = repairTextArtifacts(String(title || ''));
+    let repaired = repairTextArtifacts(text);
+    if (/^daily summary$/i.test(repairedTitle) || /^yesterday you spent/i.test(repaired)) {
+        repaired = repaired.replace(/(Yesterday you spent)\s+[^0-9A-Za-z]{1,24}(?=\d)/i, '$1 \u20B1');
+    }
+    return repaired;
+}
+
+if (typeof window !== 'undefined') {
+    window.repairTextArtifacts = repairTextArtifacts;
+}
+
 // Show toast notification
 export function showToast(msg, duration = 3000) {
     const toast = document.getElementById('toast-box');
     const msgEl = document.getElementById('toast-msg');
+    const safeMessage = repairTextArtifacts(String(msg || ''));
     
     if (!toast || !msgEl) {
-        console.log('Toast:', msg);
+        console.log('Toast:', safeMessage);
         return;
     }
-    msgEl.innerText = msg;
+    msgEl.innerText = safeMessage;
     toast.classList.add('show');
     clearTimeout(window._toastTimer);
     window._toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
@@ -278,6 +329,8 @@ export function triggerHaptic(type = 'light') {
 export function createNotification(title, message, type = 'info', action = null, meta = null) {
     const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
     const safeMeta = meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null;
+    const safeTitle = repairTextArtifacts(String(title || 'Notification'));
+    const safeMessage = repairTextArtifacts(String(message || ''));
     const hasExact = notifications.some((item) => {
         if (String(item?.type || 'info') !== String(type || 'info')) return false;
 
@@ -291,8 +344,8 @@ export function createNotification(title, message, type = 'info', action = null,
             if (sameThresholdMeta) return true;
         }
 
-        return String(item?.title || '') === String(title || '')
-            && String(item?.message || '') === String(message || '');
+        return String(item?.title || '') === safeTitle
+            && String(item?.message || '') === safeMessage;
     });
 
     if (hasExact) return false;
@@ -300,8 +353,8 @@ export function createNotification(title, message, type = 'info', action = null,
     const createdAtMs = Date.now();
     const newNotif = {
         id: createdAtMs,
-        title,
-        message,
+        title: safeTitle,
+        message: safeMessage,
         type,
         time: new Date().toISOString(),
         createdAtMs,
@@ -347,38 +400,63 @@ export function createNotification(title, message, type = 'info', action = null,
 export function cleanAIText(text) {
     if (!text) return '';
     
-    let cleaned = text
-        .replace(/###/g, '') // Remove headers
-        .replace(/#{1,6}\s?/g, '') // Remove headers
-        .replace(/`/g, '') // Remove backticks
-        .replace(/(^|[\n])\s*[-*]\s+/g, '$1') // Only remove list bullets at start of lines
-        .replace(/\n\n/g, '<br><br>') // Ensure double breaks are preserved
-        .replace(/<\/?strong>/gi, '')
+    let cleaned = repairTextArtifacts(text)
+        .replace(/###/g, '')
+        .replace(/#{1,6}\s?/g, '')
+        .replace(/`/g, '')
+        .replace(/(^|[\n])\s*[-*]\s+/g, '$1')
+        .replace(/\n\n/g, '<br><br>')
         .trim();
     
-    // De-duplicate spaces and fix spaces before common punctuation
     cleaned = cleaned
         .replace(/\s+/g, ' ')
         .replace(/\s([.,!?;:])/g, '$1')
         .trim();
     
-    // Convert ₱1000 to ₱1,000 using regex (Handle numbers with or without ₱)
-    // Looks for 4+ digits that aren't already comma-separated
-    cleaned = cleaned.replace(/(₱?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
+    cleaned = cleaned.replace(/(\u20B1?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
         const fullNum = p2 + p3;
-        const formatted = parseInt(fullNum).toLocaleString('en-US');
+        const formatted = parseInt(fullNum, 10).toLocaleString('en-US');
         return p1 + formatted;
     });
 
-    // Final cleanup
+    cleaned = cleaned.replace(/(\u20B1?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
+        const fullNum = p2 + p3;
+        const formatted = parseInt(fullNum, 10).toLocaleString('en-US');
+        return p1 + formatted;
+    });
+
     cleaned = cleaned
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>')
+        .replace(/(?:<br>\s*)?(Recommendation:)/gi, '<br><br><span class="ai-summary-highlight">$1</span>')
+        .replace(/(?:<br>\s*)?(Tip:)/gi, '<br><br><span class="ai-summary-highlight">$1</span>')
+        .replace(/(<span class="ai-summary-highlight">[^<]+<\/span>)(\s*)/gi, '$1 ')
         .replace(/\*/g, '')
-        .replace(/\s+/g, ' ')        // Collapse multiple spaces
+        .replace(/\s+/g, ' ')
+        .replace(/(<br>\s*){3,}/g, '<br><br>')
         .trim();
     
     return cleaned;
+}
+
+/**
+ * Strip HTML tags from email/Gmail body text (matches inline index.html helper).
+ * @param {string} html
+ * @returns {string}
+ */
+export function stripTags(html) {
+    if (!html) return '';
+    return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/(^|[\n])\s*[-*]\s+/g, '$1')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>| <\/div>|<\/tr>/gi, '\n')
+        .replace(/<\/td>/gi, ' | ')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n\s+/g, '\n')
+        .trim();
 }
 
 /**

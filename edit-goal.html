@@ -1277,12 +1277,16 @@
 
                 // 3. Trigger Smart Notification Milestone Check
                 if (window.NotificationsEngine && currentGoalData) {
+                    const milestoneCycles = (currentGoalData.milestoneCycles && typeof currentGoalData.milestoneCycles === 'object')
+                        ? currentGoalData.milestoneCycles
+                        : {};
                     window.NotificationsEngine.checkGoalMilestones(
-                        currentUser.uid, 
-                        goalId, 
-                        currentGoalData.title, 
-                        currentGoalData.currentAmount, 
-                        currentGoalData.targetAmount
+                        currentUser.uid,
+                        goalId,
+                        currentGoalData.title,
+                        currentGoalData.currentAmount,
+                        currentGoalData.targetAmount,
+                        milestoneCycles
                     );
                 }
 

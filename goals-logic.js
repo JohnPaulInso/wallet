@@ -259,7 +259,10 @@
         },
 
         refresh: function() {
-            this.showLoadingState();
+            // Do not flash preloaders on normal navigation when data is already present.
+            if (!Array.isArray(goals) || goals.length === 0) {
+                this.showLoadingState();
+            }
             if (!currentUser || !db) {
                 this.init();
                 return;
@@ -401,15 +404,12 @@
             // [FIXED: 2026-04-05 - Added fade-in animation for premium UX - Antigravity]
             if (container) {
                 container.style.opacity = '1';
-                container.classList.add('fade-in-load');
             }
             if (summary) {
                 summary.style.display = 'flex';
-                summary.classList.add('fade-in-load');
             }
             if (forecast) {
                 forecast.style.display = 'flex';
-                forecast.classList.add('fade-in-load');
             }
         },
 

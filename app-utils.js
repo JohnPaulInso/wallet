@@ -28,16 +28,67 @@ export function formatLocalDate(date) {
     return `${year}-${month}-${day}`;
 }
 
+const TEXT_ARTIFACT_REPLACEMENTS = [
+    ['????????????????????????????????', '\u20B1'],
+    ['????????????????????????????????', '\u2022'],
+    ['????', '\u00F7'],
+    ['?????', '\u00D7'],
+    ['???????', '\u2212'],
+    ['??????????', '\uD83D\uDD14'],
+    ['??????????????????????????????????????????????????????????????????????', '\u20B1'],
+    ['???????', '\u20B1'],
+    ['???', '\u20B1'],
+    ['??????????????????????????????????????????????????????????????????????', '\u2022'],
+    ['???????', '\u2022'],
+    ['???????????', '\u2022'],
+    ['????', '\u2022'],
+    ['??', '']
+];
+
+export function repairTextArtifacts(text) {
+    if (text === null || text === undefined) return '';
+    if (typeof text !== 'string') return text;
+
+    let repaired = text;
+    TEXT_ARTIFACT_REPLACEMENTS.forEach(([bad, good]) => {
+        repaired = repaired.split(bad).join(good);
+    });
+
+    return repaired
+        .replace(/Ã¢â€šÂ±|ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±|Ã‚â‚±/g, '\u20B1')
+        .replace(/Ã¢â‚¬Â¢|ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢/g, '\u2022')
+        .replace(/Ã¢Ë†â€™|ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢|ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“/g, '\u2212')
+        .replace(/Ãƒâ€”/g, '\u00D7')
+        .replace(/ÃƒÂ·/g, '\u00F7')
+        .replace(/\uFFFD+/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+export function repairNotificationTextArtifacts(text, title = '') {
+    const repairedTitle = repairTextArtifacts(String(title || ''));
+    let repaired = repairTextArtifacts(text);
+    if (/^daily summary$/i.test(repairedTitle) || /^yesterday you spent/i.test(repaired)) {
+        repaired = repaired.replace(/(Yesterday you spent)\s+[^0-9A-Za-z]{1,24}(?=\d)/i, '$1 \u20B1');
+    }
+    return repaired;
+}
+
+if (typeof window !== 'undefined') {
+    window.repairTextArtifacts = repairTextArtifacts;
+}
+
 // Show toast notification
 export function showToast(msg, duration = 3000) {
     const toast = document.getElementById('toast-box');
     const msgEl = document.getElementById('toast-msg');
+    const safeMessage = repairTextArtifacts(String(msg || ''));
     
     if (!toast || !msgEl) {
-        console.log('Toast:', msg);
+        console.log('Toast:', safeMessage);
         return;
     }
-    msgEl.innerText = msg;
+    msgEl.innerText = safeMessage;
     toast.classList.add('show');
     clearTimeout(window._toastTimer);
     window._toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
@@ -69,8 +120,91 @@ export function displayCategoryName(id) {
     return cat ? cat.label : id;
 }
 
+function normalizeMerchantText(value = '') {
+    return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function inferMerchantCategory(name = '', note = '') {
+    const combined = normalizeMerchantText(`${name} ${note}`).toUpperCase();
+    const defaultMeta = { category: 'Financial Expenses', icon: 'payments', catClass: 'cat-financial', autoSuggested: false };
+    if (!combined) return defaultMeta;
+
+    if (combined === 'INCOME' || combined.includes('SALARY') || combined.includes('DIVIDEND') || combined.includes('REFUND SOURCE')) {
+        return { category: 'Income', icon: 'savings', catClass: 'cat-income', autoSuggested: true };
+    }
+
+    if (combined.includes('TRADERSCONNECT') || combined.includes('TRADERS CONNECT')) {
+        return { category: 'Trade Copier', icon: 'hub', catClass: 'cat-aqua', autoSuggested: true };
+    }
+
+    if (combined.includes('EQUITY EDGE') || combined.includes('ANALYTICS') || combined.includes('TRADING') || combined.includes('LEVERAGE FUND') || combined.includes('MRCRMT')) {
+        return { category: 'Trading Expenses', icon: 'insights', catClass: 'cat-trading', autoSuggested: true };
+    }
+
+    if (combined.includes('LOCQ')) {
+        return { category: 'Vehicle', icon: 'local_gas_station', catClass: 'cat-vehicle', autoSuggested: true };
+    }
+
+    if (/\bSM\b/.test(combined) || combined.startsWith('SM ') || combined.includes('SM STORE') || combined.includes('SM SUPERMARKET')) {
+        return { category: 'Shopping', icon: 'shopping_cart', catClass: 'cat-shopping', autoSuggested: true };
+    }
+
+    if (combined.includes('J AND L MALL') || combined.includes('J & L MALL') || combined.includes('J AND L SHOPPING') || combined.includes('J & L')) {
+        return { category: 'Shopping', icon: 'shopping_cart', catClass: 'cat-shopping', autoSuggested: true };
+    }
+
+    const keywordMatches = (terms) => terms.some(term => combined.includes(term));
+
+    const keywordMap = [
+        { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'shein', 'carousell'] },
+        { cat: 'Shopping', key: [
+            'mall', 'supermet', 'gaisano', 'mr diy', 'mr. diy', 'watsons', 'sm store', 'sm superm', 'sm supermarket',
+            'sm city', 'sm mall', 'sm hypermarket', 'robinsons', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m',
+            'uniqlo', 'puregold', 'landmark', 'daiso', 'national bookstore', 'fully booked', 'landers', 's&r',
+            's and r', 'waltermart', 'shopwise', 'ace hardware', 'handyman', 'wilcon', 'true value', 'octagon',
+            'mercury drug', 'generika', 'southstar drug', 'rose pharmacy'
+        ] },
+        { cat: 'Vehicle', key: [
+            'locq', 'tecfuel', 'tec fuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'unioil',
+            'phoenix', 'total', 'flying v', 'fuel', 'gas station', 'gas', 'toyota', 'honda', 'mitsub', 'car wash',
+            'autoshop', 'parking', 'tire', 'auto supply'
+        ] },
+        { cat: 'Food & Drinks', key: [
+            'jollibee', 'mcdo', 'mcdonald', 'burger king', 'starbucks', 'chowking', 'kfc', 'mang inasal', 'greenwich',
+            'ribshack', 'coffee', 'resto', 'cafe', 'tea', 'bakery', 'j.co', 'dunkin', 'boba', 'pizza',
+            '7-eleven', 'seven eleven', '7 11', '7/11', 'alfamart', 'familymart', 'ministop', 'lawson',
+            'pickup coffee', 'bo s coffee', "bo's coffee", 'bonchon', 'pizzahut', "pizza hut", 'shakey', 'conti',
+            'yellow cab', 'potato corner'
+        ] },
+        { cat: 'Service', key: [
+            'globe', 'smart', 'pldt', 'converge', 'tm', 'gomo', 'dito', 'netflix', 'spotify', 'youtube', 'disney',
+            'prime', 'apple', 'icloud', 'google', 'canva', 'paypal', 'gcash', 'maya', 'paymaya', 'subscription',
+            'bill', 'insurance', 'philhealth', 'sss', 'pag-ibig', 'veco', 'mcwd', 'meralco', 'bayad', 'water bill',
+            'internet', 'load', 'top up', 'streaming'
+        ] },
+        { cat: 'Transportation', key: ['grab car', 'grab ride', 'grab', 'taxi', 'move it', 'joyride', 'angkas', 'jeep', 'bus', 'ferry', 'pier', 'airport', 'airline', 'beep'] },
+        { cat: 'Education', key: ['school', 'university', 'tuition', 'book', 'udemy', 'coursera', 'skillshare', 'training', 'review center', 'college'] },
+        { cat: 'Life & Entertainment', key: ['cinema', 'movie', 'game', 'playstation', 'xbox', 'steam', 'valve', 'riot', 'epic', 'skating', 'zoo', 'park', 'concert', 'amusement', 'theater'] }
+    ];
+
+    for (const map of keywordMap) {
+        if (keywordMatches(map.key)) {
+            const userCat = CATEGORIES.find(c => c.id === map.cat);
+            if (userCat) {
+                return { category: userCat.id, icon: userCat.icon, catClass: userCat.cls || 'cat-financial', autoSuggested: true };
+            }
+        }
+    }
+
+    return defaultMeta;
+}
+
 // Merchant Mapping & Categorization
 export function getMerchantDisplay(name = '', t = {}) {
+    if (typeof window !== 'undefined' && typeof window.__inlineGetMerchantDisplay === 'function' && window.__inlineGetMerchantDisplay !== getMerchantDisplay) {
+        return window.__inlineGetMerchantDisplay(name, t);
+    }
+
     let raw = name.toUpperCase();
     
     // 1. GENERAL CLEANUP
@@ -170,7 +304,25 @@ export function getMerchantDisplay(name = '', t = {}) {
         'TAP SURE LEVERAGE FUND': 'TAP SURE LEVERAGE FUND',
         'MRCRMT': 'MRCRMT',
         'TRADERSCONNECT.COM': 'TRADERS CONNECT',
-        'TRADERSCONNECT': 'TRADERS CONNECT'
+        'TRADERSCONNECT': 'TRADERS CONNECT',
+        'SM CITY CEBU': 'SM CITY CEBU',
+        'SM SEASIDE CITY CEBU': 'SM SEASIDE CITY CEBU',
+        'ROBINSONS GALLERIA': 'ROBINSONS GALLERIA',
+        'ROBINSONS CYBERGATE': 'ROBINSONS CYBERGATE',
+        'LANDERS SUPERCENTER': 'LANDERS SUPERCENTER',
+        'PUREGOLD': 'PUREGOLD',
+        'WALTERMART': 'WALTERMART',
+        'ACE HARDWARE': 'ACE HARDWARE',
+        'MERCURY DRUG': 'MERCURY DRUG',
+        '7-ELEVEN': '7-ELEVEN',
+        '7 11': '7-ELEVEN',
+        'FAMILYMART': 'FAMILYMART',
+        'LAWSON': 'LAWSON',
+        'MINISTOP': 'MINISTOP',
+        'JCO': 'J.CO',
+        'MANG INASAL': 'MANG INASAL',
+        'PIZZA HUT': 'PIZZA HUT',
+        'BONCHON': 'BONCHON'
     };
 
     const finalRaw = cleaned.toUpperCase();
@@ -181,49 +333,12 @@ export function getMerchantDisplay(name = '', t = {}) {
     const lowerRaw = finalRaw.toLowerCase();
     const noteLower = (t.note || '').toLowerCase();
 
-    if (finalRaw === 'INCOME' || finalRaw.includes('SALARY') || finalRaw.includes('DIVIDEND') || finalRaw.includes('REFUND SOURCE')) {
-        display.category = 'Income';
-        display.icon = 'savings';
-        display.catClass = 'cat-income';
-    } else {
-        const keywordMap = [
-            { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'shopify', 'grabfood', 'foodpanda', 'amazon', 'ebay'] },
-            { cat: 'Shopping', key: ['mall', 'supermet', 'gaisano', 'mr diy', 'watsons', 'sm store', 'sm superm', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m', 'uniqlo'] },
-            { cat: 'Vehicle', key: ['tecfuel', 'tec fuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'fuel', 'gas', 'toyota', 'honda', 'mitsub', 'car wash', 'autoshop'] },
-            { cat: 'Food & Drinks', key: ['jollibee', 'mcdo', 'mcdonald', 'starbucks', 'chowking', 'kfc', 'mang inasal', 'greenwich', 'ribshack', 'coffee', 'resto', 'cafe', 'tea', 'bakery', 'j.co', 'dunkin', 'boba', 'pizza'] },
-            { cat: 'Service', key: ['globe', 'smart', 'pldt', 'tm', 'gomo', 'netflix', 'spotify', 'youtube', 'disney', 'prime', 'apple', 'icloud', 'google', 'subscription', 'bill', 'insurance', 'philhealth', 'sss', 'pag-ibig', 'veco', 'mcwd'] },
-            { cat: 'Transportation', key: ['grab car', 'grab ride', 'taxi', 'move it', 'joyride', 'angkas', 'jeep', 'bus', 'ferry', 'pier', 'airport', 'airline'] },
-            { cat: 'Education', key: ['school', 'university', 'tuition', 'book', 'udemy', 'coursera', 'skillshare', 'training'] },
-            { cat: 'Life & Entertainment', key: ['cinema', 'movie', 'game', 'playstation', 'xbox', 'steam', 'valve', 'riot', 'epic', 'skating', 'zoo', 'park', 'concert', 'spotify', 'netflix'] }
-        ];
-
-        for (const map of keywordMap) {
-            if (map.key.some(k => lowerRaw.includes(k) || noteLower.includes(k))) {
-                const findCat = CATEGORIES.find(c => c.id === map.cat);
-                if (findCat) {
-                    display.category = findCat.id;
-                    display.icon = findCat.icon;
-                    display.catClass = findCat.cls || 'cat-financial';
-                    display.autoSuggested = true; 
-                    break;
-                }
-            }
-        }
-
-        if (finalRaw.includes('TRADERSCONNECT') || finalRaw.includes('TRADERS CONNECT')) {
-            display.category = 'Trade Copier';
-            display.icon = 'hub';
-            display.catClass = 'cat-aqua';
-        } else if (finalRaw.includes('EQUITY EDGE') || finalRaw.includes('ANALYTICS') || finalRaw.includes('TRADING') || finalRaw.includes('LEVERAGE FUND') || finalRaw.includes('MRCRMT')) {
-            display.category = 'Trading Expenses';
-            display.icon = 'insights';
-            display.catClass = 'cat-trading';
-        } else {
-            if (display.category === 'Financial Expenses' || !display.category) {
-                display.category = 'Financial Expenses';
-                display.catClass = 'cat-financial';
-            }
-        }
+    const detected = inferMerchantCategory(finalRaw, t.note || noteLower);
+    if (detected.category !== 'Financial Expenses' || detected.autoSuggested) {
+        display.category = detected.category;
+        display.icon = detected.icon;
+        display.catClass = detected.catClass;
+        display.autoSuggested = detected.autoSuggested;
     }
 
     return display;
@@ -278,21 +393,40 @@ export function triggerHaptic(type = 'light') {
 export function createNotification(title, message, type = 'info', action = null, meta = null) {
     const notifications = JSON.parse(localStorage.getItem('smartwallet_notifications') || '[]');
     const safeMeta = meta && typeof meta === 'object' ? JSON.parse(JSON.stringify(meta)) : null;
+    const safeTitle = repairTextArtifacts(String(title || 'Notification'));
+    const safeMessage = repairTextArtifacts(String(message || ''));
     const hasExact = notifications.some((item) => {
+        const itemMeta = item?.meta || null;
+        if (
+            safeMeta?.notificationKey
+            && itemMeta?.notificationKey
+            && String(itemMeta.notificationKey) === String(safeMeta.notificationKey)
+        ) {
+            return true;
+        }
+        if (
+            safeMeta?.goalId
+            && itemMeta?.goalId
+            && String(itemMeta.goalId) === String(safeMeta.goalId)
+            && String(itemMeta.milestone || '') === String(safeMeta.milestone || '')
+            && Number(itemMeta.cycle || 0) === Number(safeMeta.cycle || 0)
+        ) {
+            return true;
+        }
         if (String(item?.type || 'info') !== String(type || 'info')) return false;
 
-        if (safeMeta && item?.meta) {
+        if (safeMeta && itemMeta) {
             const sameThresholdMeta =
-                String(item.meta.category || '') === String(safeMeta.category || '')
-                && String(item.meta.monthKey || '') === String(safeMeta.monthKey || '')
-                && Number(item.meta.thresholdPct || 0) === Number(safeMeta.thresholdPct || 0)
-                && Number(item.meta.cycle || 0) === Number(safeMeta.cycle || 0)
-                && String(item.meta.notificationKey || '') === String(safeMeta.notificationKey || '');
+                String(itemMeta.category || '') === String(safeMeta.category || '')
+                && String(itemMeta.monthKey || '') === String(safeMeta.monthKey || '')
+                && Number(itemMeta.thresholdPct || 0) === Number(safeMeta.thresholdPct || 0)
+                && Number(itemMeta.cycle || 0) === Number(safeMeta.cycle || 0)
+                && String(itemMeta.notificationKey || '') === String(safeMeta.notificationKey || '');
             if (sameThresholdMeta) return true;
         }
 
-        return String(item?.title || '') === String(title || '')
-            && String(item?.message || '') === String(message || '');
+        return String(item?.title || '') === safeTitle
+            && String(item?.message || '') === safeMessage;
     });
 
     if (hasExact) return false;
@@ -300,8 +434,8 @@ export function createNotification(title, message, type = 'info', action = null,
     const createdAtMs = Date.now();
     const newNotif = {
         id: createdAtMs,
-        title,
-        message,
+        title: safeTitle,
+        message: safeMessage,
         type,
         time: new Date().toISOString(),
         createdAtMs,
@@ -347,38 +481,95 @@ export function createNotification(title, message, type = 'info', action = null,
 export function cleanAIText(text) {
     if (!text) return '';
     
-    let cleaned = text
-        .replace(/###/g, '') // Remove headers
-        .replace(/#{1,6}\s?/g, '') // Remove headers
-        .replace(/`/g, '') // Remove backticks
-        .replace(/(^|[\n])\s*[-*]\s+/g, '$1') // Only remove list bullets at start of lines
-        .replace(/\n\n/g, '<br><br>') // Ensure double breaks are preserved
-        .replace(/<\/?strong>/gi, '')
+    let cleaned = repairTextArtifacts(text)
+        .replace(/###/g, '')
+        .replace(/#{1,6}\s?/g, '')
+        .replace(/`/g, '')
+        .replace(/(^|[\n])\s*[-*]\s+/g, '$1')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n+/g, ' ')
         .trim();
     
-    // De-duplicate spaces and fix spaces before common punctuation
     cleaned = cleaned
         .replace(/\s+/g, ' ')
         .replace(/\s([.,!?;:])/g, '$1')
         .trim();
     
-    // Convert ₱1000 to ₱1,000 using regex (Handle numbers with or without ₱)
-    // Looks for 4+ digits that aren't already comma-separated
-    cleaned = cleaned.replace(/(₱?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
+    cleaned = cleaned.replace(/(\u20B1?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
         const fullNum = p2 + p3;
-        const formatted = parseInt(fullNum).toLocaleString('en-US');
+        const formatted = parseInt(fullNum, 10).toLocaleString('en-US');
         return p1 + formatted;
     });
 
-    // Final cleanup
+    cleaned = cleaned.replace(/(\u20B1?\s?)(\d{1,3})(\d{3,})(?!\d)/g, (match, p1, p2, p3) => {
+        const fullNum = p2 + p3;
+        const formatted = parseInt(fullNum, 10).toLocaleString('en-US');
+        return p1 + formatted;
+    });
+
     cleaned = cleaned
-        .replace(/\*\*(.*?)\*\*/g, '$1')
-        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.*?)__/g, '<strong>$1</strong>')
+        .replace(/(^|\s)(Recommendation:)/gi, '$1<span class="ai-summary-highlight">$2</span>')
+        .replace(/(^|\s)(Tip:)/gi, '$1<span class="ai-summary-highlight">$2</span>')
         .replace(/\*/g, '')
-        .replace(/\s+/g, ' ')        // Collapse multiple spaces
+        .replace(/\s+/g, ' ')
         .trim();
     
     return cleaned;
+}
+
+export function formatAIAnalysisHTML(text) {
+    if (!text) return '';
+
+    const highlightPhrases = [
+        'higher than your recent average',
+        'daily average',
+        'major budget driver',
+        'by month-end',
+        'save you around',
+        'recurring spending',
+        'leading expense',
+        'top merchant',
+        'top category',
+        'small daily purchases',
+        'specific promo days',
+        'loyalty card'
+    ];
+
+    let formatted = cleanAIText(text)
+        .replace(/\s*(?:<span class="ai-summary-highlight">)?(?:<strong>)?Recommendation:(?:<\/strong>)?(?:<\/span>)?\s*/gi, '<br><br><strong><span class="ai-summary-highlight">Recommendation:</span></strong> ')
+        .replace(/\s*(?:<span class="ai-summary-highlight">)?(?:<strong>)?Tip:(?:<\/strong>)?(?:<\/span>)?\s*/gi, '<br><br><strong><span class="ai-summary-highlight">Tip:</span></strong> ')
+        .replace(/^(?:<br><br>\s*)+/, '')
+        .replace(/(?:₱|PHP)\s?[\d,]+(?:\.\d+)?/g, '<strong>$&</strong>')
+        .replace(/\b\d+(?:\.\d+)?%/g, '<strong>$&</strong>')
+        .replace(/\b(with|at|on|for|to|around)\s+([A-Z0-9][A-Z0-9&./-]*(?:\s+[A-Z0-9][A-Z0-9&./-]*){1,5})\b/g, '$1 <strong>$2</strong>');
+
+    highlightPhrases.forEach((phrase) => {
+        const phraseRegex = new RegExp(`\\b${phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+        formatted = formatted.replace(phraseRegex, '<span class="ai-summary-highlight">$&</span>');
+    });
+
+    return formatted.trim();
+}
+
+/**
+ * Strip HTML tags from email/Gmail body text (matches inline index.html helper).
+ * @param {string} html
+ * @returns {string}
+ */
+export function stripTags(html) {
+    if (!html) return '';
+    return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/(^|[\n])\s*[-*]\s+/g, '$1')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>| <\/div>|<\/tr>/gi, '\n')
+        .replace(/<\/td>/gi, ' | ')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n\s+/g, '\n')
+        .trim();
 }
 
 /**

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - Smart Wallet</title>
+    <meta name="description" content="Privacy Policy for Smart Wallet - Your personal finance tracking app.">
+    <link rel="icon" type="image/png" href="applogo.png?v=4">
+    <link rel="apple-touch-icon" href="applogo.png?v=4">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            background: #f8fafc;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-wrapper {
+            width: 100%;
+            max-width: 680px;
+            padding: 0 24px 80px;
+        }
+
+        /* HEADER */
+        .privacy-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 32px 0 24px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 32px;
+        }
+        .privacy-header img {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .header-text h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.5px;
+        }
+        .header-text .subtitle {
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* LAST UPDATED BADGE */
+        .updated-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 28px;
+        }
+        .updated-badge i { font-size: 14px; }
+
+        /* INTRO */
+        .intro-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #475569;
+            font-weight: 500;
+            margin-bottom: 32px;
+        }
+
+        /* SECTION */
+        .policy-section {
+            margin-bottom: 28px;
+        }
+        .policy-section .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .section-header .icon-box {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .section-header .icon-box i { font-size: 18px; color: #fff; }
+        .section-header h2 {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+        }
+        .policy-section p,
+        .policy-section li {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #475569;
+            font-weight: 500;
+        }
+        .policy-section ul {
+            list-style: none;
+            padding: 0;
+        }
+        .policy-section ul li {
+            padding: 6px 0 6px 20px;
+            position: relative;
+        }
+        .policy-section ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #cbd5e1;
+        }
+
+        /* COLOR VARIANTS FOR ICON BOXES */
+        .icon-blue { background: #3b82f6; }
+        .icon-emerald { background: #10b981; }
+        .icon-amber { background: #f59e0b; }
+        .icon-red { background: #ef4444; }
+        .icon-purple { background: #8b5cf6; }
+        .icon-slate { background: #475569; }
+        .icon-cyan { background: #06b6d4; }
+
+        /* DIVIDER */
+        .section-divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 28px 0;
+        }
+
+        /* CONTACT CARD */
+        .contact-card {
+            background: #0f172a;
+            border-radius: 16px;
+            padding: 24px;
+            color: #fff;
+            margin-top: 32px;
+        }
+        .contact-card h3 {
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.3px;
+        }
+        .contact-card p {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.7;
+            font-weight: 500;
+        }
+        .contact-card a {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .contact-card a:hover { text-decoration: underline; }
+
+        /* BACK LINK */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 32px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #3b82f6;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            transition: background 0.2s;
+        }
+        .back-link:hover { background: #eff6ff; }
+        .back-link i { font-size: 18px; }
+
+        /* FOOTER */
+        .privacy-footer {
+            text-align: center;
+            padding: 40px 0 20px;
+            font-size: 11px;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 480px) {
+            .page-wrapper { padding: 0 20px 60px; }
+            .privacy-header { padding: 24px 0 20px; }
+            .header-text h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <!-- HEADER -->
+        <div class="privacy-header">
+            <img src="applogo.png" alt="Smart Wallet Logo">
+            <div class="header-text">
+                <h1>Smart Wallet</h1>
+                <div class="subtitle">Privacy Policy</div>
+            </div>
+        </div>
+
+        <!-- LAST UPDATED -->
+        <div class="updated-badge">
+            <i class="material-icons">update</i>
+            Last updated: February 24, 2026
+        </div>
+
+        <!-- INTRO -->
+        <p class="intro-text">
+            Smart Wallet ("we", "our", or "the app") is a personal finance tracking application developed by John Paul Inso. 
+            We are committed to protecting your privacy. This policy explains what information we collect, how we use it, and your rights regarding your data.
+        </p>
+
+        <!-- SECTION 1: INFORMATION WE COLLECT -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-blue">
+                    <i class="material-icons">info</i>
+                </div>
+                <h2>Information We Collect</h2>
+            </div>
+            <p>When you sign in with Google, we access the following information:</p>
+            <ul>
+                <li><strong>Google Account Profile</strong> — Your name, email address, and profile picture for authentication and personalization.</li>
+                <li><strong>Gmail (Read-Only)</strong> — If you enable Gmail Sync, we scan your inbox for bank transaction notification emails to automatically log expenses. We only read email subject lines and body content relevant to financial transactions.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 2: HOW WE USE YOUR DATA -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-emerald">
+                    <i class="material-icons">verified_user</i>
+                </div>
+                <h2>How We Use Your Data</h2>
+            </div>
+            <ul>
+                <li><strong>Authentication</strong> — We use Firebase Authentication to securely sign you in and identify your account.</li>
+                <li><strong>Transaction Tracking</strong> — Gmail data is processed in your browser to extract transaction details (merchant, amount, date). This data is stored in your personal Firebase Firestore database.</li>
+                <li><strong>Personalization</strong> — Your name and profile picture are displayed within the app for a personalized experience.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 3: DATA STORAGE & SECURITY -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-purple">
+                    <i class="material-icons">shield</i>
+                </div>
+                <h2>Data Storage & Security</h2>
+            </div>
+            <ul>
+                <li>Your financial data is stored in <strong>Google Firebase Firestore</strong>, linked to your authenticated Google account.</li>
+                <li>All data transmission uses <strong>HTTPS encryption</strong>.</li>
+                <li>Gmail content is processed <strong>entirely in your browser</strong> — we do not store raw email content on any server.</li>
+                <li>Access tokens are stored locally on your device and are never shared with third parties.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 4: THIRD-PARTY SHARING -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-red">
+                    <i class="material-icons">block</i>
+                </div>
+                <h2>Third-Party Sharing</h2>
+            </div>
+            <p>
+                <strong>We do not sell, trade, or share your personal data with any third parties.</strong>
+                Your data is only used within the Smart Wallet app for the purposes described above. 
+                The only third-party services we use are Google Firebase (for authentication and data storage) and Google APIs (for Gmail access), 
+                both governed by <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" style="color: #3b82f6; font-weight: 700;">Google's Privacy Policy</a>.
+            </p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 5: YOUR RIGHTS -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-amber">
+                    <i class="material-icons">tune</i>
+                </div>
+                <h2>Your Rights & Controls</h2>
+            </div>
+            <ul>
+                <li><strong>Revoke Access</strong> — You can revoke Smart Wallet's access to your Google account at any time via your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener" style="color: #3b82f6; font-weight: 700;">Google Account Permissions</a>.</li>
+                <li><strong>Delete Data</strong> — You can export and delete all your transaction data from within the app using the Account Backup feature.</li>
+                <li><strong>Log Out</strong> — Logging out clears your session. Your data remains in Firestore until you choose to delete it.</li>
+            </ul>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 6: DATA RETENTION -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-cyan">
+                    <i class="material-icons">history</i>
+                </div>
+                <h2>Data Retention</h2>
+            </div>
+            <p>
+                We retain your transaction data for as long as your account is active. 
+                If you wish to delete your data, you may do so through the app's export/import functionality or by contacting us directly.
+            </p>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- SECTION 7: CHANGES -->
+        <div class="policy-section">
+            <div class="section-header">
+                <div class="icon-box icon-slate">
+                    <i class="material-icons">edit_note</i>
+                </div>
+                <h2>Changes to This Policy</h2>
+            </div>
+            <p>
+                We may update this Privacy Policy from time to time. Any changes will be reflected on this page with an updated "Last updated" date. 
+                Continued use of the app after changes constitutes acceptance of the updated policy.
+            </p>
+        </div>
+
+        <!-- CONTACT CARD -->
+        <div class="contact-card">
+            <h3>Questions or Concerns?</h3>
+            <p>
+                If you have any questions about this Privacy Policy or your data, feel free to reach out:<br>
+                <strong>Developer:</strong> John Paul Inso<br>
+                <strong>Email:</strong> <a href="mailto:johnpaulinso123@gmail.com">johnpaulinso123@gmail.com</a>
+            </p>
+        </div>
+
+        <!-- BACK LINK -->
+        <a href="index.html" class="back-link">
+            <i class="material-icons">arrow_back</i>
+            Back to Smart Wallet
+        </a>
+
+        <!-- FOOTER -->
+        <div class="privacy-footer">
+            © 2026 Smart Wallet by John Paul Inso. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

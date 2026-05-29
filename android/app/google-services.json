@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "64186651619",
+    "project_id": "atome-wallet",
+    "storage_bucket": "atome-wallet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:64186651619:android:5b6993c6c596e9356606d6",
+        "android_client_info": {
+          "package_name": "smart.wallet1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "64186651619-fer0e8ng08hfr5skm9gutd5n9k6fblna.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "smart.wallet1",
+            "certificate_hash": "a09cb9886426bae73387327d29a0c7ad3e7afd1c"
+          }
+        },
+        {
+          "client_id": "64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3RgXMrx3oydPqO_O4FF8KJC883Bj2iQM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

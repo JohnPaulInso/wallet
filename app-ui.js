@@ -2,12 +2,252 @@
  * UI Rendering and Management for the Wallet App
  */
 import { db, auth, doc, setDoc, onSnapshot, getDoc, serverTimestamp } from "./firebase-config.js";
-import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, triggerHaptic, createNotification, cleanAIText, animateNumber } from "./app-utils.js";
+import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, triggerHaptic, createNotification, cleanAIText, formatAIAnalysisHTML, animateNumber, repairTextArtifacts, repairNotificationTextArtifacts } from "./app-utils.js";
 import { CONFIG } from "./config.js";
 import { LocalAI } from "./local-ai.js";
 
 let switchSyncTimer = null;
 let keyboardViewportBridgeInitialized = false;
+const DASHBOARD_MONTH_FILTER_KEY = 'smartwallet_dashboard_month_filter';
+const DASHBOARD_MONTH_FILTER_TS_KEY = 'smartwallet_dashboard_month_filter_ts';
+const DASHBOARD_MONTH_FILTER_TTL_MS = 90 * 60 * 1000;
+const BUDGET_WIDGET_MONTH_FILTER_KEY = 'smartwallet_budget_widget_month_filter';
+const pesoSymbol = '\u20B1';
+const txnBullet = '\u2022';
+const maskedAccountNumber = `${txnBullet.repeat(4)} ${txnBullet.repeat(4)} ${txnBullet.repeat(4)} `;
+
+function isExplicitYearMonthFilter(value) {
+    return /^\d{4}-\d{2}$/.test(String(value || '').trim());
+}
+
+function normalizeDashboardFilterValue(value) {
+    const normalized = String(value || '').trim();
+    if (!normalized) return 'this_month';
+    return normalized;
+}
+
+function getStoredDashboardMonthSelection() {
+    try {
+        const value = localStorage.getItem(DASHBOARD_MONTH_FILTER_KEY);
+        const ts = Number(localStorage.getItem(DASHBOARD_MONTH_FILTER_TS_KEY) || '0');
+        if (!value || !ts || (Date.now() - ts) > DASHBOARD_MONTH_FILTER_TTL_MS) {
+            localStorage.removeItem(DASHBOARD_MONTH_FILTER_KEY);
+            localStorage.removeItem(DASHBOARD_MONTH_FILTER_TS_KEY);
+            return null;
+        }
+        return normalizeDashboardFilterValue(value);
+    } catch (error) {
+        return null;
+    }
+}
+
+function persistDashboardMonthSelection(value) {
+    const normalized = normalizeDashboardFilterValue(value);
+    try {
+        localStorage.setItem(DASHBOARD_MONTH_FILTER_KEY, normalized);
+        localStorage.setItem(DASHBOARD_MONTH_FILTER_TS_KEY, String(Date.now()));
+    } catch (error) {}
+    return normalized;
+}
+
+function rehydrateDashboardFromCurrentTxns() {
+    if (!Array.isArray(window.allTxns)) return;
+    try { updateBalanceToThisMonth(window.allTxns, window.currentAccount); } catch (error) { console.warn('rehydrate balance failed:', error); }
+    try { updateInsightCards(window.allTxns); } catch (error) { console.warn('rehydrate insights failed:', error); }
+    try {
+        if (typeof window.filterChart === 'function') window.filterChart();
+        else drawTrendChart(window.allTxns);
+    } catch (error) { console.warn('rehydrate chart filter failed:', error); }
+    try { drawCashFlowChart(); } catch (error) { console.warn('rehydrate cash flow failed:', error); }
+    try { detectSubscriptions(); } catch (error) { console.warn('rehydrate recurring failed:', error); }
+    try { updateCategoryBudgetsUI(); } catch (error) { console.warn('rehydrate category budgets failed:', error); }
+    try {
+        if (!window.__freezeBudgetWidgetUI) {
+            if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+            else updateTripleProgressBar();
+        }
+    } catch (error) { console.warn('rehydrate budget failed:', error); }
+}
+
+function getDashboardMonthContext(filterValue = null) {
+    const activeValue = normalizeDashboardFilterValue(
+        filterValue
+        || document.getElementById('chart-filter')?.value
+        || getStoredDashboardMonthSelection()
+        || 'this_month'
+    );
+    const explicitMonth = isExplicitYearMonthFilter(activeValue);
+    const referenceDate = explicitMonth
+        ? (() => {
+            const [year, month] = activeValue.split('-').map(Number);
+            return new Date(year, month - 1, 1);
+        })()
+        : new Date();
+    const previousDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - 1, 1);
+    const labelTitle = referenceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return {
+        filterValue: activeValue,
+        explicitMonth,
+        referenceDate,
+        previousDate,
+        year: referenceDate.getFullYear(),
+        monthIndex: referenceDate.getMonth(),
+        monthKey: `${referenceDate.getFullYear()}-${String(referenceDate.getMonth() + 1).padStart(2, '0')}`,
+        labelTitle,
+        labelUpper: labelTitle.toUpperCase(),
+        labelShort: referenceDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase()
+    };
+}
+
+function isRecentBudgetNotificationSnapshot(snapshot) {
+    const generatedAtMs = Number(snapshot?.generatedAtMs || 0);
+    return generatedAtMs > 0 && (Date.now() - generatedAtMs) <= 120000;
+}
+
+function getBudgetWidgetMonthSelection() {
+    try {
+        const selectValue = document.getElementById('budget-month-filter')?.value;
+        const storedValue = localStorage.getItem(BUDGET_WIDGET_MONTH_FILTER_KEY);
+        return normalizeDashboardFilterValue(
+            selectValue
+            || storedValue
+            || document.getElementById('chart-filter')?.value
+            || 'this_month'
+        );
+    } catch (error) {
+        return normalizeDashboardFilterValue(document.getElementById('chart-filter')?.value || 'this_month');
+    }
+}
+
+function persistBudgetWidgetMonthSelection(value) {
+    const normalized = normalizeDashboardFilterValue(value);
+    try {
+        localStorage.setItem(BUDGET_WIDGET_MONTH_FILTER_KEY, normalized);
+    } catch (error) {}
+    return normalized;
+}
+
+function getBudgetWidgetMonthContext(filterValue = null) {
+    return getDashboardMonthContext(filterValue || getBudgetWidgetMonthSelection());
+}
+
+function getBudgetWidgetMonthOptions() {
+    const history = window.safeToSpendConfig?.budgetProfileHistory || {};
+    const keys = new Set();
+    const currentMonthKey = getDashboardMonthContext('this_month').monthKey;
+    keys.add(currentMonthKey);
+
+    Object.keys(history).forEach((key) => {
+        if (/^\d{4}-\d{2}$/.test(key)) keys.add(key);
+    });
+
+    for (let i = 1; i <= 12; i++) {
+        const date = new Date();
+        date.setDate(1);
+        date.setMonth(date.getMonth() - i);
+        keys.add(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`);
+    }
+
+    return [...keys]
+        .sort((a, b) => b.localeCompare(a))
+        .map((monthKey) => ({
+            value: monthKey,
+            label: getDashboardMonthContext(monthKey).labelTitle
+        }));
+}
+
+function populateBudgetMonthFilter() {
+    const select = document.getElementById('budget-month-filter');
+    if (!select) return;
+
+    const options = getBudgetWidgetMonthOptions();
+    const storedValue = localStorage.getItem(BUDGET_WIDGET_MONTH_FILTER_KEY);
+    const chartValue = document.getElementById('chart-filter')?.value;
+    let preferred = normalizeDashboardFilterValue(
+        storedValue
+        || (isExplicitYearMonthFilter(chartValue) ? chartValue : '')
+        || getDashboardMonthContext('this_month').monthKey
+    );
+
+    if (!options.some((opt) => opt.value === preferred)) {
+        options.unshift({
+            value: preferred,
+            label: getDashboardMonthContext(preferred).labelTitle
+        });
+    }
+
+    select.innerHTML = options.map((opt) => `<option value="${opt.value}">${opt.label}</option>`).join('');
+    select.value = preferred;
+    select.title = 'Choose a saved month to review budget progress';
+}
+
+function setBudgetMonthSelection(value) {
+    const normalized = persistBudgetWidgetMonthSelection(value);
+    const select = document.getElementById('budget-month-filter');
+    const previousValue = select?.value || '';
+    const shouldSavePrevious = previousValue && previousValue !== normalized && typeof window.saveCurrentBudgetModalProfile === 'function';
+    if (shouldSavePrevious) {
+        try {
+            window.saveCurrentBudgetModalProfile('month-switch');
+        } catch (error) {
+            console.warn('Failed to auto-save previous budget month before switching', error);
+        }
+    }
+    if (select && select.value !== normalized) {
+        select.value = normalized;
+    }
+    if (typeof window.updateTripleProgressBar === 'function') {
+        window.updateTripleProgressBar();
+    }
+    if (typeof window.loadBudgetModalMonthProfile === 'function') {
+        window.loadBudgetModalMonthProfile(normalized);
+    }
+    return normalized;
+}
+
+function isCurrentBudgetNotificationSnapshot(snapshot) {
+    if (!snapshot || !snapshot.liveReady) return false;
+    if (!isRecentBudgetNotificationSnapshot(snapshot)) return false;
+    if (snapshot.filterVal !== 'this_month') return false;
+    const currentMonthKey = getBudgetProgressMonthKey();
+    return String(snapshot?.monthKey || '') === currentMonthKey;
+}
+
+if (typeof window !== 'undefined') {
+    window.getStoredDashboardMonthSelection = getStoredDashboardMonthSelection;
+    window.persistDashboardMonthSelection = persistDashboardMonthSelection;
+    window.getDashboardMonthContext = getDashboardMonthContext;
+    window.getBudgetWidgetMonthSelection = getBudgetWidgetMonthSelection;
+    window.persistBudgetWidgetMonthSelection = persistBudgetWidgetMonthSelection;
+    window.getBudgetWidgetMonthContext = getBudgetWidgetMonthContext;
+    window.populateBudgetMonthFilter = populateBudgetMonthFilter;
+    window.setBudgetMonthSelection = setBudgetMonthSelection;
+}
+
+/** Gmail inbox sync is heavy; defer it so account switches stay responsive. */
+function scheduleDeferredInboxSyncForAccount(accountId) {
+    if (typeof window === 'undefined') return;
+    if (accountId !== 'atome' && accountId !== 'bpi') return;
+    const token = localStorage.getItem('g_access_token');
+    const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0', 10);
+    const TOKEN_MAX_AGE = 50 * 60 * 1000;
+    if (!token || Date.now() - tokenIssuedAt >= TOKEN_MAX_AGE) return;
+    if (switchSyncTimer) clearTimeout(switchSyncTimer);
+    switchSyncTimer = setTimeout(() => {
+        if (window.currentAccount !== accountId || window.isSyncing) return;
+        import('./app-data.js').then((m) => {
+            const run = () => {
+                if (window.currentAccount !== accountId || window.isSyncing) return;
+                if (m.handleScan) m.handleScan(8, false);
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(run, { timeout: 12000 });
+            } else {
+                setTimeout(run, 400);
+            }
+        });
+    }, 2800);
+}
 
 function resolveFocusableTarget(targetOrId) {
     if (typeof targetOrId === 'string') {
@@ -134,21 +374,59 @@ function getTxnNoteColor(mappedCategory, isRefund, isReimbursed) {
     return (window.categoryConfig && window.categoryConfig[mappedCategory]?.darkColor) || '#475569';
 }
 
+function normalizeBudgetCategoryLabel(categoryId) {
+    const label = typeof window.displayCategoryName === 'function'
+        ? window.displayCategoryName(categoryId)
+        : categoryId;
+    return String(label || '').trim().toLowerCase();
+}
+
+function getTxnBudgetAllocations(t, mapped = null) {
+    const allocations = [];
+    if (!t || t.excluded || t.refund || t.reimbursed) return allocations;
+
+    const amount = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)) || 0);
+    if (!amount) return allocations;
+
+    const split = t.budgetSplit;
+    if (split && typeof split === 'object') {
+        const splitNeeds = Number(split.needs) || 0;
+        const splitWants = Number(split.wants) || 0;
+        const splitSavings = Number(split.savings) || 0;
+        const splitNa = Number(split.na) || 0;
+        const hasSplitAllocation = splitNeeds > 0 || splitWants > 0 || splitSavings > 0 || splitNa > 0;
+        if (hasSplitAllocation) {
+            if (splitNeeds > 0) allocations.push({ bucket: 'needs', amount: splitNeeds });
+            if (splitWants > 0) allocations.push({ bucket: 'wants', amount: splitWants });
+            if (splitSavings > 0) allocations.push({ bucket: 'savings', amount: splitSavings });
+            return allocations;
+        }
+    }
+
+    const manualBucket = String(t.manualBudgetCategory || '').trim().toLowerCase();
+    if (manualBucket === 'n/a') return allocations;
+    if (['needs', 'wants', 'savings'].includes(manualBucket)) {
+        allocations.push({ bucket: manualBucket, amount });
+        return allocations;
+    }
+
+    const categoryId = mapped?.category || t.manualCategory || t.category || '';
+    const categoryLabel = normalizeBudgetCategoryLabel(categoryId);
+    const needsCats = ['education', 'service', 'vehicle', 'transportation'];
+    const wantsCats = ['shopping', 'online shopping', 'food & drinks', 'life & entertainment', 'sport', 'financial expenses', 'financial expense'];
+    const savingsCats = ['savings', 'investments'];
+
+    if (needsCats.includes(categoryLabel)) allocations.push({ bucket: 'needs', amount });
+    else if (wantsCats.includes(categoryLabel)) allocations.push({ bucket: 'wants', amount });
+    else if (savingsCats.includes(categoryLabel)) allocations.push({ bucket: 'savings', amount });
+
+    return allocations;
+}
+
 function getTxnBudgetDotHTML(t, mapped, isIncome, isRefund, isReimbursed) {
     if (t.excluded || isIncome || isRefund || isReimbursed || mapped.category === 'Credit Card Payment') return '';
 
-    const manualBCat = t.manualBudgetCategory;
-    let detectedBudget = '';
-    if (manualBCat && manualBCat !== 'n/a') {
-        detectedBudget = manualBCat;
-    } else if (manualBCat !== 'n/a') {
-        const needsCats = ['Education', 'Service', 'Vehicle', 'Transportation'];
-        const wantsCats = ['Shopping', 'Online shopping', 'Food & Drinks', 'Life & Entertainment', 'Sport', 'Financial expenses', 'Financial Expenses'];
-        const savingsCats = ['Savings', 'Investments'];
-        if (needsCats.includes(mapped.category)) detectedBudget = 'needs';
-        else if (wantsCats.includes(mapped.category)) detectedBudget = 'wants';
-        else if (savingsCats.includes(mapped.category)) detectedBudget = 'savings';
-    }
+    const detectedBudget = getTxnBudgetAllocations(t, mapped)[0]?.bucket || '';
 
     const dotColors = { needs: '#3b82f6', wants: '#F5BE27', savings: '#22c55e' };
     if (!detectedBudget || !dotColors[detectedBudget]) return '';
@@ -259,7 +537,9 @@ export function renderHistory(txns) {
             </div>
         `;
 
-        
+        header.innerHTML = repairTextArtifacts(header.innerHTML);
+        header.innerHTML = repairTextArtifacts(header.innerHTML);
+
         const content = document.createElement('div');
         content.className = `month-content ${isCollapsed ? 'collapsed' : ''}`;
         
@@ -351,7 +631,7 @@ export function renderHistory(txns) {
                 </div>`;
         });
         
-        content.innerHTML = contentHTML;
+        content.innerHTML = repairTextArtifacts(contentHTML);
         header.onclick = () => {
             const isNowCollapsed = content.classList.toggle('collapsed');
             header.classList.toggle('collapsed', isNowCollapsed);
@@ -552,7 +832,7 @@ function renderHistoryClean(txns) {
                 </div>`;
         });
 
-        content.innerHTML = contentHTML;
+        content.innerHTML = repairTextArtifacts(contentHTML);
         header.onclick = () => {
             const isNowCollapsed = content.classList.toggle('collapsed');
             header.classList.toggle('collapsed', isNowCollapsed);
@@ -606,6 +886,17 @@ function renderHistoryClean(txns) {
             });
         }, 10);
     }
+
+    // Keep the key dashboard widgets alive when the module-based loader renders
+    // history through the bridged `window.renderHistory` path.
+    if (!window.__suspendBudgetWidgetRefresh && typeof window.updateTripleProgressBar === 'function') {
+        try { window.updateTripleProgressBar(); } catch (error) { console.warn('updateTripleProgressBar failed:', error); }
+    }
+    try { if (typeof window.updateBudgetUI === 'function') window.updateBudgetUI(); } catch (error) { console.warn('updateBudgetUI failed:', error); }
+    try { if (typeof window.drawCashFlowChart === 'function') window.drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart failed:', error); }
+    try { if (typeof window.detectSubscriptions === 'function') window.detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions failed:', error); }
+    try { if (typeof window.updateCategoryBudgetsUI === 'function') window.updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI failed:', error); }
+    try { if (typeof window.updateInsightCards === 'function') window.updateInsightCards(window.allTxns || txns); } catch (error) { console.warn('updateInsightCards failed:', error); }
 }
 
 // Update Triple Progress Bar
@@ -613,9 +904,23 @@ export function updateTripleProgressBar() {
     const user = auth.currentUser;
     const widget = document.getElementById('triple-progress-widget');
     if (!widget) return;
+    if (window.__freezeBudgetWidgetUI || (window.__suspendBudgetWidgetRefresh && window.__preserveBudgetWidgetVisuals)) {
+        widget.style.display = 'block';
+        return;
+    }
     
     // Always show widget by default (as per user request for instant load)
     widget.style.display = 'block';
+    if (typeof window.populateBudgetMonthFilter === 'function') {
+        window.populateBudgetMonthFilter();
+    }
+
+    const budgetFilterEl = document.getElementById('budget-month-filter');
+    const budgetFilterValue = budgetFilterEl
+        ? budgetFilterEl.value
+        : (document.getElementById('chart-filter')?.value || 'this_month');
+    const monthContext = getDashboardMonthContext(budgetFilterValue);
+    const filterVal = monthContext.filterValue;
 
     let needsTotal = 0;
     let wantsTotal = 0;
@@ -626,7 +931,7 @@ export function updateTripleProgressBar() {
     let wantsCategoryMap = {};
 
     // --- INSTANT LOAD CACHE ---
-    const cacheKey = `budget_widget_cache_${user?.uid || 'guest'}`;
+    const cacheKey = `budget_widget_cache_${user?.uid || 'guest'}_${monthContext.monthKey}`;
     const cachedDataStr = localStorage.getItem(cacheKey);
     let parsedCache = null;
     try { if (cachedDataStr) parsedCache = JSON.parse(cachedDataStr); } catch (e) { }
@@ -640,7 +945,9 @@ export function updateTripleProgressBar() {
     );
     const atomeReady = isMultiWallet ? (window.walletTxns.atome !== undefined) : (window.allTxns !== null);
     const bpiReady = isMultiWallet ? (window.walletTxns.bpi !== undefined) : (window.allTxns !== null);
-    const currentReady = isCurrentAccountBucketSeparate ? Array.isArray(window.allTxns) : true;
+    const currentReady = isCurrentAccountBucketSeparate
+        ? (Array.isArray(window.allTxns) || Boolean(window.__preserveBudgetWidgetVisuals))
+        : true;
     const manualReady = (window.budgetManualTxns !== undefined);
 
     // Categories are only "Live Ready" if ALL their possible sources are loaded (Atomic Readiness)
@@ -657,135 +964,91 @@ export function updateTripleProgressBar() {
         }, 2600);
     }
     const isTimeoutFallback = (Date.now() - window.budgetLoadStartTime > 2500);
+    const preserveVisuals = Boolean(window.__preserveBudgetWidgetVisuals);
+    const budgetProfile = typeof window.getMonthlyBudgetProfile === 'function'
+        ? window.getMonthlyBudgetProfile(window.safeToSpendConfig || {}, monthContext.monthKey)
+        : null;
+    const hasLiveTxnSources = Array.isArray(window.allTxns)
+        || (window.walletTxns && typeof window.walletTxns === 'object' && Object.values(window.walletTxns).some((txns) => Array.isArray(txns)))
+        || Array.isArray(window.budgetManualTxns);
 
-    const canUseLiveNeeds = isAggregatedReady; 
-    const canUseLiveWants = isAggregatedReady; 
-    const canUseLiveSavings = isAggregatedReady;
+    if (preserveVisuals && !hasLiveTxnSources && !isTimeoutFallback) {
+        widget.style.display = 'block';
+        return;
+    }
+    if (preserveVisuals && (hasLiveTxnSources || isTimeoutFallback)) {
+        window.__preserveBudgetWidgetVisuals = false;
+    }
 
-    if (canUseLiveNeeds || canUseLiveWants || canUseLiveSavings) {
+    const canUseLiveNeeds = hasLiveTxnSources; 
+    const canUseLiveWants = hasLiveTxnSources; 
+    const canUseLiveSavings = hasLiveTxnSources;
+
+    if (hasLiveTxnSources) {
         // Live aggregation
-        const now = new Date();
-        const filterEl = document.getElementById('chart-filter');
-        const currentFilter = filterEl ? filterEl.value : 'this_month';
+        const now = monthContext.referenceDate;
+        const currentFilter = monthContext.filterValue;
+        const seenTxnKeys = new Set();
 
-        const aggregateFrom = (txns, account) => {
-            txns.forEach(t => {
+        const aggregateFrom = (txns, sourceAccount) => {
+            (Array.isArray(txns) ? txns : []).forEach((t) => {
+                if (!t || typeof t !== 'object') return;
+                const txnKey = `${sourceAccount || 'source'}:${t.id || t._id || t.date || t.merchant || t.name || ''}`;
+                if (seenTxnKeys.has(txnKey)) return;
+                seenTxnKeys.add(txnKey);
+
                 if (t.excluded || t.reimbursed || t.refund) return;
                 if (window.checkPeriod && !window.checkPeriod(t, currentFilter, 0, now)) return;
 
                 const display = getMerchantDisplay(t.name || t.merchant, t);
-                const amt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-                const manualCat = t.manualBudgetCategory;
+                const allocations = getTxnBudgetAllocations(t, display);
                 
                 // Track today's specific velocity
                 const isToday = window.checkPeriod && window.checkPeriod(t, 'today', 0, now);
 
-                // [NEW: 2026-04-03] Multi-Category Split Logic
-                if (t.budgetSplit && (t.budgetSplit.needs > 0 || t.budgetSplit.wants > 0 || t.budgetSplit.savings > 0 || t.budgetSplit.na > 0)) {
-                    const split = t.budgetSplit;
-                    
-                    // Add to Needs
-                    if (split.needs > 0) {
-                        needsTotal += split.needs;
-                        if (isToday) todayNeeds += split.needs;
+                allocations.forEach(({ bucket, amount }) => {
+                    if (bucket === 'needs') {
+                        needsTotal += amount;
+                        if (isToday) todayNeeds += amount;
+                        return;
                     }
-                    
-                    // Add to Wants
-                    if (split.wants > 0) {
-                        wantsTotal += split.wants;
-                        if (isToday) todayWants += split.wants;
-                        wantsCategoryMap['Split Wants'] = (wantsCategoryMap['Split Wants'] || 0) + split.wants;
-                    }
-                    
-                    // Add to Savings (Spent or Total depending on account)
-                    if (split.savings > 0) {
-                        const sourceAcc = t.account || account;
-                        if (sourceAcc === 'atome') {
-                            savingsSpent += split.savings;
-                        } else {
-                            savingsTotal += split.savings;
-                        }
-                    }
-                    
-                    return; // Done with this split transaction
-                }
 
-                if (manualCat) {
-                    if (manualCat === 'needs') {
-                        needsTotal += amt;
-                        if (isToday) todayNeeds += amt;
-                    } else if (manualCat === 'wants') {
-                        wantsTotal += amt;
-                        if (isToday) todayWants += amt;
-                    } else if (manualCat === 'savings') {
-                        // [REFINED: 2026-04-03] Manual Savings Split: Detect account from txn object if available
-                        const sourceAcc = t.account || account;
+                    if (bucket === 'wants') {
+                        wantsTotal += amount;
+                        if (isToday) todayWants += amount;
+                        const wantsKey = t.budgetSplit ? 'Split Wants' : (display?.category || 'Wants');
+                        wantsCategoryMap[wantsKey] = (wantsCategoryMap[wantsKey] || 0) + amount;
+                        return;
+                    }
+
+                    if (bucket === 'savings') {
+                        const sourceAcc = t.account || sourceAccount;
                         if (sourceAcc === 'atome') {
-                            savingsSpent += amt;
+                            savingsSpent += amount;
                         } else {
-                            savingsTotal += amt;
+                            savingsTotal += amount;
                         }
                     }
-                } else if (account === 'atome') {
-                    if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
-                        needsTotal += amt;
-                        if (isToday) todayNeeds += amt;
-                    } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses' || display.category === 'Financial Expenses') {
-                        wantsTotal += amt;
-                        if (isToday) todayWants += amt;
-                        wantsCategoryMap[display.category] = (wantsCategoryMap[display.category] || 0) + amt;
-                    } else if (display.category === 'Savings') {
-                        // [NEW: 2026-04-03] Atome Expense tagged Savings = Spent Savings (Olive)
-                        savingsSpent += amt;
-                    }
-                } else if (account === 'bpi') {
-                    if (display.category === 'Savings' || (t.name && t.name.toUpperCase().includes('SAVINGS'))) {
-                        savingsTotal += amt;
-                    } else if (display.category === 'Vehicle' || (t.name && (t.name.includes('Withdrawal') || t.name.includes('withdraw:')))) {
-                        needsTotal += amt;
-                        if (isToday) todayNeeds += amt;
-                    }
-                } else if (account === 'budget_manual') {
-                    if (display.category === 'Education' || display.category === 'Service' || display.category === 'Vehicle' || display.category === 'Transportation') {
-                        needsTotal += amt;
-                        if (isToday) todayNeeds += amt;
-                    } else if (display.category === 'Shopping' || display.category === 'Online shopping' || display.category === 'Food & Drinks' || display.category === 'Life & Entertainment' || display.category === 'Sport' || display.category === 'Financial expenses' || display.category === 'Financial Expenses') {
-                        wantsTotal += amt;
-                        if (isToday) todayWants += amt;
-                        wantsCategoryMap[display.category] = (wantsCategoryMap[display.category] || 0) + amt;
-                    } else if (display.category === 'Savings') {
-                        // Manual savings usually count as accumulated unless specified
-                        savingsTotal += amt;
-                    }
-                }
+                });
             });
         };
 
-        if (window.walletTxns) {
-            const aggregatedAccounts = new Set();
-            const aggregateBucket = (txns, account) => {
-                if (!account || aggregatedAccounts.has(account)) return;
-                aggregatedAccounts.add(account);
-                aggregateFrom(txns || [], account);
-            };
-
+        if (window.walletTxns && typeof window.walletTxns === 'object') {
             Object.entries(window.walletTxns).forEach(([account, txns]) => {
-                aggregateBucket(txns, account);
+                aggregateFrom(txns, account);
             });
-
-            if (isCurrentAccountBucketSeparate) {
-                aggregateBucket(window.allTxns || [], window.currentAccount);
-            }
-
-            aggregateBucket(window.budgetManualTxns || [], 'budget_manual');
-        } else {
-            aggregateFrom(window.allTxns || [], window.currentAccount);
         }
+
+        if (isCurrentAccountBucketSeparate || !window.walletTxns) {
+            aggregateFrom(window.allTxns || [], window.currentAccount || 'current');
+        }
+
+        aggregateFrom(window.budgetManualTxns || [], 'budget_manual');
     }
 
     // FALLBACK TO CACHE FOR SPECIFIC CATEGORIES (Modified 2026-03-27)
     // If a category source isn't ready, use its cached value instead of 0
-    if (parsedCache) {
+    if (parsedCache && !hasLiveTxnSources) {
         if (!canUseLiveNeeds) needsTotal = parsedCache.needs || 0;
         if (!canUseLiveWants) wantsTotal = parsedCache.wants || 0;
         if (!canUseLiveSavings) {
@@ -796,8 +1059,10 @@ export function updateTripleProgressBar() {
     // --------------------------
 
     // Salary Target & Rules from LocalStorage (single declaration)
-    const salaryTarget = parseFloat(localStorage.getItem('monthly_salary_target') || '17600');
-    const budgetRule = localStorage.getItem('budget_rule') || '50/30/20';
+    const salaryTarget = parseFloat(
+        budgetProfile?.budgetSalaryTarget ?? localStorage.getItem('monthly_salary_target') ?? '17600'
+    );
+    const budgetRule = budgetProfile?.budgetRule || localStorage.getItem('budget_rule') || '50/30/20';
 
     let weights = { needs: 0.50, wants: 0.30, savings: 0.20 };
     if (budgetRule === '40/30/30') {
@@ -805,16 +1070,15 @@ export function updateTripleProgressBar() {
     } else if (budgetRule === '50/20/30') {
         weights = { needs: 0.50, wants: 0.20, savings: 0.30 };
     } else if (budgetRule === 'custom') {
+        const customWeights = budgetProfile?.customRuleWeights || {};
         weights = {
-            needs: (parseInt(localStorage.getItem('custom_rule_needs')) || 50) / 100,
-            wants: (parseInt(localStorage.getItem('custom_rule_wants')) || 30) / 100,
-            savings: (parseInt(localStorage.getItem('custom_rule_savings')) || 20) / 100
+            needs: (parseInt(customWeights.needs ?? localStorage.getItem('custom_rule_needs')) || 50) / 100,
+            wants: (parseInt(customWeights.wants ?? localStorage.getItem('custom_rule_wants')) || 30) / 100,
+            savings: (parseInt(customWeights.savings ?? localStorage.getItem('custom_rule_savings')) || 20) / 100
         };
     }
 
-    const filterEl = document.getElementById('chart-filter');
-    const filterVal = filterEl ? filterEl.value : 'this_month';
-    const now = new Date();
+    const now = monthContext.referenceDate;
     
     // Monthly Budget Label Update (Modified 2026-03-27)
     const monthDisplay = document.getElementById('triple-month-display');
@@ -823,21 +1087,18 @@ export function updateTripleProgressBar() {
         const currentMonthName = monthNames[now.getMonth()];
         const currentYear = now.getFullYear();
 
-        if (filterVal === 'this_month') monthDisplay.innerText = `${currentMonthName} ${currentYear}`;
-        else if (filterVal === 'today') monthDisplay.innerText = `TODAY, ${currentMonthName.slice(0,3)} ${now.getDate()}`;
-        else if (filterVal === 'this_week' || filterVal === 'last_week' || filterVal === 'last_7_days') monthDisplay.innerText = `WEEKLY BUDGET`;
-        else if (filterVal === 'first_15' || filterVal === 'last_15') monthDisplay.innerText = `15-DAY BUDGET`;
-        else if (filterVal === 'last_6_months') monthDisplay.innerText = `6-MONTH BUDGET`;
-        else if (filterVal === 'this_year') monthDisplay.innerText = `YEARLY BUDGET`;
+        monthDisplay.innerText = isExplicitYearMonthFilter(monthContext.filterValue)
+            ? monthContext.labelUpper
+            : `${currentMonthName} ${currentYear}`;
     }
 
     // SCALING LOGIC (Modified 2026-03-27)
     let scalingFactor = 1.0;
-    if (filterVal === 'today') scalingFactor = 1 / 31;
-    else if (filterVal === 'this_week' || filterVal === 'last_week' || filterVal === 'last_7_days') scalingFactor = 7 / 31;
-    else if (filterVal === 'first_15' || filterVal === 'last_15') scalingFactor = 15 / 31;
-    else if (filterVal === 'last_6_months') scalingFactor = 6;
-    else if (filterVal === 'this_year') scalingFactor = 12;
+    if (monthContext.filterValue === 'today') scalingFactor = 1 / 31;
+    else if (monthContext.filterValue === 'this_week' || monthContext.filterValue === 'last_week' || monthContext.filterValue === 'last_7_days') scalingFactor = 7 / 31;
+    else if (monthContext.filterValue === 'first_15' || monthContext.filterValue === 'last_15') scalingFactor = 15 / 31;
+    else if (monthContext.filterValue === 'last_6_months') scalingFactor = 6;
+    else if (monthContext.filterValue === 'this_year') scalingFactor = 12;
 
     const needsLimit = salaryTarget * weights.needs * scalingFactor;
     const wantsLimit = salaryTarget * weights.wants * scalingFactor;
@@ -862,6 +1123,9 @@ export function updateTripleProgressBar() {
         window.lastBudgetNotificationSnapshot = {
             uid: user?.uid || null,
             filterVal,
+            monthKey: monthContext.monthKey,
+            liveReady: isAggregatedReady,
+            generatedAtMs: Date.now(),
             needsReadyToDisplay,
             wantsReadyToDisplay,
             savingsReadyToDisplay,
@@ -885,9 +1149,10 @@ export function updateTripleProgressBar() {
             budgetNotifUid
             && filterVal === 'this_month'
             && window.NotificationsEngine
+            && isAggregatedReady
         );
 
-        if (allReadyToDisplay && !canRunBudgetNotifications) {
+        if (allReadyToDisplay && filterVal === 'this_month' && !canRunBudgetNotifications) {
             persistBudgetProgress(budgetNotifUid || null, getBudgetProgressMonthKey(), filterVal, {
                 needs: needsPct,
                 wants: wantsPct,
@@ -942,7 +1207,7 @@ export function updateTripleProgressBar() {
         const needsEl = document.getElementById('needs-stats');
         const needsPctEl = document.getElementById('needs-pct');
         if (needsEl) {
-            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
             
             if (shouldReveal) {
                 const needsHadSkeleton = needsEl.classList.contains('skeleton');
@@ -979,7 +1244,7 @@ export function updateTripleProgressBar() {
         if (needsBar) {
             const bg = needsBar.closest('.progress-bar-bg');
             // Modified 2026-03-27: Bars only reveal when FULLY aggregated OR timeout fallback
-            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+            const shouldReveal = hasLiveTxnSources || isTimeoutFallback;
 
             if (bg && shouldReveal && needsReadyToDisplay) {
                 if (bg.classList.contains('skeleton')) {
@@ -1002,7 +1267,7 @@ export function updateTripleProgressBar() {
         const wantsEl = document.getElementById('wants-stats');
         const wantsPctEl = document.getElementById('wants-pct');
         if (wantsEl) {
-            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay;
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay;
 
             if (shouldReveal) {
                 const wantsHadSkeleton = wantsEl.classList.contains('skeleton');
@@ -1038,7 +1303,7 @@ export function updateTripleProgressBar() {
         const wantsBar = document.getElementById('wants-bar');
         if (wantsBar) {
             const bg = wantsBar.closest('.progress-bar-bg');
-            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+            const shouldReveal = hasLiveTxnSources || isTimeoutFallback;
 
             if (bg && shouldReveal && wantsReadyToDisplay) {
                 if (bg.classList.contains('skeleton')) {
@@ -1073,7 +1338,7 @@ export function updateTripleProgressBar() {
         const wantsMsg = document.getElementById('wants-depleted-msg');
         if (wantsMsg) {
             // Modified 2026-03-27: Gate message with Unified Reveal (Atomic Readiness)
-            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay;
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay;
             if (shouldReveal) {
                 if (wantsPct >= 100) {
                     wantsMsg.style.display = 'flex';
@@ -1105,7 +1370,7 @@ export function updateTripleProgressBar() {
         const savingsEl = document.getElementById('savings-stats');
         const savingsPctEl = document.getElementById('savings-pct');
         if (savingsEl) {
-            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
             if (shouldReveal) {
                 const savingsHadSkeleton = savingsEl.classList.contains('skeleton');
                 savingsEl.classList.remove('skeleton');
@@ -1144,7 +1409,7 @@ export function updateTripleProgressBar() {
         const savingsBarSpent = document.getElementById('savings-bar-spent'); // Olive
         if (savingsBar) {
             const bg = savingsBar.closest('.progress-bar-bg');
-            const shouldReveal = isAggregatedReady || isTimeoutFallback;
+            const shouldReveal = hasLiveTxnSources || isTimeoutFallback;
 
             if (bg && shouldReveal && savingsReadyToDisplay) {
                 if (bg.classList.contains('skeleton')) {
@@ -1212,7 +1477,7 @@ export function updateTripleProgressBar() {
         }
 
         if (remainingEl) {
-            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
             remainingEl.dataset.raw = remainingRaw;
             remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
             remainingEl.style.display = '';
@@ -1289,7 +1554,7 @@ export function updateTripleProgressBar() {
 
         const usageSub = document.getElementById('triple-usage-sub');
         if (usageSub) {
-            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
             if (shouldReveal) {
                 const usageSubHadSkeleton = usageSub.classList.contains('skeleton');
                 usageSub.classList.remove('skeleton');
@@ -1305,7 +1570,7 @@ export function updateTripleProgressBar() {
         if (window.syncWidgets) window.syncWidgets();
 
         // --- SAVE TO CACHE ---
-        if (canUseLiveNeeds && canUseLiveWants && canUseLiveSavings) {
+        if (hasLiveTxnSources) {
             localStorage.setItem(cacheKey, JSON.stringify({
                 needs: needsTotal,
                 wants: wantsTotal,
@@ -1315,18 +1580,6 @@ export function updateTripleProgressBar() {
             }));
         }
 }
-
-function checkAndTriggerAlert(alertKey, title, message, type) {
-    const today = new Date().toDateString();
-    const lastAlert = localStorage.getItem(`alert_${alertKey}_last`);
-    
-    // Only trigger once per day to avoid spamming
-    if (lastAlert !== today) {
-        createNotification(title, message, type);
-        localStorage.setItem(`alert_${alertKey}_last`, today);
-    }
-}
-
 
 // Charting Functions
 export function drawPieChart(segments, total, isUpdate = false) {
@@ -1346,8 +1599,8 @@ export function drawPieChart(segments, total, isUpdate = false) {
     const radius = 90; 
     const strokeWidth = 40; 
     const circumference = 2 * Math.PI * radius;
-    
-    const totalFormatted = total > 0 ? `ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(total).toLocaleString()}` : "ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±0";
+    const peso = '\u20B1';
+    const totalFormatted = total > 0 ? `${peso}${Math.round(total).toLocaleString()}` : `${peso}0`;
 
     // State-based Label Logic
     if (totalLabel && totalVal) {
@@ -1360,7 +1613,7 @@ export function drawPieChart(segments, total, isUpdate = false) {
             const seg = segments.find(s => s.name === window.selectedCategoryName);
             if (seg) {
                 totalLabel.innerText = seg.name;
-                const valText = `ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(seg.value).toLocaleString()}`;
+                const valText = `${peso}${Math.round(seg.value).toLocaleString()}`;
                 totalVal.dataset.raw = valText;
                 totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : valText;
                 if (totalPct) {
@@ -1376,6 +1629,11 @@ export function drawPieChart(segments, total, isUpdate = false) {
                 if (totalPct) totalPct.innerText = '';
             }
         }
+    }
+
+    if (totalVal) {
+        totalVal.innerText = repairTextArtifacts(totalVal.innerText || '');
+        totalVal.dataset.raw = repairTextArtifacts(totalVal.dataset.raw || totalVal.innerText || '');
     }
 
     const bgLayer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -1468,20 +1726,30 @@ export function drawTrendChart(txns) {
     const path = document.getElementById('trendPath');
     const area = document.getElementById('trendArea');
     const totalEl = document.getElementById('trend-period-total');
-    if (!path || txns.length === 0) return;
+    if (!path || !area || !Array.isArray(txns)) return;
 
     // Simplified Trend Chart Implementation
     const dataPoints = new Array(4).fill(0);
-    const now = new Date();
+    const monthContext = typeof window.getDashboardMonthContext === 'function'
+        ? window.getDashboardMonthContext()
+        : null;
+    const now = monthContext?.referenceDate ? new Date(monthContext.referenceDate) : new Date();
+    let periodTotal = 0;
     txns.forEach(t => {
         const d = new Date(t.date);
         if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && !t.excluded) {
             const week = Math.floor((d.getDate() - 1) / 7);
             if (week >= 0 && week < 4) {
-                 dataPoints[week] += Math.abs(t.amount || 0);
+                 const amount = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                 dataPoints[week] += amount;
+                 periodTotal += amount;
             }
         }
     });
+
+    if (totalEl) {
+        totalEl.innerText = `PHP ${periodTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
 
     const max = Math.max(...dataPoints, 500) * 1.2;
     const w = 400, h = 130, padding = 20;
@@ -1598,7 +1866,7 @@ export async function updateAISummary(txns, force = false) {
     const cacheKey = `ai_summary_${window.currentAccount}_${new Date().getMonth()}`;
     const cached = localStorage.getItem(cacheKey);
     if (!force && cached) {
-        summaryEl.innerHTML = formatAISummaryHTML(cleanAIText(cached));
+        summaryEl.innerHTML = formatAIAnalysisHTML(cached);
         return;
     }
 
@@ -1606,7 +1874,7 @@ export async function updateAISummary(txns, force = false) {
     if (backoffUntil && Date.now() < parseInt(backoffUntil)) {
         const localText = LocalAI.analyze(txns);
         const badgeColor = '#64748b';
-        summaryEl.innerHTML = `<span style="font-size: 8px; font-weight: 800; text-transform: uppercase; color: ${badgeColor}; border: 1px solid ${badgeColor}; padding: 1px 3px; border-radius: 3px; margin-right: 6px; vertical-align: middle; display: inline-flex; align-items: center; letter-spacing: 0.5px;">Edge AI</span>${formatAISummaryHTML(cleanAIText(localText))}`;
+        summaryEl.innerHTML = `<span style="font-size: 8px; font-weight: 800; text-transform: uppercase; color: ${badgeColor}; border: 1px solid ${badgeColor}; padding: 1px 3px; border-radius: 3px; margin-right: 6px; vertical-align: middle; display: inline-flex; align-items: center; letter-spacing: 0.5px;">Edge AI</span>${formatAIAnalysisHTML(localText)}`;
         return;
     }
 
@@ -1623,7 +1891,7 @@ export async function updateAISummary(txns, force = false) {
         const prompt = `Quickly analyze these transactions: ${JSON.stringify(recentTxns)}. 
 Provide a short, forward-looking financial insight (2 sentences) in BASIC ENGLISH. Focus on FORECASTING and future spending predictions (e.g., "At this rate, you will spend X by month-end"). Predict how much can be saved if spending in their top category is reduced by 20%. Put them in ONE PARAGRAPH.
 
-Use DOUBLE LINE BREAKS to highlight these:
+Do not add blank lines. Keep Recommendation and Tip in a tight flow:
 Recommendation: Concrete action to cut costs next month.
 Tip: Predictive savings tip specific to the top merchant or category (e.g., if fuel/Seaoil, suggest promo days; if shopping, suggest loyalty points; if services/subs, suggest auditing).
 
@@ -1686,10 +1954,9 @@ Use plain text only. Do NOT use markdown, bold text, bullets, or asterisks. Do N
 
     try {
         let { text, engine } = await fetchInsights();
-        text = cleanAIText(text);
         const badgeColor = engine === 'ChatGPT' ? '#10a37f' : (engine === 'Gemini' ? '#3b82f6' : '#64748b');
-        summaryEl.innerHTML = `<span style="font-size: 8px; font-weight: 800; text-transform: uppercase; color: ${badgeColor}; border: 1px solid ${badgeColor}; padding: 1px 3px; border-radius: 3px; margin-right: 6px; vertical-align: middle; display: inline-flex; align-items: center; letter-spacing: 0.5px;">${engine}</span>${formatAISummaryHTML(text)}`;
-        localStorage.setItem(cacheKey, text);
+        summaryEl.innerHTML = `<span style="font-size: 8px; font-weight: 800; text-transform: uppercase; color: ${badgeColor}; border: 1px solid ${badgeColor}; padding: 1px 3px; border-radius: 3px; margin-right: 6px; vertical-align: middle; display: inline-flex; align-items: center; letter-spacing: 0.5px;">${engine}</span>${formatAIAnalysisHTML(text)}`;
+        localStorage.setItem(cacheKey, cleanAIText(text));
     } catch (err) {
         console.error("Master AI Error:", err);
         summaryEl.innerText = 'Restoring AI insights. Please sync your transactions to refresh analysis.';
@@ -1741,16 +2008,7 @@ export async function updateCategoryBudgetsUI() {
         }
         
         const pct = limit > 0 ? Math.min((spent / limit) * 100, 100) : 0;
-        
-        // Category Alert Triggers
-        if (limit > 0) {
-            const catLabel = displayCategoryName(cat);
-            if (pct >= 100) {
-                checkAndTriggerAlert(`cat_budget_${cat}_100`, `${catLabel} Limit Reached`, `You've maxed out your ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()} budget for ${catLabel}.`, 'error');
-            } else if (pct >= 80) {
-                checkAndTriggerAlert(`cat_budget_${cat}_80`, `${catLabel} Warning`, `You've used 80% of your ${catLabel} budget.`, 'warning');
-            }
-        }
+
         return `
             <div class="cat-budget-item">
                 <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(spent).toLocaleString()} / ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()}</span></div>
@@ -1959,6 +2217,141 @@ function getBalanceViewport() {
     return document.getElementById('cardCarouselScroll');
 }
 
+function isDesktopWalletLayout() {
+    return typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(min-width: 1100px)').matches;
+}
+
+function syncWalletDesktopLayout() {
+    const container = document.querySelector('#view-wallet .mui-container');
+    if (!container) return;
+
+    const layoutOrder = [
+        '#safe-spend-widget',
+        '#triple-progress-widget',
+        '.insight-row',
+        '.monthly-summary-card',
+        '#offline-queue-card',
+        '#chart-section',
+        '.trend-card',
+        '.recent-header',
+        '.search-container',
+        '#loading-spinner',
+        '#history-container',
+        '#subscription-section',
+        '#analytics-section',
+        '#cat-budget-widget',
+        '.data-mgmt-card',
+        '.troubleshoot-card',
+        '#admin-controls',
+        '#log-container',
+        '.footer-credits'
+    ];
+
+    const firstMatch = (selector) => container.querySelector(selector);
+    const allDataCards = container.querySelectorAll('.data-mgmt-card');
+    const elements = {
+        safe: firstMatch('#safe-spend-widget'),
+        budget: firstMatch('#triple-progress-widget'),
+        insights: firstMatch('.insight-row'),
+        summary: firstMatch('.monthly-summary-card'),
+        offline: firstMatch('#offline-queue-card'),
+        chart: firstMatch('#chart-section'),
+        trend: firstMatch('.trend-card'),
+        recent: firstMatch('.recent-header'),
+        search: firstMatch('.search-container'),
+        loading: firstMatch('#loading-spinner'),
+        history: firstMatch('#history-container'),
+        subscription: firstMatch('#subscription-section'),
+        analytics: firstMatch('#analytics-section'),
+        category: firstMatch('#cat-budget-widget'),
+        dataMgmt: allDataCards[0] || null,
+        troubleshoot: container.querySelector('.troubleshoot-card'),
+        admin: firstMatch('#admin-controls'),
+        log: firstMatch('#log-container'),
+        footer: firstMatch('.footer-credits')
+    };
+
+    let shell = container.querySelector('.wallet-desktop-shell');
+
+    if (!isDesktopWalletLayout()) {
+        if (shell) {
+            const moveBack = (el) => { if (el) container.appendChild(el); };
+            layoutOrder.forEach((selector) => {
+                if (selector === '.data-mgmt-card') {
+                    moveBack(elements.dataMgmt);
+                    return;
+                }
+                const el = firstMatch(selector);
+                moveBack(el);
+            });
+            shell.remove();
+        }
+        return;
+    }
+
+    if (!shell) {
+        shell = document.createElement('div');
+        shell.className = 'wallet-desktop-shell';
+        shell.innerHTML = `
+            <div class="wallet-desktop-main">
+                <div class="wallet-desktop-left"></div>
+                <div class="wallet-desktop-right"></div>
+            </div>
+            <div class="wallet-desktop-bottom">
+                <div class="wallet-desktop-bottom-main"></div>
+                <div class="wallet-desktop-bottom-side"></div>
+            </div>
+            <div class="wallet-desktop-utility"></div>
+        `;
+        container.prepend(shell);
+    }
+
+    const left = shell.querySelector('.wallet-desktop-left');
+    const right = shell.querySelector('.wallet-desktop-right');
+    const bottomMain = shell.querySelector('.wallet-desktop-bottom-main');
+    const bottomSide = shell.querySelector('.wallet-desktop-bottom-side');
+    const utility = shell.querySelector('.wallet-desktop-utility');
+
+    [elements.safe, elements.insights, elements.summary, elements.offline].forEach((el) => { if (el) left.appendChild(el); });
+    [elements.budget, elements.chart, elements.trend].forEach((el) => { if (el) right.appendChild(el); });
+    [elements.recent, elements.search, elements.loading, elements.history].forEach((el) => { if (el) bottomMain.appendChild(el); });
+    [elements.subscription, elements.analytics, elements.category].forEach((el) => { if (el) bottomSide.appendChild(el); });
+    [elements.dataMgmt, elements.troubleshoot, elements.admin, elements.log, elements.footer].forEach((el) => { if (el) utility.appendChild(el); });
+
+    const chartSection = elements.chart;
+    if (chartSection) {
+        const chartContainer = chartSection.querySelector('.chart-container');
+        const chartLegend = chartSection.querySelector('#chart-legend');
+        let chartCluster = chartSection.querySelector('.chart-desktop-cluster');
+
+        if (isDesktopWalletLayout()) {
+            if (chartContainer && chartLegend) {
+                if (!chartCluster) {
+                    chartCluster = document.createElement('div');
+                    chartCluster.className = 'chart-desktop-cluster';
+                }
+                chartSection.appendChild(chartCluster);
+                chartCluster.appendChild(chartContainer);
+                chartCluster.appendChild(chartLegend);
+            }
+        } else if (chartCluster) {
+            if (chartContainer) chartSection.appendChild(chartContainer);
+            if (chartLegend) chartSection.appendChild(chartLegend);
+            chartCluster.remove();
+        }
+    }
+}
+
+function updateBalanceViewportMode(cardCount = getBalanceCards().length) {
+    const viewport = getBalanceViewport();
+    if (!viewport) return;
+    const useStaticRow = isDesktopWalletLayout() && cardCount <= 3;
+    viewport.classList.toggle('desktop-static-row', useStaticRow);
+    viewport.classList.toggle('desktop-carousel-row', isDesktopWalletLayout() && cardCount > 3);
+}
+
 function getCardSnapLeft(card, viewport = getBalanceViewport()) {
     if (!card || !viewport) return 0;
     const rawLeft = card.offsetLeft - ((viewport.clientWidth - card.offsetWidth) / 2);
@@ -1986,6 +2379,66 @@ function getNearestBalanceCard(viewport = getBalanceViewport()) {
     return closest;
 }
 
+function getBalanceCardIndex(card, cards = getBalanceCards()) {
+    if (!card || !Array.isArray(cards) || !cards.length) return -1;
+    return cards.findIndex((entry) => entry === card);
+}
+
+function getGestureLimitedBalanceCard(originCard, viewport = getBalanceViewport()) {
+    const cards = getBalanceCards();
+    const nearestCard = getNearestBalanceCard(viewport);
+    if (!originCard || !nearestCard || cards.length < 2) return nearestCard;
+
+    const originIndex = getBalanceCardIndex(originCard, cards);
+    const nearestIndex = getBalanceCardIndex(nearestCard, cards);
+    if (originIndex === -1 || nearestIndex === -1) return nearestCard;
+
+    const minIndex = Math.max(0, originIndex - 1);
+    const maxIndex = Math.min(cards.length - 1, originIndex + 1);
+    const clampedIndex = Math.max(minIndex, Math.min(maxIndex, nearestIndex));
+    return cards[clampedIndex] || nearestCard;
+}
+
+function getSwipeTargetBalanceCard(originCard, viewport = getBalanceViewport(), motion = {}) {
+    const cards = getBalanceCards();
+    const nearestCard = getNearestBalanceCard(viewport);
+    if (!originCard || !nearestCard || cards.length < 2) return nearestCard;
+
+    const originIndex = getBalanceCardIndex(originCard, cards);
+    if (originIndex === -1) return nearestCard;
+
+    const travel = Number(motion.travel || 0);
+    const hasIntent = Math.abs(travel) >= 18;
+    if (hasIntent) {
+        const direction = travel > 0 ? 1 : -1;
+        const targetIndex = Math.max(0, Math.min(cards.length - 1, originIndex + direction));
+        return cards[targetIndex] || nearestCard;
+    }
+
+    return getGestureLimitedBalanceCard(originCard, viewport);
+}
+
+function holdBudgetWidgetForAccountSwitch() {
+    window.__freezeBudgetWidgetUI = true;
+    window.__skipBudgetRefreshOnNextChartFilter = true;
+    window.__preserveBudgetWidgetVisuals = true;
+    window.__suspendBudgetWidgetRefresh = true;
+    window.clearTimeout(window.__budgetWidgetAccountSwitchReleaseTimer);
+}
+
+function releaseBudgetWidgetAfterAccountSwitch(delay = 260) {
+    window.clearTimeout(window.__budgetWidgetAccountSwitchReleaseTimer);
+    window.__budgetWidgetAccountSwitchReleaseTimer = window.setTimeout(() => {
+        window.__freezeBudgetWidgetUI = false;
+        window.__suspendBudgetWidgetRefresh = false;
+        window.__skipBudgetRefreshOnNextChartFilter = false;
+        window.__preserveBudgetWidgetVisuals = false;
+        window.budgetLoadStartTime = Date.now() - 3000;
+        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+        else if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+    }, delay);
+}
+
 function syncActiveAccountChrome(accId, accounts = window.walletAccounts || []) {
     if (!accId) return;
     window.currentAccount = accId;
@@ -1998,17 +2451,31 @@ function syncActiveAccountChrome(accId, accounts = window.walletAccounts || []) 
 function snapToBalanceCard(card, behavior = 'smooth') {
     const viewport = getBalanceViewport();
     if (!viewport || !card) return;
+    if (viewport.classList.contains('desktop-static-row')) return;
     viewport.scrollTo({ left: getCardSnapLeft(card, viewport), behavior });
 }
 
 function settleToNearestBalanceCard(behavior = 'smooth', options = {}) {
-    const card = getNearestBalanceCard();
+    const viewport = getBalanceViewport();
+    const card = options.originCard
+        ? getSwipeTargetBalanceCard(options.originCard, viewport, { travel: options.travel || 0 })
+        : getNearestBalanceCard();
     if (!card) return;
+    const accountId = card.dataset.account;
+    if (!accountId) return;
     snapToBalanceCard(card, behavior);
-    syncActiveAccountChrome(card.dataset.account, window.walletAccounts || []);
-    if (options.skipReload || window.__lastSettledWalletAccount === card.dataset.account) return;
-    window.__lastSettledWalletAccount = card.dataset.account;
-    import('./app-data.js').then((m) => m.loadData());
+    syncActiveAccountChrome(accountId, window.walletAccounts || []);
+    if (options.skipReload || window.__lastSettledWalletAccount === accountId) return;
+    window.__lastSettledWalletAccount = accountId;
+    if (viewport) {
+        window.clearTimeout(viewport.__walletSwitchTimer);
+        const reloadDelay = behavior === 'smooth' ? 140 : 0;
+        viewport.__walletSwitchTimer = window.setTimeout(() => {
+            switchAccount(accountId, false, true);
+        }, reloadDelay);
+        return;
+    }
+    switchAccount(accountId, false, true);
 }
 
 function releaseInstantActiveCards(container) {
@@ -2034,6 +2501,7 @@ function settleBalanceCards() {
 export function updateBalanceCardsUI(accounts) {
     const container = document.getElementById('dynamic-balance-cards');
     if (!container) return;
+    syncWalletDesktopLayout();
 
     if (window.accountCardObserver?.disconnect) {
         try { window.accountCardObserver.disconnect(); } catch (e) {}
@@ -2062,7 +2530,7 @@ export function updateBalanceCardsUI(accounts) {
 
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
-    container.innerHTML = accounts.map(acc => {
+    container.innerHTML = accounts.map((acc, index) => {
         const isAtome = acc.id === 'atome';
         const isBPI = acc.id === 'bpi';
         const isActiveCard = acc.id === activeAccountId;
@@ -2070,7 +2538,7 @@ export function updateBalanceCardsUI(accounts) {
         
         return `
         <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
-            <div class="card-shimmer"></div> <!-- .card-shimmer - Added 2026-03-27 - subtle intermittent shimmer effect -->
+            <div class="card-shimmer" style="animation-delay: ${index * 1.8}s;"></div>
             ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
             ${isBPI ? '<div class="bpi-rays"></div>' : ''}
             
@@ -2119,7 +2587,18 @@ export function updateBalanceCardsUI(accounts) {
         `;
     }).join('');
 
+    container.innerHTML = repairTextArtifacts(container.innerHTML);
     const renderedCards = container.querySelectorAll('.balance-card');
+    renderedCards.forEach((card) => {
+        const accountId = card.dataset.account;
+        if (accountId === 'bpi') return;
+        const account = accounts.find((item) => item.id === accountId);
+        const numberEl = card.querySelector('.card-number');
+        if (account && numberEl) {
+            numberEl.textContent = `${maskedAccountNumber}${account.last4 || '0000'}`;
+        }
+    });
+    updateBalanceViewportMode(accounts.length);
     renderedCards.forEach((card) => {
         window.requestAnimationFrame(() => triggerSoftFadeInElement(card));
     });
@@ -2137,11 +2616,56 @@ export function scrollToActiveCard(accId, behavior = 'smooth') {
         snapToBalanceCard(card, behavior);
     }
 }
+
+function hydrateAccountViewFromCache(accId) {
+    const uid = auth.currentUser?.uid || localStorage.getItem('wallet_last_uid');
+    if (!uid || !accId) return false;
+
+    const cacheKey = `wallet_cache_${uid}_${accId}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    if (!cachedData) return false;
+
+    try {
+        const cache = JSON.parse(cachedData);
+        if (!Array.isArray(cache.txns) || (Date.now() - cache.timestamp >= 86400000)) return false;
+
+        window.allTxns = cache.txns;
+        if (window.renderHistory) window.renderHistory(cache.txns);
+        if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(cache.txns, accId);
+        if (window.updateInsightCards) window.updateInsightCards(cache.txns);
+        if (window.renderCalendar) window.renderCalendar(cache.txns);
+
+        const filterEl = document.getElementById('chart-filter');
+        if (filterEl) {
+            const preferredFilter = getStoredDashboardMonthSelection() || 'this_month';
+            if (filterEl.querySelector(`option[value="${preferredFilter}"]`)) {
+                filterEl.value = preferredFilter;
+            } else {
+                filterEl.value = 'this_month';
+            }
+            window.requestAnimationFrame(() => {
+                if (window.filterChart) window.filterChart();
+            });
+        }
+        return true;
+    } catch (error) {
+        console.warn('hydrateAccountViewFromCache failed', error);
+        return false;
+    }
+}
 // Account Switcher Management
 export function switchAccount(id, silentRestore = false, forceReload = false) {
     const resolvedId = resolveActiveAccountId(window.walletAccounts, id);
     if (resolvedId === window.currentAccount && !forceReload) return;
+    holdBudgetWidgetForAccountSwitch();
+    window.currentAccount = resolvedId;
+    if (typeof window.lockObserverAccountReload === 'function') {
+        window.lockObserverAccountReload(resolvedId);
+    }
+    localStorage.setItem('wallet_current_account', resolvedId);
     syncActiveAccountChrome(resolvedId, window.walletAccounts || []);
+    applyAccountTheme(resolvedId, window.walletAccounts || []);
+    updateHeaderIcon(resolvedId);
     window.__lastSettledWalletAccount = resolvedId;
     scrollToActiveCard(resolvedId);
     if (!silentRestore) triggerHaptic('bump');
@@ -2149,23 +2673,20 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
     // Toggle Safe to Spend Widget Visibility
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
-        // Safe to Spend is specifically for BPI account
-        safeSpendWidget.style.display = (resolvedId === 'bpi') ? 'block' : 'none';
-        if (resolvedId === 'bpi') updateSafeSpendUI();
+        const shouldShowSafeSpend = resolvedId === 'bpi' || isDesktopWalletLayout();
+        safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
+        if (shouldShowSafeSpend) updateSafeSpendUI();
     }
 
-    // Trigger data reload for the new account
-    import('./app-data.js').then(m => m.loadData());
+    // Trigger data reload for the new account (cache path inside loadData is the single source of truth)
+    import('./app-data.js').then(m => m.loadData({
+        preserveBudgetWidget: true,
+        preserveViewState: false,
+        reason: 'account_switch'
+    }));
 
-    // Auto-sync if token is fresh
-    if (!silentRestore && (resolvedId === 'atome' || resolvedId === 'bpi')) {
-        const token = localStorage.getItem('g_access_token');
-        const tokenIssuedAt = parseInt(localStorage.getItem('g_token_issued_at') || '0');
-        const tokenAge = Date.now() - tokenIssuedAt;
-        const TOKEN_MAX_AGE = 50 * 60 * 1000;
-        if (token && tokenAge < TOKEN_MAX_AGE) {
-            import('./app-data.js').then(m => m.handleScan(25, false));
-        }
+    if (!silentRestore) {
+        scheduleDeferredInboxSyncForAccount(resolvedId);
     }
 }
 
@@ -2173,6 +2694,11 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
 export function applyAccountTheme(accId, accounts) {
     const acc = accounts.find(a => a.id === accId);
     if (!acc) return;
+
+    // Keep all theme-driven UI (including trend chart color) synced to active account.
+    if (typeof applyTheme === 'function') {
+        applyTheme(accId);
+    }
     
     document.documentElement.style.setProperty('--wallet-card-bg', acc.color);
     document.documentElement.style.setProperty('--dynamic-button-color', acc.color);
@@ -2193,7 +2719,7 @@ export function applyUserView(user) {
     
     const safeSpendWidget = document.getElementById('safe-spend-widget');
     if (safeSpendWidget) {
-        safeSpendWidget.style.display = isBPI ? 'block' : 'none';
+        safeSpendWidget.style.display = (isBPI || isDesktopWalletLayout()) ? 'block' : 'none';
     }
 }
 
@@ -2266,84 +2792,188 @@ export function setupAccountSwitcher() {
     const viewport = document.getElementById('cardCarouselScroll');
     const cards = getBalanceCards();
     if (!viewport || cards.length === 0) return;
+    window.__useModuleWalletSwitcher = true;
+    updateBalanceViewportMode(cards.length);
+    let hasDragged = false;
+    const isStaticDesktopRow = () => viewport.classList.contains('desktop-static-row');
+    let isDown = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+    let gestureOriginCard = null;
+    let gestureMode = null;
+    let lastTouchScrollLeft = 0;
+
+    const bindCardTaps = () => {
+        cards.forEach((card) => {
+            if (card.dataset.desktopTapBound === 'true') return;
+            card.dataset.desktopTapBound = 'true';
+            card.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (hasDragged) return;
+                const accountId = card.dataset.account;
+                if (!accountId) return;
+                switchAccount(accountId);
+            });
+        });
+    };
+
+    const clearGestureTimers = () => {
+        window.clearTimeout(viewport.__walletSettleTimer);
+        window.clearTimeout(viewport.__walletSwitchTimer);
+    };
+
+    const queueSettle = (behavior = 'smooth', delay = 60) => {
+        if (isStaticDesktopRow()) return;
+        clearGestureTimers();
+        viewport.__walletSettleTimer = window.setTimeout(() => {
+            viewport.classList.remove('cards-dragging');
+            viewport.style.scrollSnapType = 'x mandatory';
+            settleToNearestBalanceCard(behavior, {
+                originCard: gestureOriginCard,
+                travel: viewport.scrollLeft - startScrollLeft
+            });
+            gestureOriginCard = null;
+            gestureMode = null;
+        }, delay);
+    };
 
     if (viewport.__walletAccountSwitcherBound) {
-        settleToNearestBalanceCard('auto', { skipReload: true });
+        bindCardTaps();
+        if (!isStaticDesktopRow()) {
+            settleToNearestBalanceCard('auto', { skipReload: true });
+        } else {
+            ensureActiveBalanceCard(resolveActiveAccountId(window.walletAccounts, window.currentAccount));
+        }
         return;
     }
 
-    let isDown = false;
-    let startX;
-    let scrollLeft;
-    let hasDragged = false;
-    const queueSettle = (behavior = 'smooth') => {
-        window.clearTimeout(viewport.__walletSettleTimer);
-        viewport.__walletSettleTimer = window.setTimeout(() => {
-            viewport.style.scrollSnapType = 'x mandatory';
-            settleToNearestBalanceCard(behavior);
-        }, 110);
-    };
-
     viewport.addEventListener('mousedown', (e) => {
+        if (isStaticDesktopRow()) return;
+        clearGestureTimers();
         isDown = true;
+        gestureMode = 'mouse';
         viewport.style.cursor = 'grabbing';
         viewport.style.scrollSnapType = 'none';
+        viewport.classList.add('cards-dragging');
         startX = e.pageX - viewport.offsetLeft;
-        scrollLeft = viewport.scrollLeft;
+        startScrollLeft = viewport.scrollLeft;
+        gestureOriginCard = getNearestBalanceCard(viewport);
         hasDragged = false;
     });
 
     viewport.addEventListener('mouseleave', () => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         isDown = false;
         viewport.style.cursor = 'grab';
-        queueSettle();
+        if (hasDragged) {
+            queueSettle('smooth', 32);
+        } else {
+            gestureOriginCard = null;
+            gestureMode = null;
+            viewport.classList.remove('cards-dragging');
+            viewport.style.scrollSnapType = 'x mandatory';
+        }
     });
 
     viewport.addEventListener('mouseup', () => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         isDown = false;
         viewport.style.cursor = 'grab';
-        queueSettle();
+        if (hasDragged) {
+            queueSettle('smooth', 32);
+        } else {
+            gestureOriginCard = null;
+            gestureMode = null;
+            viewport.classList.remove('cards-dragging');
+            viewport.style.scrollSnapType = 'x mandatory';
+        }
     });
 
     viewport.addEventListener('mousemove', (e) => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         e.preventDefault();
         const x = e.pageX - viewport.offsetLeft;
-        const walk = (x - startX) * 1.5;
-        if (Math.abs(walk) > 5) hasDragged = true;
-        viewport.scrollLeft = scrollLeft - walk;
+        const walk = (x - startX) * 1.18;
+        if (Math.abs(walk) > 2) hasDragged = true;
+        viewport.scrollLeft = startScrollLeft - walk;
     });
 
     viewport.addEventListener('touchstart', (e) => {
+        if (isStaticDesktopRow()) return;
+        clearGestureTimers();
         startX = e.touches[0].pageX - viewport.offsetLeft;
-        scrollLeft = viewport.scrollLeft;
+        startScrollLeft = viewport.scrollLeft;
+        lastTouchScrollLeft = viewport.scrollLeft;
         isDown = true;
+        gestureMode = 'touch';
+        gestureOriginCard = getNearestBalanceCard(viewport);
         hasDragged = false;
-        viewport.style.scrollSnapType = 'none';
+        viewport.classList.add('cards-dragging');
     }, { passive: true });
 
     viewport.addEventListener('touchmove', (e) => {
+        if (isStaticDesktopRow()) return;
         if (!isDown) return;
         const x = e.touches[0].pageX - viewport.offsetLeft;
-        const walk = (x - startX) * 1.5;
-        if (Math.abs(walk) > 5) hasDragged = true;
-        viewport.scrollLeft = scrollLeft - walk;
+        const delta = Math.abs(x - startX);
+        if (delta > 4) hasDragged = true;
     }, { passive: true });
 
     viewport.addEventListener('touchend', () => {
+        if (isStaticDesktopRow()) return;
         isDown = false;
-        queueSettle();
+        viewport.style.cursor = 'grab';
+        if (hasDragged) {
+            queueSettle('smooth', 120);
+        } else {
+            gestureOriginCard = null;
+            gestureMode = null;
+            viewport.classList.remove('cards-dragging');
+            viewport.style.scrollSnapType = 'x mandatory';
+        }
     }, { passive: true });
 
     viewport.addEventListener('scroll', () => {
-        if (isDown) return;
-        queueSettle('smooth');
+        if (isStaticDesktopRow()) return;
+        if (gestureMode !== 'touch') return;
+        if (Math.abs(viewport.scrollLeft - lastTouchScrollLeft) > 2) {
+            hasDragged = true;
+        }
+        lastTouchScrollLeft = viewport.scrollLeft;
+        if (!isDown) {
+            queueSettle('smooth', 120);
+        }
     }, { passive: true });
 
+    bindCardTaps();
+
     viewport.__walletAccountSwitcherBound = true;
-    settleToNearestBalanceCard('auto', { skipReload: true });
+    if (!isStaticDesktopRow()) {
+        settleToNearestBalanceCard('auto', { skipReload: true });
+    } else {
+        ensureActiveBalanceCard(resolveActiveAccountId(window.walletAccounts, window.currentAccount));
+    }
+}
+
+if (typeof window !== 'undefined' && !window.__walletDesktopResizeBound) {
+    window.__walletDesktopResizeBound = true;
+    window.addEventListener('resize', () => {
+        syncWalletDesktopLayout();
+        updateBalanceViewportMode();
+    }, { passive: true });
+}
+
+if (typeof document !== 'undefined') {
+    const bootWalletDesktopLayout = () => syncWalletDesktopLayout();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootWalletDesktopLayout, { once: true });
+    } else {
+        bootWalletDesktopLayout();
+    }
 }
 
 export function updateHeaderIcon(account) {
@@ -2396,6 +3026,7 @@ export function updateBalanceToThisMonth(txns, targetAccount) {
     // Update insights using the specific view transactions (usually this month)
     updateInsightCards(txns);
 }
+window.__appUiUpdateBalanceToThisMonth = updateBalanceToThisMonth;
 
 export function updateInsightCards(txns) {
     const dailyAvgEl = document.getElementById('daily-avg-val');
@@ -2496,9 +3127,10 @@ export function updateInsightCards(txns) {
     };
 
     try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth();
+        const monthContext = getDashboardMonthContext();
+        const now = monthContext.referenceDate;
+        const year = monthContext.year;
+        const month = monthContext.monthIndex;
 
         const filterExpenseTxn = (targetYear, targetMonth) => rawTxns.filter((t) => {
             if (!t || t.deleted || t.excluded || t.refund || t.reimbursed) return false;
@@ -2509,7 +3141,7 @@ export function updateInsightCards(txns) {
         });
 
         const thisMonthTxns = filterExpenseTxn(year, month);
-        const lmDate = new Date(year, month - 1, 1);
+        const lmDate = new Date(monthContext.previousDate.getFullYear(), monthContext.previousDate.getMonth(), 1);
         const lastMonthTxns = filterExpenseTxn(lmDate.getFullYear(), lmDate.getMonth());
 
         const thisMonthTotal = thisMonthTxns.reduce((sum, t) => sum + getAmt(t), 0);
@@ -2533,7 +3165,9 @@ export function updateInsightCards(txns) {
                 dailyAvgSub.textContent = `${pct > 0 ? arrowUp : arrowDown} ${Math.abs(pct).toFixed(0)}% vs last month`;
                 dailyAvgSub.className = `insight-sub ${pct > 0 ? 'up' : 'down'}`;
             } else {
-                dailyAvgSub.textContent = `BASED ON ${daysInMonth} DAYS`;
+                dailyAvgSub.textContent = monthContext.explicitMonth
+                    ? `BASED ON ${monthContext.labelShort}`
+                    : `BASED ON ${daysInMonth} DAYS`;
                 dailyAvgSub.className = 'insight-sub neutral';
             }
             triggerSoftFadeInElement(dailyAvgSub);
@@ -2611,6 +3245,7 @@ export function updateInsightCards(txns) {
         setZeroState();
     }
 }
+window.__appUiUpdateInsightCards = updateInsightCards;
 window.updateInsightCards = updateInsightCards;
 
 export function initPrivacyLock() {
@@ -2644,9 +3279,11 @@ export function drawCashFlowChart() {
     const container = document.getElementById('cashflow-bars');
     if (!container || !window.allTxns) return;
 
+    const monthContext = getDashboardMonthContext();
+    const referenceDate = monthContext.referenceDate;
     const months = [];
     for (let i = 5; i >= 0; i--) {
-        const d = new Date();
+        const d = new Date(referenceDate);
         d.setDate(1);
         d.setMonth(d.getMonth() - i);
         months.push({
@@ -2687,31 +3324,67 @@ export function drawCashFlowChart() {
             </div>
         `;
     });
-    container.innerHTML = html;
+    container.innerHTML = repairTextArtifacts(html);
 }
 
 function checkDailySummary() {
-    const lastSummary = localStorage.getItem('last_daily_summary_date');
-    const today = new Date().toDateString();
-    
-    if (lastSummary === today || !window.allTxns) return;
-    
+    const uid = window.auth?.currentUser?.uid;
+    if (!uid || window.auth?.currentUser?.isAnonymous) return;
+    const engine = window.NotificationsEngine;
+    if (!engine?.triggerNotification) return;
+
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = yesterday.toDateString();
-    
-    let ySpent = 0;
-    window.allTxns.forEach(t => {
-        const d = new Date(t.date);
-        if (d.toDateString() === yStr && !t.excluded && !t.refund) {
-            ySpent += Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
-        }
-    });
-    
-    if (ySpent > 0) {
-        createNotification('Daily Summary', `Yesterday you spent ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(ySpent).toLocaleString()}. Check your trends to see how you're doing!`, 'info');
-        localStorage.setItem('last_daily_summary_date', today);
+    yesterday.setHours(0, 0, 0, 0);
+    const todayStart = new Date(yesterday);
+    todayStart.setDate(todayStart.getDate() + 1);
+
+    const allSources = [];
+    const seen = new Set();
+    const pushTxn = (txn, sourceKey = 'default') => {
+        if (!txn || typeof txn !== 'object') return;
+        const txnId = String(txn.id || '');
+        const key = `${sourceKey}:${txnId}:${txn.date || ''}:${txn.merchant || txn.name || ''}:${txn.amount || txn.manualAmount || 0}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        allSources.push(txn);
+    };
+
+    if (window.walletTxns && typeof window.walletTxns === 'object') {
+        Object.entries(window.walletTxns).forEach(([account, txns]) => {
+            (Array.isArray(txns) ? txns : []).forEach((txn) => pushTxn(txn, account));
+        });
     }
+    (Array.isArray(window.budgetManualTxns) ? window.budgetManualTxns : []).forEach((txn) => pushTxn(txn, 'budget_manual'));
+    (Array.isArray(window.allTxns) ? window.allTxns : []).forEach((txn) => pushTxn(txn, window.currentAccount || 'current'));
+
+    let spentYesterday = 0;
+    allSources.forEach((txn) => {
+        if (txn.excluded || txn.refund || txn.reimbursed) return;
+        const txnDate = new Date(txn.date);
+        if (Number.isNaN(txnDate.getTime())) return;
+        if (txnDate < yesterday || txnDate >= todayStart) return;
+        const mapped = window.getMerchantDisplay ? window.getMerchantDisplay(txn.merchant || txn.name, txn) : null;
+        if (mapped?.category === 'Income') return;
+        const amount = Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : txn.amount) || 0);
+        spentYesterday += amount;
+    });
+
+    if (spentYesterday <= 4000) return;
+
+    const dayKey = formatLocalDate(yesterday);
+    const meta = {
+        action: 'open_budget_overview',
+        dayKey,
+        spentAmount: Math.round(spentYesterday * 100) / 100,
+        threshold: 4000,
+        notificationKey: `daily_summary_${dayKey}`
+    };
+    const title = 'Daily Summary';
+    const body = `Yesterday you spent \u20B1${Math.round(spentYesterday).toLocaleString()}. Check your trends to see how you're doing!`;
+
+    engine.triggerNotification(uid, title, body, 'daily_summary', meta)
+        .catch((error) => console.warn('Daily summary notification failed:', error));
 }
 
 export function detectSubscriptions() {
@@ -2804,7 +3477,7 @@ export function detectSubscriptions() {
     }
 
     section.style.display = 'block';
-    container.innerHTML = subs.sort((a,b) => b.currentMonthSpend - a.currentMonthSpend).map(g => {
+    container.innerHTML = repairTextArtifacts(subs.sort((a,b) => b.currentMonthSpend - a.currentMonthSpend).map(g => {
         const perc = g.averageSpend > 0 ? (g.currentMonthSpend / g.averageSpend) * 100 : 0;
         const statusColor = g.currentMonthSpend > g.averageSpend ? '#ef4444' : '#10b981';
         return `
@@ -2821,18 +3494,7 @@ export function detectSubscriptions() {
                 </div>
             </div>
         `;
-    }).join('');
-
-    // Subscription Reminder Trigger
-    subs.forEach(s => {
-        if (s.currentMonthSpend === 0 && s.averageSpend > 0) {
-            // Predict if due soon (heuristic: if middle of month and not paid)
-            const day = new Date().getDate();
-            if (day >= 10 && day <= 25) {
-                checkAndTriggerAlert(`sub_${s.name.replace(/\s+/g, '_')}`, 'Upcoming Bill', `${s.name} is usually paid around this time (Avg: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(s.averageSpend).toLocaleString()}).`, 'info');
-            }
-        }
-    });
+    }).join(''));
 }
 
 // Profile Dropdown Management
@@ -2855,6 +3517,92 @@ export function toggleProfileDropdown(e) {
 }
 
 // Notification Center Management
+function getNotifClearWatermarkKey(uid) {
+    return `smartwallet_notifications_cleared_at_${uid || 'guest'}`;
+}
+
+function readNotifClearWatermark(uid) {
+    const value = Number(localStorage.getItem(getNotifClearWatermarkKey(uid)) || '0');
+    return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function passesNotificationInstallEpoch(uid, createdAtMs) {
+    const engine = window.NotificationsEngine;
+    if (!engine?.isNotificationVisibleForCurrentInstall) return true;
+    const ms = Number(createdAtMs || 0);
+    if (!Number.isFinite(ms) || ms <= 0) return true;
+    return engine.isNotificationVisibleForCurrentInstall(uid, ms);
+}
+
+function writeNotifClearWatermark(uid, ts = Date.now()) {
+    try {
+        localStorage.setItem(getNotifClearWatermarkKey(uid), String(ts));
+    } catch (e) {}
+}
+
+function isNotifOlderThanClear(item, watermarkMs) {
+    const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+    return watermarkMs > 0 && createdAtMs > 0 && createdAtMs <= watermarkMs;
+}
+
+function getNotifRenderCacheKey(uid) {
+    return `smartwallet_notification_render_cache_${uid || 'guest'}`;
+}
+
+function readNotifRenderCache(uid) {
+    try {
+        const raw = JSON.parse(localStorage.getItem(getNotifRenderCacheKey(uid)) || '[]');
+        return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function writeNotifRenderCache(uid, items) {
+    try {
+        const safe = Array.isArray(items) ? items.slice(0, 40) : [];
+        localStorage.setItem(getNotifRenderCacheKey(uid), JSON.stringify(safe));
+    } catch (e) {}
+}
+
+function renderNotificationItemsIntoList(list, items) {
+    window.__notificationActionMap = {};
+    list.innerHTML = getLimitedNotificationItems(items)
+        .map(data => {
+            const id = data.id;
+            const safeTitle = repairTextArtifacts(String(data.title || 'Notification'));
+            const safeBody = repairNotificationTextArtifacts(String(data.body || ''), safeTitle);
+            window.__notificationActionMap[id] = {
+                action: data.action || null,
+                meta: data.meta || null,
+                isLocalFallback: Boolean(data.isLocalFallback)
+            };
+            return `
+                <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${id}')">
+                    <div class="notif-icon ${getNotifTone(data)}">
+                        <i class="material-icons">${getNotifIcon(data)}</i>
+                    </div>
+                    <div class="notif-content">
+                        <div class="notif-title">${safeTitle}</div>
+                        <div class="notif-body">${safeBody}</div>
+                        <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
+                    </div>
+                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${id}')">
+                        <i class="material-icons">more_vert</i>
+                    </div>
+                    <div class="notif-dropdown" id="notif-dropdown-${id}" onclick="event.stopPropagation()">
+                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${id}')">
+                            <i class="material-icons">mark_as_unread</i> Mark as Unread
+                        </div>
+                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${id}')">
+                            <i class="material-icons">delete_outline</i> Delete Alert
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+}
+
 export function toggleNotificationCenter(e) {
     if (e) e.stopPropagation();
     const sidebar = document.getElementById('notification-center');
@@ -2869,6 +3617,12 @@ export function toggleNotificationCenter(e) {
     
     if (isActive) {
         renderNotifications();
+        // Opening the center should consume unread state immediately.
+        setTimeout(() => {
+            if (typeof window.markAllNotificationsRead === 'function') {
+                window.markAllNotificationsRead();
+            }
+        }, 120);
         triggerHaptic('light');
         
         // Push modal state for universal back button
@@ -2888,7 +3642,7 @@ function seedBudgetThresholdNotificationsFromSnapshot() {
     const snapshot = window.lastBudgetNotificationSnapshot;
     const engine = window.NotificationsEngine;
     const uid = snapshot?.uid || window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
-    if (!snapshot || snapshot.filterVal !== 'this_month' || !uid || !engine?.ensureBudgetThresholdInApp) return;
+    if (!isCurrentBudgetNotificationSnapshot(snapshot) || !uid || !engine?.ensureBudgetThresholdInApp) return;
 
     ensureBudgetThresholdLocalFallback('Needs', snapshot.needsTotal, snapshot.needsLimit);
     ensureBudgetThresholdLocalFallback('Wants', snapshot.wantsTotal, snapshot.wantsLimit);
@@ -2913,7 +3667,7 @@ export async function forceBudgetNotificationCheck() {
 
     const snapshot = window.lastBudgetNotificationSnapshot;
     const uid = snapshot?.uid || window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
-    if (!snapshot || snapshot.filterVal !== 'this_month' || !uid || !window.NotificationsEngine) return;
+    if (!isCurrentBudgetNotificationSnapshot(snapshot) || !uid || !window.NotificationsEngine) return;
 
     seedBudgetThresholdNotificationsFromSnapshot();
 
@@ -2950,8 +3704,8 @@ function getLocalFallbackNotifications() {
         if (!Array.isArray(raw)) return [];
         return raw.map(item => ({
             id: `local-${item.id}`,
-            title: item.title || 'Notification',
-            body: item.message || '',
+            title: repairTextArtifacts(item.title || 'Notification'),
+            body: repairNotificationTextArtifacts(item.message || '', item.title || 'Notification'),
             type: item.type || 'general',
             isRead: item.unread === false,
             createdAtMs: Number(new Date(item.time).getTime()) || Date.now(),
@@ -3106,6 +3860,167 @@ function collapseThresholdNotificationItems(items) {
             )
         ) {
             grouped.set(groupKey, { item, meta, score: currentScore, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function getGoalNotifMeta(item) {
+    const meta = item?.meta || {};
+    if (meta.goalId && meta.milestone) {
+        return {
+            goalId: String(meta.goalId),
+            milestone: String(meta.milestone),
+            cycle: Number(meta.cycle || 0)
+        };
+    }
+
+    const type = String(item?.type || '');
+    const m = type.match(/^goal_(.+)_(50|75|100|1000)(?:_cycle_(\d+))?$/i);
+    if (!m) return null;
+    return {
+        goalId: m[1],
+        milestone: m[2],
+        cycle: Number(m[3] || meta.cycle || 0)
+    };
+}
+
+function collapseGoalNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const g = getGoalNotifMeta(item);
+        if (!g) {
+            passthrough.push(item);
+            continue;
+        }
+        const groupKey = `${g.goalId}|${g.milestone}|${g.cycle}`;
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing) {
+            grouped.set(groupKey, { item, time: currentTime });
+            continue;
+        }
+        const currentIsRemote = !item?.isLocalFallback;
+        const existingIsRemote = !existing.item?.isLocalFallback;
+        if (
+            currentTime > existing.time
+            || (
+                currentTime === existing.time
+                && currentIsRemote
+                && !existingIsRemote
+            )
+        ) {
+            grouped.set(groupKey, { item, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function getMonthlySummaryNotifKey(item) {
+    const rawTitle = repairTextArtifacts(String(item?.title || ''));
+    const monthKey = String(item?.meta?.monthKey || '');
+    if (monthKey && String(item?.type || '') === 'monthly_comparison') {
+        return `monthly:${monthKey}`;
+    }
+    if (/summary$/i.test(rawTitle)) {
+        return `summary:${rawTitle.toLowerCase()}`;
+    }
+    return null;
+}
+
+function getDailySummaryNotifKey(item) {
+    const rawTitle = repairTextArtifacts(String(item?.title || ''));
+    const rawBody = repairTextArtifacts(String(item?.body || item?.message || ''));
+    if (!/^daily summary$/i.test(rawTitle) && !/^yesterday you spent/i.test(rawBody)) {
+        return null;
+    }
+    const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+    if (!createdAtMs) return `daily:${rawTitle.toLowerCase()}`;
+    return `daily:${new Date(createdAtMs).toISOString().slice(0, 10)}`;
+}
+
+function getTuitionReminderNotifKey(item) {
+    try {
+        const rawTitle = repairTextArtifacts(String(item?.title || ''));
+        const rawBody = repairTextArtifacts(String(item?.body || item?.message || ''));
+        if (
+            !/^tuition reminder$/i.test(rawTitle)
+            && !(/friendly reminder/i.test(rawBody) && /tuition/i.test(rawBody))
+            && !/tuition'?s due today\/tomorrow/i.test(rawBody)
+        ) {
+            return null;
+        }
+        const explicitMonthKey = String(item?.meta?.monthKey || item?.meta?.dueMonthKey || '');
+        if (explicitMonthKey) return `tuition:${explicitMonthKey}`;
+        const createdAtMs = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        if (!createdAtMs) return 'tuition:general';
+        const createdDate = new Date(createdAtMs);
+        if (Number.isNaN(createdDate.getTime())) return 'tuition:general';
+        return `tuition:${createdDate.toISOString().slice(0, 7)}`;
+    } catch (error) {
+        console.warn('Tuition reminder key generation failed:', error);
+        return null;
+    }
+}
+
+function collapseMonthlySummaryNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const groupKey = getMonthlySummaryNotifKey(item);
+        if (!groupKey) {
+            passthrough.push(item);
+            continue;
+        }
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing || currentTime > existing.time) {
+            grouped.set(groupKey, { item, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function collapseTuitionReminderNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const groupKey = getTuitionReminderNotifKey(item);
+        if (!groupKey) {
+            passthrough.push(item);
+            continue;
+        }
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing || currentTime > existing.time) {
+            grouped.set(groupKey, { item, time: currentTime });
+        }
+    }
+
+    return [...passthrough, ...[...grouped.values()].map(entry => entry.item)];
+}
+
+function collapseDailySummaryNotificationItems(items) {
+    const passthrough = [];
+    const grouped = new Map();
+
+    for (const item of items || []) {
+        const groupKey = getDailySummaryNotifKey(item);
+        if (!groupKey) {
+            passthrough.push(item);
+            continue;
+        }
+        const currentTime = Number(item?.createdAtMs || new Date(item?.time || 0).getTime() || 0);
+        const existing = grouped.get(groupKey);
+        if (!existing || currentTime > existing.time) {
+            grouped.set(groupKey, { item, time: currentTime });
         }
     }
 
@@ -3473,9 +4388,10 @@ async function persistBudgetProgress(uid, monthKey, filterVal, snapshot) {
 }
 
 async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
-    if (!snapshot) return;
+    if (!snapshot || snapshot.filterVal !== 'this_month' || !snapshot.liveReady) return;
 
-    const monthKey = getBudgetProgressMonthKey();
+    const monthKey = String(snapshot.monthKey || getBudgetProgressMonthKey());
+    if (monthKey !== getBudgetProgressMonthKey()) return;
     const current = {
         needs: roundBudgetPct(snapshot.needsPct),
         wants: roundBudgetPct(snapshot.wantsPct),
@@ -3528,13 +4444,43 @@ async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
 }
 
 function getNotifDedupKey(item = {}) {
+    const goalGroup = getGoalNotifMeta(item);
+    if (goalGroup) {
+        return `goal:${goalGroup.goalId}:${goalGroup.milestone}:${goalGroup.cycle}`;
+    }
+    const meta = item?.meta || {};
+    const key = meta.notificationKey || meta.dedupeKey || meta.remoteKey || '';
+    if (key) return `key:${key}`;
+    const category = String(meta.category || '');
+    const threshold = Number(meta.thresholdPct || 0);
+    const monthKey = String(meta.monthKey || '');
+    const cycle = Number(meta.cycle || 0);
+    if (category && threshold > 0 && monthKey) {
+        return `threshold:${category}:${threshold}:${monthKey}:${cycle}`;
+    }
     return `${item.type || 'general'}|${item.title || ''}|${item.body || item.message || ''}`;
 }
 
 function getLimitedNotificationItems(items = [], limitCount = 10) {
-    return collapseThresholdNotificationItems(items)
-        .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))
-        .slice(0, limitCount);
+    try {
+        return collapseGoalNotificationItems(
+            collapseMonthlySummaryNotificationItems(
+                collapseTuitionReminderNotificationItems(
+                    collapseDailySummaryNotificationItems(
+                        collapseThresholdNotificationItems(items)
+                    )
+                )
+            )
+        )
+            .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0))
+            .slice(0, limitCount);
+    } catch (error) {
+        console.warn('Notification collapse pipeline failed:', error);
+        return (Array.isArray(items) ? items : [])
+            .slice()
+            .sort((a, b) => (b?.createdAtMs || 0) - (a?.createdAtMs || 0))
+            .slice(0, limitCount);
+    }
 }
 
 function formatNotifTimestamp(createdAtMs) {
@@ -3551,42 +4497,27 @@ function formatNotifTimestamp(createdAtMs) {
 export async function renderNotifications() {
     const list = document.getElementById('notification-list');
     if (!list) return;
-    const localFallbacks = getLocalFallbackNotifications();
+    const uidForWatermark = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+    const clearWatermark = readNotifClearWatermark(uidForWatermark);
+    const localFallbacks = getLocalFallbackNotifications()
+        .filter(item => !isNotifOlderThanClear(item, clearWatermark))
+        .filter(item => passesNotificationInstallEpoch(uidForWatermark, item.createdAtMs));
+    const cachedRendered = readNotifRenderCache(uidForWatermark)
+        .filter(item => !isNotifOlderThanClear(item, clearWatermark))
+        .filter(item => passesNotificationInstallEpoch(uidForWatermark, item.createdAtMs));
+    const immediateItems = getLimitedNotificationItems([...cachedRendered, ...localFallbacks], 30);
+
+    if (immediateItems.length) {
+        renderNotificationItemsIntoList(list, immediateItems);
+    }
 
     if (!window.db || !window.auth.currentUser) {
+        if (immediateItems.length) {
+            return;
+        }
         if (localFallbacks.length) {
-            window.__notificationActionMap = {};
-            list.innerHTML = getLimitedNotificationItems(localFallbacks)
-                .map(data => {
-                    window.__notificationActionMap[data.id] = {
-                        action: data.action || null,
-                        meta: data.meta || null,
-                        isLocalFallback: true
-                    };
-                    return `
-                    <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${data.id}')">
-                        <div class="notif-icon ${getNotifTone(data)}">
-                            <i class="material-icons">${getNotifIcon(data)}</i>
-                        </div>
-                        <div class="notif-content">
-                            <div class="notif-title">${data.title}</div>
-                            <div class="notif-body">${data.body}</div>
-                            <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
-                        </div>
-                        <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${data.id}')">
-                            <i class="material-icons">more_vert</i>
-                        </div>
-                        <div class="notif-dropdown" id="notif-dropdown-${data.id}" onclick="event.stopPropagation()">
-                            <div class="notif-dropdown-item" onclick="window.markNotifUnread('${data.id}')">
-                                <i class="material-icons">mark_as_unread</i> Mark as Unread
-                            </div>
-                            <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${data.id}')">
-                                <i class="material-icons">delete_outline</i> Delete Alert
-                            </div>
-                        </div>
-                    </div>
-                `;
-                }).join('');
+            renderNotificationItemsIntoList(list, localFallbacks);
+            writeNotifRenderCache(uidForWatermark, localFallbacks);
             return;
         }
         list.innerHTML = `
@@ -3598,11 +4529,13 @@ export async function renderNotifications() {
         return;
     }
 
-    list.innerHTML = `
-        <div class="notifications-loading">
-            <div class="notifications-loading-spinner" aria-hidden="true"></div>
-        </div>
-    `;
+    if (!immediateItems.length) {
+        list.innerHTML = `
+            <div class="notifications-loading">
+                <div class="notifications-loading-spinner" aria-hidden="true"></div>
+            </div>
+        `;
+    }
 
     try {
         const { collection, getDocs, query, orderBy, limit } = window;
@@ -3610,7 +4543,9 @@ export async function renderNotifications() {
         if (window.NotificationsEngine?.syncStoredInAppNotifications) {
             await window.NotificationsEngine.syncStoredInAppNotifications(uid);
         }
-        if (window.NotificationsEngine?.backfillNotificationsFromState) {
+        // Prevent immediate replay of older notifications right after user clears them.
+        const shouldBackfill = !clearWatermark || (Date.now() - clearWatermark) > (60 * 1000);
+        if (shouldBackfill && window.NotificationsEngine?.backfillNotificationsFromState) {
             await window.NotificationsEngine.backfillNotificationsFromState(uid);
         }
         const notifRef = collection(window.db, `users/${uid}/notifications`);
@@ -3630,9 +4565,10 @@ export async function renderNotifications() {
         snap.forEach(docSnap => {
             const data = docSnap.data() || {};
             const createdAtMs = Number(data.createdAtMs || 0) || (data.createdAt?.toDate ? data.createdAt.toDate().getTime() : 0) || Date.now();
+            if (!passesNotificationInstallEpoch(uid, createdAtMs)) return;
             const key = getNotifDedupKey(data);
             remoteKeys.add(key);
-            items.push({
+            const remoteItem = {
                 id: docSnap.id,
                 title: data.title || 'Notification',
                 body: data.body || '',
@@ -3642,7 +4578,10 @@ export async function renderNotifications() {
                 isLocalFallback: false,
                 action: data.action || null,
                 meta: data.meta || null
-            });
+            };
+            if (!isNotifOlderThanClear(remoteItem, clearWatermark)) {
+                items.push(remoteItem);
+            }
         });
 
         localFallbacks.forEach(item => {
@@ -3660,81 +4599,17 @@ export async function renderNotifications() {
             return;
         }
 
-        let html = '';
-        getLimitedNotificationItems(items).forEach(data => {
-            const id = data.id;
-            const date = data.createdAtMs ? formatNotifTimestamp(data.createdAtMs) : 'Just now';
-            const isUnread = !data.isRead;
-            window.__notificationActionMap[id] = {
-                action: data.action || null,
-                meta: data.meta || null,
-                isLocalFallback: Boolean(data.isLocalFallback)
-            };
-
-            html += `
-                <div class="notif-item ${isUnread ? 'unread' : ''}" onclick="window.handleNotificationClick('${id}')">
-                    <div class="notif-icon ${getNotifTone(data)}">
-                        <i class="material-icons">${getNotifIcon(data)}</i>
-                    </div>
-                    <div class="notif-content">
-                        <div class="notif-title">${data.title}</div>
-                        <div class="notif-body">${data.body}</div>
-                        <div class="notif-date">${date}</div>
-                    </div>
-                    
-                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${id}')">
-                        <i class="material-icons">more_vert</i>
-                    </div>
-                    
-                    <div class="notif-dropdown" id="notif-dropdown-${id}" onclick="event.stopPropagation()">
-                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${id}')">
-                            <i class="material-icons">mark_as_unread</i> Mark as Unread
-                        </div>
-                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${id}')">
-                            <i class="material-icons">delete_outline</i> Delete Alert
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        list.innerHTML = html;
+        renderNotificationItemsIntoList(list, items);
+        writeNotifRenderCache(uidForWatermark, items);
 
     } catch (e) {
         console.error('Failed to fetch notifications from Firestore:', e);
-        const fallbackItems = getLocalFallbackNotifications();
+        const fallbackItems = getLocalFallbackNotifications().filter(item =>
+            passesNotificationInstallEpoch(uidForWatermark, item.createdAtMs)
+        );
         if (!fallbackItems.length) return;
-        window.__notificationActionMap = {};
-        list.innerHTML = getLimitedNotificationItems(fallbackItems)
-            .map(data => {
-                window.__notificationActionMap[data.id] = {
-                    action: data.action || null,
-                    meta: data.meta || null,
-                    isLocalFallback: true
-                };
-                return `
-                <div class="notif-item ${!data.isRead ? 'unread' : ''}" onclick="window.handleNotificationClick('${data.id}')">
-                    <div class="notif-icon ${getNotifTone(data)}">
-                        <i class="material-icons">${getNotifIcon(data)}</i>
-                    </div>
-                    <div class="notif-content">
-                        <div class="notif-title">${data.title}</div>
-                        <div class="notif-body">${data.body}</div>
-                        <div class="notif-date">${formatNotifTimestamp(data.createdAtMs)}</div>
-                    </div>
-                    <div class="notif-actions" onclick="window.toggleNotifDropdown(event, '${data.id}')">
-                        <i class="material-icons">more_vert</i>
-                    </div>
-                    <div class="notif-dropdown" id="notif-dropdown-${data.id}" onclick="event.stopPropagation()">
-                        <div class="notif-dropdown-item" onclick="window.markNotifUnread('${data.id}')">
-                            <i class="material-icons">mark_as_unread</i> Mark as Unread
-                        </div>
-                        <div class="notif-dropdown-item delete" onclick="window.deleteNotif('${data.id}')">
-                            <i class="material-icons">delete_outline</i> Delete Alert
-                        </div>
-                    </div>
-                </div>
-            `;
-            }).join('');
+        renderNotificationItemsIntoList(list, fallbackItems);
+        writeNotifRenderCache(uidForWatermark, fallbackItems);
     }
 }
 
@@ -3838,31 +4713,9 @@ export function updateUnreadCount(markRead = false) {
 }
 
 export function clearAllNotifications() {
-    const clearTask = async () => {
-        writeLocalFallbackNotifications([]);
-
-        if (window.auth?.currentUser && window.db && window.collection && window.getDocs && window.deleteDoc && window.doc) {
-            try {
-                const uid = window.auth.currentUser.uid;
-                const notifRef = window.collection(window.db, `users/${uid}/notifications`);
-                const snap = await window.getDocs(notifRef);
-                const deletes = [];
-                snap.forEach(docSnap => {
-                    deletes.push(window.deleteDoc(window.doc(window.db, `users/${uid}/notifications`, docSnap.id)));
-                });
-                if (deletes.length) await Promise.allSettled(deletes);
-            } catch (e) {
-                console.error('Error clearing notifications', e);
-            }
-        }
-
-        updateUnreadCount();
-        if (document.getElementById('notification-center')?.classList.contains('active')) {
-            renderNotifications();
-        }
-    };
-
-    clearTask();
+    if (typeof window.markAllNotificationsRead === 'function') {
+        window.markAllNotificationsRead();
+    }
 }
 
 window.handleNotificationClick = async function(id) {
@@ -4047,8 +4900,9 @@ export function initUI() {
     // Initial unread check
     updateUnreadCount();
 
-    // Check Daily Summary
-    checkDailySummary();
+    setTimeout(() => {
+        try { checkDailySummary(); } catch (error) { console.warn('Initial daily summary check failed:', error); }
+    }, 1400);
 
     // 1. Restore Profile from Cache (Instant UI)
     if (window.NavState) {
@@ -4057,6 +4911,9 @@ export function initUI() {
 
     // 2. Populate Previous 3 Months in filter
     populateMonthFilter();
+    if (typeof window.populateBudgetMonthFilter === 'function') {
+        window.populateBudgetMonthFilter();
+    }
 
     // 3. Setup Fast Path rendering if possible (Delayed for skeleton visibility)
     setTimeout(() => {
@@ -4069,16 +4926,13 @@ export function initUI() {
         // IMPORTANT: Trigger dashboard refresh once gate is open
         if (Array.isArray(window.allTxns)) {
             console.log('Loading Gate Open: Refreshing Dashboard...');
-            if (window.updateBalanceToThisMonth) window.updateBalanceToThisMonth(window.allTxns);
-            if (window.updateInsightCards) {
-                window.updateInsightCards(window.allTxns);
-                requestAnimationFrame(() => {
-                    const summaryTotalEl = document.getElementById('summary-total');
-                    if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
-                        window.updateInsightCards(window.allTxns);
-                    }
-                });
-            }
+            rehydrateDashboardFromCurrentTxns();
+            requestAnimationFrame(() => {
+                const summaryTotalEl = document.getElementById('summary-total');
+                if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
+                    rehydrateDashboardFromCurrentTxns();
+                }
+            });
         }
     }, 200);
 }
@@ -4103,6 +4957,11 @@ function populateMonthFilter() {
             option.value = monthValue;
             option.textContent = monthName;
             last15Option.insertAdjacentElement('afterend', option);
+        }
+
+        const persistedValue = getStoredDashboardMonthSelection();
+        if (persistedValue && chartFilter.querySelector(`option[value="${persistedValue}"]`)) {
+            chartFilter.value = persistedValue;
         }
     }
 }
@@ -4136,9 +4995,17 @@ function setupFastPath() {
             if (window.updateBalanceCardsUI) window.updateBalanceCardsUI(accounts);
             if (window.applyAccountTheme) window.applyAccountTheme(cachedCurrent, accounts);
             
-            import('./app-data.js').then(m => {
-                window.fastPathTriggered = true;
-                if (m.loadData) m.loadData(lastUid);
+            import('./app-data.js').then(async (m) => {
+                try {
+                    window.fastPathTriggered = true;
+                    if (m.loadData) await m.loadData(lastUid);
+                } catch (error) {
+                    window.fastPathTriggered = false;
+                    console.warn('Fast path loadData failed', error);
+                }
+            }).catch((error) => {
+                window.fastPathTriggered = false;
+                console.warn('Fast path import failed', error);
             });
         } catch(e) { console.warn('Fast path failed', e); }
     }
@@ -4147,10 +5014,13 @@ function setupFastPath() {
 // LEGACY BRIDGING (Final Export to Global Scope)
 function bridgeGlobals() {
     console.log('ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Bridging exports to global scope...');
+    window.__useModuleWalletSwitcher = true;
     window.updateAccountSwitcherUI = updateAccountSwitcherUI;
     window.updateBalanceCardsUI = updateBalanceCardsUI;
     window.scrollToActiveCard = scrollToActiveCard;
     window.updateProfileUI = updateProfileUI;
+    window.__appUiUpdateBalanceToThisMonth = updateBalanceToThisMonth;
+    window.__appUiUpdateInsightCards = updateInsightCards;
     window.updateBalanceToThisMonth = updateBalanceToThisMonth;
     window.updateInsightCards = updateInsightCards;
     window.handleLocalModeNudge = handleLocalModeNudge;
@@ -4163,11 +5033,16 @@ function bridgeGlobals() {
     window.applyTheme = applyTheme;
     window.setupAccountSwitcher = setupAccountSwitcher;
     window.updateHeaderIcon = updateHeaderIcon;
+    window.holdBudgetWidgetForAccountSwitch = holdBudgetWidgetForAccountSwitch;
+    window.releaseBudgetWidgetAfterAccountSwitch = releaseBudgetWidgetAfterAccountSwitch;
+    window.__appUiUpdateBalanceToThisMonth = updateBalanceToThisMonth;
+    window.__appUiUpdateInsightCards = updateInsightCards;
     window.updateBalanceToThisMonth = updateBalanceToThisMonth;
     window.updateInsightCards = updateInsightCards;
     window.initPrivacyLock = initPrivacyLock;
     window.tryBiometricUnlock = tryBiometricUnlock;
     window.drawCashFlowChart = drawCashFlowChart;
+    window.checkDailySummary = checkDailySummary;
     window.toggleProfileDropdown = toggleProfileDropdown;
     window.getMerchantDisplay = getMerchantDisplay;
     window.displayCategoryName = displayCategoryName;
@@ -4189,13 +5064,9 @@ window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificatio
     console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Global bridge complete.');
     // If cached/live txns landed before app-ui finished wiring globals, paint the dashboard now.
     if (Array.isArray(window.allTxns)) {
-        updateBalanceToThisMonth(window.allTxns, window.currentAccount);
-        updateInsightCards(window.allTxns);
-        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
-        else updateTripleProgressBar();
+        rehydrateDashboardFromCurrentTxns();
     }
 }
 
 // Run bridging immediately
 bridgeGlobals();
-

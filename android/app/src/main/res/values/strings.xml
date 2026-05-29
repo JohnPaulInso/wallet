@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Smart Wallet</string>
+    <string name="title_activity_main">Smart Wallet</string>
+    <string name="package_name">smart.wallet1</string>
+    <string name="custom_url_scheme">smart.wallet1</string>
+    <string name="google_client_id">64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com</string>
+    <string name="server_client_id">64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com</string>
+</resources>

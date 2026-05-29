@@ -4,6 +4,12 @@
  */
 
 const NavState = {
+    isDesktopSPA() {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(min-width: 1100px)').matches;
+    },
+
     // ===== PROFILE DATA MANAGEMENT =====
     
     /**
@@ -182,6 +188,9 @@ const NavState = {
     getActiveSPAIndex() {
         const viewport = document.getElementById('view-viewport');
         if (!viewport) return 0;
+        if (this.isDesktopSPA()) {
+            return typeof this.lastSPAIndex === 'number' ? this.lastSPAIndex : 0;
+        }
         if (typeof this.lastSPAIndex === 'number') return this.lastSPAIndex;
         return Math.round(viewport.scrollLeft / Math.max(viewport.clientWidth, 1));
     },
@@ -364,7 +373,9 @@ const NavState = {
         setTimeout(() => { this.isInitialLoad = false; }, 1500);
 
         const persistActiveTab = () => {
-            const liveIndex = viewport && viewport.clientWidth > 0
+            const liveIndex = this.isDesktopSPA()
+                ? (typeof this.lastSPAIndex === 'number' ? this.lastSPAIndex : 0)
+                : viewport && viewport.clientWidth > 0
                 ? Math.round(viewport.scrollLeft / viewport.clientWidth)
                 : null;
             const index = typeof liveIndex === 'number' && Number.isFinite(liveIndex)
@@ -388,6 +399,9 @@ const NavState = {
         if (savedTab !== null) {
             const index = parseInt(savedTab, 10);
             console.log(`🏠 Restoring SPA tab from storage: ${index}`);
+            if (this.isDesktopSPA()) {
+                this.updateActiveTabUI(index, true);
+            } else {
             // [REFINED: 3-Stage Re-assertion - 2026-04-03]
             // Combats layout shifts from late-loading modules/CSS
             const reAssert = () => {
@@ -399,6 +413,7 @@ const NavState = {
             setTimeout(reAssert, 100);  // Early boot
             setTimeout(reAssert, 500);  // Mid boot (Fast path finish)
             setTimeout(reAssert, 1500); // Late boot (Firebase/Import finish)
+            }
         }
 
         window.addEventListener('pagehide', persistActiveTab);
@@ -408,10 +423,18 @@ const NavState = {
         });
 
         const settleToNearestTab = (forcedIndex = null, smooth = true) => {
-            if (!viewport || viewport.clientWidth === 0) return;
+            if (!viewport) return;
 
             const views = document.querySelectorAll('.view-section');
             const maxIndex = Math.max(views.length - 1, 0);
+            if (this.isDesktopSPA()) {
+                const desktopIndex = forcedIndex === null
+                    ? (typeof this.lastSPAIndex === 'number' ? this.lastSPAIndex : 0)
+                    : forcedIndex;
+                this.updateActiveTabUI(Math.max(0, Math.min(desktopIndex, maxIndex)), true);
+                return;
+            }
+            if (viewport.clientWidth === 0) return;
             const rawIndex = forcedIndex === null
                 ? Math.round(viewport.scrollLeft / viewport.clientWidth)
                 : forcedIndex;
@@ -483,6 +506,17 @@ const NavState = {
             const targetView = views[targetIndex];
             if (!targetView || !directionClass) return;
 
+            if (directionClass === 'tab-fade-desktop') {
+                targetView.classList.remove('tab-fade-desktop', 'tab-nav-animating');
+                void targetView.offsetWidth;
+                targetView.classList.add('tab-nav-animating', 'tab-fade-desktop');
+                window.clearTimeout(targetView._navAnimTimer);
+                targetView._navAnimTimer = window.setTimeout(() => {
+                    targetView.classList.remove('tab-nav-animating', 'tab-fade-desktop');
+                }, 260);
+                return;
+            }
+
             const fromX = directionClass === 'tab-slide-in-from-right' ? 34 : -34;
             const keyframes = [
                 { opacity: 1, transform: `translate3d(${fromX}px, 0, 0)` },
@@ -527,6 +561,7 @@ const NavState = {
             // Ignore "noisy" scroll events during the first 1.5s of boot
             if (this.isInitialLoad) return;
             if (this.isProgrammaticSwipe) return;
+            if (this.isDesktopSPA()) return;
 
             window.clearTimeout(isScrolling);
             isScrolling = setTimeout(() => {
@@ -545,22 +580,30 @@ const NavState = {
         viewport.addEventListener('touchend', settleAfterGesture, { passive: true });
         viewport.addEventListener('touchcancel', settleAfterGesture, { passive: true });
         viewport.addEventListener('pointerup', settleAfterGesture, { passive: true });
-        window.addEventListener('resize', () => settleToNearestTab(this.lastSPAIndex ?? 0, false), { passive: true });
+        window.addEventListener('resize', () => {
+            if (this.isDesktopSPA()) {
+                this.updateActiveTabUI(this.lastSPAIndex ?? 0, true);
+                return;
+            }
+            settleToNearestTab(this.lastSPAIndex ?? 0, false);
+        }, { passive: true });
 
         // 3. Global scrollToView function
         window.scrollToView = (index) => {
             const views = document.querySelectorAll('.view-section');
             const maxIndex = Math.max(views.length - 1, 0);
             const targetIndex = Math.max(0, Math.min(index, maxIndex));
+            const isDesktop = this.isDesktopSPA();
             const currentIndex = typeof this.lastSPAIndex === 'number'
                 ? this.lastSPAIndex
-                : (viewport.clientWidth === 0 ? 0 : Math.round(viewport.scrollLeft / viewport.clientWidth));
-            const targetX = viewport.clientWidth * targetIndex;
-            const directionClass = targetIndex > currentIndex
-                ? 'tab-slide-in-from-right'
-                : targetIndex < currentIndex
-                    ? 'tab-slide-in-from-left'
-                    : null;
+                : (isDesktop || viewport.clientWidth === 0 ? 0 : Math.round(viewport.scrollLeft / viewport.clientWidth));
+            const directionClass = isDesktop
+                ? 'tab-fade-desktop'
+                : targetIndex > currentIndex
+                    ? 'tab-slide-in-from-right'
+                    : targetIndex < currentIndex
+                        ? 'tab-slide-in-from-left'
+                        : null;
 
             if (targetIndex === currentIndex) {
                 settleToNearestTab(targetIndex, false);
@@ -568,7 +611,7 @@ const NavState = {
             }
 
             this.pendingTabAnimation = directionClass ? { targetIndex, directionClass } : null;
-            settleToNearestTab(targetIndex, true);
+            settleToNearestTab(targetIndex, !isDesktop);
 
             if (window.triggerHaptic) {
                 window.triggerHaptic('selection');

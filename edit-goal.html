@@ -3,12 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#ffffff"> <!-- updated 2026-03-31 - white theme for seamless status bar -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="manifest" href="manifest.json?v=1">
     <title>Edit Goal - Smart Wallet</title>
+    
+    <script src="capacitor.js"></script>
+    <script>
+        // Robust APK/Native Detection
+        const isNative = () => {
+            return (window.Capacitor && window.Capacitor.isNativePlatform()) || 
+                   window.location.href.includes('capacitor://') || 
+                   window.location.href.includes('http://localhost');
+        };
+        if (isNative()) document.documentElement.classList.add('is-native');
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isNative()) document.documentElement.classList.add('is-native');
+            
+            // Seamless Status Bar Init - Added 2026-03-31
+            const initStatusBar = async () => {
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    if (window.Capacitor.Plugins.StatusBar) {
+                        try {
+                            const { StatusBar } = window.Capacitor.Plugins;
+                            await StatusBar.setBackgroundColor({ color: '#00000000' });
+                            await StatusBar.setStyle({ style: 'LIGHT' }); // dark icons on light bg
+                            await StatusBar.setOverlaysWebView({ overlay: true });
+                        } catch (e) { console.warn('StatusBar Plugin error:', e); }
+                    }
+                }
+            };
+            initStatusBar();
+
+            // Header Scroll Effect - Added 2026-03-31
+            const header = document.querySelector('.page-header');
+            const wrapper = document.getElementById('pageWrapper');
+            if (header && wrapper) {
+                wrapper.addEventListener('scroll', () => {
+                    if (wrapper.scrollTop > 20) {
+                        header.classList.add('shrunk');
+                    } else {
+                        header.classList.remove('shrunk');
+                    }
+                });
+            }
+        });
+    </script>
+    <style>
+        /* APK specific styling: -10% font sizes ONLY */
+        .is-native { --base-font-scale: 0.9; }
+        /* Add other native-specific fixes if needed */
+    </style>
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap">
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -37,7 +85,6 @@
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
             -webkit-user-drag: none;
-            user-drag: none;
         }
         /* Disable text selection highlighting */
         ::selection { background: transparent; }
@@ -65,6 +112,7 @@
             overflow-y: auto;
             overflow-x: hidden;
             overscroll-behavior-y: contain;
+            padding-top: 0 !important; /* Reset for seamless status bar */
         }
     </style>
 </head>
@@ -92,21 +140,30 @@
         </div>
 
 <style>
-        /* HEADER */
+        /* HEADER - updated 2026-03-31 - frosted glass blur effect with white tint */
         .page-header {
-            background: #fff;
+            background: rgba(255, 255, 255, 0.72); 
+            backdrop-filter: blur(20px) saturate(180%); 
+            -webkit-backdrop-filter: blur(20px) saturate(180%); 
             padding: 12px 24px 8px;
+            padding-top: calc(env(safe-area-inset-top, 24px) + 12px); /* updated 2026-03-31 - added safe area padding for seamless status bar - 2026-03-31 */
             display: flex;
             align-items: center;
             gap: 16px;
             position: sticky;
             top: 0;
             width: 100%;
-            z-index: 500;
-            border-bottom: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            z-index: 1000;
+            border-bottom: 1px solid rgba(0,0,0,0.06); 
+            box-shadow: 0 1px 8px rgba(0,0,0,0.04); 
+            transition: all 0.3s ease;
         }
-        .header-spacer { height: 75px; }
+        .page-header.shrunk {
+            padding: 12px 24px 8px;
+            padding-top: calc(env(safe-area-inset-top, 24px) + 8px); /* updated 2026-03-31 - maintained status bar padding when shrunk - 2026-03-31 */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04); 
+        }
+        .header-spacer { height: calc(env(safe-area-inset-top, 24px) + 75px); } /* updated 2026-03-31 - increased depth for transparent status bar overlay - 2026-03-31 */
 
         .back-btn {
             width: 36px;
@@ -414,12 +471,12 @@
         /* FIXED FOOTER ACTION */
         .action-footer {
             position: fixed;
-            bottom: 0;
+            bottom: calc(4px + env(safe-area-inset-bottom, 0px));
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
             max-width: 430px;
-            padding: 40px 24px 24px;
+            padding: 32px 24px 2px;
             z-index: 1000;
             display: flex;
             flex-direction: column;
@@ -557,8 +614,8 @@
             display: none; align-items: center; justify-content: center; padding: 24px;
         }
         .modal-card {
-            background: #fff; width: 100%; max-width: 400px; /* Slightly wider */
-            border-radius: 32px; padding: 24px;
+            background: #fff; width: 1  0%; max-width: 440px; /* Slightly wider */
+            border-radius: 32px; padding: 20px;
             box-shadow: 0 25px 50px rgba(0,0,0,0.1);
             animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -625,7 +682,7 @@
         .section-title { font-size: 14px; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* MODERN PULL-TO-REFRESH SPINNER */
-        .ptr-container { position: absolute; top: 0; left: 0; width: 100%; height: 0; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
+        .ptr-container { position: absolute; top: calc(env(safe-area-inset-top, 24px) + 5px); left: 0; width: 100%; height: 0; display: flex; justify-content: center; z-index: 100; pointer-events: none; }
         .ptr-spinner { width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 3px 12px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center; transform: translateY(-60px) scale(0.6); opacity: 0; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease; }
         .ptr-spinner.visible { opacity: 1; }
         .ptr-spinner.refreshing { transform: translateY(0) scale(1) !important; opacity: 1; }
@@ -638,6 +695,9 @@
         .icon-item-box i { font-size: 20px; }
         .icon-item-label { font-size: 9px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.3px; text-align: center; }
         .icon-item.active .icon-item-label { color: var(--accent-color); }
+        
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spin { animation: spin 1s linear infinite; display: inline-block; }
 
         .upload-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
         .upload-btn {
@@ -1034,7 +1094,7 @@
             auth, db, onAuthStateChanged, 
             doc, getDoc, updateDoc, serverTimestamp,
             collection, getDocs, query, orderBy, deleteDoc,
-            addDoc
+            addDoc, increment
         } from "./firebase-config.js";
 
         // Navigation & State
@@ -1087,74 +1147,157 @@
                 loadGoalData();
                 loadTransactionHistory();
             } else {
-                window.location.href = 'index.html';
+                // PERSISTENCE FIX: Wait for Firebase to restore session before redirecting
+                const lastAuthType = localStorage.getItem('wallet_auth_type');
+                if (lastAuthType === 'google') {
+                    // Give it a grace period to restore persistent login
+                    setTimeout(() => {
+                        if (!auth.currentUser) {
+                            window.location.href = 'index.html';
+                        }
+                    }, 2500); // 2.5s parity with index.html
+                } else {
+                    window.location.href = 'index.html';
+                }
             }
         });
 
         // DEPOSIT MODAL LOGIC
-        window.openDepositModal = function() {
+        window.openDepositModal = function(prefillAmount = '') {
             const modal = document.getElementById('depositModal');
             if (modal) {
-                modal.style.display = 'flex';
+                // Reset to default "Deposit" state
+                const modalTitle = modal.querySelector('.modal-title');
+                const confirmBtn = modal.querySelector('.primary-btn');
+                const amountLabel = modal.querySelector('.form-group label');
                 const input = document.getElementById('depositAmountInput');
-                if (input) input.focus();
+
+                if (modalTitle) modalTitle.innerText = 'Deposit to Goal';
+                if (confirmBtn) confirmBtn.innerText = 'Confirm Deposit';
+                if (amountLabel) amountLabel.innerText = 'Deposit Amount';
+                if (input) {
+                    const digitsOnly = String(prefillAmount || '').replace(/\D/g, '');
+                    input.value = digitsOnly ? parseInt(digitsOnly, 10).toLocaleString() : '';
+                }
+
+                modal.style.display = 'flex';
+                if (nav) nav.pushModalState('depositModal', () => modal.style.display = 'none');
+                if (input) setTimeout(() => input.focus(), 100);
             }
+        };
+
+        window.openWithdrawModal = function(prefillAmount = '') {
+            const depositModal = document.getElementById('depositModal');
+            if (depositModal) {
+                if (nav) nav.popModalState('depositModal');
+                depositModal.style.display = 'none';
+            }
+
+            const modal = document.getElementById('depositModal');
+            if (!modal) return;
+
+            const modalTitle = modal.querySelector('.modal-title');
+            const confirmBtn = modal.querySelector('.primary-btn');
+            const amountLabel = modal.querySelector('.form-group label');
+            const input = document.getElementById('depositAmountInput');
+
+            if (modalTitle) modalTitle.innerText = `Withdraw from ${currentGoalData?.title || 'Goal'}`;
+            if (confirmBtn) confirmBtn.innerText = 'Confirm Withdrawal';
+            if (amountLabel) amountLabel.innerText = 'Withdrawal Amount';
+            if (input) {
+                const digitsOnly = String(prefillAmount || '').replace(/\D/g, '');
+                input.value = digitsOnly ? parseInt(digitsOnly, 10).toLocaleString() : '';
+            }
+
+            modal.style.display = 'flex';
+            if (nav) nav.pushModalState('depositModal', () => modal.style.display = 'none');
+            if (input) setTimeout(() => input.focus(), 100);
         };
 
         window.closeDepositModal = function() {
             const modal = document.getElementById('depositModal');
-            if (modal) modal.style.display = 'none';
+            if (modal) {
+                if (nav) nav.popModalState('depositModal');
+                modal.style.display = 'none';
+            }
             const input = document.getElementById('depositAmountInput');
             if (input) input.value = '';
         };
 
         window.confirmDepositActual = async function() {
-            const amountStr = document.getElementById('depositAmountInput').value.replace(/,/g, '');
+            const amountInput = document.getElementById('depositAmountInput');
+            const amountStr = amountInput.value.replace(/,/g, '');
             const amount = parseFloat(amountStr);
             
-            if (!amount || amount <= 0) {
+            if (!amount || amount === 0) {
                 alert("Please enter a valid amount");
                 return;
             }
 
             if (!currentUser || !goalId) return;
 
-            try {
-                // Disable button to prevent double-click
-                const btn = event.target;
-                btn.disabled = true;
-                btn.innerText = "Processing...";
+            // UI: Find the button and show loading
+            const btn = document.querySelector('#depositModal button.modal-btn.primary-btn');
+            const originalText = btn ? btn.innerText : 'Confirm Deposit';
 
-                // 1. Add to transactions sub-collection
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.7';
+                    btn.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="material-icons spin" style="font-size: 18px;">sync</i> Saving...
+                    </span>`;
+                }
+
+                const isWithdrawal = amount < 0;
+                const type = isWithdrawal ? 'withdrawal' : 'deposit';
+
+                // 1. Update goal's currentAmount atomically
+                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
+                await updateDoc(goalRef, {
+                    currentAmount: increment(amount)
+                });
+
+                // 2. Add to transactions sub-collection
                 const txnRef = collection(db, `users/${currentUser.uid}/goals/${goalId}/transactions`);
                 await addDoc(txnRef, {
                     amount: amount,
-                    type: 'deposit',
+                    type: type,
                     timestamp: serverTimestamp()
                 });
 
-                // 2. Update goal's currentAmount
-                const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
-                const newTotal = (currentGoalData.currentAmount || 0) + amount;
-                await updateDoc(goalRef, {
-                    currentAmount: newTotal
-                });
-
                 window.closeDepositModal();
-                window.showToast(`₱${amount.toLocaleString()} deposited!`);
+                const absAmount = Math.abs(amount);
+                const actionWord = isWithdrawal ? 'withdrawn' : 'deposited';
+                window.showToast(`₱${absAmount.toLocaleString()} ${actionWord}!`);
                 
                 // Refresh data
                 await loadGoalData();
                 await loadTransactionHistory();
 
+                // 3. Trigger Smart Notification Milestone Check
+                if (window.NotificationsEngine && currentGoalData) {
+                    const milestoneCycles = (currentGoalData.milestoneCycles && typeof currentGoalData.milestoneCycles === 'object')
+                        ? currentGoalData.milestoneCycles
+                        : {};
+                    window.NotificationsEngine.checkGoalMilestones(
+                        currentUser.uid,
+                        goalId,
+                        currentGoalData.title,
+                        currentGoalData.currentAmount,
+                        currentGoalData.targetAmount,
+                        milestoneCycles
+                    );
+                }
+
             } catch (error) {
                 console.error("Error confirming deposit:", error);
-                alert("Error saving deposit. Please try again.");
+                alert("Error saving transaction. Please try again.");
             } finally {
-                const btn = document.querySelector('#depositModal button.modal-btn');
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerText = "Confirm Deposit";
+                    btn.style.opacity = '1';
+                    btn.innerText = originalText;
                 }
             }
         };
@@ -1374,6 +1517,14 @@
             container.innerHTML = visibleTxns.map(data => {
                 const dateStr = data.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
                 const timeStr = data.date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
+                
+                const isWithdrawal = data.amount < 0;
+                const icon = isWithdrawal ? 'remove' : 'add';
+                const iconBg = isWithdrawal ? '#fee2e2' : '#f0fdf4';
+                const iconColor = isWithdrawal ? '#ef4444' : '#22c55e';
+                const typeName = isWithdrawal ? 'Withdrawal' : 'Deposit';
+                const amountPrefix = isWithdrawal ? '-₱' : '+₱';
+                const absAmount = Math.abs(data.amount);
 
                 return `
                     <div class="history-item" 
@@ -1383,12 +1534,12 @@
                          onmouseup="window.cancelTxnPress()"
                          ontouchend="window.cancelTxnPress()"
                          onmouseleave="window.cancelTxnPress()">
-                        <div class="history-icon" style="background: #f0fdf4; color: #22c55e;"><i class="material-icons">add</i></div>
+                        <div class="history-icon" style="background: ${iconBg}; color: ${iconColor};"><i class="material-icons">${icon}</i></div>
                         <div class="history-info">
-                            <div class="history-name">Deposit</div>
+                            <div class="history-name">${typeName}</div>
                             <div class="history-time">${dateStr} • ${timeStr}</div>
                         </div>
-                        <div class="history-amt">+₱${data.amount.toLocaleString()}</div>
+                        <div class="history-amt">${amountPrefix}${absAmount.toLocaleString()}</div>
                     </div>
                 `;
             }).join('');
@@ -1655,19 +1806,65 @@
         window.formatCurrencyInput = function(input) {
             let selectionStart = input.selectionStart;
             let originalLength = input.value.length;
-            let val = input.value.replace(/\D/g, '');
-            if (val === '') {
-                input.value = '';
+             
+            // Detect signed input
+            const rawValue = String(input.value || '');
+            const normalizedValue = rawValue
+                .replace(/[−–—]/g, '-')
+                .replace(/＋/g, '+');
+            const hasMinus = normalizedValue.includes('-');
+            const hasPlus = normalizedValue.includes('+');
+            let isNegative = hasMinus && !hasPlus;
+            const startsPositive = hasPlus && !hasMinus;
+            let val = normalizedValue.replace(/[^0-9]/g, '');
+            
+            const isDepositModal = input.id === 'depositAmountInput';
+            const modalId = isDepositModal ? 'depositModal' : 'editAmountModal';
+            const modalTitle = document.querySelector(`#${modalId} .modal-title`);
+            const confirmBtn = document.querySelector(`#${modalId} .modal-btn.primary-btn, #${modalId} .btn-primary`);
+            const amountLabel = document.querySelector(`#${modalId} .form-group label, #${modalId} .modal-subtitle`);
+
+            if (isDepositModal && isNegative) {
+                input.value = val ? `-${parseInt(val, 10).toLocaleString()}` : '-';
+                requestAnimationFrame(() => window.openWithdrawModal(val));
                 return;
             }
-            let formatted = parseInt(val).toLocaleString();
+
+            if (isDepositModal && startsPositive) {
+                input.value = val ? `+${parseInt(val, 10).toLocaleString()}` : '+';
+                requestAnimationFrame(() => window.openDepositModal(val));
+                return;
+            }
+
+            if (isNegative) {
+                if (modalTitle) modalTitle.innerText = isDepositModal ? 'Withdraw from Goal' : 'Edit Withdrawal';
+                if (confirmBtn) confirmBtn.innerText = isDepositModal ? 'Confirm Withdrawal' : 'Save Changes';
+                if (amountLabel && isDepositModal) amountLabel.innerText = 'Withdrawal Amount';
+            } else {
+                if (modalTitle) modalTitle.innerText = isDepositModal ? 'Deposit to Goal' : 'Edit Deposit';
+                if (confirmBtn) confirmBtn.innerText = isDepositModal ? 'Confirm Deposit' : 'Save Changes';
+                if (amountLabel && isDepositModal) amountLabel.innerText = 'Deposit Amount';
+            }
+
+            if (val === '') {
+                input.value = isNegative ? '-' : '';
+                return;
+            }
+            
+            let formatted = parseInt(val, 10).toLocaleString();
+            if (isNegative) formatted = '-' + formatted;
+            
             input.value = formatted;
-            let diff = formatted.length - originalLength;
-            input.setSelectionRange(selectionStart + diff, selectionStart + diff);
+            if (typeof input.setSelectionRange === 'function') {
+                let diff = formatted.length - originalLength;
+                try {
+                    input.setSelectionRange(selectionStart + diff, selectionStart + diff);
+                } catch (e) {}
+            }
         }
 
         window.startTxnPress = function(e, id, amount) {
-            selectedTxn = { id, amount };
+            selectedTxn = { id, amount, type: amount < 0 ? 'withdrawal' : 'deposit' };
             const item = e.currentTarget;
             item.classList.add('popped');
             pressTimer = setTimeout(() => {
@@ -1695,8 +1892,15 @@
         window.openEditModal = function() {
             window.closeOptionsModal();
             const input = document.getElementById('newAmountInput');
-            input.value = (selectedTxn.amount || 0).toLocaleString();
+            const txnAmount = Number(selectedTxn.amount || 0);
+            const isNegative = selectedTxn.type === 'withdrawal' || txnAmount < 0;
+            input.value = isNegative ? `-${Math.abs(txnAmount).toLocaleString()}` : txnAmount.toLocaleString();
+            
+            // Set correct labels for edit modal
             const modal = document.getElementById('editAmountModal');
+            const modalTitle = modal.querySelector('.modal-title');
+            if (modalTitle) modalTitle.innerText = isNegative ? 'Edit Withdrawal' : 'Edit Deposit';
+            
             modal.style.display = 'flex';
             if (nav) nav.pushModalState('editAmountModal', () => modal.style.display = 'none');
         };
@@ -1719,22 +1923,27 @@
         };
 
         window.saveNewAmount = async function() {
-            const newAmount = parseFloat(document.getElementById('newAmountInput').value.replace(/,/g, ''));
-            if (isNaN(newAmount) || newAmount < 0) return alert("Invalid amount");
+            const rawValue = document.getElementById('newAmountInput').value.replace(/,/g, '');
+            const newAmount = parseFloat(rawValue);
+            if (isNaN(newAmount) || newAmount === 0) return alert("Invalid amount");
             
             try {
                 document.getElementById('loadingOverlay').style.display = 'flex';
                 const diff = newAmount - selectedTxn.amount;
+                const isWithdrawal = newAmount < 0;
+                const type = isWithdrawal ? 'withdrawal' : 'deposit';
                 
                 // Update Transaction
                 await updateDoc(doc(db, `users/${currentUser.uid}/goals/${goalId}/transactions`, selectedTxn.id), {
                     amount: newAmount,
+                    type: type,
                     updatedAt: serverTimestamp()
                 });
 
                 // Update Goal Total
                 const goalRef = doc(db, `users/${currentUser.uid}/goals`, goalId);
-                const newTotal = (currentGoalData.currentAmount || 0) + diff;
+                const currentBalance = currentGoalData.currentAmount || 0;
+                const newTotal = currentBalance + diff;
                 await updateDoc(goalRef, { currentAmount: Math.max(0, newTotal) });
 
                 currentGoalData.currentAmount = Math.max(0, newTotal);
@@ -1744,7 +1953,6 @@
             } catch (e) {
                 console.error(e);
             } finally {
-                // Overlay loading is only for async ops after initial load
                 const overlay = document.getElementById('loadingOverlay');
                 if (overlay) overlay.style.display = 'none';
             }
@@ -1968,6 +2176,11 @@
             });
         }
 
+        window.goBack = () => {
+            if (window.NavState) window.NavState.goBack();
+            else window.history.back();
+        };
+
         // Wait for page to be "ready" after data load to fade in
         window.addEventListener('load', () => {
             // Initial check for loading state
@@ -2070,3 +2283,4 @@
     </script>
 </body>
 </html>
+

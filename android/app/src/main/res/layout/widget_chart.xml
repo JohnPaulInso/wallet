@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/widget_chart_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EXPENSES STRUCTURE"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#1e293b"
+        android:fontFamily="@font/plus_jakarta_sans"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/widget_chart_title"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <!-- Donut Chart Canvas (on left) -->
+        <ImageView
+            android:id="@+id/widget_donut_chart"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"/>
+
+        <!-- Labels (on right) -->
+        <LinearLayout
+            android:id="@+id/widget_legend_container"
+            android:layout_width="0dp"
+            android:layout_weight="1.2"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="12dp"
+            android:orientation="vertical">
+            <!-- Dynamic labels will be handled via RemoteViews? 
+                 Actually, RemoteViews doesn't support dynamic view addition easily.
+                 I'll pre-define 4 rows. -->
+            
+            <LinearLayout android:id="@+id/row1" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:visibility="gone">
+                <View android:id="@+id/dot1" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center_vertical" android:background="#3b82f6"/>
+                <TextView android:id="@+id/txt1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="4dp" android:textSize="9sp" android:textColor="#1e293b" android:singleLine="true" android:fontFamily="@font/plus_jakarta_sans"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="4dp" android:visibility="gone">
+                <View android:id="@+id/dot2" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center_vertical" android:background="#ef4444"/>
+                <TextView android:id="@+id/txt2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="4dp" android:textSize="9sp" android:textColor="#1e293b" android:singleLine="true" android:fontFamily="@font/plus_jakarta_sans"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row3" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="4dp" android:visibility="gone">
+                <View android:id="@+id/dot3" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center_vertical" android:background="#10b981"/>
+                <TextView android:id="@+id/txt3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="4dp" android:textSize="9sp" android:textColor="#1e293b" android:singleLine="true" android:fontFamily="@font/plus_jakarta_sans"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/row4" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="4dp" android:visibility="gone">
+                <View android:id="@+id/dot4" android:layout_width="6dp" android:layout_height="6dp" android:layout_gravity="center_vertical" android:background="#f59e0b"/>
+                <TextView android:id="@+id/txt4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginLeft="4dp" android:textSize="9sp" android:textColor="#1e293b" android:singleLine="true" android:fontFamily="@font/plus_jakarta_sans"/>
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</RelativeLayout>

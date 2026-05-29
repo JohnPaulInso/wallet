@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+    </style>
+
+    <!-- AppTheme.NoActionBar - updated 2026-03-31 - transparent status bar for frosted glass header, black navigation bar -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@color/black</item>
+        <item name="android:windowBackground">@color/black</item>
+        <!-- android:statusBarColor - updated 2026-03-31 - transparent so frosted glass header shows through -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- android:windowLightStatusBar - updated 2026-03-31 - dark status bar icons on light frosted glass -->
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- android:navigationBarColor - stays black for Samsung-style universal nav bar -->
+        <item name="android:navigationBarColor">@color/black</item>
+    </style>
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground_scaled</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+    </style>
+
+</resources>

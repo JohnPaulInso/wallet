@@ -1,5 +1,7 @@
 {
     "github-actions.workflows.pinned.workflows": [
         "dynamic/pages/pages-build-deployment"
-    ]
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "liveServer.settings.port": 5501
 }

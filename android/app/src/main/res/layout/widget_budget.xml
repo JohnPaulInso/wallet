@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/widget_budget_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MONTHLY BUDGET"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="#1e293b"
+        android:fontFamily="@font/plus_jakarta_sans"/>
+
+    <TextView
+        android:id="@+id/widget_budget_month"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_budget_title"
+        android:text="MARCH 2026"
+        android:textSize="10sp"
+        android:textColor="#94a3b8"
+        android:textAllCaps="true"
+        android:fontFamily="@font/plus_jakarta_sans"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_budget_month"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical">
+
+        <!-- Needs -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NEEDS"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#64748b"/>
+            <TextView
+                android:id="@+id/widget_needs_val"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:text="₱0 LEFT"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#1e293b"
+                android:fontFamily="@font/plus_jakarta_sans"/>
+        </RelativeLayout>
+        <ProgressBar
+            android:id="@+id/widget_needs_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_blue"/>
+
+        <!-- Wants -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="WANTS"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#64748b"/>
+            <TextView
+                android:id="@+id/widget_wants_val"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:text="₱0 LEFT"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#1e293b"/>
+        </RelativeLayout>
+        <ProgressBar
+            android:id="@+id/widget_wants_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_red"/>
+
+        <!-- Savings -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SAVINGS"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#64748b"/>
+            <TextView
+                android:id="@+id/widget_savings_val"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:text="₱0 LEFT"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:textColor="#1e293b"/>
+        </RelativeLayout>
+        <ProgressBar
+            android:id="@+id/widget_savings_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_green"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#f0fdf4"
+        android:padding="6dp"
+        android:orientation="horizontal">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="AVAILABLE"
+            android:textSize="8sp"
+            android:textStyle="bold"
+            android:textColor="#16a34a"/>
+        <TextView
+            android:id="@+id/widget_available_val"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="₱0.00"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:textColor="#16a34a"
+            android:fontFamily="@font/plus_jakarta_sans"/>
+    </LinearLayout>
+
+</RelativeLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 
+    Adaptive icon canvas is 108dp x 108dp.
+    To get the 'Faiora' look, we want the logo to fill the entire space 
+    to compensate for the image's own transparent padding.
+    Scaling up to 125dp essentially 'zooms in' the wallet shape.
+    -->
+    <item
+        android:drawable="@drawable/app_icon_foreground"
+        android:gravity="center"
+        android:width="125dp"
+        android:height="125dp" />
+</layer-list>

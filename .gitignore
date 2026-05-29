@@ -1,0 +1,33 @@
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor settings
+.vscode/
+
+# Dependencies
+node_modules/
+
+# Build outputs
+android/**/build/
+android/.gradle/
+android/.idea/
+www/
+tmp/
+.tmp_*
+
+# Python cache
+__pycache__/
+
+# Backups and older versions
+*backup*
+*copy*
+index v1.html
+index v2.html
+index end.html
+index start.html
+lines.txt
+
+# Local config and secrets
+config.js
+service-account.json

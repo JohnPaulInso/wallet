@@ -8120,7 +8120,8 @@ Be direct, practical, and helpful.`;
                                 circle.setAttribute('stroke-width', strokeWidthVal);
                                 circle.setAttribute('opacity', before.isExcluded ? '0' : String(dimOpacity));
                                 circle.setAttribute('stroke-dasharray', `${before.arc} ${circumference}`);
-                                circle.style.transform = `rotate(${before.angle}deg) scale(${isSelected ? 1.06 : 1})`;
+                                /* [FIX 2026-06-27: Changed 'isSelected' to 'wasSelected' for initial transform to restore the growing/shrinking scale animation on click - Antigravity] */
+                                circle.style.transform = `rotate(${before.angle}deg) scale(${wasSelected ? 1.06 : 1})`;
                                 circle.style.filter = before.isExcluded ? 'grayscale(1)' : defaultFilter;
                             }
 
@@ -14469,7 +14470,8 @@ Be direct, practical, and helpful.`;
                         <!-- Transactions will be injected here -->
                     </div>
                     <div id="budget-txn-summary"
-                        style="padding: 12px 20px calc(env(safe-area-inset-bottom, 20px) + 20px); margin-bottom: 10px; background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, #ffffff 20%); border-top: 1px solid #f1f5f9; flex-shrink: 0;">
+                        /* [FIX 2026-06-27: Reduced padding and margin-bottom to make the summary component shorter as requested - Antigravity] */
+                        style="padding: 8px 20px calc(env(safe-area-inset-bottom, 12px) + 12px); margin-bottom: 0px; background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, #ffffff 20%); border-top: 1px solid #f1f5f9; flex-shrink: 0;">
                         <!-- Summary cards injected here -->
                     </div>
                 </div>

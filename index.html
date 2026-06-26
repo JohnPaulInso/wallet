@@ -14450,17 +14450,23 @@ Be direct, practical, and helpful.`;
                 <div class="custom-modal" id="budget-modal-content" onclick="event.stopPropagation()"
                     style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 90vh; overflow: hidden; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y; background: #ffffff; display: flex; flex-direction: column;">
 
-                    <div id="budget-modal-drag-handle"
+                    <!-- [FIX: 2026-06-27 - Labeled header drag handle element - Antigravity] -->
+                    <div id="budget-modal-drag-handle" class="budget-modal-drag-handle-container"
                         style="width: 100%; padding: 20px 20px 8px 20px; background: #ffffff; border-radius: 24px 24px 0 0 !important; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #f1f5f9; cursor: grab;">
-                        <div style="display: flex; justify-content: center; margin-bottom: 12px;">
-                            <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
+                        <!-- [FIX: 2026-06-27 - Labeled center handle wrapper - Antigravity] -->
+                        <div class="budget-drag-handle-bar-container" style="display: flex; justify-content: center; margin-bottom: 12px;">
+                            <!-- [FIX: 2026-06-27 - Labeled physical drag indicator line - Antigravity] -->
+                            <div class="budget-drag-handle-visual-indicator" style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                         </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <!-- [FIX: 2026-06-27 - Labeled actions row - Antigravity] -->
+                        <div class="budget-modal-header-actions-row" style="display: flex; justify-content: space-between; align-items: center;">
                             <i class="material-icons" onclick="closeModals('budget-txn-modal')"
                                 style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
-                            <div id="budget-modal-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">
+                            <!-- [FIX: 2026-06-27 - Labeled title element - Antigravity] -->
+                            <div id="budget-modal-title" class="budget-modal-header-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">
                                 Budget Details</div>
-                            <div id="budget-modal-add-btn"
+                            <!-- [FIX: 2026-06-27 - Labeled add button wrapper - Antigravity] -->
+                            <div id="budget-modal-add-btn" class="budget-modal-header-add-button-wrapper"
                                 style="width: 28px; display: flex; justify-content: flex-end;">
                                 <i class="material-icons"
                                     style="color: #10b981; font-size: 28px; cursor: pointer;">add_circle</i>
@@ -14468,13 +14474,14 @@ Be direct, practical, and helpful.`;
                         </div>
                     </div>
 
-                    <div id="budget-txn-list"
+                    <!-- [FIX: 2026-06-27 - Labeled transaction list scroll container - Antigravity] -->
+                    <div id="budget-txn-list" class="budget-transaction-list-container"
                         style="padding: 10px 20px 16px 20px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
                         <!-- Transactions will be injected here -->
                     </div>
-                    <div id="budget-txn-summary"
-                        /* [FIX 2026-06-27: Reduced padding and margin-bottom to make the summary component shorter as requested - Antigravity] */
-                        style="padding: 8px 20px calc(env(safe-area-inset-bottom, 12px) + 12px); margin-bottom: 0px; background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, #ffffff 20%); border-top: 1px solid #f1f5f9; flex-shrink: 0;">
+                    <!-- [FIX 2026-06-27: Added class "budget-transaction-summary-sticky-container", labeled summary element, and added a subtle top shadow (box-shadow) to visually separate the sticky footer - Antigravity] -->
+                    <div id="budget-txn-summary" class="budget-transaction-summary-sticky-container"
+                        style="padding: 8px 20px calc(env(safe-area-inset-bottom, 12px) + 12px); margin-bottom: 0px; background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, #ffffff 20%); border-top: 1px solid #f1f5f9; flex-shrink: 0; box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);">
                         <!-- Summary cards injected here -->
                     </div>
                 </div>

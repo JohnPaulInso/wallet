@@ -3660,6 +3660,8 @@
             position: relative;
             z-index: 1;
             transition: transform 0.15s ease;
+            /* [FIX 2026-06-27: Added touch-action: pan-y to prevent horizontal swipe right from triggering global tab switch - Antigravity] */
+            touch-action: pan-y;
         }
 
         /* UNDO SNACKBAR STACK */

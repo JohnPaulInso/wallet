@@ -10619,6 +10619,8 @@ Be direct, practical, and helpful.`;
                             if (isSwiping) {
                                 // Prevent page scroll if swiping
                                 if (e.cancelable) e.preventDefault();
+                                /* [FIX 2026-06-27: Added e.stopPropagation() to isolate horizontal swipe right and prevent moving to next tab (Calendar) - Antigravity] */
+                                if (e.stopPropagation) e.stopPropagation();
 
                                 // Limit swipe distance
                                 const moveX = Math.max(-120, Math.min(120, diffX));

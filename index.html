@@ -5526,21 +5526,22 @@
                         const theme = sectionThemes[type] || { bg: '#f8fafc', color: '#475569', border: '#e2e8f0', val: '#1e293b' };
 
                         html += `
-                    <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">
+                    <!-- [FIX 2026-06-27: Made the 3-card summary inside the budget transactions modal even more compact - Antigravity] -->
+                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
                         <!-- Card 1: Cash Expenses (Financial + Manual) -->
-                        <div class="cash-expenses-card" style="padding: 14px 16px; background: #fff1f2; border-radius: 16px; border: 1px dashed #fecdd3; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="cash-expenses-card" style="padding: 10px 14px; background: #fff1f2; border-radius: 12px; border: 1px dashed #fecdd3; display: flex; justify-content: space-between; align-items: center;">
                             <div style="font-size: 10px; font-weight: 900; color: #e11d48; text-transform: uppercase; letter-spacing: 0.5px;">Cash Expenses</div>
                             <div style="font-size: 13px; font-weight: 900; color: #be123c;">₱${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </div>
 
                         <!-- Card 2: Section Expenses (Theme Aware) -->
-                        <div class="section-total-card" style="padding: 14px 16px; background: ${theme.bg}; border-radius: 16px; border: 1px dashed ${theme.border}; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="section-total-card" style="padding: 10px 14px; background: ${theme.bg}; border-radius: 12px; border: 1px dashed ${theme.border}; display: flex; justify-content: space-between; align-items: center;">
                             <div style="font-size: 10px; font-weight: 900; color: ${theme.color}; text-transform: uppercase; letter-spacing: 0.5px;">${mainLabel}</div>
                             <div style="font-size: 13px; font-weight: 900; color: ${theme.val};">₱${totalMain.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </div>
 
                         <!-- Card 3: Overall Summary (Premium Accent Light Design) -->
-                        <div class="overall-total-card" style="margin-top: 4px; padding: 18px 20px; background: #ffffff; border-radius: 20px; border-left: 5px solid ${theme.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
+                        <div class="overall-total-card" style="margin-top: 2px; padding: 12px 16px; background: #ffffff; border-radius: 14px; border-left: 5px solid ${theme.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
                             <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, ${theme.bg}55 0%, #ffffff 100%); pointer-events: none;"></div>
                             <div style="position: relative; z-index: 1;">
                                 <div style="font-size: 7.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Overall ${sectionLabel}</div>
@@ -8125,7 +8126,8 @@ Be direct, practical, and helpful.`;
                                 circle.style.filter = before.isExcluded ? 'grayscale(1)' : defaultFilter;
                             }
 
-                            circle.style.transition = 'stroke-dasharray 0.45s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.35s ease, opacity 0.35s ease, filter 0.25s ease, stroke-width 0.35s ease, transform 0.45s cubic-bezier(0.4, 0, 0.2, 1)';
+                            /* [FIX 2026-06-27: Sped up transform transition to 0.15s for snappier scaling animation on click, per user request - Antigravity] */
+                            circle.style.transition = 'stroke-dasharray 0.45s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.35s ease, opacity 0.35s ease, filter 0.25s ease, stroke-width 0.35s ease, transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)';
                             circle.style.cursor = 'pointer';
 
                             // Add to DOM

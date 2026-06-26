@@ -5555,7 +5555,8 @@
                     <div style="height: 54px;"></div> <!-- updated 2026-03-31 - increased bottom spacing - 2026-03-31 -->
                 `;
 
-                        const summaryMarker = '<div style="margin-top: 24px; display: flex; flex-direction: column; gap: 12px;">';
+                        /* [FIX 2026-06-27: Updated summaryMarker to match the new compact summary container comment to restore sticky behavior - Antigravity] */
+                        const summaryMarker = '<!-- [FIX 2026-06-27: Made the 3-card summary';
                         const summaryStart = html.indexOf(summaryMarker);
                         let summaryHTML = '';
                         if (summaryStart !== -1) {

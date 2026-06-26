@@ -45,7 +45,8 @@ const TEXT_ARTIFACT_REPLACEMENTS = [
     ['??', '']
 ];
 
-export function repairTextArtifacts(text) {
+/* [FIX 2026-06-26: Modified repairTextArtifacts to accept an optional shouldTrim parameter (defaults to true) to prevent removing spaces around inline tags inside text nodes. Modified repairDomArtifacts to pass false for shouldTrim on text nodes.] */
+export function repairTextArtifacts(text, shouldTrim = true) {
     if (text === null || text === undefined) return '';
     if (typeof text !== 'string') return text;
 
@@ -54,15 +55,60 @@ export function repairTextArtifacts(text) {
         repaired = repaired.split(bad).join(good);
     });
 
-    return repaired
+    const processed = repaired
+        .replace(/â‚±/g, '\u20B1')
         .replace(/Ã¢â€šÂ±|ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±|Ã‚â‚±/g, '\u20B1')
         .replace(/Ã¢â‚¬Â¢|ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢/g, '\u2022')
         .replace(/Ã¢Ë†â€™|ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢|ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“/g, '\u2212')
         .replace(/Ãƒâ€”/g, '\u00D7')
         .replace(/ÃƒÂ·/g, '\u00F7')
         .replace(/\uFFFD+/g, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
+        .replace(/\s{2,}/g, ' ');
+
+    return shouldTrim ? processed.trim() : processed;
+}
+
+export function repairDomArtifacts(root = document.body) {
+    if (!root || typeof document === 'undefined') return;
+
+    const target = root.nodeType === Node.DOCUMENT_NODE ? root.documentElement : root;
+    if (!target) return;
+
+    const skipTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE']);
+    const textWalker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT, null);
+    const textNodes = [];
+
+    while (textWalker.nextNode()) {
+        textNodes.push(textWalker.currentNode);
+    }
+
+    textNodes.forEach((node) => {
+        const parent = node.parentElement;
+        if (!parent || skipTags.has(parent.tagName)) return;
+        /* [FIX 2026-06-26: Pass false to shouldTrim for text nodes to avoid stripping spaces adjacent to inline HTML tags] */
+        const repaired = repairTextArtifacts(node.nodeValue || '', false);
+        if (repaired !== node.nodeValue) node.nodeValue = repaired;
+    });
+
+    if (target.querySelectorAll) {
+        const attrNames = ['data-raw', 'title', 'aria-label', 'placeholder'];
+        target.querySelectorAll(attrNames.map((name) => '[' + name + ']').join(',')).forEach((el) => {
+            attrNames.forEach((attr) => {
+                if (!el.hasAttribute(attr)) return;
+                const current = el.getAttribute(attr);
+                if (current === null) return;
+                const repaired = repairTextArtifacts(current);
+                if (repaired !== current) el.setAttribute(attr, repaired);
+            });
+        });
+    }
+}
+
+let domArtifactRepairTimer = null;
+export function scheduleDomArtifactRepair(root = document.body) {
+    if (typeof window === 'undefined') return;
+    window.clearTimeout(domArtifactRepairTimer);
+    domArtifactRepairTimer = window.setTimeout(() => repairDomArtifacts(root), 0);
 }
 
 export function repairNotificationTextArtifacts(text, title = '') {
@@ -76,6 +122,23 @@ export function repairNotificationTextArtifacts(text, title = '') {
 
 if (typeof window !== 'undefined') {
     window.repairTextArtifacts = repairTextArtifacts;
+    window.repairDomArtifacts = repairDomArtifacts;
+    window.scheduleDomArtifactRepair = scheduleDomArtifactRepair;
+
+    const initDomArtifactRepairObserver = () => {
+        if (window.__domArtifactRepairObserver || typeof MutationObserver === 'undefined') return;
+        const root = document.body || document.documentElement;
+        if (!root) return;
+        window.__domArtifactRepairObserver = new MutationObserver(() => scheduleDomArtifactRepair(root));
+        window.__domArtifactRepairObserver.observe(root, { childList: true, subtree: true, characterData: true });
+        scheduleDomArtifactRepair(root);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDomArtifactRepairObserver, { once: true });
+    } else {
+        initDomArtifactRepairObserver();
+    }
 }
 
 // Show toast notification

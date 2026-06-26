@@ -345,18 +345,24 @@ function shouldShowTxnLogos() {
     return window.showLogos !== false;
 }
 
+/* [FIX 2026-06-26: Updated detectTxnLogo with the full set of brand logos (adding Atome, Google, Seaoil, Petron, Ayala, and fixing Lazada extension from .jpg to .png to match actual assets) and exposed detectTxnLogo on the global window object so that budget transaction rendering in index.html can detect and draw brand badges on wants-txn, needs-txn, and savings-txn cards] */
 function detectTxnLogo(mappedName = "") {
     const mUpper = String(mappedName || "").toUpperCase();
     if (mUpper.includes('JOLLIBEE')) return 'logos/jollibee.png';
     if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) return 'logos/mcdo.png';
     if (mUpper.includes('SHELL')) return 'logos/shell.png';
     if (mUpper.includes('SHOPEE')) return 'logos/shopee.png';
-    if (mUpper.includes('LAZADA')) return 'logos/lazada.jpg';
+    if (mUpper.includes('LAZADA')) return 'logos/lazada.png';
     if (mUpper.includes('GLOBE') || mUpper.includes('GOMO')) return 'logos/globe.png';
     if (mUpper.includes('SM') || mUpper.includes('SM STORE')) return 'logos/sm.png';
     if (mUpper.includes('SPOTIFY')) return 'logos/spotify.png';
     if (mUpper.includes('TIKTOK')) return 'logos/tiktokshop.png';
     if (mUpper.includes('TECFUEL')) return 'logos/tecfuel.png';
+    if (mUpper.includes('SEAOIL') || mUpper.includes('LOCQ')) return 'logos/seaoil.png';
+    if (mUpper.includes('ATOME PAYMENT') || mUpper.includes('ATOMEPAYMENT') || mUpper === 'ATOME' || mUpper.startsWith('ATOME ')) return 'logos/atome.png';
+    if (mUpper.includes('GOOGLE ONE') || mUpper.includes('GOOGLE')) return 'logos/google.png';
+    if (mUpper.includes('AYALA')) return 'logos/ayala.png';
+    if (mUpper.includes('PETRON')) return 'logos/petron.png';
     if (mUpper.includes('MR DIY')) return 'logos/mrdiy.png';
     if (mUpper.includes('METRO')) return 'logos/supermetro.png';
     if (mUpper.includes('7 11') || mUpper.includes('7/11')) return 'logos/711.png';
@@ -365,6 +371,7 @@ function detectTxnLogo(mappedName = "") {
     if (mUpper.includes('TRADERSCONNECT')) return 'logos/tradersconnect.png';
     return null;
 }
+window.detectTxnLogo = detectTxnLogo;
 
 function getTxnNoteColor(mappedCategory, isRefund, isReimbursed) {
     if (mappedCategory === 'Savings' || mappedCategory === 'Income' || mappedCategory === 'Life & Entertainment' || mappedCategory === 'Sport') {
@@ -1697,9 +1704,16 @@ export function drawPieChart(segments, total, isUpdate = false) {
         if (window.selectedCategoryName && !isSelected) circle.setAttribute('opacity', '0.2');
         
         circle.setAttribute('stroke-dasharray', `${arcLength} ${circumference}`);
-        circle.setAttribute('transform', `rotate(${currentAngle} ${centerX} ${centerY})`);
         circle.style.opacity = dimOpacity;
-        circle.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+        
+        /* [FIX 2026-06-26: Subtler glow filter for selected segment (4px, 44 opacity)] */
+        const defaultFilter = isSelected ? `brightness(1.02) drop-shadow(0 0 4px ${seg.color}44)` : 'none';
+        circle.style.filter = defaultFilter;
+        
+        /* [FIX 2026-06-26: CSS transform scaling transitions for smooth hover and selection animations] */
+        circle.style.transformOrigin = '120px 120px';
+        circle.style.transform = `rotate(${currentAngle}deg) scale(${isSelected ? 1.04 : 1})`;
+        circle.style.transition = 'stroke-dasharray 0.45s ease-in-out, stroke 0.35s ease, opacity 0.35s ease, filter 0.25s ease, stroke-width 0.35s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
         circle.style.cursor = 'pointer';
         
         const handleInteraction = (e) => {
@@ -1710,6 +1724,26 @@ export function drawPieChart(segments, total, isUpdate = false) {
         };
 
         circle.onclick = handleInteraction;
+        
+        // Hover Glow & Scale restrictions
+        const hoverGlow = seg.color || '#3b82f6';
+        circle.onmouseenter = (e) => {
+            /* [FIX 2026-06-26: Restrict hover glow and scale: do NOT scale/glow other slices if a slice is already selected] */
+            if (!window.selectedCategoryName || isSelected) {
+                /* [FIX 2026-06-26: Subtler hover glow (6px, 66 opacity) and scale animation] */
+                circle.style.filter = `brightness(1.04) drop-shadow(0 0 6px ${hoverGlow}66)`;
+                circle.style.transform = `rotate(${currentAngle}deg) scale(${isSelected ? 1.06 : 1.02})`;
+            } else {
+                circle.style.filter = 'none';
+                circle.style.transform = `rotate(${currentAngle}deg) scale(${isSelected ? 1.04 : 1})`;
+            }
+        };
+        circle.onmouseleave = () => {
+            circle.style.filter = defaultFilter;
+            /* [FIX 2026-06-26: Restore scale on mouseleave] */
+            circle.style.transform = `rotate(${currentAngle}deg) scale(${isSelected ? 1.04 : 1})`;
+        };
+
         svgGroup.appendChild(circle);
         currentAngle += (percent * 360);
         
@@ -1801,38 +1835,148 @@ export function drawTrendChart(txns) {
         };
         pointsContainer.appendChild(circle);
     }
-}
-
-function filterHistoryByWeek(weekIndex) {
-    const txns = window.allTxns || [];
-    const now = new Date();
-    const filtered = txns.filter(t => {
-        const d = new Date(t.date);
-        const week = Math.floor((d.getDate() - 1) / 7);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && week === weekIndex;
-    });
-    
-    // Temporarily override renderHistory to show only this week
-    const container = document.getElementById('history-container');
-    const originalContent = container.innerHTML;
-    
-    renderHistoryClean(filtered);
-    
-    // Add a "Clear Filter" floating pill if it doesn't exist
-    let clearBtn = document.getElementById('clear-week-filter');
-    if (!clearBtn) {
-        clearBtn = document.createElement('div');
-        clearBtn.id = 'clear-week-filter';
-        clearBtn.innerHTML = `<span>Week ${weekIndex + 1} Filtered</span> <i class="material-icons" style="font-size:14px;">close</i>`;
-        clearBtn.style.cssText = 'position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 30px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); z-index: 2000; cursor: pointer;';
-        clearBtn.onclick = () => {
-            renderHistoryClean(window.allTxns);
-            clearBtn.remove();
-            triggerHaptic('light');
-        };
-        document.body.appendChild(clearBtn);
+    /* [FIX 2026-06-26: Re-apply week highlights on chart redraw] */
+    if (typeof window.applyTrendWeekHighlight === 'function') {
+        window.applyTrendWeekHighlight(window.selectedTrendWeekIndex);
     }
 }
+
+/* [FIX 2026-06-26: Expose filterHistoryByWeek and implement window.applyTrendWeekHighlight for subtle card tinting and labels highlighting] */
+function filterHistoryByWeek(weekIndex) {
+    window.selectedTrendWeekIndex = window.selectedTrendWeekIndex === weekIndex ? null : weekIndex;
+    if (typeof window.applyTrendWeekHighlight === 'function') {
+        window.applyTrendWeekHighlight(window.selectedTrendWeekIndex);
+    }
+}
+window.filterHistoryByWeek = filterHistoryByWeek;
+
+window.applyTrendWeekHighlight = function(selectedWeekIndex = null) {
+    const cards = document.querySelectorAll('.premium-txn[data-date]');
+    const hasSelection = Number.isInteger(selectedWeekIndex) && selectedWeekIndex >= 0;
+
+    const monthContext = typeof window.getDashboardMonthContext === 'function' ? window.getDashboardMonthContext() : null;
+    const now = monthContext?.referenceDate ? new Date(monthContext.referenceDate) : new Date();
+
+    cards.forEach((card) => {
+        /* [FIX 2026-06-26: Parse date string using component splitting to remain immune to timezone boundary shifts] */
+        const dateParts = card.dataset.date.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // 0-indexed
+        const day = parseInt(dateParts[2], 10);
+
+        const matchesMonth = month === now.getMonth() && year === now.getFullYear();
+
+        /* [FIX 2026-06-26: Aligns calculation of week indices with the main dashboard's drawTrendChart grid algorithm] */
+        const firstDay = new Date(year, month, 1);
+        const week = Math.ceil((day + firstDay.getDay()) / 7) - 1;
+
+        const isMatch = hasSelection && matchesMonth && week === selectedWeekIndex;
+        card.classList.toggle('week-highlight', isMatch);
+        const txnRight = card.querySelector('.txn-right');
+        if (isMatch) {
+            /* [FIX 2026-06-27: Shortened week badge from 'Week X' to 'WX' compact format for cleaner UI - Antigravity] */
+            const badgeVal = 'W' + (selectedWeekIndex + 1);
+            card.dataset.weekBadge = badgeVal;
+            if (txnRight) txnRight.dataset.weekBadge = badgeVal;
+        } else {
+            delete card.dataset.weekBadge;
+            if (txnRight) delete txnRight.dataset.weekBadge;
+        }
+    });
+
+    // Highlight the selected week label on the trend chart
+    const labels = document.querySelectorAll('.trend-label');
+    labels.forEach((lbl, idx) => {
+        const isMatch = hasSelection && idx === selectedWeekIndex;
+        lbl.classList.toggle('active', isMatch);
+        if (isMatch) {
+            lbl.style.color = window.currentThemeTrend || '#3b82f6';
+            lbl.style.fontWeight = '900';
+            lbl.style.transform = 'scale(1.08)';
+            lbl.style.transition = 'all 0.2s ease';
+        } else {
+            lbl.style.color = '';
+            lbl.style.fontWeight = '';
+            lbl.style.transform = '';
+        }
+    });
+
+    // [FIX 2026-06-26: Retain the black/default theme trend color on the primary line chart stroke, instead of making the entire line blue]
+    const path = document.getElementById('trendPath');
+    if (path) {
+        const trendColor = window.currentThemeTrend || '#3b82f6';
+        path.setAttribute('stroke', trendColor);
+    }
+
+    /* [FIX 2026-06-26: Removed the vertical highlight column/rect (the 'square') and any highlight dot from the SVG. Instead, dynamically overlay a secondary blue curve path segment ('trend-highlight-segment') on top of the black line chart corresponding to the selected week's segments.] */
+    const svg = document.getElementById('trendChart');
+    if (svg) {
+        // Remove previous highlight elements
+        const oldHighlightRect = document.getElementById('trend-week-highlight');
+        if (oldHighlightRect) oldHighlightRect.remove();
+        
+        const oldHighlightDot = document.getElementById('trend-highlight-dot');
+        if (oldHighlightDot) oldHighlightDot.remove();
+        
+        const oldHighlightSegment = document.getElementById('trend-highlight-segment');
+        if (oldHighlightSegment) oldHighlightSegment.remove();
+
+        if (hasSelection && svg.dataset.points) {
+            try {
+                const points = JSON.parse(svg.dataset.points);
+                const max = Number(svg.dataset.max || 500);
+                const step = Number(svg.dataset.step || 0);
+                const padding = Number(svg.dataset.padding || 20);
+                const h = Number(svg.dataset.h || 130);
+
+                let d = "";
+                // Segment leading to selectedWeekIndex (if index > 0)
+                if (selectedWeekIndex > 0 && selectedWeekIndex < points.length) {
+                    const x_prev = padding + ((selectedWeekIndex - 1) * step);
+                    const y_prev = h - (points[selectedWeekIndex - 1] / max) * h;
+                    const x_curr = padding + (selectedWeekIndex * step);
+                    const y_curr = h - (points[selectedWeekIndex] / max) * h;
+                    const cp1x = x_prev + (x_curr - x_prev) / 2;
+                    d += `M ${x_prev} ${y_prev} C ${cp1x} ${y_prev}, ${cp1x} ${y_curr}, ${x_curr} ${y_curr} `;
+                }
+                // Segment leaving selectedWeekIndex (if index < points.length - 1)
+                if (selectedWeekIndex < points.length - 1) {
+                    const x_curr = padding + (selectedWeekIndex * step);
+                    const y_curr = h - (points[selectedWeekIndex] / max) * h;
+                    const x_next = padding + ((selectedWeekIndex + 1) * step);
+                    const y_next = h - (points[selectedWeekIndex + 1] / max) * h;
+                    const cp1x = x_curr + (x_next - x_curr) / 2;
+                    d += `M ${x_curr} ${y_curr} C ${cp1x} ${y_curr}, ${cp1x} ${y_next}, ${x_next} ${y_next} `;
+                }
+
+                if (d) {
+                    /* [FIX 2026-06-27: Added class name to trend highlight path element for standard targetability under the user global rule - Antigravity] */
+                    const highlightPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    highlightPath.id = 'trend-highlight-segment';
+                    highlightPath.classList.add('trend-highlight-segment-line'); // class name added for easy styling/targeting
+                    highlightPath.setAttribute('d', d);
+                    highlightPath.setAttribute('fill', 'none');
+                    highlightPath.setAttribute('stroke', '#3b82f6');
+                    /* [FIX 2026-06-27: Kept highlight segment stroke-width at 4 for visible blue line overlay - Antigravity] */
+                    highlightPath.setAttribute('stroke-width', '4');
+                    highlightPath.setAttribute('stroke-linecap', 'round');
+                    highlightPath.style.pointerEvents = 'none';
+                    highlightPath.style.transition = 'stroke 0.2s ease';
+                    
+                    // Insert before the dots group (so it sits on top of the main path but below any hover tooltips/guides)
+                    const dotsGroup = document.getElementById('trendDots');
+                    if (dotsGroup) {
+                        svg.insertBefore(highlightPath, dotsGroup);
+                    } else {
+                        svg.appendChild(highlightPath);
+                    }
+                }
+            } catch (e) {
+                console.warn('Error rendering trend highlight segment:', e);
+            }
+        }
+    }
+};
 
 // Insight and AI Summary
 export async function updateAISummary(txns, force = false) {

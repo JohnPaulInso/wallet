@@ -1,0 +1,702 @@
+================================================================================
+                    SMART WALLET DESIGN RULES & STANDARDS
+================================================================================
+Last Updated: 2026-06-29
+File Purpose: Comprehensive design system reference for spacing, colors, icons,
+              typography, modals, animations, and all UI patterns.
+================================================================================
+
+1. PREMIUM TRANSACTION ROW / CARD SPACING
+--------------------------------------------------------------------------------
+Standard metrics used in transaction cards (.premium-txn / .txn-item):
+
+- Card Row Wrapper:
+  * Padding: 14px top/bottom, 18px left/right
+  * Alignment: display: flex; align-items: center; justify-content: space-between;
+  * Inner Gap: 14px (between icon, details, and amount)
+  * Border: 1px solid #f1f5f9 (Neutral standard border)
+  * Left border colors: None (removed as per design requirements)
+  * Shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.02)
+
+- Synced Card highlights:
+  * BG color: #f8fafc (Clean light gray tint)
+  * Border color: #e2e8f0
+
+- New/Pending Card highlights:
+  * BG color: #fffdf5 (Soft warm yellow tint)
+  * Border color: #fef08a (Soft yellow outline border)
+
+- Icon Container Box (.icon-box / .bpi-txn-icon):
+  * Dimensions: 44px width, 44px height
+  * Border Radius: 12px
+  * Alignment: display: flex; align-items: center; justify-content: center;
+  * Icon Font Size: 20px
+  * Flex behavior: flex-shrink: 0;
+
+- Transaction Details (.txn-details / .bpi-txn-info):
+  * Alignment: display: flex; flex-direction: column;
+  * Flex behavior: flex: 1; min-width: 0;
+
+- Action Buttons (.bpi-txn-btn):
+  * Dimensions: 32px width, 32px height
+  * Border Radius: 50% (fully circular check and reject buttons)
+  * Inner Gap: 6px between buttons
+
+
+2. OVERLAY & GESTURE SHEETS (.bpi-scanner-sheet)
+--------------------------------------------------------------------------------
+- Backdrop Overlay (.bpi-scanner-backdrop):
+  * Background: rgba(15, 23, 42, 0.4) (darkened layer)
+  * Blur styling: backdrop-filter: blur(12px) (frosted glass background)
+
+- Pull-down Sheet Content (.bpi-scanner-content):
+  * Height: 90vh (forces it to fill the entire space below the top offset)
+  * Border Radius: 28px 28px 0px 0px (curved top corners only)
+  * Gesture Trigger: Pull-down close enabled on .bpi-sheet-handle-area
+  * Gesture Threshold: Closable if dragged down >120px
+
+
+3. TYPOGRAPHY STANDARDS
+--------------------------------------------------------------------------------
+- Merchant/Title Label (.txn-merch / .bpi-txn-merchant):
+  * Font Size: 13.5px
+  * Font Weight: 700 (relaxed from 800)
+  * Colors: #0f172a (Light Mode), #f8fafc (Dark Mode)
+  * Transformation: text-transform: uppercase; (or standard casing for matching)
+
+- Subtitle / Meta (Date and Category) (.txn-sub / .bpi-txn-meta):
+  * Font Size: 9.5px
+  * Font Weight: 600 (relaxed from 700)
+  * Colors: #64748b (Light Mode)
+  * Line spacing / formatting: white-space: nowrap; (prevents date and category wrapping)
+  * Overflow rules: overflow: hidden; text-overflow: ellipsis;
+
+- Transaction Amount (.txn-amount / .bpi-txn-amount):
+  * Font Size: 14px
+  * Font Weight: 700 (relaxed from 800)
+  * Colors: #ef4444 (Negative/Expenses), #10b981 (Positive/Synced)
+
+- Note Label (.txn-note / .bpi-txn-note):
+  * Font Size: 11px (matching main app transaction layout notes)
+  * Font Weight: 600 (relaxed from 700)
+  * Style: text-transform: none; (supports Title Case / standard casing)
+  * Margin Top: 3px
+
+
+4. CATEGORY SPECIFICATIONS (COLORS, HEX CODES & LOGOS)
+--------------------------------------------------------------------------------
+The application uses strict category bindings with predefined background/text 
+color sets and Material Design icons:
+
+Category ID             Icon                Class Name              Colors (Hex)
+--------------------------------------------------------------------------------
+Online shopping         shopping_bag        cat-online              BG: #fff7ed
+                                                                    Text/Icon: #ea580c
+                                                                    (Soft Orange)
+--------------------------------------------------------------------------------
+Shopping                shopping_cart       cat-shopping            BG: #dbeafe
+                                                                    Text/Icon: #3b82f6
+                                                                    (Soft Blue)
+--------------------------------------------------------------------------------
+Vehicle                 local_gas_station   cat-vehicle             BG: #ede9fe
+                                                                    Text/Icon: #8b5cf6
+                                                                    (Soft Purple)
+--------------------------------------------------------------------------------
+Food & Drinks           restaurant          cat-food                BG: #fef9c3
+                                                                    Text/Icon: #eab308
+                                                                    (Soft Yellow/Gold)
+--------------------------------------------------------------------------------
+Service                 settings_cell       cat-service-magenta     BG: #fdf4ff
+                                                                    Text/Icon: #d946ef
+                                                                    (Soft Magenta)
+--------------------------------------------------------------------------------
+Trade Copier            hub                 cat-aqua                BG: #cffafe
+                                                                    Text/Icon: #06b6d4
+                                                                    (Soft Cyan)
+--------------------------------------------------------------------------------
+Trading Expenses        insights            cat-trading             BG: #fee2e2
+                                                                    Text/Icon: #ef4444
+                                                                    (Soft Red)
+--------------------------------------------------------------------------------
+Life & Entertainment    confirmation_number cat-life                BG: #d1fae5
+                                                                    Text/Icon: #10b981
+                                                                    (Soft Emerald)
+--------------------------------------------------------------------------------
+Financial Expenses      payments            cat-financial           BG: #fee2e2
+                                                                    Text/Icon: #ef4444
+                                                                    (Soft Red)
+--------------------------------------------------------------------------------
+Credit Card Payment     credit_card         cat-credit-card         BG: #fff7ed
+                                                                    Text/Icon: #eaaf0c
+                                                                    (Soft Amber)
+--------------------------------------------------------------------------------
+Transportation          directions_bus      cat-vehicle             BG: #ede9fe
+                                                                    Text/Icon: #8b5cf6
+                                                                    (Soft Purple)
+--------------------------------------------------------------------------------
+Travel                  flight              cat-aqua                BG: #cffafe
+                                                                    Text/Icon: #06b6d4
+                                                                    (Soft Cyan)
+--------------------------------------------------------------------------------
+Education               school              cat-education           BG: #eff6ff
+                                                                    Text/Icon: #1d4ed8
+                                                                    (Soft Dark Blue)
+--------------------------------------------------------------------------------
+Sport                   fitness_center      cat-life                BG: #d1fae5
+                                                                    Text/Icon: #10b981
+                                                                    (Soft Emerald)
+--------------------------------------------------------------------------------
+Savings                 account_balance     cat-investments         BG: #dcfce7
+                                                                    Text/Icon: #15803d
+                                                                    (Soft Green)
+--------------------------------------------------------------------------------
+Income                  savings             cat-income              BG: #dcfce7
+                                                                    Text/Icon: #16a34a
+                                                                    (Soft Green)
+--------------------------------------------------------------------------------
+
+
+5. SUB-ICON BRAND BADGES
+--------------------------------------------------------------------------------
+Merchant logos (e.g., Google G, MR DIY logo, Shell logo) are rendered as nested 
+sub-icons in the bottom right corner of the main category avatar:
+
+- Container styling rules for logo badge wrappers:
+  * Position: absolute; right: -4px; bottom: -4px;
+  * Sizing: 20px width, 20px height
+  * Border Radius: 50%
+  * Shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
+  * Background: #ffffff
+  * Display: flex; align-items: center; justify-content: center;
+
+
+6. MODAL DESIGN SYSTEM
+--------------------------------------------------------------------------------
+All confirmation and interaction modals follow iOS-style center modal pattern:
+
+- Modal Overlay (.modal-overlay):
+  * Background: rgba(15, 23, 42, 0.75) (Dark translucent backdrop)
+  * Backdrop Filter: blur(8px) (Frosted glass effect)
+  * Position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  * Z-index: 9999
+  * Animation: fadeIn 0.2s ease
+
+- Modal Container (.custom-modal, .confirmation-modal):
+  * Background: #2c3e50 (Dark slate background)
+  * Border Radius: 20px (Soft rounded corners)
+  * Max Width: 340px
+  * Padding: 28px 24px 20px
+  * Box Shadow: 0 20px 60px rgba(0, 0, 0, 0.4)
+  * Animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) (Bouncy entrance)
+
+- Modal Title (.modal-title):
+  * Font Size: 18px
+  * Font Weight: 700
+  * Color: #f8fafc (Light text on dark)
+  * Margin Bottom: 4px
+  * Letter Spacing: -0.3px
+  * Text Align: center
+
+- Modal Message (.modal-message):
+  * Font Size: 14px
+  * Font Weight: 500
+  * Color: #94a3b8 (Muted gray)
+  * Line Height: 1.5
+  * Margin Bottom: 24px
+  * Text Align: center
+
+- Modal Button Container (.modal-actions):
+  * Display: flex
+  * Gap: 12px
+  * Flex Direction: row
+  * Justify Content: space-between
+
+- Primary Action Button (.modal-btn-primary, OK button):
+  * Background: #06b6d4 (Cyan/Aqua brand color)
+  * Color: #0f172a (Dark text)
+  * Font Size: 15px
+  * Font Weight: 700
+  * Padding: 13px 28px
+  * Border Radius: 14px
+  * Border: 2px solid #06b6d4
+  * Transition: all 0.2s ease
+  * Hover: transform: scale(1.02); background: #0891b2
+  * Active: transform: scale(0.98)
+
+- Secondary Action Button (.modal-btn-secondary, Cancel button):
+  * Background: transparent
+  * Color: #06b6d4
+  * Font Size: 15px
+  * Font Weight: 700
+  * Padding: 13px 28px
+  * Border Radius: 14px
+  * Border: 2px solid #475569 (Muted border)
+  * Transition: all 0.2s ease
+  * Hover: background: rgba(71, 85, 105, 0.2); border-color: #64748b
+  * Active: transform: scale(0.98)
+
+- Dark Mode Modal Adjustments:
+  * Background remains #2c3e50 (consistent dark theme)
+  * Text colors remain the same for optimal contrast
+  * Button colors remain consistent across themes
+
+
+7. GLOBAL SPACING SYSTEM
+--------------------------------------------------------------------------------
+Consistent spacing scale used throughout the application:
+
+- Micro Spacing (Component Internal):
+  * 2px  - Minimal separation (icon padding, fine adjustments)
+  * 4px  - Tight spacing (badge offsets, small gaps)
+  * 6px  - Compact spacing (button icon gaps)
+  * 8px  - Standard tight (small element margins)
+
+- Component Spacing:
+  * 12px - Default component gap (card internal padding start)
+  * 14px - Standard component spacing (transaction row gaps)
+  * 16px - Medium spacing (notification item gaps)
+  * 18px - Comfortable spacing (card padding horizontal)
+  * 20px - Large component spacing (section padding)
+  * 24px - Extra large spacing (modal padding, major sections)
+
+- Layout Spacing:
+  * 28px - Section header spacing (modal top padding)
+  * 32px - Major section gaps
+  * 40px - Large section separation
+  * 60px - Major layout blocks
+
+
+8. TYPOGRAPHY SYSTEM
+--------------------------------------------------------------------------------
+Complete font hierarchy with specific use cases:
+
+FONT FAMILY STACK:
+- Primary: 'Plus Jakarta Sans', sans-serif (Body text, UI elements)
+- Display: 'Lexend', sans-serif (Large headers, emphasis)
+- Monospace: 'Montserrat', sans-serif (Numbers, amounts)
+- Brand: 'Lemon Milk', sans-serif (Logo, special titles)
+
+FONT SIZES:
+- 9px   - Tiny labels (notification badge, meta info)
+- 9.5px - Micro text (transaction date/category)
+- 10.5px - Small labels (greeting text, uppercase labels)
+- 11px  - Notes and descriptions (transaction notes)
+- 13px  - Body text (error messages, secondary info)
+- 13.5px - Primary labels (merchant names, card titles)
+- 14px  - Standard body (modal messages, amounts)
+- 15px  - Button text (action buttons)
+- 17px  - Large labels (user names, section titles)
+- 18px  - Modal titles (confirmation dialogs)
+- 22px  - Page headers (biometric screen titles)
+- 24px  - Large icons (notification bell)
+- 40px  - Extra large icons (biometric fingerprint)
+
+FONT WEIGHTS:
+- 300 - Light (Rarely used, decorative only)
+- 400 - Regular (Not used in current design)
+- 500 - Medium (Subtle emphasis, modal messages)
+- 600 - Semi-Bold (Standard emphasis, notes, meta info)
+- 700 - Bold (Primary text, labels, merchant names, buttons)
+- 800 - Extra Bold (User names, headers, strong emphasis)
+- 900 - Black (Logo, display text, maximum impact)
+
+COMMON WEIGHT USAGE:
+- Merchant/Primary Labels: 700
+- User Names/Headers: 800
+- Meta Info/Dates: 600
+- Body Text/Messages: 500
+- Buttons: 700
+- Display Headers: 800-900
+- Badge Text: 800
+
+
+9. BORDER RADIUS SYSTEM
+--------------------------------------------------------------------------------
+Consistent roundness hierarchy for visual harmony:
+
+- 4px   - Subtle rounding (logo images, small badges, skeleton text)
+- 12px  - Standard components (notification icons, header bell, skeleton bars)
+- 14px  - Medium components (buttons, modal action buttons, notification icons)
+- 20px  - Large components (cards, modals, main containers)
+- 28px  - Extra large (bottom sheets, pull-down panels - top corners only)
+- 50%   - Perfect circles (profile pictures, icon containers, action buttons)
+
+
+10. COLOR PALETTE & USAGE
+--------------------------------------------------------------------------------
+Complete color system with semantic meanings:
+
+NEUTRAL COLORS:
+- #ffffff - Pure white (Backgrounds, cards in light mode)
+- #f8fafc - Slate 50 (Page background, synced card highlight)
+- #f1f5f9 - Slate 100 (Skeleton loading, borders)
+- #e2e8f0 - Slate 200 (Synced border, secondary backgrounds)
+- #cbd5e1 - Slate 300 (Disabled states)
+- #94a3b8 - Slate 400 (Muted text, subtitles, icons)
+- #64748b - Slate 500 (Secondary text, meta info)
+- #475569 - Slate 600 (Modal borders, secondary elements)
+- #334155 - Slate 700 (Dark mode secondary)
+- #1e293b - Slate 800 (Primary dark text, dark mode backgrounds)
+- #0f172a - Slate 900 (Darkest text, headers)
+- #121212 - True black (Card backgrounds - Atome)
+
+PRIMARY BRAND COLORS:
+- #06b6d4 - Cyan 500 (Primary action, travel category, aqua theme)
+- #0891b2 - Cyan 600 (Hover state for primary buttons)
+
+SUCCESS & POSITIVE:
+- #10b981 - Emerald 500 (Success, income, life category)
+- #16a34a - Green 600 (Income text)
+- #15803d - Green 700 (Savings/investments)
+- #dcfce7 - Green 50 (Success background)
+- #d1fae5 - Emerald 50 (Life category background)
+- #eefcl1 - Soft green (Notification success background)
+
+WARNING & ALERTS:
+- #eab308 - Yellow 500 (Food category, warnings)
+- #f59e0b - Amber 500 (Warning notifications)
+- #fef9c3 - Yellow 50 (Food category background)
+- #fff7ed - Orange 50 (Online shopping background)
+- #fff7e8 - Soft yellow (Warning notification background)
+- #fffdf5 - Warm yellow (New/pending card highlight)
+- #fef08a - Yellow 200 (Pending border)
+
+ERROR & EXPENSES:
+- #ef4444 - Red 500 (Expenses, errors, trading, financial)
+- #fee2e2 - Red 50 (Error backgrounds, trading/financial category)
+- #fef2f2 - Red 50 lighter (Error notification background)
+
+INFORMATION:
+- #3b82f6 - Blue 500 (Shopping category, info notifications)
+- #1d4ed8 - Blue 700 (Education category)
+- #dbeafe - Blue 50 (Shopping category background)
+- #eff6ff - Blue 50 lighter (Education background, info notification)
+
+SPECIAL CATEGORIES:
+- #8b5cf6 - Purple 500 (Vehicle, transportation)
+- #ede9fe - Purple 50 (Vehicle category background)
+- #d946ef - Magenta/Fuchsia 500 (Service category)
+- #fdf4ff - Magenta 50 (Service category background)
+- #ea580c - Orange 600 (Online shopping icon)
+- #eaaf0c - Amber 600 (Credit card payment)
+
+BRAND SPECIFIC:
+- #931B1B - BPI Red (BPI card background)
+- #c0ff00 - Neon lime (Atome accent - used sparingly)
+
+
+11. SHADOW SYSTEM
+--------------------------------------------------------------------------------
+Elevation hierarchy using box-shadow:
+
+LEVEL 0 - Flat (No shadow):
+- Use: Flush elements, backgrounds
+
+LEVEL 1 - Subtle elevation:
+- Shadow: 0 1px 2px rgba(0,0,0,0.04)
+- Use: Card borders, subtle separation
+
+LEVEL 2 - Low elevation:
+- Shadow: 0 2px 4px rgba(0,0,0,0.06)
+- Use: Buttons, small cards, hoverable items
+
+LEVEL 3 - Standard elevation:
+- Shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.02)
+- Use: Transaction cards, standard components
+
+LEVEL 4 - Medium elevation:
+- Shadow: 0 4px 12px rgba(0,0,0,0.08)
+- Use: Dropdown menus, notification center
+
+LEVEL 5 - High elevation:
+- Shadow: 0 10px 25px rgba(0,0,0,0.1)
+- Use: Notification dropdowns, context menus
+
+LEVEL 6 - Dramatic elevation:
+- Shadow: 0 20px 60px rgba(0,0,0,0.4)
+- Use: Modals, overlays, maximum depth
+
+SPECIAL SHADOWS:
+- Card Active: 0 5px 15px rgba(0,0,0,0.3)
+- BPI Card: 0 5px 15px rgba(92, 10, 10, 0.4)
+- Notification Badge: 0 2px 4px rgba(239, 68, 68, 0.3)
+
+
+12. ANIMATION & TRANSITION SYSTEM
+--------------------------------------------------------------------------------
+Consistent motion design for smooth UX:
+
+TIMING FUNCTIONS:
+- ease-in-out: Standard smooth (general transitions)
+- cubic-bezier(0.4, 0, 0.2, 1): Material Design standard (cards, nav)
+- cubic-bezier(0.34, 1.56, 0.64, 1): Bouncy (modals, buttons, special effects)
+- cubic-bezier(0.16, 1, 0.3, 1): Smooth deceleration (loads, fades)
+
+DURATION STANDARDS:
+- 0.15s - Ultra fast (micro-interactions, button presses)
+- 0.2s - Fast (button hovers, small state changes)
+- 0.22s - Quick (tab transitions, quick fades)
+- 0.28s - Standard (fades, subtle animations)
+- 0.3s - Default (modal backgrounds, most transitions)
+- 0.32s - Medium (slides, content entry)
+- 0.4s - Slow (major transitions, header scroll, complex animations)
+- 0.85s - Special (spinner rotations)
+- 1.05s - Very slow (shimmer effects)
+- 1.5s - Ambient (shimmer premium effect)
+- 2s - Background (skeleton pulse)
+
+NAMED ANIMATIONS:
+- fadeIn: Opacity 0 → 1 (0.2s ease)
+- scaleIn: Scale 0.9 → 1 with opacity (0.3s bouncy)
+- slideUp: TranslateY(20px) → 0 with opacity (0.15s ease-out)
+- shimmer-premium: Diagonal gradient sweep (1.5s infinite)
+- skeleton-pulse: Background color pulse (2s infinite)
+- bioPulse: Scale with shadow expansion (2s infinite)
+- spinAnimation: 360° rotation (0.85s infinite linear)
+- fadeInLoad: Opacity + translateY + scale (0.4s smooth deceleration)
+- tabFadeInQuick: Quick opacity + translateY (0.22s)
+- tabSlideInFromRight: Slide from right (0.32s smooth deceleration)
+- tabSlideInFromLeft: Slide from left (0.32s smooth deceleration)
+
+HOVER INTERACTIONS:
+- Buttons: scale(1.02) on hover, scale(0.98) on active
+- Cards: subtle background shift, no scale
+- Icons: scale(1.05) on hover, scale(0.95) on active
+- Notification bell: background appears, slight scale up
+
+
+13. ICON SYSTEM (MATERIAL ICONS)
+--------------------------------------------------------------------------------
+Consistent Material Icon usage with sizes:
+
+ICON SIZES:
+- 20px - Small icons (card icons, category badges)
+- 24px - Standard icons (notification bell, navigation, category main)
+- 28px - Medium icons (special emphasis)
+- 32px - Large icons (headers)
+- 40px - Extra large (biometric fingerprint)
+
+ICON USAGE BY CONTEXT:
+- Navigation: 24px, muted colors (#64748b)
+- Category Icons: 20px, category-specific colors
+- Action Buttons: 20-24px, contextual colors
+- Headers: 24-28px, primary colors
+- Biometric/Special: 40px+, high contrast
+
+
+14. BUTTON DESIGN PATTERNS
+--------------------------------------------------------------------------------
+Complete button system with variants:
+
+PRIMARY BUTTON (.modal-btn-primary):
+- Background: Brand color (#06b6d4)
+- Text: Dark (#0f172a)
+- Font Weight: 700
+- Padding: 13px 28px
+- Border Radius: 14px
+- Font Size: 15px
+- Hover: scale(1.02), darker background
+- Active: scale(0.98)
+
+SECONDARY BUTTON (.modal-btn-secondary):
+- Background: transparent
+- Text: Brand color (#06b6d4)
+- Font Weight: 700
+- Padding: 13px 28px
+- Border: 2px solid #475569
+- Border Radius: 14px
+- Font Size: 15px
+- Hover: background rgba(71, 85, 105, 0.2), lighter border
+- Active: scale(0.98)
+
+ICON BUTTON (.notification-trigger):
+- Size: 40x40px
+- Background: transparent
+- Border Radius: 12px
+- Icon Size: 24px
+- Hover: background rgba(0, 0, 0, 0.04), slight scale(1.05)
+- Active: scale(0.95)
+
+FAB (Floating Action Button):
+- Size: 56x56px
+- Border Radius: 50%
+- Background: Brand gradient
+- Shadow: Level 4-5
+- Icon: 24px white
+- Hover: scale(1.05)
+- Active: scale(0.95)
+
+
+15. LAYOUT & GRID SYSTEM
+--------------------------------------------------------------------------------
+Responsive layout constraints:
+
+CONTAINER MAX WIDTH:
+- Mobile wrapper: 430px (viewport maximum)
+- Modal containers: 340px
+- Content cards: 334px
+
+SAFE AREA HANDLING:
+- Top: env(safe-area-inset-top, 24px) + component padding
+- Bottom: env(safe-area-inset-bottom, 0px)
+- Header offset: calc(env(safe-area-inset-top, 24px) + 60px)
+
+VIEWPORT VARIABLES:
+- --app-header-offset: Top safe area + header height
+- --app-content-top-gap: Header offset + 8px spacing
+- --app-bottom-safe: Bottom safe area for notched devices
+
+PADDING STANDARDS:
+- Page horizontal: 20-22px
+- Card internal: 18-24px horizontal, 14-18px vertical
+- Modal: 24px horizontal, 28px top, 20px bottom
+- Transaction row: 14px vertical, 18px horizontal
+
+
+16. DARK MODE SPECIFICATIONS
+--------------------------------------------------------------------------------
+Color adjustments for dark theme:
+
+BACKGROUNDS:
+- Page: #0f172a → stays same or #1e293b
+- Cards: #ffffff → #1e293b
+- Modals: #2c3e50 (consistent)
+- Skeleton: #f1f5f9 → #1e293b
+
+TEXT:
+- Primary: #1e293b → #f8fafc
+- Secondary: #64748b → #94a3b8
+- Muted: #94a3b8 → maintain or lighten
+
+BORDERS:
+- Light borders: rgba(0,0,0,0.06) → rgba(255,255,255,0.08)
+- Standard borders: #f1f5f9 → #334155
+
+EFFECTS:
+- Shadows: Darker, more pronounced
+- Shimmer: Lower opacity overlays
+- Backdrop blur: Maintain consistency
+
+
+17. ACCESSIBILITY GUIDELINES
+--------------------------------------------------------------------------------
+Design considerations for usability:
+
+TOUCH TARGETS:
+- Minimum: 40x40px (notification icons, small buttons)
+- Comfortable: 48x48px (category icons, profile buttons)
+- Large: 56x56px (FABs, primary actions)
+
+CONTRAST RATIOS:
+- Body text: Minimum 4.5:1 (WCAG AA)
+- Large text: Minimum 3:1 (WCAG AA)
+- UI components: Minimum 3:1
+
+TEXT READABILITY:
+- Line height: 1.4-1.6 for body text
+- Max line length: ~60-70 characters
+- Letter spacing: Adjust for uppercase labels
+
+FOCUS STATES:
+- Visible focus indicators on interactive elements
+- Keyboard navigation support (where applicable)
+
+COLOR USAGE:
+- Never rely solely on color to convey information
+- Use icons + text + color together
+- Sufficient contrast for color-blind users
+
+
+18. STATE MANAGEMENT PATTERNS
+--------------------------------------------------------------------------------
+Visual feedback for different states:
+
+LOADING STATE:
+- Skeleton screens with shimmer animation
+- Pulse animation for backgrounds
+- Maintain layout structure
+- Keep skeleton until data arrives
+
+EMPTY STATE:
+- Centered message with icon
+- Helpful description text
+- Primary action button to add content
+- Muted color scheme
+
+ERROR STATE:
+- Red accent (#ef4444)
+- Clear error message
+- Retry action button
+- Maintain context of what failed
+
+SUCCESS STATE:
+- Green accent (#10b981)
+- Confirmation message (brief)
+- Auto-dismiss or manual close
+- Positive icon (checkmark)
+
+DISABLED STATE:
+- Reduced opacity (0.5-0.6)
+- Muted colors (#cbd5e1)
+- No hover effects
+- Cursor: not-allowed
+
+HOVER/ACTIVE STATE:
+- Subtle scale transformations
+- Background color shifts
+- Shadow elevation changes
+- Fast transitions (0.2s)
+
+
+19. BEST PRACTICES & GUIDELINES
+--------------------------------------------------------------------------------
+Rules to maintain design consistency:
+
+SPACING:
+✓ Use the defined spacing scale (avoid arbitrary values)
+✓ Maintain consistent gaps within similar components
+✓ Increase spacing for visual hierarchy
+✗ Never use spacing less than 2px (creates cramped UI)
+
+TYPOGRAPHY:
+✓ Use font weights from the system (600, 700, 800)
+✓ Match font sizes to defined use cases
+✓ Apply letter-spacing to uppercase text
+✗ Avoid font weights 400 or 500 for primary UI text
+✗ Never exceed 3 font sizes in a single component
+
+COLORS:
+✓ Use semantic colors (success = green, error = red)
+✓ Maintain category color associations
+✓ Check contrast ratios in both themes
+✗ Never use pure black (#000) except for overlays
+✗ Avoid creating new color variants without system update
+
+ANIMATIONS:
+✓ Use cubic-bezier for refined motion
+✓ Keep durations under 0.4s for UI interactions
+✓ Apply will-change for performance-critical animations
+✗ Avoid long animations (>0.5s) on frequent interactions
+✗ Never animate height/width directly (use transform)
+
+MODALS & OVERLAYS:
+✓ Center modals for confirmations
+✓ Use bottom sheets for extensive content/forms
+✓ Apply backdrop blur for depth
+✓ Include clear dismiss actions
+✗ Never stack more than 2 modal layers
+✗ Avoid modals for non-critical information
+
+BUTTONS:
+✓ Primary action = filled with brand color
+✓ Secondary action = outlined or ghost style
+✓ Maintain 44px minimum touch target
+✓ Use consistent padding (13px vertical minimum)
+✗ Never use more than 2 primary buttons in same context
+✗ Avoid button text over 20 characters
+
+
+================================================================================
+END OF DESIGN RULES - SMART WALLET v2.0
+For questions or updates, reference this document and maintain consistency.
+================================================================================

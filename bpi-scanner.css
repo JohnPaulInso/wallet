@@ -1,0 +1,1026 @@
+/* ============================================================
+   BPI SCANNER - PULL-DOWN SHEET DESIGN
+   ============================================================ */
+
+/* ── PULL-DOWN SHEET OVERLAY ── */
+/* Glassmorphic Sheet Overlay */
+/* FIX DATE: 2026-06-28 */
+/* FIX SPEC: Main sheet wrapper is transparent; backdrop holds the glassmorphic overlay */
+.bpi-scanner-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    background: transparent;
+}
+
+.bpi-scanner-sheet.bpi-scan-visible {
+    display: flex;
+}
+
+/* Backdrop - darkened blur overlay layer */
+.bpi-scanner-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 1;
+}
+
+/* Sheet Content container */
+/* FIX DATE: 2026-06-28 */
+/* FIX SPEC: Changed height to 90vh so it occupies the entire bottom space */
+.bpi-scanner-content {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 95vh;
+    /* [FIXED: 2026-06-29] Sized up height from 90vh to 95vh to occupy more vertical screen space at the top */
+    background: #ffffff;
+    border-radius: 28px 28px 0 0;
+    box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.15);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.32, 1.08, 0.58, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(241, 245, 249, 0.8);
+}
+
+.bpi-scanner-sheet.bpi-scan-visible .bpi-scanner-content {
+    transform: translateY(0);
+}
+
+/* Drag Handle */
+.bpi-sheet-handle-area {
+    padding: 10px 0 6px;
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: grab;
+}
+
+/* Drag handle visual element */
+/* FIX DATE: 2026-06-28 */
+.bpi-sheet-handle {
+    width: 44px;
+    height: 5px;
+    background: #cbd5e1;
+    border-radius: 999px;
+}
+
+/* Header */
+.bpi-sheet-header {
+    padding: 6px 16px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f1f5f9;
+    position: relative;
+}
+
+.bpi-sheet-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.bpi-sheet-close-btn:active {
+    transform: scale(0.92);
+    background: #f1f5f9;
+}
+
+.bpi-sheet-close-btn .material-icons {
+    font-size: 18px;
+    color: #64748b;
+}
+
+.bpi-sheet-header-content {
+    flex: 1;
+    padding-top: 2px;
+}
+
+/* Title inside sheet header */
+/* FIX DATE: 2026-06-28 */
+/* FIX SPEC: Updated header font sizes for premium look */
+.bpi-sheet-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.4px;
+}
+
+/* Subtitle inside sheet header */
+.bpi-sheet-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    margin: 3px 0 0;
+}
+
+/* ── IMAGE PREVIEW SECTION ── */
+.bpi-scan-preview-section {
+    flex-shrink: 0;
+    max-height: 240px;
+    overflow: hidden;
+    background: #0f172a;
+    position: relative;
+}
+
+.bpi-scan-preview-container {
+    width: 100%;
+    height: 240px;
+    position: relative;
+    overflow: hidden;
+    /* [FIXED: 2026-06-28] Drag-to-pan handles scrolling content */
+    touch-action: none !important;
+    /* [FIXED: 2026-06-29] Lock browser gesture control on parent box */
+}
+
+.bpi-scan-preview-img {
+    width: 100%;
+    height: 100%;
+    /* [FIXED: 2026-06-29] Changed back to 100% height to fit container initially like phone gallery */
+    object-fit: contain;
+    background: #1e293b;
+    pointer-events: auto !important;
+    /* [FIXED: 2026-06-28] Force enable touch gestures to override inline pointer-events */
+    touch-action: none;
+}
+
+/* ── SCANNING ANIMATION OVERLAY ── */
+.bpi-scan-animation-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+/* Laser scanning line */
+.bpi-scan-laser {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent 0%, #22d3ee 20%, #38bdf8 50%, #22d3ee 80%, transparent 100%);
+    box-shadow: 0 0 18px 5px rgba(56, 189, 248, 0.55);
+    border-radius: 999px;
+    top: 10%;
+    animation: bpiLaserScan 1.8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes bpiLaserScan {
+    0% {
+        top: 8%;
+        opacity: 1;
+    }
+
+    48% {
+        top: 88%;
+        opacity: 1;
+    }
+
+    50% {
+        top: 88%;
+        opacity: 0;
+    }
+
+    52% {
+        top: 8%;
+        opacity: 0;
+    }
+
+    54% {
+        top: 8%;
+        opacity: 1;
+    }
+
+    100% {
+        top: 8%;
+        opacity: 1;
+    }
+}
+
+/* Corner brackets */
+.bpi-scan-corners {
+    position: absolute;
+    inset: 10%;
+    pointer-events: none;
+}
+
+.bpi-scan-corner {
+    position: absolute;
+    width: 28px;
+    height: 28px;
+    border-color: #38bdf8;
+    border-style: solid;
+    opacity: 0.9;
+}
+
+.bpi-scan-corner-tl {
+    top: 0;
+    left: 0;
+    border-width: 3px 0 0 3px;
+    border-radius: 4px 0 0 0;
+}
+
+.bpi-scan-corner-tr {
+    top: 0;
+    right: 0;
+    border-width: 3px 3px 0 0;
+    border-radius: 0 4px 0 0;
+}
+
+.bpi-scan-corner-bl {
+    bottom: 0;
+    left: 0;
+    border-width: 0 0 3px 3px;
+    border-radius: 0 0 0 4px;
+}
+
+.bpi-scan-corner-br {
+    bottom: 0;
+    right: 0;
+    border-width: 0 3px 3px 0;
+    border-radius: 0 0 4px 0;
+}
+
+/* Circular progress indicator */
+.bpi-scan-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    z-index: 20;
+}
+
+.bpi-scan-progress-circle {
+    width: 80px;
+    height: 80px;
+    position: relative;
+}
+
+.bpi-scan-progress-circle svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.bpi-scan-progress-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 2;
+}
+
+.bpi-scan-progress-circle-path {
+    fill: none;
+    stroke: #38bdf8;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.3s ease;
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5));
+}
+
+.bpi-scan-progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+}
+
+.bpi-scan-progress-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #e0f2fe;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* ── RESULTS SECTION ── */
+.bpi-scan-results-section {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px 100px;
+    /* [FIXED: 2026-06-28] Added 100px bottom padding to avoid interference with system navigation bar */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Balance divider banner displaying the savings account info */
+/* [FIXED: 2026-06-29] Upgraded to two-row layout with BPI balance + wallet comparison insight */
+.bpi-scan-balance-divider {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    background: #fff5f5;
+    border-radius: 14px;
+    border: 1px solid #fee2e2;
+    border-left: 4px solid #ef4444;
+    /* BPI Brand Red accent */
+    margin-bottom: 14px;
+    box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.04);
+    gap: 8px;
+}
+
+/* Header row: label + scanned balance amount */
+.bpi-balance-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.bpi-balance-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 9.5px;
+    font-weight: 900;
+    color: #ef4444;
+    letter-spacing: 0.6px;
+}
+
+.bpi-scan-balance-divider .bpi-scan-divider-val {
+    font-size: 14px;
+    font-weight: 900;
+    color: #991b1b;
+}
+
+/* Insight row: Smart Wallet balance comparison [NEW: 2026-06-29] */
+.bpi-balance-insight-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding-top: 7px;
+    border-top: 1px dashed #fecaca;
+}
+
+.bpi-balance-insight-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.bpi-balance-insight-label {
+    font-size: 8.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.bpi-balance-insight-value {
+    font-size: 12px;
+    font-weight: 800;
+    color: #475569;
+}
+
+.bpi-balance-insight-diff {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+/* ── SKELETON LOADER SHIMMER STYLES [NEW: 2026-06-29] ── */
+.bpi-skeleton-card {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.bpi-skeleton-balance {
+    background: #fff5f5;
+    border: 1px solid #fee2e2;
+    border-left: 4px solid #fecaca;
+}
+
+.bpi-skeleton-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #e2e8f0;
+    animation: skeletonShimmer 1.5s infinite ease-in-out;
+}
+
+.bpi-skeleton-icon-wrapper {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bpi-skeleton-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background: #fecaca;
+    animation: skeletonShimmer 1.5s infinite ease-in-out;
+}
+
+.bpi-skeleton-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bpi-skeleton-line {
+    height: 10px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    animation: skeletonShimmer 1.5s infinite ease-in-out;
+}
+
+.bpi-skeleton-balance .bpi-skeleton-line {
+    background: #fecaca;
+}
+
+.bpi-skeleton-line.short {
+    width: 35%;
+}
+
+.bpi-skeleton-line.medium {
+    width: 60%;
+}
+
+.bpi-skeleton-line.long {
+    width: 85%;
+}
+
+.bpi-skeleton-amount {
+    width: 55px;
+    height: 14px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    animation: skeletonShimmer 1.5s infinite ease-in-out;
+}
+
+.bpi-skeleton-balance .bpi-skeleton-amount {
+    background: #fecaca;
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
+}
+
+.bpi-scan-results-header {
+    margin-bottom: 12px;
+}
+
+.bpi-scan-results-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 2px;
+    letter-spacing: -0.2px;
+}
+
+.bpi-scan-results-subtitle {
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0;
+}
+
+.bpi-scan-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    /* [FIXED: 2026-06-28] Increased list gap for less crammed layout */
+}
+
+/* Date divider styling */
+/* [FIXED: 2026-06-29] Added date dividers between transactions with different dates */
+.bpi-date-divider {
+    display: flex;
+    align-items: center;
+    margin: 8px 0 4px;
+    gap: 12px;
+}
+
+.bpi-date-divider::before,
+.bpi-date-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+}
+
+.bpi-date-divider-text {
+    font-size: 10px;
+    font-weight: 900;
+    color: #64748b;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+/* ── PREMIUM TRANSACTION CARD ── */
+/* Premium Transaction Card container */
+/* FIX DATE: 2026-06-28 */
+/* FIX SPEC: Redesigned card items with no left border colors, 
+ * clean border and background fills, larger padding, and nowrap meta configurations
+ */
+.bpi-txn-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    /* [FIXED: 2026-06-28] Increased inner gap */
+    background: #ffffff;
+    border: 1px solid #f1f5f9;
+    border-radius: 18px;
+    /* [FIXED: 2026-06-28] Increased border-radius for modern look */
+    padding: 14px 16px;
+    /* [FIXED: 2026-06-28] Increased padding for breathability */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    /* [FIXED: 2026-06-28] Prevent overflow of masks */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+}
+
+.bpi-txn-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
+
+/* Synced cards: Soft green background with standard thin green border [FIXED: 2026-06-28] */
+.bpi-txn-card.synced {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+/* New/Pending cards: Soft yellow/amber background and border [FIXED: 2026-06-28] */
+.bpi-txn-card.new {
+    background: #fffdf5;
+    border: 1px solid #fef08a;
+    animation: premiumPulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Card accepting animation - fade to green */
+.bpi-txn-card.accepting {
+    animation: fadeToGreen 0.6s ease-out forwards;
+}
+
+/* Card rejecting animation - fade to red */
+.bpi-txn-card.rejecting {
+    animation: fadeToRed 0.6s ease-out forwards;
+}
+
+@keyframes fadeToGreen {
+    0% {
+        background: #fffdf5;
+        border-color: #fef08a;
+    }
+    100% {
+        background: #f0fdf4;
+        border-color: #bbf7d0;
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+}
+
+@keyframes fadeToRed {
+    0% {
+        background: #fffdf5;
+        border-color: #fef08a;
+    }
+    100% {
+        background: #fef2f2;
+        border-color: #fecaca;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+    }
+}
+
+@keyframes premiumPulseGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
+        border-color: #fef08a;
+    }
+
+    50% {
+        box-shadow: 0 0 12px rgba(251, 191, 36, 0.12);
+        border-color: rgba(251, 191, 36, 0.3);
+    }
+}
+
+/* Category avatar icon with standard category backgrounds and text colors */
+.bpi-txn-icon {
+    width: 42px;
+    /* [FIXED: 2026-06-28] Sized up for visual balance */
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 20px;
+    position: relative;
+    transition: transform 0.2s;
+}
+
+/* Exact category style mappings synced from index.css */
+.bpi-txn-icon.cat-shopping {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.bpi-txn-icon.cat-online {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.bpi-txn-icon.cat-food {
+    background: #fef9c3;
+    color: #eab308;
+}
+
+.bpi-txn-icon.cat-financial {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.bpi-txn-icon.cat-vehicle {
+    background: #ede9fe;
+    color: #8b5cf6;
+}
+
+.bpi-txn-icon.cat-service-magenta {
+    background: #fdf4ff;
+    color: #d946ef;
+}
+
+.bpi-txn-icon.cat-life {
+    background: #d1fae5;
+    color: #10b981;
+}
+
+.bpi-txn-icon.cat-aqua {
+    background: #cffafe;
+    color: #06b6d4;
+}
+
+.bpi-txn-icon.cat-trading {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.bpi-txn-icon.cat-credit-card {
+    background: #fff7ed;
+    color: #eaaf0c;
+}
+
+.bpi-txn-icon.cat-investments,
+.bpi-txn-icon.cat-income {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.bpi-txn-icon.cat-education {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+/* Transaction details content wrapper */
+.bpi-txn-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0px;
+    /* [FIXED: 2026-06-28] Reduced gap spacing inside text wrapper */
+}
+
+/* Merchant or Title text styling - matching main layout */
+.bpi-txn-merchant {
+    font-size: 11.5px;
+    /* [FIXED: 2026-06-28] Sized down merchant title slightly */
+    font-weight: 850;
+    /* [FIXED: 2026-06-28] Increased weight to extra-bold */
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+    /* [FIXED: 2026-06-28] Reduced line height for tighter look */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    /* Clip for gradient fade mask */
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent 98%);
+    mask-image: linear-gradient(to right, #000 82%, transparent 98%);
+    /* [FIXED: 2026-06-28] White gradient fade-out instead of ellipsis */
+}
+
+.bpi-txn-card.synced .bpi-txn-merchant {
+    color: #0f172a;
+}
+
+/* Meta wrapper (Date and Category) - nowrap layout to fix line breaks */
+.bpi-txn-meta {
+    font-size: 9px;
+    /* [FIXED: 2026-06-28] Made font sizes a bit smaller as requested */
+    font-weight: 800;
+    /* [FIXED: 2026-06-28] Increased font weight to 800 */
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 85%, transparent 100%);
+    /* [FIXED: 2026-06-28] White gradient fade-out */
+}
+
+.bpi-txn-card.synced .bpi-txn-meta {
+    color: #64748b;
+}
+
+/* Category indicator */
+.bpi-txn-category {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9px;
+    /* [FIXED: 2026-06-28] Sized down */
+    font-weight: 800;
+    /* [FIXED: 2026-06-28] Sized up font weight */
+    color: #64748b;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.bpi-txn-category::before {
+    content: '•';
+    font-size: 9px;
+    /* [FIXED: 2026-06-28] Sized up bullet to be bigger as requested */
+    color: #94a3b8;
+    margin-right: 2px;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Transaction amount label - premium layout size */
+.bpi-txn-amount {
+    font-size: 12.5px;
+    /* [FIXED: 2026-06-28] Made amount font size smaller as requested */
+    font-weight: 800;
+    /* Bold weight */
+    color: #ef4444;
+    margin-right: 8px;
+    white-space: nowrap;
+    letter-spacing: -0.3px;
+}
+
+.bpi-txn-card.synced .bpi-txn-amount {
+    color: #10b981;
+}
+
+/* Note style - matching main app note size and colors */
+.bpi-txn-note {
+    font-size: 9px;
+    /* [FIXED: 2026-06-28] Made font sizes a bit smaller as requested */
+    font-weight: 650;
+    text-transform: none;
+    margin-top: 0px;
+    /* [FIXED: 2026-06-28] Reduced note margin top */
+    line-height: 1.15;
+    /* [FIXED: 2026-06-28] Reduced line height */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: clip;
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent 100%);
+    mask-image: linear-gradient(to right, #000 85%, transparent 100%);
+    /* [FIXED: 2026-06-28] White gradient fade-out */
+}
+
+/* Status pill badge for synced transactions */
+.bpi-txn-status {
+    padding: 3px 8px;
+    /* [FIXED: 2026-06-28] Smaller padding for compact sync badge */
+    border-radius: 6px;
+    /* [FIXED: 2026-06-28] Modern subtle rounding */
+    font-size: 8px;
+    /* [FIXED: 2026-06-28] Smaller sync badge text */
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: #e6f4ea;
+    color: #137333;
+    border: none;
+    flex-shrink: 0;
+}
+
+/* Undoable synced status - clickable with hover effect */
+.bpi-txn-status.undoable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bpi-txn-status.undoable:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    transform: scale(1.05);
+}
+
+.bpi-txn-status.undoable:active {
+    transform: scale(0.95);
+}
+
+.bpi-txn-status .material-icons {
+    font-size: 10px;
+    /* [FIXED: 2026-06-28] Smaller icon */
+}
+
+/* Actions panel wrapper for pending items */
+.bpi-txn-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Action button general styling - premium circular style */
+.bpi-txn-btn {
+    width: 26px;
+    /* [FIXED: 2026-06-28] Shrunk button size for premium layout */
+    height: 26px;
+    /* [FIXED: 2026-06-28] Shrunk button size */
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.bpi-txn-btn:hover {
+    transform: scale(1.08);
+}
+
+/* Accept transaction button */
+.bpi-txn-btn-check {
+    background: #d2f4ea;
+    color: #0f9d58;
+}
+
+.bpi-txn-btn-check:hover {
+    background: #0f9d58;
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(15, 157, 88, 0.25);
+}
+
+.bpi-txn-btn-check:active {
+    transform: scale(0.92);
+}
+
+/* Adding animation state */
+.bpi-txn-btn-check.adding {
+    animation: checkPulse 0.6s ease-in-out;
+    background: #0f9d58;
+    color: #ffffff;
+}
+
+@keyframes checkPulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.3) rotate(360deg);
+        box-shadow: 0 0 20px rgba(15, 157, 88, 0.6);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Reject transaction button */
+.bpi-txn-btn-x {
+    background: #fce8e6;
+    color: #c5221f;
+}
+
+.bpi-txn-btn-x:hover {
+    background: #c5221f;
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(197, 34, 31, 0.25);
+}
+
+.bpi-txn-btn-x:active {
+    transform: scale(0.92);
+}
+
+.bpi-txn-btn .material-icons {
+    font-size: 12px;
+    /* [FIXED: 2026-06-28] Smaller action button icons */
+}
+
+/* Empty state */
+.bpi-scan-empty {
+    text-align: center;
+    padding: 48px 24px;
+}
+
+.bpi-scan-empty .material-icons {
+    font-size: 64px;
+    color: #cbd5e1;
+    margin-bottom: 16px;
+}
+
+.bpi-scan-empty-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #1e293b;
+    margin: 0 0 6px;
+}
+
+.bpi-scan-empty-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 0;
+}
+
+/* All synced state */
+.bpi-scan-all-synced {
+    text-align: center;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-radius: 16px;
+    margin: 0;
+}
+
+.bpi-scan-all-synced .material-icons {
+    font-size: 56px;
+    color: #22c55e;
+    margin-bottom: 12px;
+}
+
+.bpi-scan-all-synced-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: #15803d;
+    margin: 0 0 4px;
+}
+
+.bpi-scan-all-synced-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: #16a34a;
+    margin: 0;
+}

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" class="app-shell-pending">
 
 <head>
@@ -43,6 +43,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <!-- Tesseract.js for free client-side OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <!-- AUTH PERFORMANCE OPTIMIZATION (PRELOADS) -->
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" crossorigin="anonymous">
@@ -145,7 +148,10 @@
             (function () {
                 try {
                     const lastUid = localStorage.getItem('wallet_last_uid') || 'guest';
-                    const cacheKey = `budget_widget_cache_${lastUid}`;
+                    // [FIXED: 2026-06-27 - Aligned cache key with app-ui.js by appending monthKey - Antigravity]
+                    const now = new Date();
+                    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    const cacheKey = `budget_widget_cache_${lastUid}_${monthKey}`;
                     const cachedData = localStorage.getItem(cacheKey);
                     if (!cachedData) return;
 
@@ -298,7 +304,20 @@
                         remainingEl.dataset.raw = availableBalanceText;
                         remainingEl.innerText = isHidden ? '******' : availableBalanceText;
                         remainingEl.style.display = '';
-                        remainingEl.className = `triple-summary-value privacy-mask skeleton ${netRemaining < 0 ? 'negative' : (100 - usedPct < 15 ? 'warning' : 'remaining')}`;
+
+                        // [FIXED: 2026-06-27 - Changed coloring thresholds for remaining balance value (triple-remaining-val): green for 3k+, yellow for 1500-3000, red for 1500 and below - Antigravity]
+                        let statusKey = 'remaining';
+                        if (netRemaining <= 1500) {
+                            statusKey = 'negative';
+                        } else if (netRemaining < 3000) {
+                            statusKey = 'warning';
+                        }
+
+                        remainingEl.className = `triple-summary-value privacy-mask skeleton ${statusKey}`;
+
+                        // Also update cache footer style
+                        const footer = document.getElementById('triple-summary-footer');
+                        if (footer) footer.className = `triple-summary-footer status-${statusKey}`;
                     }
 
                     // Hide depleted message initially until logic runs
@@ -325,6 +344,7 @@
     </script>
 
     <link rel="stylesheet" href="index.css" id="app-stylesheet">
+    <link rel="stylesheet" href="bpi-scanner.css">
 
     <script>
         (function () {
@@ -597,6 +617,24 @@
                     <!-- SUBSCRIPTION CARD (MOVED BELOW HISTORY) -->
 
 
+
+                    <!-- BPI OCR SCANNER UPLOAD BUTTON -->
+                    <!-- FIX DATE: 2026-06-28 -->
+                    <!-- FIX SPEC: Relocated above safe spend widget; hidden by default -->
+                    <div class="bpi-scan-upload-row" id="bpi-scan-upload-row" style="display:none; margin-bottom: 0px;">
+                        <input type="file" id="bpi-scan-file-input" accept="image/*" style="display:none;">
+                        <button class="bpi-scan-upload-btn"
+                            onclick="console.log('BPI button clicked'); document.getElementById('bpi-scan-file-input').click()">
+                            <span class="bpi-scan-btn-icon">
+                                <i class="material-icons">document_scanner</i>
+                            </span>
+                            <span class="bpi-scan-btn-text">
+                                <span class="bpi-scan-btn-label">Scan New BPI Transactions</span>
+                                <span class="bpi-scan-btn-sub">Compare BPI screenshot with your wallet</span>
+                            </span>
+                            <i class="material-icons bpi-scan-btn-arrow">chevron_right</i>
+                        </button>
+                    </div>
 
                     <!-- SAFE TO SPEND WIDGET (BPI ONLY) -->
                     <div id="safe-spend-widget" class="safe-spend-card">
@@ -1152,6 +1190,8 @@
                                 onclick="clearSearch()">cancel</i>
                         </div>
                     </div>
+
+
 
                     <div id="loading-spinner" class="loading-overlay">
                         <i class="material-icons spin" style="font-size: 48px; color: #1e293b;">sync</i>
@@ -2054,6 +2094,7 @@
 
             <script type="module">
                 import { CONFIG } from "./config.js";
+                window.CONFIG = CONFIG; // expose for plain-script modules (e.g. BPI Scanner)
                 import { LocalAI } from "./local-ai.js";
                 import { cleanAIText, formatAIAnalysisHTML } from "./app-utils.js";
                 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -3205,6 +3246,11 @@
                         const shouldShowSafeSpend = (activeAccountId === 'bpi') || isDesktopSafeSpendMode();
                         safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
                     }
+                    // BPI Scanner button - Show only when BPI is the active account
+                    const bpiScanRow = document.getElementById('bpi-scan-upload-row');
+                    if (bpiScanRow) {
+                        bpiScanRow.style.display = (activeAccountId === 'bpi') ? 'block' : 'none';
+                    }
                     setupAccountSwitcher(); // Re-bind observer to new cards
                     ensureActiveBalanceCard(activeAccountId);
                 }
@@ -3289,6 +3335,12 @@
                         if (shouldShowSafeSpend) updateSafeSpendUI();
                     }
 
+                    // BPI Scanner button - Show only when BPI is active
+                    const bpiScanRow = document.getElementById('bpi-scan-upload-row');
+                    if (bpiScanRow) {
+                        bpiScanRow.style.display = (resolvedId === 'bpi') ? 'block' : 'none';
+                    }
+
                     if (!silentRestore) {
                         scheduleDeferredInboxSyncForAccount(resolvedId);
                     }
@@ -3306,6 +3358,12 @@
                     if (safeSpendWidget) {
                         const isBPI = window.currentAccount === 'bpi';
                         safeSpendWidget.style.display = (isBPI || isDesktopSafeSpendMode()) ? 'block' : 'none';
+                    }
+
+                    // BPI Scanner button - Show only when BPI is active
+                    const bpiScanRowInit = document.getElementById('bpi-scan-upload-row');
+                    if (bpiScanRowInit) {
+                        bpiScanRowInit.style.display = (window.currentAccount === 'bpi') ? 'block' : 'none';
                     }
 
                     // SHOW/HIDE GATE
@@ -3653,6 +3711,12 @@
                                 if (shouldShowSafeSpend) updateSafeSpendUI();
                             }
 
+                            // BPI Scanner button - Show only when BPI is active
+                            const bpiScanRow = document.getElementById('bpi-scan-upload-row');
+                            if (bpiScanRow) {
+                                bpiScanRow.style.display = (account === 'bpi') ? 'block' : 'none';
+                            }
+
                             scheduleDeferredInboxSyncForAccount(account);
 
                             // Debounced loadData Ã¢â‚¬â€ but always run immediately when the active account changes
@@ -3870,6 +3934,9 @@
                                     prevTxns[i].id === t.id &&
                                     prevTxns[i].note === t.note &&
                                     prevTxns[i].manualCategory === t.manualCategory &&
+                                    prevTxns[i].category === t.category &&
+                                    prevTxns[i].merchant === t.merchant &&
+                                    prevTxns[i].name === t.name &&
                                     prevTxns[i].manualAmount === t.manualAmount &&
                                     prevTxns[i].excluded === t.excluded &&
                                     prevTxns[i].refund === t.refund
@@ -5351,27 +5418,40 @@
                             }
 
                             let match = false;
-                            const manualBudgetCategory = t.manualBudgetCategory;
-                            const mappedCategory = display.category;
+                            const manualBudgetCategory = String(t.manualBudgetCategory || '').trim().toLowerCase();
+                            const mappedCategory = String(display.category || t.manualCategory || t.category || '').trim().toLowerCase();
 
                             // FIX 2026-03-27: Skip N/A transactions from budget modal listing
                             if (manualBudgetCategory === 'n/a') return;
 
-                            // If it's a split transaction, we already filtered by effectiveAmt > 0
-                            if (isSplit) {
-                                match = true;
-                            } else if (manualBudgetCategory) {
-                                if (manualBudgetCategory === type) match = true;
-                            } else if (type === 'needs') {
-                                if (mappedCategory === 'Education' || mappedCategory === 'Service' || mappedCategory === 'Vehicle' || mappedCategory === 'Transportation') match = true;
-                            } else if (type === 'wants') {
-                                if (mappedCategory === 'Shopping' || mappedCategory === 'Online shopping' || mappedCategory === 'Food & Drinks' || mappedCategory === 'Life & Entertainment' || mappedCategory === 'Sport' || mappedCategory === 'Financial Expenses') match = true; // updated 2026-03-31 - standardized category name - 2026-03-31
-                            } else if (type === 'savings') {
-                                if (mappedCategory === 'Savings') match = true;
+                            // [FIXED: 2026-06-27 - Aligned categorization logic with app-ui.js to prevent casing and mapping mismatches (e.g. BPI transactions like 1016 PHP) - Antigravity]
+                            if (window.getTxnBudgetAllocations) {
+                                const allocations = window.getTxnBudgetAllocations(t, display);
+                                const alloc = allocations.find(a => a.bucket === type);
+                                if (alloc) {
+                                    match = true;
+                                    effectiveAmt = alloc.amount;
+                                }
+                            } else {
+                                // Fallback matching matching app-ui.js lowercase rules
+                                if (isSplit) {
+                                    match = true;
+                                } else if (manualBudgetCategory) {
+                                    if (manualBudgetCategory === type) match = true;
+                                } else if (type === 'needs') {
+                                    const needsCats = ['education', 'service', 'vehicle', 'transportation'];
+                                    if (needsCats.includes(mappedCategory)) match = true;
+                                } else if (type === 'wants') {
+                                    const wantsCats = ['shopping', 'online shopping', 'food & drinks', 'life & entertainment', 'sport', 'financial expenses', 'financial expense'];
+                                    if (wantsCats.includes(mappedCategory)) match = true;
+                                } else if (type === 'savings') {
+                                    const savingsCats = ['savings', 'investments'];
+                                    if (savingsCats.includes(mappedCategory)) match = true;
+                                }
                             }
 
                             if (match) {
-                                filtered.push({ ...t, account, effectiveAmt, totalAmt, isSplit });
+                                filtered.push({ ...t, account, effectiveAmt, totalAmt, isSplit, display });
                             }
                         });
                     };
@@ -5755,14 +5835,33 @@
                         };
 
                         if (window.editingBudgetManualId) {
-                            await updateDoc(doc(db, "users", uid, "budget_manual_txns", window.editingBudgetManualId), data);
+                            // Optimistic local update: patch budgetManualTxns before Firestore responds
+                            // to prevent showing stale/duplicate data in the modal refresh below
+                            const editId = window.editingBudgetManualId;
+                            if (Array.isArray(window.budgetManualTxns)) {
+                                const idx = window.budgetManualTxns.findIndex(t => t.id === editId);
+                                const optimisticData = { ...data, id: editId };
+                                delete optimisticData.updatedAt; // remove serverTimestamp placeholder
+                                if (idx >= 0) {
+                                    window.budgetManualTxns[idx] = { ...window.budgetManualTxns[idx], ...optimisticData };
+                                }
+                            }
+                            await updateDoc(doc(db, "users", uid, "budget_manual_txns", editId), data);
                             showToast('Log updated');
                         } else {
                             data.createdAt = serverTimestamp();
-                            await addDoc(collection(db, "users", uid, "budget_manual_txns"), data);
+                            const newRef = await addDoc(collection(db, "users", uid, "budget_manual_txns"), data);
+                            // Optimistic local insert so modal shows new entry immediately
+                            const optimisticNew = { ...data, id: newRef.id };
+                            delete optimisticNew.createdAt;
+                            delete optimisticNew.updatedAt;
+                            if (Array.isArray(window.budgetManualTxns)) {
+                                window.budgetManualTxns.unshift(optimisticNew);
+                            }
                             showToast('Cash log saved');
                         }
 
+                        window.editingBudgetManualId = null;
                         window.closeBudgetManualModal();
 
                         const titleText = document.getElementById('budget-modal-title').innerText.split(' ')[0].toLowerCase();
@@ -5770,6 +5869,7 @@
                         if (typeMap[titleText]) window.showBudgetTransactions(typeMap[titleText]);
                         if (window.updateTripleProgressBar) window.updateTripleProgressBar();
                         if (window.syncWidgets) window.syncWidgets();
+                        if (window.quickReloadAccordions) window.quickReloadAccordions();
 
                     } catch (err) {
                         log('Save manual budget error: ' + err.message, 'error');
@@ -7993,32 +8093,32 @@ Be direct, practical, and helpful.`;
                     function computeLayout(exclusionsSet) {
                         let currentAngleVal = -90;
                         const layout = {};
-                        
+
                         const visibleSegs = segments.filter((seg) => !exclusionsSet.has(seg.name)).slice().sort((a, b) => b.value - a.value);
                         const excludedSegs = segments.filter((seg) => exclusionsSet.has(seg.name)).slice().sort((a, b) => b.value - a.value);
                         const renderSegsForLayout = visibleSegs.concat(excludedSegs);
-                        
+
                         // Total for this layout
                         const layoutTotal = segments.reduce((sum, seg) => exclusionsSet.has(seg.name) ? sum : sum + (Number(seg.value) || 0), 0);
                         const useTotal = layoutTotal > 0 ? layoutTotal : (window.__expensesChartLastFallbackTotal || chartTotal);
-                        
+
                         renderSegsForLayout.forEach((seg) => {
                             const isExcluded = exclusionsSet.has(seg.name);
                             const percent = !isExcluded && useTotal > 0 ? (seg.value / useTotal) : 0;
                             const arc = percent * circumference;
-                            
+
                             layout[seg.name] = {
                                 angle: currentAngleVal,
                                 arc: arc,
                                 percent: percent,
                                 isExcluded: isExcluded
                             };
-                            
+
                             if (!isExcluded) {
                                 currentAngleVal += (percent * 360);
                             }
                         });
-                        
+
                         return layout;
                     }
 
@@ -8211,11 +8311,11 @@ Be direct, practical, and helpful.`;
                         lItem.style.opacity = before.isExcluded ? '0.45' : dimOpacity;
                         lItem.style.transition = 'all 0.3s';
                         lItem.style.cursor = 'pointer';
-                        
+
                         const legendDotColor = seg.color || '#64748b';
                         const excludedBadge = before.isExcluded ? '<span class="legend-item-excluded-badge" style="font-size:7px; color:#94a3b8; font-weight:700; margin-left:4px; text-transform:uppercase; letter-spacing:0.3px;">excluded</span>' : '';
                         lItem.innerHTML = `<div class="legend-color" style="background: ${legendDotColor}"></div><span>${seg.name}</span>${excludedBadge}`;
-                        
+
                         lItem.onclick = handleInteraction;
                         lItem.addEventListener('pointerdown', beginLongPress);
                         lItem.addEventListener('pointerup', endLongPress);
@@ -8707,6 +8807,19 @@ Be direct, practical, and helpful.`;
 
                 // CATEGORY BUDGET LIMITER LOGIC
                 let selectedBudgetCatId = null;
+
+                // Quick reload: re-render accordion list from current in-memory data without
+                // a full Firestore fetch. Called after edits to avoid duplicate flicker.
+                window.quickReloadAccordions = () => {
+                    if (Array.isArray(window.allTxns) && window.allTxns.length > 0) {
+                        try {
+                            renderHistory(window.allTxns);
+                            if (window.filterTxnList) window.filterTxnList();
+                        } catch (e) {
+                            console.warn('quickReloadAccordions failed:', e);
+                        }
+                    }
+                };
 
                 window.updateCategoryBudgetsUI = async () => {
                     const widget = document.getElementById('cat-budget-widget');
@@ -14454,16 +14567,20 @@ Be direct, practical, and helpful.`;
                     <div id="budget-modal-drag-handle" class="budget-modal-drag-handle-container"
                         style="width: 100%; padding: 20px 20px 8px 20px; background: #ffffff; border-radius: 24px 24px 0 0 !important; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #f1f5f9; cursor: grab;">
                         <!-- [FIX: 2026-06-27 - Labeled center handle wrapper - Antigravity] -->
-                        <div class="budget-drag-handle-bar-container" style="display: flex; justify-content: center; margin-bottom: 12px;">
+                        <div class="budget-drag-handle-bar-container"
+                            style="display: flex; justify-content: center; margin-bottom: 12px;">
                             <!-- [FIX: 2026-06-27 - Labeled physical drag indicator line - Antigravity] -->
-                            <div class="budget-drag-handle-visual-indicator" style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
+                            <div class="budget-drag-handle-visual-indicator"
+                                style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
                         </div>
                         <!-- [FIX: 2026-06-27 - Labeled actions row - Antigravity] -->
-                        <div class="budget-modal-header-actions-row" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="budget-modal-header-actions-row"
+                            style="display: flex; justify-content: space-between; align-items: center;">
                             <i class="material-icons" onclick="closeModals('budget-txn-modal')"
                                 style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
                             <!-- [FIX: 2026-06-27 - Labeled title element - Antigravity] -->
-                            <div id="budget-modal-title" class="budget-modal-header-title" style="font-weight: 800; font-size: 18px; color: #1e293b;">
+                            <div id="budget-modal-title" class="budget-modal-header-title"
+                                style="font-weight: 800; font-size: 18px; color: #1e293b;">
                                 Budget Details</div>
                             <!-- [FIX: 2026-06-27 - Labeled add button wrapper - Antigravity] -->
                             <div id="budget-modal-add-btn" class="budget-modal-header-add-button-wrapper"
@@ -14478,6 +14595,13 @@ Be direct, practical, and helpful.`;
                     <div id="budget-txn-list" class="budget-transaction-list-container"
                         style="padding: 10px 20px 16px 20px; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
                         <!-- Transactions will be injected here -->
+                    </div>
+                    <!-- [FIX: 2026-06-27 - Labeled floating scroll down indicator to show there are more transactions below - Antigravity] -->
+                    <div id="budget-scroll-indicator" class="budget-scroll-indicator-badge"
+                        style="position: absolute; bottom: calc(env(safe-area-inset-bottom, 12px) + 95px); left: 50%; transform: translateX(-50%); z-index: 25; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 6px 14px; border-radius: 20px; font-size: 9px; font-weight: 800; display: none; align-items: center; gap: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; letter-spacing: 0.5px; text-transform: uppercase;">
+                        <span>Scroll for more</span>
+                        <i class="material-icons"
+                            style="font-size: 13px; font-weight: 900; animation: bounceArrow 1.5s infinite;">keyboard_arrow_down</i>
                     </div>
                     <!-- [FIX 2026-06-27: Added class "budget-transaction-summary-sticky-container", labeled summary element, added a slightly softer top shadow (box-shadow: 0 -6px 20px rgba(0,0,0,0.08)), and set position/z-index to elevate it above scrollable relative-positioned wants-txn list items - Antigravity] -->
                     <div id="budget-txn-summary" class="budget-transaction-summary-sticky-container"
@@ -14767,6 +14891,643 @@ Be direct, practical, and helpful.`;
             </div>
 
             <style>
+                /* ============================================================
+               BPI OCR SCANNER — STYLES
+               ============================================================ */
+
+                /* Upload button row */
+                .bpi-scan-upload-row {
+                    padding: 8px 0 16px;
+                    margin-bottom: 12px;
+                }
+
+                .bpi-scan-upload-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    width: 100%;
+                    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+                    border: 1.5px dashed #93c5fd;
+                    border-radius: 16px;
+                    padding: 11px 14px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    outline: none;
+                    text-align: left;
+                }
+
+                .bpi-scan-upload-btn:active {
+                    transform: scale(0.98);
+                    background: #dbeafe;
+                }
+
+                .bpi-scan-btn-icon {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 12px;
+                    background: #1d4ed8;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    color: #fff;
+                }
+
+                .bpi-scan-btn-icon .material-icons {
+                    font-size: 20px;
+                }
+
+                .bpi-scan-btn-text {
+                    flex: 1;
+                    min-width: 0;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 1px;
+                }
+
+                .bpi-scan-btn-label {
+                    font-size: 12px;
+                    font-weight: 800;
+                    color: #1e3a8a;
+                    letter-spacing: 0.2px;
+                }
+
+                .bpi-scan-btn-sub {
+                    font-size: 9.5px;
+                    font-weight: 600;
+                    color: #64748b;
+                }
+
+                .bpi-scan-btn-arrow {
+                    color: #93c5fd;
+                    font-size: 20px !important;
+                    flex-shrink: 0;
+                }
+
+                /* Removed legacy full-screen ID override to allow bpi-scanner.css class rules to apply */
+
+                /* Image preview + scanner animation */
+                .bpi-scan-preview-zone {
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    overflow: hidden;
+                }
+
+                .bpi-scan-preview-img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: contain;
+                    filter: grayscale(80%) blur(2px) brightness(0.55);
+                    transition: filter 0.8s ease;
+                    pointer-events: none;
+                    user-select: none;
+                }
+
+                .bpi-scan-preview-img.bpi-scan-done {
+                    filter: grayscale(0%) blur(0px) brightness(1);
+                }
+
+                /* Laser scanner line */
+                .bpi-scan-laser {
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    height: 3px;
+                    background: linear-gradient(90deg, transparent 0%, #22d3ee 20%, #38bdf8 50%, #22d3ee 80%, transparent 100%);
+                    box-shadow: 0 0 18px 5px rgba(56, 189, 248, 0.55);
+                    border-radius: 999px;
+                    top: 10%;
+                    animation: bpiLaserScan 1.8s ease-in-out infinite;
+                    pointer-events: none;
+                    z-index: 2;
+                }
+
+                .bpi-scan-laser.bpi-scan-laser-hidden {
+                    display: none;
+                }
+
+                @keyframes bpiLaserScan {
+                    0% {
+                        top: 8%;
+                        opacity: 1;
+                    }
+
+                    48% {
+                        top: 88%;
+                        opacity: 1;
+                    }
+
+                    50% {
+                        top: 88%;
+                        opacity: 0;
+                    }
+
+                    52% {
+                        top: 8%;
+                        opacity: 0;
+                    }
+
+                    54% {
+                        top: 8%;
+                        opacity: 1;
+                    }
+
+                    100% {
+                        top: 8%;
+                        opacity: 1;
+                    }
+                }
+
+                /* Scanning corner brackets */
+                .bpi-scan-corners {
+                    position: absolute;
+                    inset: 10%;
+                    pointer-events: none;
+                    z-index: 3;
+                }
+
+                .bpi-scan-corner {
+                    position: absolute;
+                    width: 28px;
+                    height: 28px;
+                    border-color: #38bdf8;
+                    border-style: solid;
+                    opacity: 0.9;
+                }
+
+                .bpi-scan-corner-tl {
+                    top: 0;
+                    left: 0;
+                    border-width: 3px 0 0 3px;
+                    border-radius: 4px 0 0 0;
+                }
+
+                .bpi-scan-corner-tr {
+                    top: 0;
+                    right: 0;
+                    border-width: 3px 3px 0 0;
+                    border-radius: 0 4px 0 0;
+                }
+
+                .bpi-scan-corner-bl {
+                    bottom: 0;
+                    left: 0;
+                    border-width: 0 0 3px 3px;
+                    border-radius: 0 0 0 4px;
+                }
+
+                .bpi-scan-corner-br {
+                    bottom: 0;
+                    right: 0;
+                    border-width: 0 3px 3px 0;
+                    border-radius: 0 0 4px 0;
+                }
+
+                /* Scanning status pill */
+                .bpi-scan-status-pill {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(10, 15, 30, 0.82);
+                    border: 1px solid rgba(56, 189, 248, 0.35);
+                    border-radius: 999px;
+                    padding: 9px 20px;
+                    display: flex;
+                    align-items: center;
+                    gap: 9px;
+                    z-index: 10;
+                    backdrop-filter: blur(8px);
+                    pointer-events: none;
+                }
+
+                .bpi-scan-status-pill .spin {
+                    color: #38bdf8;
+                    font-size: 18px !important;
+                    animation: spin 1s linear infinite;
+                }
+
+                .bpi-scan-status-pill span {
+                    font-size: 11px;
+                    font-weight: 800;
+                    color: #e0f2fe;
+                    text-transform: uppercase;
+                    letter-spacing: 0.8px;
+                }
+
+                @keyframes spin {
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+
+                /* Top bar */
+                .bpi-scan-topbar {
+                    position: relative;
+                    z-index: 20;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 14px 16px 10px;
+                    background: linear-gradient(180deg, rgba(10, 15, 30, 0.95) 0%, transparent 100%);
+                }
+
+                .bpi-scan-back-btn {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 12px;
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    color: #fff;
+                    flex-shrink: 0;
+                    transition: background 0.2s;
+                }
+
+                .bpi-scan-back-btn:active {
+                    background: rgba(255, 255, 255, 0.22);
+                }
+
+                .bpi-scan-back-btn .material-icons {
+                    font-size: 22px;
+                }
+
+                .bpi-scan-topbar-title {
+                    font-size: 14px;
+                    font-weight: 900;
+                    color: #fff;
+                    letter-spacing: 0.3px;
+                }
+
+                .bpi-scan-topbar-sub {
+                    font-size: 10px;
+                    font-weight: 600;
+                    color: rgba(255, 255, 255, 0.5);
+                    margin-top: 1px;
+                }
+
+                /* ── RESULTS PANEL (slides up) ── */
+                .bpi-scan-results-panel {
+                    position: absolute;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 20;
+                    background: #fff;
+                    border-radius: 24px 24px 0 0;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    transform: translateY(100%);
+                    transition: transform 0.42s cubic-bezier(0.32, 1.08, 0.58, 1);
+                    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.3);
+                }
+
+                .bpi-scan-results-panel.bpi-results-open {
+                    transform: translateY(0);
+                }
+
+                .bpi-scan-results-drag-handle {
+                    width: 36px;
+                    height: 4px;
+                    background: #e2e8f0;
+                    border-radius: 999px;
+                    margin: 10px auto 6px;
+                    flex-shrink: 0;
+                }
+
+                .bpi-scan-results-header {
+                    padding: 4px 16px 10px;
+                    flex-shrink: 0;
+                }
+
+                .bpi-scan-results-title {
+                    font-size: 14px;
+                    font-weight: 900;
+                    color: #0f172a;
+                    letter-spacing: -0.3px;
+                }
+
+                .bpi-scan-results-meta {
+                    font-size: 10px;
+                    font-weight: 700;
+                    color: #64748b;
+                    margin-top: 2px;
+                }
+
+                .bpi-scan-results-scroll {
+                    overflow-y: auto;
+                    flex: 1;
+                    padding: 4px 12px 24px;
+                    -webkit-overflow-scrolling: touch;
+                }
+
+                /* Summary chips row */
+                .bpi-scan-summary-chips {
+                    display: flex;
+                    gap: 8px;
+                    padding: 0 4px 12px;
+                    flex-wrap: wrap;
+                }
+
+                .bpi-scan-chip {
+                    padding: 5px 12px;
+                    border-radius: 999px;
+                    font-size: 10px;
+                    font-weight: 800;
+                    letter-spacing: 0.3px;
+                    text-transform: uppercase;
+                }
+
+                .bpi-scan-chip-new {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                }
+
+                .bpi-scan-chip-synced {
+                    background: #dcfce7;
+                    color: #15803d;
+                }
+
+                .bpi-scan-chip-balance {
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                }
+
+                /* ── TRANSACTION CARD ── */
+                .bpi-scan-txn-card {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    background: #fff;
+                    border: 1px solid #f1f5f9;
+                    border-radius: 16px;
+                    padding: 11px 12px;
+                    margin-bottom: 8px;
+                    position: relative;
+                    overflow: hidden;
+                    touch-action: pan-y;
+                    transition: transform 0.18s ease, opacity 0.18s ease;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                    user-select: none;
+                }
+
+                .bpi-scan-txn-card.bpi-card-synced {
+                    background: #f0fdf4;
+                    border-color: #bbf7d0;
+                    opacity: 0.75;
+                }
+
+                .bpi-scan-txn-card.bpi-card-swiping-right {
+                    background: linear-gradient(90deg, #dcfce7 0%, #fff 100%);
+                }
+
+                .bpi-scan-txn-card.bpi-card-swiping-left {
+                    background: linear-gradient(90deg, #fff 0%, #fee2e2 100%);
+                }
+
+                /* swipe accept/reject bg reveal */
+                .bpi-scan-swipe-hint {
+                    position: absolute;
+                    top: 0;
+                    bottom: 0;
+                    width: 80px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity 0.15s;
+                    font-size: 26px;
+                }
+
+                .bpi-scan-swipe-hint-accept {
+                    left: 0;
+                    background: linear-gradient(90deg, #22c55e44 0%, transparent 100%);
+                    color: #16a34a;
+                }
+
+                .bpi-scan-swipe-hint-reject {
+                    right: 0;
+                    background: linear-gradient(270deg, #ef444444 0%, transparent 100%);
+                    color: #dc2626;
+                }
+
+                /* card icon box */
+                .bpi-scan-card-icon {
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    font-size: 18px;
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                }
+
+                .bpi-scan-card-icon.synced-icon {
+                    background: #dcfce7;
+                    color: #16a34a;
+                }
+
+                /* card info */
+                .bpi-scan-card-info {
+                    flex: 1;
+                    min-width: 0;
+                }
+
+                .bpi-scan-card-name {
+                    font-size: 11px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    text-transform: uppercase;
+                    letter-spacing: 0.3px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .bpi-scan-card-meta {
+                    font-size: 9px;
+                    font-weight: 700;
+                    color: #94a3b8;
+                    margin-top: 1px;
+                }
+
+                .bpi-scan-card-synced-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 3px;
+                    font-size: 8px;
+                    font-weight: 800;
+                    color: #16a34a;
+                    background: #dcfce7;
+                    padding: 2px 8px;
+                    border-radius: 999px;
+                    text-transform: uppercase;
+                    margin-top: 3px;
+                    letter-spacing: 0.3px;
+                }
+
+                /* card amount + action buttons */
+                .bpi-scan-card-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    flex-shrink: 0;
+                }
+
+                .bpi-scan-card-amount {
+                    font-size: 13px;
+                    font-weight: 900;
+                    color: #1e293b;
+                    white-space: nowrap;
+                }
+
+                .bpi-scan-action-btns {
+                    display: flex;
+                    gap: 4px;
+                }
+
+                .bpi-scan-btn-accept,
+                .bpi-scan-btn-reject {
+                    width: 34px;
+                    height: 34px;
+                    border-radius: 10px;
+                    border: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: transform 0.15s, opacity 0.15s;
+                    flex-shrink: 0;
+                }
+
+                .bpi-scan-btn-accept {
+                    background: #dcfce7;
+                    color: #16a34a;
+                }
+
+                .bpi-scan-btn-reject {
+                    background: #fee2e2;
+                    color: #dc2626;
+                }
+
+                .bpi-scan-btn-accept:active {
+                    transform: scale(0.88);
+                }
+
+                .bpi-scan-btn-reject:active {
+                    transform: scale(0.88);
+                }
+
+                .bpi-scan-btn-accept .material-icons,
+                .bpi-scan-btn-reject .material-icons {
+                    font-size: 18px;
+                }
+
+                /* Section labels */
+                .bpi-scan-section-label {
+                    font-size: 9px;
+                    font-weight: 800;
+                    color: #94a3b8;
+                    text-transform: uppercase;
+                    letter-spacing: 0.8px;
+                    padding: 10px 4px 6px;
+                }
+
+                /* Error state */
+                .bpi-scan-error-box {
+                    margin: 12px 4px;
+                    padding: 14px;
+                    background: #fee2e2;
+                    border-radius: 14px;
+                    border: 1px solid #fecaca;
+                    font-size: 11px;
+                    font-weight: 700;
+                    color: #b91c1c;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 8px;
+                }
+
+                .bpi-scan-error-box .material-icons {
+                    font-size: 18px;
+                    flex-shrink: 0;
+                    margin-top: 1px;
+                }
+
+                /* Balance match row */
+                .bpi-scan-balance-row {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 10px 12px;
+                    background: #eff6ff;
+                    border-radius: 14px;
+                    border: 1px solid #bfdbfe;
+                    margin-bottom: 12px;
+                }
+
+                .bpi-scan-balance-row .material-icons {
+                    color: #1d4ed8;
+                    font-size: 20px;
+                    flex-shrink: 0;
+                }
+
+                .bpi-scan-balance-label {
+                    font-size: 9px;
+                    font-weight: 800;
+                    color: #1d4ed8;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .bpi-scan-balance-val {
+                    font-size: 13px;
+                    font-weight: 900;
+                    color: #1e293b;
+                }
+
+                .bpi-scan-balance-match {
+                    font-size: 9px;
+                    font-weight: 700;
+                    color: #64748b;
+                    margin-top: 1px;
+                }
+
+                /* All done state */
+                .bpi-scan-all-done {
+                    text-align: center;
+                    padding: 28px 20px;
+                }
+
+                .bpi-scan-all-done .material-icons {
+                    font-size: 48px;
+                    color: #22c55e;
+                }
+
+                .bpi-scan-all-done-title {
+                    font-size: 16px;
+                    font-weight: 900;
+                    color: #0f172a;
+                    margin-top: 8px;
+                }
+
+                .bpi-scan-all-done-sub {
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #64748b;
+                    margin-top: 4px;
+                }
             </style>
 
             <script>
@@ -16106,10 +16867,966 @@ Be direct, practical, and helpful.`;
                 });
 
             </script>
+            <!-- ================================================================
+     BPI OCR SCANNER OVERLAY
+     ================================================================ -->
+            <div id="bpi-scanner-overlay" class="bpi-scanner-sheet">
+
+                <!-- Backdrop -->
+                <div class="bpi-scanner-backdrop" onclick="window.BPIScanner.close()"></div>
+
+                <!-- Pull-down Sheet -->
+                <div class="bpi-scanner-content">
+
+                    <!-- Drag Handle -->
+                    <div class="bpi-sheet-handle-area">
+                        <div class="bpi-sheet-handle"></div>
+                    </div>
+
+                    <!-- Header -->
+                    <div class="bpi-sheet-header">
+                        <button class="bpi-sheet-close-btn" onclick="window.BPIScanner.close()" aria-label="Close">
+                            <i class="material-icons">close</i>
+                        </button>
+                        <div class="bpi-sheet-header-content">
+                            <h2 class="bpi-sheet-title">BPI Screenshot Scanner</h2>
+                            <p class="bpi-sheet-subtitle" id="bpi-scan-status-text">Upload a screenshot to analyze</p>
+                        </div>
+                    </div>
+
+                    <!-- Image Preview Section (initially hidden) -->
+                    <div class="bpi-scan-preview-section" id="bpi-scan-preview-section" style="display:none;">
+                        <div class="bpi-scan-preview-container">
+                            <img id="bpi-scan-preview-img" class="bpi-scan-preview-img" src="" alt="Screenshot preview">
+
+                            <!-- Scanning Animation Overlay -->
+                            <div class="bpi-scan-animation-overlay" id="bpi-scan-animation-overlay"
+                                style="display:none;">
+                                <div class="bpi-scan-laser"></div>
+                                <div class="bpi-scan-corners">
+                                    <div class="bpi-scan-corner bpi-scan-corner-tl"></div>
+                                    <div class="bpi-scan-corner bpi-scan-corner-tr"></div>
+                                    <div class="bpi-scan-corner bpi-scan-corner-bl"></div>
+                                    <div class="bpi-scan-corner bpi-scan-corner-br"></div>
+                                </div>
+                                <div class="bpi-scan-progress">
+                                    <div class="bpi-scan-progress-circle">
+                                        <svg viewBox="0 0 36 36">
+                                            <path class="bpi-scan-progress-bg"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                            <path class="bpi-scan-progress-circle-path" id="bpi-scan-progress-path"
+                                                stroke-dasharray="0, 100"
+                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        </svg>
+                                        <div class="bpi-scan-progress-text" id="bpi-scan-progress-text">0%</div>
+                                    </div>
+                                    <div class="bpi-scan-progress-label" id="bpi-scan-progress-label">Analyzing...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div class="bpi-scan-results-section" id="bpi-scan-results-section">
+                        <div class="bpi-scan-results-header">
+                            <h3 class="bpi-scan-results-title" id="bpi-scan-results-title">Detected Transactions</h3>
+                            <p class="bpi-scan-results-subtitle" id="bpi-scan-results-subtitle">Review and confirm to
+                                add</p>
+                        </div>
+
+                        <!-- Transactions List -->
+                        <div class="bpi-scan-results-list" id="bpi-scan-results-list">
+                            <!-- Dynamic content here -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ================================================================
+     BPI OCR SCANNER â€” JAVASCRIPT
+     ================================================================ -->
+            <script>
+                (function () {
+                    'use strict';
+
+                    /* â”€â”€ helpers â”€â”€ */
+                    const $ = (id) => document.getElementById(id);
+
+                    function fmtAmt(n) {
+                        return 'â‚±' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+
+                    function normalizeAmt(n) {
+                        return Math.round(parseFloat(n) * 100); // cents, integer compare
+                    }
+
+                    /* â”€â”€ collect all BPI txn amounts already in the app â”€â”€ */
+                    function getLocalBpiAmounts() {
+                        const amounts = new Set();
+                        const src = (window.walletTxns && window.walletTxns.bpi)
+                            ? window.walletTxns.bpi
+                            : (window.allTxns || []);
+                        src.forEach(t => {
+                            const raw = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                            amounts.add(normalizeAmt(raw));
+                        });
+                        return amounts;
+                    }
+
+                    /* â”€â”€ fuzzy match a scanned txn against local records â”€â”€ */
+                    function isAlreadySynced(scannedAmt, localAmounts) {
+                        return localAmounts.has(normalizeAmt(scannedAmt));
+                    }
+
+                    // Uses Gemini Vision — works with plain fetch (no CORS issues unlike OpenAI direct calls)
+                    /* ══════════════════════════════════════════════════════════
+                       TESSERACT.JS OCR - FREE CLIENT-SIDE TEXT EXTRACTION
+                       No API keys, no quota, runs entirely in browser
+                       ══════════════════════════════════════════════════════════ */
+
+                    async function runTesseractOCR(base64Image, mimeType) {
+                        console.log('[BPI Scanner] Starting Tesseract OCR...');
+
+                        if (!window.Tesseract) {
+                            console.error('[BPI Scanner] Tesseract.js not loaded!');
+                            throw new Error('Tesseract.js not loaded. Check CDN script.');
+                        }
+
+                        console.log('[BPI Scanner] Tesseract loaded, creating worker...');
+                        const dataUrl = `data:${mimeType};base64,${base64Image}`;
+
+                        setStatusText('Initializing OCR engine…');
+
+                        try {
+                            const { data: { text } } = await Tesseract.recognize(
+                                dataUrl,
+                                'eng',
+                                {
+                                    logger: m => {
+                                        console.log('[Tesseract]', m.status, m.progress);
+                                        if (m.status === 'recognizing text') {
+                                            const pct = Math.round(m.progress * 100);
+                                            setStatusText(`Reading text... ${pct}%`);
+                                        } else if (m.status === 'loading tesseract core') {
+                                            setStatusText('Loading OCR engine...');
+                                        } else if (m.status === 'initializing tesseract') {
+                                            setStatusText('Initializing OCR...');
+                                        } else if (m.status === 'initializing api') {
+                                            setStatusText('Preparing to scan...');
+                                        } else if (m.status === 'loading language traineddata') {
+                                            setStatusText('Loading language data...');
+                                        }
+                                    }
+                                }
+                            );
+
+                            console.log('[BPI Scanner] OCR complete, text length:', text.length);
+                            console.log('[BPI Scanner] First 200 chars:', text.substring(0, 200));
+                            return text;
+                        } catch (err) {
+                            console.error('[BPI Scanner] Tesseract error:', err);
+                            throw err;
+                        }
+                    }
+
+                    /* ── parse OCR text into structured transaction data ── */
+                    function parseOCRText(rawText) {
+                        console.log('[BPI Scanner] Parsing OCR text, length:', rawText.length);
+                        console.log('[BPI Scanner] Raw OCR output:', rawText.substring(0, 1000));
+
+                        const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+                        console.log('[BPI Scanner] Total lines:', lines.length);
+
+                        // Extract available balance
+                        let availableBalance = null;
+                        const balanceMatch = rawText.match(/(?:Available.*?balance|PHP|₱|P)\s*([\d,]+\.?\d*)/i);
+                        if (balanceMatch) {
+                            availableBalance = parseFloat(balanceMatch[1].replace(/,/g, ''));
+                            console.log('[BPI Scanner] Found balance:', availableBalance);
+                        }
+
+                        const transactions = [];
+                        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                        const year = new Date().getFullYear();
+
+                        // Try multiple parsing strategies
+
+                        // Strategy 1: Look for PHP amounts and work backwards to find merchant
+                        const amountLines = [];
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            // Find lines with amounts: "PHP 215.50" or "- PHP 215.50" or "215.50"
+                            const amountMatch = line.match(/[-−]?\s*(?:PHP|₱|P)?\s*([\d,]+\.\d{2})/i);
+                            if (amountMatch) {
+                                const amount = parseFloat(amountMatch[0].replace(/[PHP₱P\s,−-]/g, ''));
+                                if (amount > 0) {
+                                    amountLines.push({ lineIdx: i, amount: amount, line: line, hasNegative: /^[-−]/.test(line.trim()) || line.includes('- PHP') });
+                                }
+                            }
+                        }
+
+                        console.log('[BPI Scanner] Found', amountLines.length, 'amount lines');
+
+                        // For each amount, look backwards for merchant and date
+                        for (const amtInfo of amountLines) {
+                            let merchant = '';
+                            let date = '';
+                            let note = '';
+
+                            // Look backwards up to 5 lines for merchant name
+                            for (let j = amtInfo.lineIdx - 1; j >= Math.max(0, amtInfo.lineIdx - 5); j--) {
+                                const candidateLine = lines[j];
+
+                                // Skip certain keywords
+                                if (/transaction history|recent transaction|amount|available|balance|account number/i.test(candidateLine)) continue;
+
+                                // Check if line has meaningful text (not just dates/numbers)
+                                if (candidateLine.length >= 3 && /[a-zA-Z]{3,}/.test(candidateLine)) {
+                                    // Date pattern: "JUN 25"
+                                    const dateMatch = candidateLine.match(/\b([A-Z]{3})\s*(\d{1,2})\b/i);
+                                    if (dateMatch && !date) {
+                                        const monthIdx = months.findIndex(m => m === dateMatch[1].toUpperCase());
+                                        if (monthIdx >= 0) {
+                                            const day = dateMatch[2].padStart(2, '0');
+                                            const month = String(monthIdx + 1).padStart(2, '0');
+                                            date = `${year}-${month}-${day}`;
+                                        }
+                                    }
+
+                                    // Detect "TRANSFER TO OTHER BANK" note
+                                    if (/transfer to other bank/i.test(candidateLine)) {
+                                        note = 'Transfer to other bank';
+                                    }
+
+                                    // If not a date line, could be merchant
+                                    if (!dateMatch && !merchant && candidateLine.length >= 3) {
+                                        merchant = candidateLine;
+                                    }
+                                }
+                            }
+
+                            if (!merchant) {
+                                // Check forward too (sometimes merchant is after amount)
+                                for (let j = amtInfo.lineIdx + 1; j < Math.min(lines.length, amtInfo.lineIdx + 3); j++) {
+                                    const candidateLine = lines[j];
+
+                                    // Detect "TRANSFER TO OTHER BANK" note
+                                    if (/transfer to other bank/i.test(candidateLine)) {
+                                        note = 'Transfer to other bank';
+                                    }
+
+                                    if (candidateLine.length >= 3 && /[a-zA-Z]{3,}/.test(candidateLine) && !merchant) {
+                                        merchant = candidateLine;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (merchant || amtInfo.amount > 0) {
+                                // Clean merchant name
+                                merchant = (merchant || 'Unknown')
+                                    .replace(/^(Purchase-BN @|Purchase - BN @|Partner Merchant|Cash In|Fund Transfer|TO:)/i, '')
+                                    .replace(/\s+/g, ' ')
+                                    .trim();
+
+                                transactions.push({
+                                    merchant: merchant || 'Transaction',
+                                    date: date || `${year}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
+                                    amount: amtInfo.amount,
+                                    type: amtInfo.hasNegative ? 'debit' : 'credit',
+                                    note: note
+                                });
+                            }
+                        }
+
+                        // Combine InstaPay Transfer + Fee transactions
+                        for (let i = 0; i < transactions.length - 1; i++) {
+                            const current = transactions[i];
+                            const next = transactions[i + 1];
+
+                            // Check if current is InstaPay Transfer and next is InstaPay Transfer Fee
+                            const isInstaPayTransfer = /instapay\s*transfer/i.test(current.merchant);
+                            const isInstaPayFee = /instapay\s*transfer\s*fee/i.test(next.merchant);
+
+                            if (isInstaPayTransfer && isInstaPayFee && current.date === next.date) {
+                                // Combine them: main amount + fee
+                                current.amount = current.amount + next.amount;
+                                current.merchant = 'INSTAPAY TRANSFER';
+                                current.note = current.note || 'Transfer to other bank';
+
+                                // Remove the fee transaction
+                                transactions.splice(i + 1, 1);
+
+                                console.log('[BPI Scanner] Combined InstaPay Transfer + Fee:', current.amount);
+                            }
+                        }
+
+                        console.log('[BPI Scanner] Parsed', transactions.length, 'transactions');
+                        transactions.forEach((t, i) => {
+                            console.log(`  [${i}]`, t.merchant, '|', t.date, '|', t.amount, '|', t.type, '|', t.note || '');
+                        });
+
+                        return {
+                            availableBalance,
+                            transactions
+                        };
+                    }
+
+                    /* ── parseAIResponse alias — kept for runScan compatibility ── */
+                    function parseAIResponse(ocrResult) {
+                        // ocrResult is already the parsed object from parseBPIText
+                        return ocrResult;
+                    }
+
+                    function cleanMerchant(raw) {
+                        return raw
+                            .replace(/^[-–•*·]+/, '')          // leading dashes/bullets
+                            .replace(/\s{2,}/g, ' ')            // collapse spaces
+                            .replace(/[^\x20-\x7E]/g, '')       // strip non-ASCII OCR artifacts
+                            .trim()
+                            .toUpperCase()
+                            .substring(0, 50);
+                    }
+                    /* â”€â”€ normalise date string from AI â”€â”€ */
+                    function normaliseDate(rawDate) {
+                        if (!rawDate) return window.formatLocalDate ? window.formatLocalDate(new Date()) : new Date().toISOString().split('T')[0];
+                        // already ISO
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return rawDate;
+                        // "JUN 25" style
+                        const months = { JAN: 0, FEB: 1, MAR: 2, APR: 3, MAY: 4, JUN: 5, JUL: 6, AUG: 7, SEP: 8, OCT: 9, NOV: 10, DEC: 11 };
+                        const m = rawDate.toUpperCase().match(/([A-Z]+)\s+(\d+)/);
+                        if (m && months[m[1]] !== undefined) {
+                            const d = new Date();
+                            d.setMonth(months[m[1]]);
+                            d.setDate(parseInt(m[2]));
+                            return window.formatLocalDate ? window.formatLocalDate(d) : d.toISOString().split('T')[0];
+                        }
+                        return rawDate;
+                    }
+
+                    /* â”€â”€ push a single approved txn to BPI ledger â”€â”€ */
+                    async function pushToBPI(txn) {
+                        const uid = window.auth?.currentUser?.uid;
+                        if (!uid) throw new Error('Not logged in');
+
+                        const merchant = txn.merchant || 'BPI Transaction';
+                        const display = typeof window.getMerchantDisplay === 'function'
+                            ? window.getMerchantDisplay(merchant, txn)
+                            : { category: 'Other', icon: 'receipt' };
+
+                        const data = {
+                            merchant: merchant,
+                            name: merchant,
+                            amount: txn.type === 'credit' ? txn.amount : -Math.abs(txn.amount),
+                            manualAmount: Math.abs(txn.amount),
+                            date: normaliseDate(txn.date),
+                            category: display.category || 'Other',
+                            manualCategory: display.category || 'Other',
+                            manualBudgetCategory: 'n/a',
+                            source: 'bpi_ocr_scan',
+                            createdAt: window.serverTimestamp ? window.serverTimestamp() : new Date().toISOString()
+                        };
+
+                        const colRef = window.collection
+                            ? window.collection(window.db, 'users', uid, 'bpi_transactions')
+                            : null;
+
+                        if (!colRef) throw new Error('Firestore not ready');
+                        await window.addDoc(colRef, data);
+
+                        // optimistic local push
+                        if (window.walletTxns && Array.isArray(window.walletTxns.bpi)) {
+                            window.walletTxns.bpi.unshift({ id: `ocr_${Date.now()}`, ...data });
+                        }
+                        if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                    }
+
+                    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+                       SCANNER STATE
+                    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+                    let _imageDataUrl = '';
+                    let _scanResults = [];   // { merchant, date, amount, type, synced, dismissed }
+                    let _availBal = null;
+
+                    /* â”€â”€ render the results list â”€â”€ */
+                    function renderResults() {
+                        const scroll = $('bpi-scan-results-scroll');
+                        const title = $('bpi-scan-results-title');
+                        const meta = $('bpi-scan-results-meta');
+
+                        const unsyncedItems = _scanResults.filter(r => !r.synced && !r.dismissed);
+                        const syncedItems = _scanResults.filter(r => r.synced);
+
+                        title.textContent = `${unsyncedItems.length} Missing Â· ${syncedItems.length} Already Synced`;
+                        meta.textContent = unsyncedItems.length ? 'Swipe â†’ to add  Â·  Swipe â† to skip' : 'All transactions accounted for';
+
+                        let html = '';
+
+                        // Balance row
+                        if (_availBal !== null) {
+                            html += `<div class="bpi-scan-balance-row">
+                <i class="material-icons">account_balance</i>
+                <div>
+                    <div class="bpi-scan-balance-label">Screenshot Balance</div>
+                    <div class="bpi-scan-balance-val">${fmtAmt(_availBal)}</div>
+                    <div class="bpi-scan-balance-match">Extracted from screenshot header</div>
+                </div>
+            </div>`;
+                        }
+
+                        // Summary chips
+                        html += `<div class="bpi-scan-summary-chips">
+            <span class="bpi-scan-chip bpi-scan-chip-new">${unsyncedItems.length} New</span>
+            <span class="bpi-scan-chip bpi-scan-chip-synced">${syncedItems.length} Synced</span>
+            ${_availBal ? `<span class="bpi-scan-chip bpi-scan-chip-balance">${fmtAmt(_availBal)}</span>` : ''}
+        </div>`;
+
+                        // Unsynced (actionable)
+                        if (unsyncedItems.length) {
+                            html += `<div class="bpi-scan-section-label">ðŸ”´ Missing â€” Tap âœ“ to add</div>`;
+                            unsyncedItems.forEach(r => {
+                                html += buildCardHTML(r);
+                            });
+                        }
+
+                        // All done state
+                        if (!unsyncedItems.length && _scanResults.length > 0) {
+                            html += `<div class="bpi-scan-all-done">
+                <i class="material-icons">check_circle</i>
+                <div class="bpi-scan-all-done-title">All Caught Up!</div>
+                <div class="bpi-scan-all-done-sub">Every transaction in this screenshot is already in your wallet.</div>
+            </div>`;
+                        }
+
+                        // Already synced (dimmed)
+                        if (syncedItems.length) {
+                            html += `<div class="bpi-scan-section-label">âœ… Already in Wallet</div>`;
+                            syncedItems.forEach(r => { html += buildCardHTML(r); });
+                        }
+
+                        scroll.innerHTML = html;
+                        attachCardListeners();
+                    }
+
+                    function buildCardHTML(r) {
+                        const isSynced = r.synced;
+                        const dateDisplay = r.date ? String(r.date).replace(/^\d{4}-/, '').replace('-', '/') : 'â€”';
+                        return `
+        <div class="bpi-scan-txn-card ${isSynced ? 'bpi-card-synced' : ''}"
+             data-id="${r._id}"
+             ${!isSynced ? 'data-swipeable="1"' : ''}>
+            <div class="bpi-scan-swipe-hint bpi-scan-swipe-hint-accept">âœ“</div>
+            <div class="bpi-scan-swipe-hint bpi-scan-swipe-hint-reject">âœ—</div>
+            <div class="bpi-scan-card-icon ${isSynced ? 'synced-icon' : ''}">
+                <i class="material-icons">${isSynced ? 'check_circle' : (r.type === 'credit' ? 'arrow_downward' : 'arrow_upward')}</i>
+            </div>
+            <div class="bpi-scan-card-info">
+                <div class="bpi-scan-card-name">${r.merchant}</div>
+                <div class="bpi-scan-card-meta">${dateDisplay} Â· ${r.type === 'credit' ? 'Credit' : 'Debit'}</div>
+                ${isSynced ? '<span class="bpi-scan-card-synced-badge"><i class="material-icons" style="font-size:10px">check</i> Already Synced</span>' : ''}
+            </div>
+            <div class="bpi-scan-card-right">
+                <div class="bpi-scan-card-amount">${fmtAmt(r.amount)}</div>
+                ${!isSynced ? `
+                <div class="bpi-scan-action-btns">
+                    <button class="bpi-scan-btn-accept" data-action="accept" data-id="${r._id}" aria-label="Add transaction">
+                        <i class="material-icons">check</i>
+                    </button>
+                    <button class="bpi-scan-btn-reject" data-action="reject" data-id="${r._id}" aria-label="Skip transaction">
+                        <i class="material-icons">close</i>
+                    </button>
+                </div>` : ''}
+            </div>
+        </div>`;
+                    }
+
+                    /* â”€â”€ attach button + swipe listeners â”€â”€ */
+                    function attachCardListeners() {
+                        const scroll = $('bpi-scan-results-scroll');
+
+                        // Button clicks
+                        scroll.querySelectorAll('[data-action="accept"]').forEach(btn => {
+                            btn.addEventListener('click', () => acceptCard(btn.dataset.id));
+                        });
+                        scroll.querySelectorAll('[data-action="reject"]').forEach(btn => {
+                            btn.addEventListener('click', () => rejectCard(btn.dataset.id));
+                        });
+
+                        // Swipe listeners on each swipeable card
+                        scroll.querySelectorAll('[data-swipeable="1"]').forEach(card => {
+                            attachSwipe(card);
+                        });
+                    }
+
+                    function attachSwipe(card) {
+                        let startX = 0, startY = 0, currentX = 0;
+                        let isSwiping = false;
+                        const THRESHOLD = 80;
+                        const id = card.dataset.id;
+                        const acceptHint = card.querySelector('.bpi-scan-swipe-hint-accept');
+                        const rejectHint = card.querySelector('.bpi-scan-swipe-hint-reject');
+
+                        card.addEventListener('touchstart', e => {
+                            startX = e.touches[0].clientX;
+                            startY = e.touches[0].clientY;
+                            currentX = 0;
+                            isSwiping = false;
+                            card.style.transition = 'none';
+                        }, { passive: true });
+
+                        card.addEventListener('touchmove', e => {
+                            const dx = e.touches[0].clientX - startX;
+                            const dy = e.touches[0].clientY - startY;
+                            if (!isSwiping && Math.abs(dy) > Math.abs(dx) + 5) return; // vertical scroll wins
+                            isSwiping = true;
+                            currentX = dx;
+                            card.style.transform = `translateX(${dx}px)`;
+                            const ratio = Math.min(Math.abs(dx) / THRESHOLD, 1);
+                            if (dx > 0) {
+                                card.classList.add('bpi-card-swiping-right');
+                                card.classList.remove('bpi-card-swiping-left');
+                                if (acceptHint) acceptHint.style.opacity = ratio;
+                                if (rejectHint) rejectHint.style.opacity = 0;
+                            } else {
+                                card.classList.add('bpi-card-swiping-left');
+                                card.classList.remove('bpi-card-swiping-right');
+                                if (rejectHint) rejectHint.style.opacity = ratio;
+                                if (acceptHint) acceptHint.style.opacity = 0;
+                            }
+                        }, { passive: true });
+
+                        card.addEventListener('touchend', () => {
+                            if (!isSwiping) return;
+                            card.style.transition = '';
+                            if (currentX > THRESHOLD) {
+                                animateCardOut(card, 'right', () => acceptCard(id));
+                            } else if (currentX < -THRESHOLD) {
+                                animateCardOut(card, 'left', () => rejectCard(id));
+                            } else {
+                                // snap back
+                                card.style.transform = '';
+                                card.classList.remove('bpi-card-swiping-right', 'bpi-card-swiping-left');
+                                if (acceptHint) acceptHint.style.opacity = 0;
+                                if (rejectHint) rejectHint.style.opacity = 0;
+                            }
+                        }, { passive: true });
+                    }
+
+                    function animateCardOut(card, dir, callback) {
+                        card.style.transition = 'transform 0.28s ease, opacity 0.28s ease';
+                        card.style.transform = dir === 'right' ? 'translateX(110%)' : 'translateX(-110%)';
+                        card.style.opacity = '0';
+                        setTimeout(callback, 300);
+                    }
+
+                    async function acceptCard(id) {
+                        const r = _scanResults.find(x => x._id === id);
+                        if (!r || r.synced || r.dismissed) return;
+                        try {
+                            await pushToBPI(r);
+                            r.synced = true;
+                            if (typeof showToast === 'function') showToast(`Added: ${r.merchant}`);
+                        } catch (e) {
+                            console.error('[BPIScanner] push failed', e);
+                            if (typeof showToast === 'function') showToast('Failed to add transaction');
+                        }
+                        renderResults();
+                    }
+
+                    function rejectCard(id) {
+                        const r = _scanResults.find(x => x._id === id);
+                        if (!r) return;
+                        r.dismissed = true;
+                        renderResults();
+                    }
+
+                    /* â”€â”€ scanner UI state helpers â”€â”€ */
+                    function setStatusText(text) {
+                        const el = $('bpi-scan-status-text');
+                        if (el) el.textContent = text;
+                    }
+                    function setTopbarSub(text) {
+                        const el = $('bpi-scan-topbar-sub');
+                        if (el) el.textContent = text;
+                    }
+                    function showStatusPill(show) {
+                        const el = $('bpi-scan-status-pill');
+                        if (el) el.style.display = show ? '' : 'none';
+                    }
+                    function showLaser(show) {
+                        const el = $('bpi-scan-laser');
+                        if (el) el.classList.toggle('bpi-scan-laser-hidden', !show);
+                    }
+                    function openResultsPanel() {
+                        const panel = $('bpi-scan-results-panel');
+                        if (panel) {
+                            requestAnimationFrame(() => panel.classList.add('bpi-results-open'));
+                        }
+                    }
+                    function closeResultsPanel() {
+                        const panel = $('bpi-scan-results-panel');
+                        if (panel) panel.classList.remove('bpi-results-open');
+                    }
+
+                    /* â”€â”€ main flow â”€â”€ */
+                    /* ── Manual Review Mode ── */
+                    function showManualReviewMode() {
+                        const scroll = $('bpi-scan-results-scroll');
+                        if (!scroll) return;
+
+                        const existingTxns = (window.walletTxns && window.walletTxns.bpi) ? window.walletTxns.bpi : (window.allTxns || []);
+
+                        // Format date as "June 24" instead of "06/24"
+                        function formatDateNice(dateStr) {
+                            if (!dateStr) return '';
+                            const d = new Date(dateStr);
+                            if (isNaN(d)) return dateStr;
+                            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                            return `${months[d.getMonth()]} ${d.getDate()}`;
+                        }
+
+                        // Get merchant display (uses same function as main accordion)
+                        function getMerchantInfo(t) {
+                            if (typeof window.getMerchantDisplay === 'function') {
+                                return window.getMerchantDisplay(t.merchant, t);
+                            }
+                            return {
+                                display: t.merchant || 'Unknown',
+                                category: 'Shopping',
+                                icon: 'shopping_bag',
+                                color: '#3b82f6',
+                                logo: null
+                            };
+                        }
+
+                        scroll.innerHTML = `
+            <div style="padding: 16px 16px 8px; text-align: center;">
+                <button onclick="window.BPIScanner.close(); setTimeout(() => window.openBudgetManual(), 100);" style="
+                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    padding: 14px 24px;
+                    font-size: 14px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    width: 100%;
+                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+                ">
+                    <i class="material-icons" style="vertical-align: middle; font-size: 18px; margin-right: 6px;">add_circle</i>
+                    Add Transaction from Screenshot
+                </button>
+            </div>
+            
+            <div style="padding: 16px; background: #f8fafc;">
+                <div style="
+                    font-size: 11px;
+                    font-weight: 800;
+                    color: #64748b;
+                    margin-bottom: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                ">YOUR BPI TRANSACTIONS (${existingTxns.length})</div>
+                
+                ${existingTxns.slice(0, 10).map(t => {
+                            const merchant = getMerchantInfo(t);
+                            const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                            const dateNice = formatDateNice(t.date);
+
+                            return `
+                        <div class="premium-txn" style="
+                            background: white;
+                            border-radius: 12px;
+                            padding: 12px;
+                            margin-bottom: 8px;
+                            display: flex;
+                            align-items: center;
+                            gap: 12px;
+                            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+                        ">
+                            ${merchant.logo ? `
+                                <div style="
+                                    width: 42px;
+                                    height: 42px;
+                                    border-radius: 10px;
+                                    background: ${merchant.color || '#f1f5f9'};
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    flex-shrink: 0;
+                                    overflow: hidden;
+                                ">
+                                    <img src="${merchant.logo}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <i class="material-icons" style="display: none; font-size: 22px; color: white;">${merchant.icon || 'shopping_bag'}</i>
+                                </div>
+                            ` : `
+                                <div style="
+                                    width: 42px;
+                                    height: 42px;
+                                    border-radius: 10px;
+                                    background: ${merchant.color || '#3b82f6'};
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    flex-shrink: 0;
+                                ">
+                                    <i class="material-icons" style="font-size: 22px; color: white;">${merchant.icon || 'shopping_bag'}</i>
+                                </div>
+                            `}
+                            
+                            <div style="flex: 1; min-width: 0; overflow: hidden;">
+                                <div style="
+                                    font-size: 13px;
+                                    font-weight: 700;
+                                    color: #1e293b;
+                                    margin-bottom: 2px;
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;
+                                    white-space: nowrap;
+                                    max-width: 100%;
+                                ">${merchant.display || 'Unknown'}</div>
+                                <div style="
+                                    font-size: 11px;
+                                    color: #64748b;
+                                    font-weight: 500;
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;
+                                    white-space: nowrap;
+                                ">${dateNice} • ${merchant.category || 'Uncategorized'}</div>
+                            </div>
+                            
+                            <div style="
+                                font-size: 15px;
+                                font-weight: 800;
+                                color: #ef4444;
+                                white-space: nowrap;
+                                margin-left: 8px;
+                            ">${fmtAmt(amt)}</div>
+                        </div>
+                    `;
+                        }).join('')}
+                
+                ${existingTxns.length === 0 ? `
+                    <div style="
+                        text-align: center;
+                        padding: 40px 20px;
+                        color: #94a3b8;
+                        font-size: 13px;
+                    ">
+                        <i class="material-icons" style="font-size: 48px; opacity: 0.3; margin-bottom: 8px;">inbox</i>
+                        <div>No BPI transactions yet</div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+                        $('bpi-scan-results-title').textContent = 'Review Screenshot';
+                        $('bpi-scan-results-meta').textContent = 'Compare and add missing';
+                        openResultsPanel();
+                    }
+
+                    async function runScan(base64Image, mimeType) {
+                        console.log('[BPI Scanner] runScan DISABLED - using manual review');
+                        showManualReviewMode();
+                        return;
+
+                        // OLD OCR CODE BELOW (DISABLED)
+                        setStatusText('Reading imageâ€¦');
+                        setTopbarSub('AI is analyzing your screenshotâ€¦');
+                        showStatusPill(true);
+                        showLaser(true);
+
+                        // Preview â€” blurred
+                        const img = $('bpi-scan-preview-img');
+                        if (img) {
+                            img.src = `data:${mimeType};base64,${base64Image}`;
+                            img.classList.remove('bpi-scan-done');
+                        }
+
+                        let parsed;
+                        try {
+                            console.log('[BPI Scanner] Starting scan process...');
+                            setStatusText('Reading text with OCRâ€¦');
+                            const ocrText = await runTesseractOCR(base64Image, mimeType);
+
+                            console.log('[BPI Scanner] OCR complete, parsing...');
+                            setStatusText('Parsing resultsâ€¦');
+                            parsed = parseOCRText(ocrText);
+                            console.log('[BPI Scanner] Parse complete:', parsed);
+                        } catch (err) {
+                            console.error('[BPI Scanner] Scan error:', err);
+                            showLaser(false);
+                            showStatusPill(false);
+                            setTopbarSub('Scan failed â€” see details below');
+                            if (img) img.classList.add('bpi-scan-done');
+
+                            // show error in results panel
+                            const scroll = $('bpi-scan-results-scroll');
+                            if (scroll) {
+                                scroll.innerHTML = `<div class="bpi-scan-error-box">
+                    <i class="material-icons">error_outline</i>
+                    <div><strong>Scan failed</strong><br>${err.message}</div>
+                </div>`;
+                            }
+                            $('bpi-scan-results-title').textContent = 'Scan Error';
+                            $('bpi-scan-results-meta').textContent = 'Please try again with a clearer screenshot';
+                            openResultsPanel();
+                            return;
+                        }
+
+                        // match against local BPI data
+                        setStatusText('Checking for duplicatesâ€¦');
+                        const localAmounts = getLocalBpiAmounts();
+                        _availBal = parsed.availableBalance ?? null;
+
+                        _scanResults = (parsed.transactions || []).map((t, i) => ({
+                            _id: `scan_${i}_${Date.now()}`,
+                            merchant: t.merchant || 'Unknown',
+                            date: t.date || '',
+                            amount: Math.abs(parseFloat(t.amount) || 0),
+                            type: t.type || 'debit',
+                            synced: isAlreadySynced(Math.abs(parseFloat(t.amount) || 0), localAmounts),
+                            dismissed: false
+                        }));
+
+                        // Reveal image
+                        if (img) img.classList.add('bpi-scan-done');
+                        showLaser(false);
+                        showStatusPill(false);
+
+                        const newCount = _scanResults.filter(r => !r.synced).length;
+                        setTopbarSub(`${_scanResults.length} transactions found Â· ${newCount} new`);
+
+                        renderResults();
+                        openResultsPanel();
+                    }
+
+                    /* â”€â”€ PUBLIC API â”€â”€ */
+                    window.BPIScanner = {
+                        handleFileUpload(event) {
+                            console.log('[BPI Scanner] File upload started');
+
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+
+                            if (!file) return;
+                            if (!file.type.startsWith('image/')) {
+                                if (typeof showToast === 'function') showToast('Please select an image file');
+                                return;
+                            }
+
+                            // Open overlay immediately
+                            const overlay = $('bpi-scanner-overlay');
+                            if (!overlay) {
+                                console.error('[BPI Scanner] Overlay not found');
+                                return;
+                            }
+
+                            overlay.classList.add('bpi-scan-visible');
+                            closeResultsPanel();
+                            showLaser(false); // No laser for manual mode
+                            showStatusPill(true);
+                            setStatusText('Loading screenshot...');
+                            setTopbarSub('Review BPI transactions below');
+
+                            // Push to NavState for back button
+                            if (window.NavState) {
+                                window.NavState.pushModalState('bpi-scanner-overlay', () => window.BPIScanner.close());
+                            }
+
+                            const reader = new FileReader();
+                            reader.onload = async (e) => {
+                                const dataUrl = e.target.result;
+                                _imageDataUrl = dataUrl;
+
+                                // Show preview image
+                                const img = $('bpi-scan-preview-img');
+                                if (img) {
+                                    img.src = dataUrl;
+                                    img.classList.add('bpi-scan-done'); // Show clearly, not blurred
+                                }
+
+                                setStatusText('Screenshot loaded - Review transactions below');
+                                showStatusPill(false);
+
+                                // Show manual entry prompt
+                                showManualReviewMode();
+                            };
+                            reader.readAsDataURL(file);
+                        },
+
+                        close() {
+                            const overlay = $('bpi-scanner-overlay');
+                            overlay.classList.remove('bpi-scan-visible');
+                            closeResultsPanel();
+                            showLaser(false);
+                            showStatusPill(false);
+                            _scanResults = [];
+                            _availBal = null;
+                            const img = $('bpi-scan-preview-img');
+                            if (img) { img.src = ''; img.classList.remove('bpi-scan-done'); }
+                            if (window.NavState) window.NavState.popModalState('bpi-scanner-overlay');
+                        },
+
+                        updateButtonVisibility() {
+                            const bpiScanRow = document.getElementById('bpi-scan-upload-row');
+                            if (bpiScanRow) {
+                                bpiScanRow.style.display = (window.currentAccount === 'bpi') ? 'block' : 'none';
+                            }
+                        },
+
+                        showQuickAddForm() {
+                            // Close scanner and open the manual transaction form
+                            this.close();
+                            setTimeout(() => {
+                                if (typeof window.openBudgetManual === 'function') {
+                                    window.openBudgetManual();
+                                }
+                            }, 300);
+                        }
+                    };
+
+                    // Attach file input handler after DOM is ready
+                    console.log('[BPI Scanner] Initializing...');
+                    console.log('[BPI Scanner] window.BPIScanner defined:', typeof window.BPIScanner);
+
+                    const fileInput = document.getElementById('bpi-scan-file-input');
+                    console.log('[BPI Scanner] File input element:', fileInput);
+
+                    if (fileInput) {
+                        fileInput.addEventListener('change', (event) => {
+                            console.log('[BPI Scanner] File input change event fired!');
+                            window.BPIScanner.handleFileUpload(event);
+                        });
+                        console.log('[BPI Scanner] Event listener attached to file input');
+                    } else {
+                        // If not found immediately, wait for DOM ready
+                        console.warn('[BPI Scanner] File input not found, will retry on DOMContentLoaded');
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', () => {
+                                const input = document.getElementById('bpi-scan-file-input');
+                                console.log('[BPI Scanner] DOMContentLoaded - File input:', input);
+                                if (input) {
+                                    input.addEventListener('change', (event) => {
+                                        console.log('[BPI Scanner] File input change event fired (delayed)!');
+                                        window.BPIScanner.handleFileUpload(event);
+                                    });
+                                    console.log('[BPI Scanner] Event listener attached (delayed)');
+                                }
+                            });
+                        }
+                    }
+
+                })();
+            </script>
+
             <script src="accounts-logic.js"></script>
             <script src="goals-logic.js"></script>
             <script src="edit-goal-logic.js"></script>
             <script src="nav-state.js"></script>
+            <script src="bpi-scanner.js"></script>
 </body>
 
 </html>

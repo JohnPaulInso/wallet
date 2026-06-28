@@ -380,6 +380,7 @@ function getTxnNoteColor(mappedCategory, isRefund, isReimbursed) {
     if (isRefund || isReimbursed) return '#f59e0b';
     return (window.categoryConfig && window.categoryConfig[mappedCategory]?.darkColor) || '#475569';
 }
+window.getTxnNoteColor = getTxnNoteColor;
 
 function normalizeBudgetCategoryLabel(categoryId) {
     const label = typeof window.displayCategoryName === 'function'
@@ -389,6 +390,8 @@ function normalizeBudgetCategoryLabel(categoryId) {
 }
 
 function getTxnBudgetAllocations(t, mapped = null) {
+    // [FIXED: 2026-06-27 - Exposed getTxnBudgetAllocations to window for categorization alignment in index.html - Antigravity]
+    window.getTxnBudgetAllocations = getTxnBudgetAllocations;
     const allocations = [];
     if (!t || t.excluded || t.refund || t.reimbursed) return allocations;
 
@@ -1457,16 +1460,23 @@ export function updateTripleProgressBar() {
         });
 
         // Final Summary Calculations (Scaled)
-        const totalSpendingLimit = needsLimit + wantsLimit;
-        const totalSpendingActual = needsTotal + wantsTotal;
-        const remaining = totalSpendingLimit - totalSpendingActual;
-        
         const totalSpent = needsTotal + wantsTotal + (savingsTotal + savingsSpent); // Gross Monthly Use
         const totalBudget = (needsLimit + wantsLimit + savingsLimit) || 1;
+        // [FIXED: 2026-06-27] Calculate overall remaining budget (salary minus total spent) to resolve spending power math mismatch - Antigravity
+        const remaining = totalBudget - totalSpent;
+        
         const usedPct = (totalSpent / totalBudget) * 100;
         const remainingPct = (remaining / (needsLimit + wantsLimit)) * 100; // Relative to spending buckets
 
-        const statusKey = remaining <= 0 ? 'negative' : (remainingPct < 15 ? 'warning' : 'remaining');
+        // [FIXED: 2026-06-27 - Changed coloring thresholds for remaining balance value (triple-remaining-val): green for 3k+, yellow for 1500-3000, red for 1500 and below - Antigravity]
+        let statusKey = 'remaining';
+        if (remaining <= 1500) {
+            statusKey = 'negative';
+        } else if (remaining < 3000) {
+            statusKey = 'warning';
+        } else {
+            statusKey = 'remaining';
+        }
         
         // [FIXED: 2026-04-05] Visual Fidelity: Restore footer class for background/value coloring
         const footer = document.getElementById('triple-summary-footer');
@@ -2822,6 +2832,12 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
         if (shouldShowSafeSpend) updateSafeSpendUI();
     }
 
+    // Toggle BPI Scanner Button Visibility
+    const bpiScanRow = document.getElementById('bpi-scan-upload-row');
+    if (bpiScanRow) {
+        bpiScanRow.style.display = (resolvedId === 'bpi') ? 'block' : 'none';
+    }
+
     // Trigger data reload for the new account (cache path inside loadData is the single source of truth)
     import('./app-data.js').then(m => m.loadData({
         preserveBudgetWidget: true,
@@ -3097,7 +3113,14 @@ export function setupAccountSwitcher() {
 
     viewport.__walletAccountSwitcherBound = true;
     if (!isStaticDesktopRow()) {
-        settleToNearestBalanceCard('auto', { skipReload: true });
+        const persisted = localStorage.getItem('wallet_current_account') || window.currentAccount;
+        if (persisted && cards.some(c => c.dataset.account === persisted)) {
+            // FIX DATE: 2026-06-28
+            // FIX SPEC: Avoid resetting active account to default on load by scrolling to the persisted choice
+            scrollToActiveCard(persisted, 'auto');
+        } else {
+            settleToNearestBalanceCard('auto', { skipReload: true });
+        }
     } else {
         ensureActiveBalanceCard(resolveActiveAccountId(window.walletAccounts, window.currentAccount));
     }

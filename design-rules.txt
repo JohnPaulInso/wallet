@@ -174,33 +174,33 @@ sub-icons in the bottom right corner of the main category avatar:
 --------------------------------------------------------------------------------
 All confirmation and interaction modals follow iOS-style center modal pattern:
 
-- Modal Overlay (.modal-overlay):
+- Modal Overlay (.modal-overlay, #confirmation-modal):
   * Background: rgba(15, 23, 42, 0.75) (Dark translucent backdrop)
   * Backdrop Filter: blur(8px) (Frosted glass effect)
   * Position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  * Z-index: 9999
+  * Z-index: 100000 (Above BPI scanner at 99999)
   * Animation: fadeIn 0.2s ease
 
 - Modal Container (.custom-modal, .confirmation-modal):
-  * Background: #2c3e50 (Dark slate background)
+  * Background: #ffffff (Pure white - always light theme)
   * Border Radius: 20px (Soft rounded corners)
   * Max Width: 340px
   * Padding: 28px 24px 20px
-  * Box Shadow: 0 20px 60px rgba(0, 0, 0, 0.4)
+  * Box Shadow: 0 20px 60px rgba(0, 0, 0, 0.3)
   * Animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) (Bouncy entrance)
 
-- Modal Title (.modal-title):
+- Modal Title (.modal-title, #confirmation-modal-title):
   * Font Size: 18px
   * Font Weight: 700
-  * Color: #f8fafc (Light text on dark)
+  * Color: #0f172a (Dark slate - high contrast on white)
   * Margin Bottom: 4px
   * Letter Spacing: -0.3px
   * Text Align: center
 
-- Modal Message (.modal-message):
+- Modal Message (.modal-message, #confirmation-modal-message):
   * Font Size: 14px
   * Font Weight: 500
-  * Color: #94a3b8 (Muted gray)
+  * Color: #64748b (Slate 500 - readable gray)
   * Line Height: 1.5
   * Margin Bottom: 24px
   * Text Align: center
@@ -212,33 +212,34 @@ All confirmation and interaction modals follow iOS-style center modal pattern:
   * Justify Content: space-between
 
 - Primary Action Button (.modal-btn-primary, OK button):
-  * Background: #06b6d4 (Cyan/Aqua brand color)
-  * Color: #0f172a (Dark text)
+  * Background: #06b6d4 (Cyan brand color)
+  * Color: #ffffff (White text for maximum contrast)
   * Font Size: 15px
   * Font Weight: 700
   * Padding: 13px 28px
   * Border Radius: 14px
-  * Border: 2px solid #06b6d4
+  * Border: none
   * Transition: all 0.2s ease
-  * Hover: transform: scale(1.02); background: #0891b2
+  * Hover: transform: scale(1.02); background: #0891b2; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3)
   * Active: transform: scale(0.98)
 
 - Secondary Action Button (.modal-btn-secondary, Cancel button):
   * Background: transparent
-  * Color: #06b6d4
+  * Color: #64748b (Muted gray)
   * Font Size: 15px
   * Font Weight: 700
   * Padding: 13px 28px
   * Border Radius: 14px
-  * Border: 2px solid #475569 (Muted border)
+  * Border: 2px solid #cbd5e1 (Light slate border)
   * Transition: all 0.2s ease
-  * Hover: background: rgba(71, 85, 105, 0.2); border-color: #64748b
+  * Hover: background: rgba(203, 213, 225, 0.2); border-color: #94a3b8; color: #475569
   * Active: transform: scale(0.98)
 
-- Dark Mode Modal Adjustments:
-  * Background remains #2c3e50 (consistent dark theme)
-  * Text colors remain the same for optimal contrast
-  * Button colors remain consistent across themes
+- Dark Mode Behavior:
+  * Modal ALWAYS stays light theme (#ffffff background)
+  * Text colors remain dark for optimal contrast
+  * Ensures readability in all contexts
+  * Override: body.dark-mode #confirmation-modal .goals-modal-card { background: #ffffff !important; }
 
 
 7. GLOBAL SPACING SYSTEM

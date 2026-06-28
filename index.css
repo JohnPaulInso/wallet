@@ -8592,3 +8592,28 @@ body.dark-mode .nav-item.active {
 .budget-scroll-indicator-badge {
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
+
+
+/* CONFIRMATION MODAL STYLES */
+.modal-btn-primary:hover {
+    transform: scale(1.02);
+    background: #0891b2 !important;
+}
+
+.modal-btn-primary:active {
+    transform: scale(0.98) !important;
+}
+
+.modal-btn-secondary:hover {
+    background: rgba(71, 85, 105, 0.2) !important;
+    border-color: #64748b !important;
+}
+
+.modal-btn-secondary:active {
+    transform: scale(0.98) !important;
+}
+
+/* Dark mode adjustments for confirmation modal */
+body.dark-mode #confirmation-modal .goals-modal-card {
+    background: #2c3e50 !important;
+}

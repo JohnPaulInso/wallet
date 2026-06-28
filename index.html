@@ -27,7 +27,7 @@
         }
     </style>
     <meta name="description"
-        content="Smart Wallet Ã¢â‚¬â€ Your personal finance tracker. Track expenses, sync bank transactions from Gmail, set budgets, and visualize your spending.">
+        content="Smart Wallet — Your personal finance tracker. Track expenses, sync bank transactions from Gmail, set budgets, and visualize your spending.">
     <link rel="icon" type="image/png" href="applogo.png?v=4">
     <link rel="apple-touch-icon" href="applogo.png?v=4">
 
@@ -99,7 +99,7 @@
             const savedAcc = localStorage.getItem('wallet_current_account');
             if (savedAcc) {
                 window.currentAccount = savedAcc;
-                console.log(`Ã°Å¸â€™Å½ Early Persistence: Account locked to ${savedAcc}`);
+                console.log(`💾 Early Persistence: Account locked to ${savedAcc}`);
             }
         })();
 
@@ -324,7 +324,7 @@
                     const depletedMsg = document.getElementById('wants-depleted-msg');
                     if (depletedMsg) depletedMsg.style.display = 'none';
 
-                    console.log('Ã¢Å¡Â¡ [Budget] DOM level Cache Applied');
+                    console.log('⚡ [Budget] DOM level Cache Applied');
                 } catch (e) { console.warn('Budget cache fail', e); }
             })();
         });
@@ -461,13 +461,13 @@
     </div>
 
     <!-- REUSABLE CONFIRMATION MODAL -->
-    <div id="confirmation-modal" class="goals-modal-overlay">
-        <div class="goals-modal-card" style="max-width: 340px; background: #2c3e50; padding: 28px 24px 20px;">
-            <div id="confirmation-modal-title" class="modal-title" style="font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.3px; text-align: center;">Confirm Action</div>
-            <div id="confirmation-modal-message" class="modal-message" style="font-size: 14px; font-weight: 500; color: #94a3b8; line-height: 1.5; margin-bottom: 24px; text-align: center;">Are you sure you want to proceed?</div>
+    <div id="confirmation-modal" class="goals-modal-overlay" style="z-index: 100000;">
+        <div class="goals-modal-card" style="max-width: 340px; background: #ffffff; padding: 28px 24px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+            <div id="confirmation-modal-title" class="modal-title" style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 4px; letter-spacing: -0.3px; text-align: center;">Confirm Action</div>
+            <div id="confirmation-modal-message" class="modal-message" style="font-size: 14px; font-weight: 500; color: #64748b; line-height: 1.5; margin-bottom: 24px; text-align: center;">Are you sure you want to proceed?</div>
             <div class="modal-actions" style="display: flex; gap: 12px;">
-                <button id="confirmation-modal-cancel" class="modal-btn-secondary" style="flex: 1; background: transparent; color: #06b6d4; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: 2px solid #475569; cursor: pointer; transition: all 0.2s ease;">Cancel</button>
-                <button id="confirmation-modal-ok" class="modal-btn-primary" style="flex: 1; background: #06b6d4; color: #0f172a; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: 2px solid #06b6d4; cursor: pointer; transition: all 0.2s ease;">OK</button>
+                <button id="confirmation-modal-cancel" class="modal-btn-secondary" style="flex: 1; background: transparent; color: #64748b; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: 2px solid #cbd5e1; cursor: pointer; transition: all 0.2s ease;">Cancel</button>
+                <button id="confirmation-modal-ok" class="modal-btn-primary" style="flex: 1; background: #06b6d4; color: #ffffff; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: none; cursor: pointer; transition: all 0.2s ease;">OK</button>
             </div>
         </div>
     </div>
@@ -495,7 +495,7 @@
                 <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px;">
                     <a href="privacy.html"
                         style="font-size: 9px; font-weight: 600; color: #b0b8c4; text-decoration: none; letter-spacing: 0.3px;">Privacy</a>
-                    <span style="font-size: 9px; color: #cbd5e1;">Ã‚Â·</span>
+                    <span style="font-size: 9px; color: #cbd5e1;">·</span>
                     <a href="terms.html"
                         style="font-size: 9px; font-weight: 600; color: #b0b8c4; text-decoration: none; letter-spacing: 0.3px;">Terms</a>
                 </div>
@@ -1352,7 +1352,7 @@
                             style="margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 6px;">
                             <a href="privacy.html"
                                 style="color: #cbd5e1; text-decoration: none; font-size: 9px; font-weight: 600;">Privacy</a>
-                            <span style="color: #e2e8f0;">Ã‚Â·</span>
+                            <span style="color: #e2e8f0;">·</span>
                             <a href="terms.html"
                                 style="color: #cbd5e1; text-decoration: none; font-size: 9px; font-weight: 600;">Terms</a>
                         </div>
@@ -2161,7 +2161,7 @@
                             const cache = JSON.parse(cachedData);
                             if (cache.txns) {
                                 window.allTxns = cache.txns;
-                                console.log('Ã¢Å¡Â¡ Early Data Init: Instant cache load successful for', lastAcc);
+                                console.log('⚡ Early Data Init: Instant cache load successful for', lastAcc);
                             }
                         }
                     }
@@ -2288,7 +2288,7 @@
                                 localStorage.setItem('g_token_expiry', expMs.toString());
                                 localStorage.setItem('g_token_issued_at', Date.now().toString());
 
-                                // Mark this session as having a valid token Ã¢â‚¬â€ prevents re-popup on navigation
+                                // Mark this session as having a valid token — prevents re-popup on navigation
                                 sessionStorage.setItem('gis_session_refreshed', Date.now().toString());
 
                                 fetchUserProfile(accessToken);
@@ -2411,7 +2411,7 @@
                                 handleAuthResult(result);
                             } catch (popupError) {
                                 if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                                    console.log('Ã°Å¸Å¡Â« Popup auth blocked/cancelled. Keeping auth inside popup flow.');
+                                    console.log('🚫 Popup auth blocked/cancelled. Keeping auth inside popup flow.');
                                     showToast('Login cancelled.');
                                 } else {
                                     throw popupError;
@@ -2447,7 +2447,7 @@
 
                     const credential = GoogleAuthProvider.credentialFromResult(result);
 
-                    // ALWAYS mark session as refreshed on login Ã¢â‚¬â€ prevents GIS popup on navigation
+                    // ALWAYS mark session as refreshed on login — prevents GIS popup on navigation
                     sessionStorage.setItem('gis_session_refreshed', Date.now().toString());
 
                     if (credential) {
@@ -2667,12 +2667,12 @@
 
                 if (window.location.search.includes('logout=true')) {
                     // Force a deep reset on the first load after logout
-                    log('Ã°Å¸Â§Â¹ Session purge complete. User isolated.', 'info');
+                    log('🧹 Session purge complete. User isolated.', 'info');
                 }
 
                 if (window.location.search.includes('logout=true')) {
                     // Force a deep reset on the first load after logout
-                    log('Ã°Å¸Â§Â¹ Session purge complete. User isolated.', 'info');
+                    log('🧹 Session purge complete. User isolated.', 'info');
                 }
 
                 window.addEventListener('DOMContentLoaded', async () => {
@@ -2711,7 +2711,7 @@
                     const cachedBalances = localStorage.getItem('wallet_cached_balances');
 
                     if (lastUid && cachedAccounts && cachedCurrent) {
-                        console.log('Ã¢Å¡Â¡ Fast Path: Rendering from cache...');
+                        console.log('⚡ Fast Path: Rendering from cache...');
                         try {
                             const accounts = JSON.parse(cachedAccounts);
 
@@ -2724,7 +2724,7 @@
                                             acc.balance = balances[acc.id];
                                         }
                                     });
-                                    console.log('Ã°Å¸â€™Â° Restored cached balances:', balances);
+                                    console.log('🔰 Restored cached balances:', balances);
                                 } catch (e) { console.warn('Balance cache error', e); }
                             }
 
@@ -2981,7 +2981,7 @@
                                     // Only refresh if token is older than 50 minutes
                                     if (tokenAge > 50 * 60 * 1000) {
                                         if (!tokenRefreshInProgress && (now - lastTokenRefreshAttempt) >= TOKEN_REFRESH_COOLDOWN) {
-                                            console.log('Ã¢Ëœâ‚¬Ã¯Â¸Â App woke up Ã¢â‚¬â€ token stale. Silent refresh...');
+                                            console.log('☀️ App woke up — token stale. Silent refresh...');
                                             tokenRefreshInProgress = true;
                                             lastTokenRefreshAttempt = now;
                                             window.isSilentRefresh = true;
@@ -3022,7 +3022,7 @@
                         applyUserView(user);
 
                         // SILENT TOKEN REFRESH ON LOAD (If Google user)
-                        // Skip if we just logged in Ã¢â‚¬â€ handleAuthResult already saved the token
+                        // Skip if we just logged in — handleAuthResult already saved the token
                         // Skip if we already refreshed this session (prevents popup on page navigation)
                         const sessionRefreshed = sessionStorage.getItem('gis_session_refreshed');
 
@@ -3046,12 +3046,12 @@
                         } else if (sessionRefreshed) {
                             console.log('Ã¢Å“â€¦ Token already refreshed this session. Skipping GIS popup.');
                         }
-                        // Clear the flag after auth processing Ã¢â‚¬â€ with delay to cover multiple onAuthStateChanged fires
+                        // Clear the flag after auth processing — with delay to cover multiple onAuthStateChanged fires
                         setTimeout(() => { window.justLoggedIn = false; }, 10000);
                     });
                 });
 
-                // Redundant updateProfileUI removed Ã¢â‚¬â€ standardized version is in app-ui.js
+                // Redundant updateProfileUI removed — standardized version is in app-ui.js
 
                 function handleLocalModeNudge(user) {
                     // Don't show sync nudge during an active login flow
@@ -3090,7 +3090,7 @@
                     const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
                     if (!isAdmin || window.isSyncing) return;
 
-                    // Don't auto-sync right after login Ã¢â‚¬â€ let the session settle first
+                    // Don't auto-sync right after login — let the session settle first
                     if (window.justLoggedIn) {
                         console.log('Ã¢ÂÂ­Ã¯Â¸Â Skipping auto-sync: just logged in.');
                         return;
@@ -3676,7 +3676,7 @@
                             // Reset Pagination
                             window.historyLimit = 4;
 
-                            // FIX 1: INSTANT CACHE LOAD Ã¢â‚¬â€ show cached balance/transactions immediately
+                            // FIX 1: INSTANT CACHE LOAD — show cached balance/transactions immediately
                             // instead of zeroing everything (which causes the 0-flash)
                             const swipeCacheKey = `wallet_cache_${auth.currentUser?.uid}_${account}`;
                             const swipeCachedData = localStorage.getItem(swipeCacheKey);
@@ -3731,7 +3731,7 @@
 
                             scheduleDeferredInboxSyncForAccount(account);
 
-                            // Debounced loadData Ã¢â‚¬â€ but always run immediately when the active account changes
+                            // Debounced loadData — but always run immediately when the active account changes
                             const now = Date.now();
                             const accountChanged = account !== lastObserverLoadAccount;
                             lastObserverLoadAccount = account;
@@ -4360,7 +4360,7 @@
                         });
                     }
                     localStorage.setItem('wallet_cached_balances', JSON.stringify(balances));
-                    console.log('Ã°Å¸â€™Â° Saved balance cache:', balances);
+                    console.log('🔰 Saved balance cache:', balances);
                 };
 
                 window.atomeDataLoaded = false;
@@ -5991,13 +5991,13 @@
                     });
 
                     const maskedElements = document.querySelectorAll('.privacy-mask');
-                    console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â  Found', maskedElements.length, 'privacy-mask elements');
+                    console.log('ÃƒÂ°Ã…Â¸"Å“Ã…Â  Found', maskedElements.length, 'privacy-mask elements');
 
                     maskedElements.forEach((el, index) => {
                         const raw = el.dataset.raw || el.innerText;
                         if (!el.dataset.raw) el.dataset.raw = raw;
 
-                        console.log(`  [${index}] ${el.className}:`, raw, 'ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢', newState ? '******' : raw);
+                        console.log(`  [${index}] ${el.className}:`, raw, 'ÃƒÂ¢"Â "â„¢', newState ? '******' : raw);
 
                         if (newState) {
                             el.innerText = '******';
@@ -6646,12 +6646,12 @@
                     };
 
                     if (!box || !textEl || !user) {
-                        console.log('Ã°Å¸Å¡Â« [AI] Missing required elements or user. Exiting.', { box: !!box, textEl: !!textEl, user: !!user });
+                        console.log('🚫 [AI] Missing required elements or user. Exiting.', { box: !!box, textEl: !!textEl, user: !!user });
                         return;
                     }
 
                     if (!thisMonthTxns || thisMonthTxns.length === 0) {
-                        console.log('Ã°Å¸Å¡Â« [AI] No transactions for this month. Hiding box.');
+                        console.log('🚫 [AI] No transactions for this month. Hiding box.');
                         box.style.display = 'none';
                         return;
                     }
@@ -9342,7 +9342,7 @@ Be direct, practical, and helpful.`;
                     // BLOCK EMAIL SYNC FOR REGULAR WALLETS: Only BPI and Atome accounts can sync with Gmail
                     const allowedSyncAccounts = ['bpi', 'atome'];
                     if (!allowedSyncAccounts.includes(syncAccount)) {
-                        console.log(`Ã°Å¸Å¡Â« Email sync blocked for regular wallet: ${syncAccount}`);
+                        console.log(`🚫 Email sync blocked for regular wallet: ${syncAccount}`);
                         if (manualTrigger) {
                             showToast('Email sync is only available for BPI and Atome accounts');
                         }
@@ -9372,7 +9372,7 @@ Be direct, practical, and helpful.`;
                         console.log('Ã°Å¸Å¡â‚¬ Using stored Gmail token (will auto-refresh on 401)...');
                         accessToken = storedToken;
                     } else if (!storedToken) {
-                        // No token at all Ã¢â‚¬â€ need to authenticate
+                        // No token at all — need to authenticate
                         if (!manualTrigger) return;
 
                         if (tokenClient || typeof handleAuthClick === 'function') {
@@ -9423,7 +9423,7 @@ Be direct, practical, and helpful.`;
                             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
 
                             if (res.status === 401) {
-                                console.warn('Ã°Å¸Å¡Â« Gmail Token expired.');
+                                console.warn('🚫 Gmail Token expired.');
                                 window.isSyncing = false;
 
                                 // Clear the expired token
@@ -10720,7 +10720,7 @@ Be direct, practical, and helpful.`;
                                     const visibleModals = document.querySelectorAll('.modal-overlay.show, .dialog-overlay.show, .receipts-modal.show, .ios-action-menu.show');
                                     const anyActuallyOpen = Array.from(visibleModals).some(el => window.getComputedStyle(el).display !== 'none');
                                     if (!anyActuallyOpen) {
-                                        console.warn('Ã¢Å¡Â Ã¯Â¸Â modalOpen was stuck true Ã¢â‚¬â€ resetting');
+                                        console.warn('Ã¢Å¡Â Ã¯Â¸Â modalOpen was stuck true — resetting');
                                         window.modalOpen = false;
                                     }
                                 }
@@ -12787,12 +12787,12 @@ Be direct, practical, and helpful.`;
                     renderManualCategories();
                 };
 
-                // FIX 2026-03-27: Replaced Auto with N/A Ã¢â‚¬â€ 'n/a' value = not included in budget
+                // FIX 2026-03-27: Replaced Auto with N/A — 'n/a' value = not included in budget
                 window.currentManualClassification = 'wants';
                 window.setManualClassification = (category) => {
                     window.currentManualClassification = category;
 
-                    // Update UI Ã¢â‚¬â€ FIX 2026-03-27: 'n/a' replaces old '' (auto) key
+                    // Update UI — FIX 2026-03-27: 'n/a' replaces old '' (auto) key
                     const btns = {
                         'needs': document.getElementById('classify-needs'),
                         'wants': document.getElementById('classify-wants'),
@@ -12811,7 +12811,7 @@ Be direct, practical, and helpful.`;
                         }
                     });
 
-                    // Update visibility of hint Ã¢â‚¬â€ FIX 2026-03-27: Show N/A hint instead of Auto
+                    // Update visibility of hint — FIX 2026-03-27: Show N/A hint instead of Auto
                     const hint = document.getElementById('auto-classification-hint');
                     if (hint) {
                         if (category === 'n/a') {
@@ -13230,7 +13230,7 @@ Be direct, practical, and helpful.`;
                             if (selectedAccount !== origAcc) {
                                 // MOVE TRANSACTION: Delete from old, Add to new
                                 if (!navigator.onLine) {
-                                    // Fire-and-forget Ã¢â‚¬â€ Firestore IndexedDB will queue it
+                                    // Fire-and-forget — Firestore IndexedDB will queue it
                                     deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
                                     setDoc(doc(db, "users", uid, col, window.editingTxnId), {
                                         ...updateData,
@@ -13501,7 +13501,7 @@ Be direct, practical, and helpful.`;
                 window.addEventListener('online', () => {
                     if (window.offlineQueue.length > 0) {
                         updateOfflineQueueCard(); // Shows uploading state
-                        // Firestore auto-syncs queued writes Ã¢â‚¬â€ we just clear the visual queue after a delay
+                        // Firestore auto-syncs queued writes — we just clear the visual queue after a delay
                         setTimeout(() => {
                             window.offlineQueue = [];
                             localStorage.removeItem('offlineQueue');
@@ -16366,7 +16366,7 @@ Be direct, practical, and helpful.`;
                                     try {
                                         const parsed = JSON.parse(cached);
                                         window.allTxns = parsed.txns || [];
-                                        console.log('Ã¢Å¡Â¡ Calendar: Re-syncing early cache for render');
+                                        console.log('⚡ Calendar: Re-syncing early cache for render');
                                     } catch (e) { console.error('Calendar cache error', e); }
                                 }
                             }

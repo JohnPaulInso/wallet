@@ -8595,25 +8595,64 @@ body.dark-mode .nav-item.active {
 
 
 /* CONFIRMATION MODAL STYLES */
+#confirmation-modal {
+    z-index: 100000 !important;
+}
+
+#confirmation-modal .goals-modal-card {
+    background: #ffffff !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+}
+
+#confirmation-modal-title {
+    color: #0f172a !important;
+}
+
+#confirmation-modal-message {
+    color: #64748b !important;
+}
+
+.modal-btn-primary {
+    background: #06b6d4 !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
 .modal-btn-primary:hover {
     transform: scale(1.02);
     background: #0891b2 !important;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
 }
 
 .modal-btn-primary:active {
     transform: scale(0.98) !important;
 }
 
+.modal-btn-secondary {
+    background: transparent !important;
+    color: #64748b !important;
+    border: 2px solid #cbd5e1 !important;
+}
+
 .modal-btn-secondary:hover {
-    background: rgba(71, 85, 105, 0.2) !important;
-    border-color: #64748b !important;
+    background: rgba(203, 213, 225, 0.2) !important;
+    border-color: #94a3b8 !important;
+    color: #475569 !important;
 }
 
 .modal-btn-secondary:active {
     transform: scale(0.98) !important;
 }
 
-/* Dark mode adjustments for confirmation modal */
+/* Keep light theme even in dark mode */
 body.dark-mode #confirmation-modal .goals-modal-card {
-    background: #2c3e50 !important;
+    background: #ffffff !important;
+}
+
+body.dark-mode #confirmation-modal-title {
+    color: #0f172a !important;
+}
+
+body.dark-mode #confirmation-modal-message {
+    color: #64748b !important;
 }

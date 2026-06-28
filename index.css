@@ -8580,3 +8580,15 @@ body.dark-mode .nav-item.active {
         transform: rotate(-90deg) scale(1);
     }
 }
+
+/* [FIX 2026-06-27: Added keyframes and styles for the floating scroll down indicator badge - Antigravity] */
+/* keyframe animation for the bouncing arrow in the scroll indicator */
+@keyframes bounceArrow {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+}
+
+/* Class for the floating scroll down badge that displays above the sticky summary card when a budget category list has scrollable contents */
+.budget-scroll-indicator-badge {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}

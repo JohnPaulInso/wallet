@@ -1,0 +1,60 @@
+Summary of fixes needed for BPI Scanner:
+
+1. ✅ DONE: InstaPay Transfer + Fee combination (already implemented in parseOCRText)
+2. ✅ DONE: Note field added to transactions (already implemented)
+3. TODO: Fix buildCardHTML dateDisplay format (line ~17315)
+4. TODO: Fix buildCardHTML to show note instead of type
+5. TODO: Improve acceptCard animation and toast messages
+6. TODO: Fix CSS for merchant name overflow
+7. TODO: Reduce gap spacing around bpi-scan-all-done
+
+Direct manual fixes required:
+============================
+
+FILE: index.html
+LINE: ~17315
+
+FIND:
+const dateDisplay = r.date ? String(r.date).replace(/^\d{4}-/, '').replace('-', '/') : 'â€"';
+
+REPLACE WITH:
+// Format date as "June 24" instead of "06/24"
+let dateDisplay = 'â€"';
+if (r.date) {
+    const d = new Date(r.date);
+    if (!isNaN(d)) {
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        dateDisplay = `${months[d.getMonth()]} ${d.getDate()}`;
+    }
+}
+
+---
+
+LINE: ~17327
+
+FIND:
+<div class="bpi-scan-card-meta">${dateDisplay} Â· ${r.type === 'credit' ? 'Credit' : 'Debit'}</div>
+
+REPLACE WITH:
+<div class="bpi-scan-card-meta">${dateDisplay}${r.note ? ` Â· ${r.note}` : ` Â· ${r.type === 'credit' ? 'Credit' : 'Debit'}`}</div>
+
+---
+
+FILE: bpi-scanner.css
+
+ADD after line ~576 (.bpi-scan-all-done):
+
+.bpi-scan-all-done {
+    margin: 12px 0; /* Reduced from default */
+}
+
+---
+
+ADD after line ~425 (.bpi-txn-merchant):
+
+.bpi-scan-card-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}

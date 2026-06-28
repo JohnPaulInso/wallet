@@ -1,4 +1,5 @@
-const CACHE_NAME = 'smartwallet-v2.1';
+// [FIXED: 2026-06-29] Bumped cache version to v3.9 - Consolidated double-tap zoom + balance insight card - Antigravity
+const CACHE_NAME = 'smartwallet-v3.9';
 const ASSETS = [
     './',
     './index.html',

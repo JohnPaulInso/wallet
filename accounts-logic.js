@@ -175,14 +175,20 @@
                         ];
                     }
                     // [FIXED: 2026-04-05] Immediate Local Sync for First-Time Users
+                    // [FIXED: 2026-06-27] Keep window.walletAccounts in sync - Antigravity
                     this.accounts = list;
+                    window.walletAccounts = list;
                     f.setDoc(configRef, { list });
                     this.render(); 
+                    if (typeof window.updateOcrUploadVisibility === 'function') window.updateOcrUploadVisibility();
                 } else {
+                    // [FIXED: 2026-06-27] Keep window.walletAccounts in sync - Antigravity
                     this.accounts = accounts;
+                    window.walletAccounts = accounts;
                     // Cache for next time
                     localStorage.setItem(`accounts_cache_${uid}`, JSON.stringify(accounts));
                     this.render();
+                    if (typeof window.updateOcrUploadVisibility === 'function') window.updateOcrUploadVisibility();
                 }
             }, (error) => {
                 console.error("❌ [Accounts] Snapshot listener failed", error);

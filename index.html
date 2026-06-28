@@ -460,6 +460,18 @@
         <div class="biometric-skip" id="biometricSkip" onclick="skipBiometric()">Skip for now</div>
     </div>
 
+    <!-- REUSABLE CONFIRMATION MODAL -->
+    <div id="confirmation-modal" class="goals-modal-overlay">
+        <div class="goals-modal-card" style="max-width: 340px; background: #2c3e50; padding: 28px 24px 20px;">
+            <div id="confirmation-modal-title" class="modal-title" style="font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; letter-spacing: -0.3px; text-align: center;">Confirm Action</div>
+            <div id="confirmation-modal-message" class="modal-message" style="font-size: 14px; font-weight: 500; color: #94a3b8; line-height: 1.5; margin-bottom: 24px; text-align: center;">Are you sure you want to proceed?</div>
+            <div class="modal-actions" style="display: flex; gap: 12px;">
+                <button id="confirmation-modal-cancel" class="modal-btn-secondary" style="flex: 1; background: transparent; color: #06b6d4; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: 2px solid #475569; cursor: pointer; transition: all 0.2s ease;">Cancel</button>
+                <button id="confirmation-modal-ok" class="modal-btn-primary" style="flex: 1; background: #06b6d4; color: #0f172a; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: 2px solid #06b6d4; cursor: pointer; transition: all 0.2s ease;">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div class="mobile-wrapper">
         <!-- GUEST LOGIN GATE (visible by default for crawlers, hidden via JS for logged-in users) -->
         <div id="guestGate" class="guest-gate-overlay" style="display:flex">

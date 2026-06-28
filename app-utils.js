@@ -157,6 +157,68 @@ export function showToast(msg, duration = 3000) {
     window._toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
 }
 
+// Show confirmation modal (returns a Promise)
+export function showConfirmationModal(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmation-modal');
+        const titleEl = document.getElementById('confirmation-modal-title');
+        const messageEl = document.getElementById('confirmation-modal-message');
+        const okBtn = document.getElementById('confirmation-modal-ok');
+        const cancelBtn = document.getElementById('confirmation-modal-cancel');
+
+        if (!modal || !titleEl || !messageEl || !okBtn || !cancelBtn) {
+            console.warn('Confirmation modal elements not found, falling back to confirm()');
+            resolve(confirm(message));
+            return;
+        }
+
+        // Set content
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        // Show modal
+        modal.classList.add('show');
+
+        // Handle OK click
+        const handleOk = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        // Handle Cancel click
+        const handleCancel = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        // Handle backdrop click
+        const handleBackdrop = (e) => {
+            if (e.target === modal) {
+                cleanup();
+                resolve(false);
+            }
+        };
+
+        // Cleanup function
+        const cleanup = () => {
+            modal.classList.remove('show');
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            modal.removeEventListener('click', handleBackdrop);
+        };
+
+        // Attach event listeners
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+        modal.addEventListener('click', handleBackdrop);
+    });
+}
+
+// Make showConfirmationModal globally available
+if (typeof window !== 'undefined') {
+    window.showConfirmationModal = showConfirmationModal;
+}
+
 // Category Configuration (Shared across UI and helper logic)
 export const CATEGORIES = [
     { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },

@@ -1127,15 +1127,7 @@
 
                     console.log('[BPI Scanner] Found transaction to undo:', txn);
 
-                    // Confirm undo with modal
-                    const confirmed = await window.showConfirmationModal(
-                        'Undo Transaction',
-                        'Undo this transaction? It will be removed from your wallet.'
-                    );
-                    
-                    if (!confirmed) {
-                        return;
-                    }
+                    // Undo immediately without confirmation
 
                     try {
                         const fm = window.FirebaseModule || {};

@@ -16999,14 +16999,16 @@ Be direct, practical, and helpful.`;
                     <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; margin: 0;">
 
                     <!-- Upload Prompt Section -->
-                    <div class="bpi-scan-upload-prompt" id="bpi-scan-upload-prompt" style="display:none; padding: 40px 20px;">
-                        <div class="bpi-upload-icon">
-                            <i class="material-icons">upload_file</i>
+                    <!-- [REDESIGNED: 2026-06-29] Modern mobile-friendly upload prompt with better visual hierarchy -->
+                    <!-- [CRITICAL: Inline styles added as fallback for APK compatibility] -->
+                    <div class="bpi-scan-upload-prompt" id="bpi-scan-upload-prompt" style="display:none; flex:1; flex-direction:column; align-items:center; justify-content:center; padding:48px 32px; gap:20px; background:linear-gradient(180deg, #fafafa 0%, #ffffff 100%);">
+                        <div class="bpi-upload-icon" style="width:100px; height:100px; border-radius:24px; background:linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(239,68,68,0.15);">
+                            <i class="material-icons" style="font-size:48px; color:#dc2626;">image</i>
                         </div>
-                        <h3 class="bpi-upload-title">Select BPI Screenshot</h3>
-                        <p class="bpi-upload-description">Choose a screenshot of your BPI transaction history to scan and import</p>
-                        <button class="bpi-upload-select-btn" onclick="document.getElementById('bpi-scan-file-input').click()">
-                            <i class="material-icons">photo_library</i>
+                        <h3 class="bpi-upload-title" style="font-size:20px; font-weight:900; color:#0f172a; margin:0; letter-spacing:-0.5px; text-align:center;">Select BPI Screenshot</h3>
+                        <p class="bpi-upload-description" style="font-size:14px; font-weight:500; color:#64748b; text-align:center; margin:0; max-width:300px; line-height:1.6;">Choose a screenshot of your BPI transaction history to scan and import</p>
+                        <button class="bpi-upload-select-btn" onclick="document.getElementById('bpi-scan-file-input').click()" style="margin-top:12px; padding:16px 32px; background:linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color:#ffffff; border:none; border-radius:16px; font-size:15px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:10px; box-shadow:0 8px 20px rgba(239,68,68,0.3); transition:all 0.3s cubic-bezier(0.4,0,0.2,1); letter-spacing:0.3px;">
+                            <i class="material-icons" style="font-size:22px;">photo_library</i>
                             <span>Select Screenshot</span>
                         </button>
                     </div>

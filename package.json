@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "sync-www": "robocopy . www *.html index.css *.js *.Snippet *.json *.png /S /XD node_modules android .git .vscode .gemini www /NFL /NDL /NJH /NJS /nc /ns /np || exit 0",
+    "sync-www": "robocopy . www *.html *.css *.js *.Snippet *.json *.png /S /XD node_modules android .git .vscode .gemini www /NFL /NDL /NJH /NJS /nc /ns /np || exit 0",
     "build": "npm run sync-www && npm run fix-java",
     "fix-java": "fix-all-java-21.bat",
     "deploy": "deploy.bat",

@@ -1045,8 +1045,10 @@
             z-index: 100;
             /* Inactive State: Smaller & Faded */
             transform: scale(0.92);
-            opacity: 0.7;
-            filter: grayscale(0.5);
+            opacity: 0.35;
+            /* [FIX 2026-06-29] Reduced from 0.7 to 0.35 to make inactive cards nearly invisible on mobile */
+            filter: grayscale(0.8);
+            /* [FIX 2026-06-29] Increased from 0.5 to 0.8 for more grayscale */
             will-change: transform, opacity, filter;
             /* Ensure shimmer doesn't leak */
             isolation: isolate;
@@ -1468,7 +1470,7 @@
         .modal-overlay { display: none; position: fixed; top: var(--app-visual-offset-top); left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: var(--app-visual-height); max-height: var(--app-visual-height); background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s ease; padding: max(env(safe-area-inset-top, 0px), 18px) 16px calc(16px + var(--app-bottom-safe)); box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
         .modal-overlay.show { display: flex; opacity: 1; }
         .custom-modal { background: #fff; width: 92%; max-width: 380px; border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); max-height: min(88vh, calc(var(--app-visual-height) - 36px - var(--app-bottom-safe))); overflow-y: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; }
-        .modal-overlay.show .custom-modal:not(#manual-modal-content):not(#duplicate-modal-content):not(#budget-modal-content) { transform: translateY(0); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-overlay.show .custom-modal:not(#manual-modal-content):not(#duplicate-modal-content):not(#budget-modal-content):not(#bpi-scanner-content) { transform: translateY(0); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes modalOut { from { transform: scale(1); opacity: 1; } to { transform: scale(0.95); opacity: 0; } }
         @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
@@ -1491,7 +1493,7 @@
             margin-top: 0 !important;
             max-height: calc(var(--app-visual-height) - max(env(safe-area-inset-top, 0px), 8px) - 14px - var(--app-bottom-safe));
         }
-        body.keyboard-active .modal-overlay.show .custom-modal:not(#manual-modal-content):not(#duplicate-modal-content):not(#budget-modal-content),
+        body.keyboard-active .modal-overlay.show .custom-modal:not(#manual-modal-content):not(#duplicate-modal-content):not(#budget-modal-content):not(#bpi-scanner-content),
         body.keyboard-active .dialog-overlay.show .dialog-card {
             transform: translateY(0) scale(1);
         }
@@ -4095,7 +4097,7 @@ body.keyboard-active .dialog-overlay {
   padding-top: max(env(safe-area-inset-top, 0px), 22px) !important;
 }
 
-body.keyboard-active .modal-overlay.show .custom-modal:not(#manual-modal-content):not(#duplicate-modal-content):not(#budget-modal-content),
+body.keyboard-active .modal-overlay.show .custom-modal:not(#manual-modal-content):not(#duplicate-modal-content):not(#budget-modal-content):not(#bpi-scanner-content),
 body.keyboard-active .dialog-overlay.show .dialog-card {
   transform: translateY(28px) scale(1) !important;
 }

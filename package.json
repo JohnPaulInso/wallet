@@ -6,9 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "sync-www": "robocopy . www *.html index.css *.js *.Snippet *.json *.png /S /XD node_modules android .git .vscode .gemini www /NFL /NDL /NJH /NJS /nc /ns /np || exit 0",
-    "build": "npm run sync-www",
+    "build": "npm run sync-www && npm run fix-java",
+    "fix-java": "fix-all-java-21.bat",
     "deploy": "deploy.bat",
-    "deploy:unix": "./deploy.sh"
+    "deploy:unix": "./deploy.sh",
+    "push": "git add . && git commit -m \"Update\" && git push",
+    "save": "git add . && git commit -m \"Quick save\" && git push",
+    "commit": "git add . && git commit",
+    "sync": "git pull && git add . && git commit -m \"Sync\" && git push",
+    "dev": "dev.bat",
+    "android": "npm run build && npx cap sync android && npm run fix-java && dev.bat",
+    "open": "dev.bat"
   },
   "keywords": [],
   "author": "",

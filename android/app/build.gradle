@@ -23,6 +23,11 @@ android {
         }
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
     applicationVariants.all { variant ->
         variant.outputs.all {
             outputFileName = "smart-wallet.apk"
@@ -31,9 +36,8 @@ android {
 }
 
 repositories {
-    flatDir{
-        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
-    }
+    mavenCentral()
+    google()
 }
 
 dependencies {

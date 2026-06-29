@@ -337,28 +337,45 @@
                 return;
             }
 
-            // Open pull-down sheet
+            // Get overlay reference
             const overlay = $('bpi-scanner-overlay');
             if (!overlay) {
                 console.error('[BPI Scanner] Overlay not found');
                 return;
             }
 
-            overlay.classList.add('bpi-scan-visible');
+            // Hide upload prompt if it exists
+            const uploadPrompt = $('bpi-scan-upload-prompt');
+            if (uploadPrompt) uploadPrompt.style.display = 'none';
+
+            // Open overlay if not already visible
+            // [FIX 2026-06-29] Use .show class instead of .bpi-scan-visible
+            if (!overlay.classList.contains('show')) {
+                overlay.classList.add('show');
+                overlay.style.display = 'flex';
+                
+                // Push to NavState for back button
+                if (window.NavState) {
+                    window.NavState.pushModalState('bpi-scanner-overlay', () => window.BPIScanner.close());
+                }
+            }
 
             // Update subtitle
             const subtitle = $('bpi-scan-status-text');
             if (subtitle) subtitle.textContent = 'Loading image...';
 
-            // Push to NavState for back button
-            if (window.NavState) {
-                window.NavState.pushModalState('bpi-scanner-overlay', () => window.BPIScanner.close());
-            }
-
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const dataUrl = e.target.result;
+
+                    // Save to localStorage
+                    try {
+                        localStorage.setItem('bpi-scanner-last-image', dataUrl);
+                        console.log('[BPI Scanner] Image saved to localStorage');
+                    } catch (err) {
+                        console.warn('[BPI Scanner] Could not save to localStorage (quota exceeded?):', err);
+                    }
 
                     // Show preview section
                     const previewSection = $('bpi-scan-preview-section');
@@ -370,6 +387,10 @@
                         img.src = dataUrl;
                         img.classList.add('bpi-scan-done'); // [FIXED: 2026-06-28] Added class bpi-scan-done to unblur image on file load
                     }
+
+                    // Show clear button
+                    const clearBtn = $('bpi-scan-clear-btn');
+                    if (clearBtn) clearBtn.style.display = 'flex';
 
                     // Show scanning animation
                     const animOverlay = $('bpi-scan-animation-overlay');
@@ -475,6 +496,18 @@
 
                 // Store results
                 window._bpiScanResults = transactions;
+
+                // Save results AND balance to localStorage
+                try {
+                    localStorage.setItem('bpi-scanner-last-results', JSON.stringify(transactions));
+                    if (window._bpiScanBalance !== null && window._bpiScanBalance !== undefined) {
+                        localStorage.setItem('bpi-scanner-last-balance', window._bpiScanBalance.toString());
+                        console.log('[BPI Scanner] Balance saved to localStorage:', window._bpiScanBalance);
+                    }
+                    console.log('[BPI Scanner] Results saved to localStorage');
+                } catch (err) {
+                    console.warn('[BPI Scanner] Could not save results to localStorage:', err);
+                }
 
                 updateProgress(100, 'Complete!');
                 const newCount = transactions.filter(t => !t.synced).length;
@@ -688,6 +721,7 @@
 
                 // Build insight row comparing balances
                 let insightHTML = '';
+                let balanceMatchClass = ''; // Default: red/warning style
                 if (walletBal !== null) {
                     const walletBalFormatted = walletBal.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     const diff = scannedBal - walletBal;
@@ -700,6 +734,7 @@
                         diffIcon = 'check_circle';
                         diffColor = '#16a34a';
                         diffLabel = 'Balances match';
+                        balanceMatchClass = ' bpi-balance-match'; // Green style
                     } else if (diff > 0) {
                         // BPI has more than wallet tracks (unrecorded income?)
                         diffIcon = 'arrow_upward';
@@ -727,7 +762,7 @@
                 }
 
                 html += `
-                    <div class="bpi-scan-balance-divider">
+                    <div class="bpi-scan-balance-divider${balanceMatchClass}">
                         <div class="bpi-balance-header-row">
                             <span class="bpi-balance-label"><i class="material-icons" style="font-size: 14px; vertical-align: middle;">account_balance</i> BPI ACCOUNT BALANCE</span>
                             <span class="bpi-scan-divider-val">₱${scannedBalFormatted}</span>
@@ -818,6 +853,10 @@
             const resultsList = $('bpi-scan-results-list');
             const resultsTitle = $('bpi-scan-results-title');
             const resultsSubtitle = $('bpi-scan-results-subtitle');
+            const resultsSection = $('bpi-scan-results-section');
+
+            // Show results section
+            if (resultsSection) resultsSection.style.display = 'block';
 
             if (resultsTitle) resultsTitle.textContent = 'Scanning...';
             if (resultsSubtitle) resultsSubtitle.textContent = 'Analyzing screenshot';
@@ -1127,7 +1166,15 @@
 
                     console.log('[BPI Scanner] Found transaction to undo:', txn);
 
-                    // Undo immediately without confirmation
+                    // Get the transaction card element
+                    const card = statusBtn.closest('.bpi-txn-card');
+                    
+                    // Add red "undoing" animation
+                    if (card) {
+                        card.classList.add('undoing');
+                        // Wait for animation to complete
+                        await new Promise(resolve => setTimeout(resolve, 400));
+                    }
 
                     try {
                         const fm = window.FirebaseModule || {};
@@ -1138,6 +1185,7 @@
 
                         if (!auth || !auth.currentUser) {
                             if (typeof showToast === 'function') showToast('Please sign in');
+                            if (card) card.classList.remove('undoing');
                             return;
                         }
                         const uid = auth.currentUser.uid;
@@ -1148,6 +1196,7 @@
                         if (!firestoreId) {
                             console.error('[BPI Scanner] No Firestore ID found on transaction');
                             if (typeof showToast === 'function') showToast('Cannot undo: Transaction ID not found');
+                            if (card) card.classList.remove('undoing');
                             return;
                         }
 
@@ -1191,20 +1240,289 @@
                     } catch (e) {
                         console.error('[BPI Scanner] Undo error:', e);
                         if (typeof showToast === 'function') showToast('Failed to undo: ' + e.message);
+                        if (card) card.classList.remove('undoing');
                     }
                 });
             });
         }
 
-        // Override close
+        // Open method - shows overlay first, then waits for user to select file
+        // FIX DATE: 2026-06-29
+        // FIX SPEC: Mobile-friendly flow that opens overlay before triggering file picker
+        window.BPIScanner.open = function () {
+            console.log('[BPI Scanner] Open method called');
+            
+            const overlay = $('bpi-scanner-overlay');
+            if (!overlay) {
+                console.error('[BPI Scanner] Overlay not found');
+                return;
+            }
+
+            // Check if there's a saved image in localStorage
+            const savedImage = localStorage.getItem('bpi-scanner-last-image');
+            if (savedImage) {
+                console.log('[BPI Scanner] Found saved image in localStorage, loading...');
+                window.BPIScanner.loadLastImage(savedImage);
+                return;
+            }
+
+            // [FIX 2026-06-29] FORCE display with aggressive inline styles
+            overlay.style.display = 'flex';
+            overlay.style.visibility = 'visible';
+            overlay.style.opacity = '1';
+            overlay.classList.add('show');
+            overlay.classList.remove('closing');
+
+            // Get content div and FORCE full height
+            const content = $('bpi-scanner-content');
+            if (content) {
+                content.style.height = '95vh';
+                content.style.minHeight = '95vh';
+                content.style.maxHeight = '95vh';
+                content.style.width = '100%';
+                content.style.maxWidth = '100%';
+                content.style.display = 'flex';
+                content.style.flexDirection = 'column';
+                content.style.transform = 'translateY(0)';
+                content.style.position = 'relative';
+                content.style.overflow = 'hidden';
+                console.log('[BPI Scanner] Content forced to full height');
+            }
+
+            // Update subtitle with instruction
+            const subtitle = $('bpi-scan-status-text');
+            if (subtitle) subtitle.textContent = 'Tap the button below to select a screenshot';
+
+            // Show upload prompt
+            const uploadPrompt = $('bpi-scan-upload-prompt');
+            if (uploadPrompt) uploadPrompt.style.display = 'flex';
+
+            // Hide preview and animation sections
+            const previewSection = $('bpi-scan-preview-section');
+            if (previewSection) previewSection.style.display = 'none';
+
+            const animOverlay = $('bpi-scan-animation-overlay');
+            if (animOverlay) animOverlay.style.display = 'none';
+
+            // Hide results section
+            const resultsSection = $('bpi-scan-results-section');
+            if (resultsSection) resultsSection.style.display = 'none';
+
+            // Push to NavState for back button
+            if (window.NavState) {
+                window.NavState.pushModalState('bpi-scanner-overlay', () => window.BPIScanner.close());
+            }
+        };
+
+        // Load last image from localStorage
+        // FIX DATE: 2026-06-29
+        // FIX SPEC: Restores previously scanned image and results on scanner open
+        window.BPIScanner.loadLastImage = async function (dataUrl) {
+            console.log('[BPI Scanner] Loading last image');
+
+            const overlay = $('bpi-scanner-overlay');
+            if (!overlay) return;
+
+            // [FIX 2026-06-29] Use .show class instead of .bpi-scan-visible
+            overlay.classList.add('show');
+            overlay.style.display = 'flex';
+
+            // Hide upload prompt
+            const uploadPrompt = $('bpi-scan-upload-prompt');
+            if (uploadPrompt) uploadPrompt.style.display = 'none';
+
+            // Push to NavState
+            if (window.NavState) {
+                window.NavState.pushModalState('bpi-scanner-overlay', () => window.BPIScanner.close());
+            }
+
+            // Check if there are saved results
+            const savedResults = localStorage.getItem('bpi-scanner-last-results');
+            const savedBalance = localStorage.getItem('bpi-scanner-last-balance');
+            
+            if (savedResults) {
+                try {
+                    const transactions = JSON.parse(savedResults);
+                    window._bpiScanResults = transactions;
+                    
+                    // Restore saved balance
+                    if (savedBalance) {
+                        window._bpiScanBalance = parseFloat(savedBalance);
+                        console.log('[BPI Scanner] Restored balance from localStorage:', window._bpiScanBalance);
+                    }
+                    
+                    // Show preview section
+                    const previewSection = $('bpi-scan-preview-section');
+                    if (previewSection) previewSection.style.display = 'block';
+
+                    // Show preview image
+                    const img = $('bpi-scan-preview-img');
+                    if (img) {
+                        img.src = dataUrl;
+                        img.classList.add('bpi-scan-done');
+                    }
+
+                    // Show clear button
+                    const clearBtn = $('bpi-scan-clear-btn');
+                    if (clearBtn) clearBtn.style.display = 'flex';
+
+                    // Update subtitle
+                    const subtitle = $('bpi-scan-status-text');
+                    const newCount = transactions.filter(t => !t.synced).length;
+                    if (subtitle) {
+                        subtitle.textContent = `Found ${transactions.length} transactions · ${newCount} new`;
+                    }
+
+                    // Show results section
+                    const resultsSection = $('bpi-scan-results-section');
+                    if (resultsSection) resultsSection.style.display = 'block';
+
+                    // Render saved results
+                    renderRealResults(transactions);
+
+                    console.log('[BPI Scanner] Restored saved results:', transactions.length, 'transactions');
+                    return;
+                } catch (err) {
+                    console.error('[BPI Scanner] Failed to parse saved results:', err);
+                    // Fall through to rescan
+                }
+            }
+
+            // No saved results, rescan the image
+            // Update subtitle
+            const subtitle = $('bpi-scan-status-text');
+            if (subtitle) subtitle.textContent = 'Loading saved screenshot...';
+
+            // Show preview section
+            const previewSection = $('bpi-scan-preview-section');
+            if (previewSection) previewSection.style.display = 'block';
+
+            // Show preview image
+            const img = $('bpi-scan-preview-img');
+            if (img) {
+                img.src = dataUrl;
+                img.classList.add('bpi-scan-done');
+            }
+
+            // Show clear button
+            const clearBtn = $('bpi-scan-clear-btn');
+            if (clearBtn) clearBtn.style.display = 'flex';
+
+            // Show scanning animation
+            const animOverlay = $('bpi-scan-animation-overlay');
+            if (animOverlay) animOverlay.style.display = 'flex';
+
+            // Show skeleton loader
+            showSkeletonLoader();
+
+            // Update status
+            if (subtitle) subtitle.textContent = 'Analyzing screenshot...';
+
+            // Perform scan
+            await performRealScan(dataUrl);
+        };
+
+        // Clear image and prompt for new upload
+        // FIX DATE: 2026-06-29
+        // FIX SPEC: Clears current image, results with smooth animations, and shows upload prompt for new screenshot
+        window.BPIScanner.clearImage = function () {
+            console.log('[BPI Scanner] Clearing image with animation');
+
+            // Add delete animation classes
+            const previewSection = $('bpi-scan-preview-section');
+            const resultsSection = $('bpi-scan-results-section');
+            
+            if (previewSection) {
+                previewSection.classList.add('bpi-clear-deleting');
+            }
+            
+            if (resultsSection) {
+                resultsSection.classList.add('bpi-clear-fade-out');
+            }
+
+            // Wait for animations to complete before clearing
+            setTimeout(() => {
+                // Clear from localStorage (including balance)
+                localStorage.removeItem('bpi-scanner-last-image');
+                localStorage.removeItem('bpi-scanner-last-results');
+                localStorage.removeItem('bpi-scanner-last-balance');
+                console.log('[BPI Scanner] Cleared localStorage including balance');
+
+                // Hide preview section
+                if (previewSection) {
+                    previewSection.style.display = 'none';
+                    previewSection.classList.remove('bpi-clear-deleting');
+                }
+
+                // Clear image
+                const img = $('bpi-scan-preview-img');
+                if (img) {
+                    img.src = '';
+                    img.classList.remove('bpi-scan-done');
+                    img.style.transform = '';
+                }
+
+                // Hide clear button
+                const clearBtn = $('bpi-scan-clear-btn');
+                if (clearBtn) clearBtn.style.display = 'none';
+
+                // Hide animation
+                const animOverlay = $('bpi-scan-animation-overlay');
+                if (animOverlay) animOverlay.style.display = 'none';
+
+                // Hide results section
+                if (resultsSection) {
+                    resultsSection.style.display = 'none';
+                    resultsSection.classList.remove('bpi-clear-fade-out');
+                }
+
+                // Clear results
+                const resultsList = $('bpi-scan-results-list');
+                if (resultsList) resultsList.innerHTML = '';
+
+                // Clear stored results
+                window._bpiScanResults = null;
+
+                // Show upload prompt with fade-in
+                const uploadPrompt = $('bpi-scan-upload-prompt');
+                if (uploadPrompt) {
+                    uploadPrompt.style.opacity = '0';
+                    uploadPrompt.style.display = 'flex';
+                    
+                    // Trigger fade-in
+                    requestAnimationFrame(() => {
+                        uploadPrompt.style.transition = 'opacity 0.3s ease-in';
+                        uploadPrompt.style.opacity = '1';
+                    });
+                }
+
+                // Update subtitle
+                const subtitle = $('bpi-scan-status-text');
+                if (subtitle) subtitle.textContent = 'Tap the button below to select a screenshot';
+
+            }, 500); // Wait for animation duration
+        };
+
         // FIX DATE: 2026-06-28
         // FIX SPEC: Reset stylesheet transform properties on close
         window.BPIScanner.close = function () {
             const overlay = $('bpi-scanner-overlay');
-            if (overlay) overlay.classList.remove('bpi-scan-visible');
+            if (overlay) {
+                overlay.classList.remove('show');
+                overlay.classList.add('closing');  // Add closing animation class
+                
+                // Hide after animation completes
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    overlay.classList.remove('closing');
+                }, 300);  // Match CSS animation duration
+            }
 
-            const sheetContent = document.querySelector('.bpi-scanner-content');
+            const sheetContent = document.getElementById('bpi-scanner-content');  // [FIX 2026-06-29] Changed from querySelector to getElementById
             if (sheetContent) sheetContent.style.transform = '';
+
+            // Re-enable body scroll
+            document.body.style.overflow = '';  // [FIX 2026-06-29] Re-enable scrolling
 
             // Clear image
             const img = $('bpi-scan-preview-img');
@@ -1218,9 +1536,21 @@
             const previewSection = $('bpi-scan-preview-section');
             if (previewSection) previewSection.style.display = 'none';
 
+            // Hide clear button
+            const clearBtn = $('bpi-scan-clear-btn');
+            if (clearBtn) clearBtn.style.display = 'none';
+
             // Hide animation
             const animOverlay = $('bpi-scan-animation-overlay');
             if (animOverlay) animOverlay.style.display = 'none';
+
+            // Hide upload prompt
+            const uploadPrompt = $('bpi-scan-upload-prompt');
+            if (uploadPrompt) uploadPrompt.style.display = 'none';
+
+            // Hide results section
+            const resultsSection = $('bpi-scan-results-section');
+            if (resultsSection) resultsSection.style.display = 'none';
 
             // Clear results
             const resultsList = $('bpi-scan-results-list');
@@ -1238,7 +1568,7 @@
     // FIX SPEC: Enabled mouse/touch drag handlers on the top handle area
     function initDragToClose() {
         const handleArea = document.querySelector('.bpi-sheet-handle-area');
-        const sheetContent = document.querySelector('.bpi-scanner-content');
+        const sheetContent = document.getElementById('bpi-scanner-content');  // [FIX 2026-06-29] Changed to getElementById
         if (!handleArea || !sheetContent) return;
 
         let startY = 0;
@@ -1295,7 +1625,17 @@
     function initPreviewInteractivity() {
         const container = $('bpi-scan-preview-container');
         const img = $('bpi-scan-preview-img');
-        if (!container || !img) return;
+        
+        console.log('[BPI Scanner] initPreviewInteractivity called');
+        console.log('[BPI Scanner] Container:', container);
+        console.log('[BPI Scanner] Image:', img);
+        
+        if (!container || !img) {
+            console.error('[BPI Scanner] Preview container or image not found! Cannot init zoom.');
+            return;
+        }
+
+        console.log('[BPI Scanner] ✓ Zoom gestures initialized successfully');
 
         let scale = 1;
         let startX = 0, startY = 0;
@@ -1312,6 +1652,7 @@
 
         const updateTransform = () => {
             img.style.transform = `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`;
+            console.log('[BPI Scanner] Transform updated:', { scale, translateX, translateY });
         };
 
         const getDistance = (t1, t2) => {
@@ -1319,32 +1660,80 @@
         };
 
         const clampTranslation = () => {
-            const parentRect = container.getBoundingClientRect();
-            const maxW = (parentRect.width * (scale - 1)) / 2;
-            const maxH = (parentRect.height * (scale - 1)) / 2;
-            if (scale > 1) {
-                translateX = Math.min(Math.max(translateX, -maxW), maxW);
-                translateY = Math.min(Math.max(translateY, -maxH), maxH);
-            } else {
+            // [FIX 2026-06-29] Clamp translation to IMAGE bounds, not container bounds
+            // This prevents zooming into dark background areas
+            
+            if (scale <= 1) {
                 translateX = 0;
                 translateY = 0;
+                return;
             }
+            
+            // Get container and image dimensions
+            const containerRect = container.getBoundingClientRect();
+            const containerWidth = containerRect.width;
+            const containerHeight = containerRect.height;
+            
+            // Get the actual rendered size of the image (after object-fit: contain)
+            // We need to calculate this based on natural dimensions and container size
+            const naturalWidth = img.naturalWidth;
+            const naturalHeight = img.naturalHeight;
+            const containerRatio = containerWidth / containerHeight;
+            const imageRatio = naturalWidth / naturalHeight;
+            
+            let renderedWidth, renderedHeight;
+            if (imageRatio > containerRatio) {
+                // Image is wider - constrained by width
+                renderedWidth = containerWidth;
+                renderedHeight = containerWidth / imageRatio;
+            } else {
+                // Image is taller - constrained by height
+                renderedHeight = containerHeight;
+                renderedWidth = containerHeight * imageRatio;
+            }
+            
+            // Calculate the offset of the rendered image within the container (centering from object-fit)
+            const imageOffsetX = (containerWidth - renderedWidth) / 2;
+            const imageOffsetY = (containerHeight - renderedHeight) / 2;
+            
+            // When zoomed, the image grows from its center
+            const scaledWidth = renderedWidth * scale;
+            const scaledHeight = renderedHeight * scale;
+            
+            // Maximum translation before hitting the image edge
+            // We want to prevent panning beyond the scaled image boundaries
+            const maxX = Math.max(0, (scaledWidth - containerWidth) / 2);
+            const maxY = Math.max(0, (scaledHeight - containerHeight) / 2);
+            
+            translateX = Math.min(Math.max(translateX, -maxX), maxX);
+            translateY = Math.min(Math.max(translateY, -maxY), maxY);
         };
 
         // ── DOUBLE TAP ZOOM HANDLER ──
         // [FIXED: 2026-06-29] Zooms to tapped coordinate with smooth CSS transition
         const doDoubleTapZoom = (tapX, tapY) => {
+            console.log('[BPI Scanner] Double-tap zoom triggered!', { tapX, tapY, currentScale: scale });
+            
             if (scale === 1) {
                 scale = 2.5;
-
-                // Compute offset to center the tapped point
+                
+                // Calculate proper zoom-to-point
+                // tapX and tapY are relative to container
                 const rect = container.getBoundingClientRect();
-                const dx = (rect.width / 2 - tapX) * (scale - 1);
-                const dy = (rect.height / 2 - tapY) * (scale - 1);
-                const maxW = (rect.width * (scale - 1)) / 2;
-                const maxH = (rect.height * (scale - 1)) / 2;
-                translateX = Math.min(Math.max(dx, -maxW), maxW);
-                translateY = Math.min(Math.max(dy, -maxH), maxH);
+                
+                // Center point offset
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                // Calculate translation to keep tap point stationary
+                const offsetX = (centerX - tapX) * (scale - 1);
+                const offsetY = (centerY - tapY) * (scale - 1);
+                
+                translateX = offsetX;
+                translateY = offsetY;
+                
+                // Clamp to image bounds
+                clampTranslation();
             } else {
                 scale = 1;
                 translateX = 0;
@@ -1364,11 +1753,15 @@
             isDragging = true;
             startX = clientX - translateX;
             startY = clientY - translateY;
+            console.log('[BPI Scanner] Drag started');
         };
 
         container.addEventListener('touchstart', (e) => {
+            console.log('[BPI Scanner] touchstart event', { touches: e.touches.length });
+            
             // Two-finger pinch start
             if (e.touches.length === 2) {
+                console.log('[BPI Scanner] Two-finger pinch detected');
                 if (tapTimeout) { clearTimeout(tapTimeout); tapTimeout = null; }
                 touchStartDist = getDistance(e.touches[0], e.touches[1]);
                 startScale = scale;
@@ -1389,6 +1782,7 @@
                     Math.abs(tapX - lastTapX) < 50 &&
                     Math.abs(tapY - lastTapY) < 50) {
                     // It's a double tap!
+                    console.log('[BPI Scanner] Double-tap detected!');
                     e.preventDefault(); // Block native browser double-tap zoom
                     if (tapTimeout) { clearTimeout(tapTimeout); tapTimeout = null; }
                     pendingDragTouch = null;
@@ -1423,6 +1817,7 @@
                 const dist = getDistance(e.touches[0], e.touches[1]);
                 const ratio = dist / touchStartDist;
                 scale = Math.min(Math.max(startScale * ratio, 1), 4);
+                console.log('[BPI Scanner] Pinch zoom:', scale);
                 clampTranslation();
                 updateTransform();
                 return;
@@ -1451,6 +1846,7 @@
 
         // ── touchend ──
         container.addEventListener('touchend', () => {
+            console.log('[BPI Scanner] touchend');
             isDragging = false;
             touchStartDist = 0;
             pendingDragTouch = null;
@@ -1458,6 +1854,7 @@
 
         // ── Mouse events for desktop/simulator ──
         container.addEventListener('mousedown', (e) => {
+            console.log('[BPI Scanner] mousedown');
             isDragging = true;
             startX = e.clientX - translateX;
             startY = e.clientY - translateY;
@@ -1481,12 +1878,49 @@
         let lastClickTime = 0;
         container.addEventListener('click', (e) => {
             const now = Date.now();
+            console.log('[BPI Scanner] Click event', { timeSinceLastClick: now - lastClickTime });
             if (now - lastClickTime < 300) {
+                console.log('[BPI Scanner] Double-click detected!');
                 const rect = container.getBoundingClientRect();
                 doDoubleTapZoom(e.clientX - rect.left, e.clientY - rect.top);
             }
             lastClickTime = now;
         });
+
+        // ── Mouse wheel / Touchpad pinch zoom for desktop ──
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            
+            const rect = container.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Get zoom direction (negative deltaY = zoom in, positive = zoom out)
+            const delta = -Math.sign(e.deltaY);
+            const zoomIntensity = 0.1;
+            
+            // Calculate new scale
+            const oldScale = scale;
+            scale = Math.min(Math.max(scale + delta * zoomIntensity, 1), 4);
+            
+            if (scale !== oldScale) {
+                // Zoom towards mouse cursor position
+                const scaleChange = scale / oldScale;
+                
+                // Calculate the point under the mouse before and after scaling
+                const beforeX = (mouseX - translateX) / oldScale;
+                const beforeY = (mouseY - translateY) / oldScale;
+                
+                // Adjust translation to keep the point under the mouse
+                translateX = mouseX - beforeX * scale;
+                translateY = mouseY - beforeY * scale;
+                
+                clampTranslation();
+                updateTransform();
+                
+                console.log('[BPI Scanner] Mouse wheel zoom:', scale);
+            }
+        }, { passive: false });
     }
 
     // Drag-down gesture logic to pull down and close the sheet
@@ -1494,7 +1928,7 @@
     // FIX SPEC: Enabled mouse/touch drag handlers on the top handle area
     function initDragToClose() {
         const handleArea = document.querySelector('.bpi-sheet-handle-area');
-        const sheetContent = document.querySelector('.bpi-scanner-content');
+        const sheetContent = document.getElementById('bpi-scanner-content');  // [FIX 2026-06-29] Changed to getElementById
         if (!handleArea || !sheetContent) return;
 
         let startY = 0;
@@ -1553,6 +1987,60 @@
     } else {
         initDragToClose();
         initPreviewInteractivity();
+    }
+
+    // Initialize button click handler
+    // FIX DATE: 2026-06-29
+    // FIX SPEC: Attach button handler after BPIScanner.open() is defined
+    function initButtonHandler() {
+        const scanButton = document.getElementById('bpi-scan-upload-btn');
+        console.log('[BPI Scanner] Initializing button handler, button found:', !!scanButton);
+
+        const handleButtonClick = (e) => {
+            console.log('[BPI Scanner] Button clicked!');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            try {
+                if (window.BPIScanner && typeof window.BPIScanner.open === 'function') {
+                    console.log('[BPI Scanner] Opening scanner');
+                    window.BPIScanner.open();
+                } else {
+                    console.error('[BPI Scanner] BPIScanner.open not available!');
+                    // Fallback to file input
+                    const input = document.getElementById('bpi-scan-file-input');
+                    if (input) {
+                        console.log('[BPI Scanner] Using file input fallback');
+                        input.click();
+                    } else {
+                        alert('Scanner not ready. Please refresh the page.');
+                    }
+                }
+            } catch (error) {
+                console.error('[BPI Scanner] Error:', error);
+                alert('Scanner error: ' + error.message);
+            }
+        };
+
+        if (scanButton) {
+            // Remove any existing handlers
+            scanButton.onclick = null;
+            
+            // Add new handlers
+            scanButton.addEventListener('click', handleButtonClick, false);
+            scanButton.addEventListener('touchstart', handleButtonClick, { passive: false });
+            console.log('[BPI Scanner] Button handlers attached');
+        } else {
+            console.warn('[BPI Scanner] Button not found, retrying after DOM load');
+            setTimeout(initButtonHandler, 500);
+        }
+    }
+
+    // Initialize button after a short delay to ensure DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initButtonHandler);
+    } else {
+        setTimeout(initButtonHandler, 100);
     }
 
     console.log('[BPI Scanner Enhanced] Loaded - Real OCR, Interactivity and Swipe-to-Close enabled');

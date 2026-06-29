@@ -701,3 +701,543 @@ BUTTONS:
 END OF DESIGN RULES - SMART WALLET v2.0
 For questions or updates, reference this document and maintain consistency.
 ================================================================================
+
+
+================================================================================
+20. ANDROID BUILD TROUBLESHOOTING GUIDE
+================================================================================
+Last Updated: 2026-06-29
+
+IMPORTANT: AUTOMATIC JAVA VERSION FIX
+--------------------------------------
+The build process now has TRIPLE-LAYER protection against Java 21 errors:
+
+LAYER 1: Project-Wide Gradle Configuration (STRONGEST)
+  File: android/build.gradle
+  - Forces JavaVersion.VERSION_17 for ALL subprojects
+  - Overrides any module-level settings
+  - Applied via afterEvaluate hook
+
+LAYER 2: Global Variables
+  File: android/variables.gradle
+  - Sets javaVersion = JavaVersion.VERSION_17
+  - Can be referenced by all modules
+
+LAYER 3: Automatic Fix Script
+  Runs on every build: npm run fix-java
+  - Scans and fixes any VERSION_21 references
+  - Fixes android/capacitor-cordova-android-plugins/build.gradle
+  - Fixes all node_modules/@capacitor/*/android/build.gradle
+  - Runs automatically with npm run build and .\a
+
+Manual Fix (if somehow still needed):
+  npm run fix-java
+  or
+  fix-all-java-21.bat
+
+This triple-layer approach ensures Java 21 errors NEVER happen again.
+
+ORIGINAL TROUBLESHOOTING GUIDE BELOW:
+--------------------------------------
+Purpose: Step-by-step fixes for common Capacitor Android build issues
+
+ISSUE: SSL Certificate Errors ("unable to find valid certification path")
+--------------------------------------------------------------------------------
+This occurs when Gradle cannot download dependencies due to SSL certificate 
+validation failures. Common causes: corrupted Java truststore, missing CA 
+certificates, antivirus interference.
+
+SOLUTION STEPS:
+
+1. IMPORT SSL CERTIFICATES TO JAVA TRUSTSTORE
+   Run as Administrator:
+   - Execute: fix-java-certificates-final.bat
+   - This imports Windows root CA certificates to JDK 17 truststore
+   - Wait 1-2 minutes for import to complete
+   - Backup is created automatically at: cacerts.backup
+
+2. CLEAN GRADLE CACHE
+   - Close Android Studio completely
+   - Execute: auto-clean-gradle.bat
+   - This removes corrupted Gradle caches and build artifacts
+
+3. FIX JAVA VERSION MISMATCH (Java 21 → Java 17)
+   All Capacitor modules default to Java 21, but JDK 17 is installed.
+   
+   Files to update (change VERSION_21 to VERSION_17):
+   
+   a) node_modules/@capacitor/android/capacitor/build.gradle
+      compileOptions {
+          sourceCompatibility JavaVersion.VERSION_17
+          targetCompatibility JavaVersion.VERSION_17
+      }
+   
+   b) node_modules/@capacitor/app/android/build.gradle
+      compileOptions {
+          sourceCompatibility JavaVersion.VERSION_17
+          targetCompatibility JavaVersion.VERSION_17
+      }
+   
+   c) node_modules/@capacitor/local-notifications/android/build.gradle
+      compileOptions {
+          sourceCompatibility JavaVersion.VERSION_17
+          targetCompatibility JavaVersion.VERSION_17
+      }
+   
+   d) node_modules/@capacitor/status-bar/android/build.gradle
+      compileOptions {
+          sourceCompatibility JavaVersion.VERSION_17
+          targetCompatibility JavaVersion.VERSION_17
+      }
+   
+   e) node_modules/@codetrix-studio/capacitor-google-auth/android/build.gradle
+      compileOptions {
+          targetCompatibility JavaVersion.VERSION_17
+          sourceCompatibility JavaVersion.VERSION_17
+      }
+   
+   f) android/capacitor-cordova-android-plugins/build.gradle
+      compileOptions {
+          sourceCompatibility JavaVersion.VERSION_17
+          targetCompatibility JavaVersion.VERSION_17
+      }
+   
+   g) android/app/capacitor.build.gradle
+      compileOptions {
+          sourceCompatibility JavaVersion.VERSION_17
+          targetCompatibility JavaVersion.VERSION_17
+      }
+   
+   QUICK FIX SCRIPT:
+   - Execute: fix-all-capacitor-java-versions.bat
+
+4. DISABLE LINT TASKS TO AVOID SSL DOWNLOADS
+   Lint tools require downloading from Maven which triggers SSL errors.
+   
+   Add to ALL Capacitor module build.gradle files (after android {} block):
+   
+   tasks.whenTaskAdded { task ->
+       if (task.name.contains("lint") || task.name.contains("Lint") || 
+           task.name.contains("Annotations")) {
+           task.enabled = false
+       }
+   }
+   
+   Files requiring this addition:
+   - node_modules/@capacitor/android/capacitor/build.gradle
+   - node_modules/@capacitor/app/android/build.gradle
+   - node_modules/@capacitor/local-notifications/android/build.gradle
+   - node_modules/@capacitor/status-bar/android/build.gradle
+   - node_modules/@codetrix-studio/capacitor-google-auth/android/build.gradle
+   - android/capacitor-cordova-android-plugins/build.gradle
+
+5. CREATE MISSING TYPEDEFS.TXT FILES
+   Disabled lint tasks expect typedefs.txt files that won't be created.
+   
+   Execute: create-all-typedef-files.bat
+   
+   This creates empty placeholder files at:
+   - android/capacitor-cordova-android-plugins/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+   - node_modules/@capacitor/android/capacitor/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+   - node_modules/@capacitor/app/android/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+   - node_modules/@capacitor/local-notifications/android/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+   - node_modules/@capacitor/status-bar/android/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+   - node_modules/@codetrix-studio/capacitor-google-auth/android/build/intermediates/annotations_typedef_file/debug/extractDebugAnnotations/typedefs.txt
+
+6. CONFIGURE ANDROID STUDIO JDK
+   - Open Android Studio
+   - File → Settings → Build, Execution, Deployment → Build Tools → Gradle
+   - Set Gradle JDK to: C:\Program Files\Java\jdk-17
+   - Click Apply and OK
+
+7. SET JAVA_HOME ENVIRONMENT VARIABLE
+   Add to android/gradle.properties:
+   
+   org.gradle.java.home=C:\\Program Files\\Java\\jdk-17
+
+8. REBUILD PROJECT
+   - File → Invalidate Caches / Restart
+   - After restart: Build → Clean Project
+   - Then: Build → Rebuild Project
+   - Finally: Build → Build Bundle(s) / APK(s) → Build APK(s)
+
+9. COMMAND LINE BUILD (Alternative)
+   cd android
+   ./gradlew clean
+   ./gradlew assembleDebug
+
+   APK output location:
+   android/app/build/outputs/apk/debug/smart-wallet.apk
+
+PREVENTION TIPS:
+--------------------------------------------------------------------------------
+✓ Keep JDK updated (use JDK 17 for Capacitor projects)
+✓ Run certificate import after fresh Java installation
+✓ Avoid running 'npx cap sync' or 'npx cap update' (regenerates Java 21 configs)
+✓ If you must run cap sync, re-apply Java 17 fixes afterward
+✓ Check antivirus settings - disable SSL scanning for development
+✓ Use corporate network: import company SSL certificates to Java truststore
+
+SCRIPT REFERENCE:
+--------------------------------------------------------------------------------
+- fix-java-certificates-final.bat     → Import SSL certificates (run as admin)
+- auto-clean-gradle.bat                → Clean Gradle cache and build dirs
+- fix-all-capacitor-java-versions.bat → Change Java 21 to 17 in all modules
+- create-all-typedef-files.bat         → Create missing lint placeholder files
+- cleanup-gradle.bat                   → Alternative cache cleanup
+- final-fix.bat                        → Set JAVA_HOME and gradle properties
+
+COMMON ERRORS & QUICK FIXES:
+--------------------------------------------------------------------------------
+ERROR: "error: invalid source release: 21"
+FIX: Run fix-all-capacitor-java-versions.bat, then rebuild
+
+ERROR: "PKIX path building failed: unable to find valid certification path"
+FIX: Run fix-java-certificates-final.bat as Administrator
+
+ERROR: "Could not resolve com.android.tools.lint:lint-gradle"
+FIX: Disable lint tasks in all modules, create typedefs files
+
+ERROR: "typedefs.txt which doesn't exist"
+FIX: Run create-all-typedef-files.bat
+
+ERROR: "No cached version available for offline mode"
+FIX: Remove --offline flag, ensure internet connection, check SSL certs
+
+ERROR: "Windows-ROOT KeyStore not available"
+FIX: Remove Windows-ROOT truststore config, use standard JKS approach
+
+ALTERNATIVE SOLUTIONS (If above fails):
+--------------------------------------------------------------------------------
+1. Download fresh JDK 17 from https://adoptium.net/
+2. Uninstall all Java versions, reinstall JDK 17 only
+3. Disable antivirus SSL scanning temporarily
+4. Try building from different network (home vs corporate)
+5. Check firewall settings - allow Java and Gradle through
+6. Manual certificate import using keytool (advanced)
+
+VERIFICATION:
+--------------------------------------------------------------------------------
+Successful build shows:
+> BUILD SUCCESSFUL in [X]s
+> [N] actionable tasks: [executed], [from cache], [up-to-date]
+
+APK location:
+android/app/build/outputs/apk/debug/smart-wallet.apk
+
+Test APK:
+adb install android/app/build/outputs/apk/debug/smart-wallet.apk
+
+================================================================================
+END OF ANDROID BUILD TROUBLESHOOTING GUIDE
+Keep this section updated as new issues arise.
+================================================================================
+
+
+================================================================================
+21. BPI SCANNER MOBILE FIX
+================================================================================
+Last Updated: 2026-06-29
+
+ISSUE:
+------
+On mobile devices, clicking the BPI scan button directly opens the native file 
+picker, which lags and prevents the scanner overlay modal from appearing properly.
+The overlay needs to be visible BEFORE the file picker is triggered.
+
+ROOT CAUSE:
+-----------
+The original implementation triggered the file input click immediately:
+  onclick="document.getElementById('bpi-scan-file-input').click()"
+
+This caused the native file picker to open before the overlay could render,
+resulting in poor mobile UX where users couldn't see the scanner interface.
+
+SOLUTION IMPLEMENTED:
+---------------------
+Created a two-step flow for better mobile experience:
+
+1. **Added window.BPIScanner.open() method** (bpi-scanner.js ~line 1201)
+   - Opens the scanner overlay modal first
+   - Shows upload prompt with instructions
+   - Adds NavState modal entry for back button support
+   - THEN waits for user to click "Select Screenshot" button inside overlay
+
+2. **Updated handleFileUpload() method** (bpi-scanner.js ~line 328)
+   - Checks if overlay is already visible
+   - Hides upload prompt when file is selected
+   - Only pushes NavState if overlay wasn't already open
+   - Prevents duplicate modal entries
+
+3. **Updated close() method** (bpi-scanner.js ~line 1234)
+   - Added logic to hide upload prompt on close
+   - Ensures clean reset for next scan
+
+4. **Added Upload Prompt Section** (index.html ~line 16909)
+   - New UI section shown when overlay opens without file
+   - Large icon, clear instructions, prominent button
+   - Button inside overlay triggers file input: 
+     onclick="document.getElementById('bpi-scan-file-input').click()"
+
+5. **Added Upload Prompt CSS** (bpi-scanner.css ~line 153)
+   - Styled upload prompt with gradient background
+   - Large icon with BPI brand colors
+   - Clear call-to-action button
+   - Mobile-optimized touch targets
+
+BUTTON CONFIGURATION:
+---------------------
+Main trigger button (index.html ~line 639):
+  onclick="if (window.BPIScanner) { window.BPIScanner.open(); } 
+          else { document.getElementById('bpi-scan-file-input').click(); }"
+
+- Calls window.BPIScanner.open() if available (shows overlay first)
+- Falls back to direct file input if BPIScanner not loaded
+
+FILE CHANGES:
+-------------
+- bpi-scanner.js: Added open() method, updated handleFileUpload() and close()
+- index.html: Added upload prompt section in scanner overlay
+- bpi-scanner.css: Added .bpi-scan-upload-prompt styles
+- index.html button: Already configured to call window.BPIScanner.open()
+
+TESTING CHECKLIST:
+------------------
+✓ Click "Scan New BPI Transactions" button
+✓ Scanner overlay should appear FIRST with upload prompt
+✓ Click "Select Screenshot" button inside overlay
+✓ File picker should open AFTER overlay is visible
+✓ Select image file
+✓ Upload prompt should hide, scanning animation should show
+✓ Back button should close overlay properly
+✓ Close button should hide upload prompt
+
+MOBILE UX FLOW:
+---------------
+1. User clicks "Scan New BPI Transactions" button
+2. Overlay slides up with upload prompt visible
+3. User sees clear instructions and large "Select Screenshot" button
+4. User clicks button to open file picker (NOW with overlay already visible)
+5. User selects image from gallery
+6. Upload prompt hides, scanning begins with preview visible
+
+BENEFITS:
+---------
+- Overlay is visible before file picker opens (no lag confusion)
+- Clear instructions for users inside the modal
+- Better mobile UX with proper modal-then-picker flow
+- Back button support throughout the process
+- Consistent with modern mobile app patterns
+
+================================================================================
+END OF BPI SCANNER MOBILE FIX
+================================================================================
+
+
+================================================================================
+22. QUICK DEVELOPMENT COMMANDS
+================================================================================
+Last Updated: 2026-06-29
+
+OVERVIEW:
+---------
+Custom batch files and npm scripts for rapid development workflow.
+Designed for Windows PowerShell with simple, memorable commands.
+
+QUICK COMMANDS:
+---------------
+
+1. BUILD AND OPEN ANDROID STUDIO
+   Command: .\a
+   Full:    dev.bat
+   NPM:     npm run dev
+   
+   What it does:
+   - Runs npm run build (syncs files to www folder)
+   - Runs npx cap sync android (syncs to Capacitor)
+   - Opens Android Studio automatically
+   - Detects Android Studio installation path
+   
+   Usage:
+   .\a
+
+2. GIT PUSH TO GITHUB
+   Command: .\g
+   Full:    g.bat
+   NPM:     npm run push
+   
+   What it does:
+   - git add .
+   - git commit -m "Update"
+   - git push
+   
+   Usage:
+   .\g                           # Default commit message "Update"
+   .\g "Custom message"          # Custom commit message
+   .\g Fixed BPI scanner bug     # Multi-word message (no quotes needed)
+
+FILE STRUCTURE:
+---------------
+Root Directory:
+  a.bat          - Ultra-short alias for dev.bat
+  dev.bat        - Main build and Android Studio opener
+  g.bat          - Ultra-short git push command
+  push.bat       - Alternative git push (same as g.bat)
+  
+package.json scripts:
+  "dev"          - Runs dev.bat
+  "android"      - Builds and syncs Android
+  "open"         - Opens Android Studio
+  "push"         - Git add, commit, push
+  "save"         - Git add, commit "Quick save", push
+  "commit"       - Git add and commit (manual message)
+  "sync"         - Git pull, add, commit "Sync", push
+
+POWERSHELL USAGE:
+-----------------
+PowerShell requires .\ prefix for local scripts:
+  
+  .\a            ✓ Correct
+  a              ✗ Won't work
+  
+  .\g            ✓ Correct
+  g              ✗ Won't work
+
+Or use npm (no prefix needed):
+  npm run dev    ✓ Works
+  npm run push   ✓ Works
+
+ANDROID STUDIO DETECTION:
+--------------------------
+dev.bat automatically checks these paths:
+1. C:\Program Files\Android\Android Studio\bin\studio64.exe
+2. C:\Program Files (x86)\Android\Android Studio\bin\studio64.exe
+3. %LOCALAPPDATA%\Programs\Android Studio\bin\studio64.exe
+
+If not found, opens android folder for manual selection.
+
+TYPICAL WORKFLOW:
+-----------------
+1. Make code changes
+2. Type: .\a
+3. Wait for Android Studio to open
+4. Build APK in Android Studio
+5. After testing, type: .\g "Added new feature"
+6. Changes pushed to GitHub
+
+TROUBLESHOOTING:
+----------------
+Q: "The term 'a' is not recognized"
+A: Use .\a (with dot-slash prefix) in PowerShell
+
+Q: "dev.bat not found"
+A: Make sure you're in the project root directory
+
+Q: Android Studio doesn't open
+A: Check if Android Studio is installed in standard paths
+   Or manually update the path in dev.bat
+
+Q: Git push fails
+A: Ensure git is configured with credentials
+   Run: git config --global user.name "Your Name"
+   Run: git config --global user.email "your@email.com"
+
+ALIASES REMINDER:
+-----------------
+.\a  = Build + Open Android Studio
+.\g  = Git Push
+npm run dev   = Same as .\a
+npm run push  = Same as .\g
+
+================================================================================
+END OF QUICK DEVELOPMENT COMMANDS
+================================================================================
+
+
+================================================================================
+23. BPI SCANNER MOBILE APK FIX (MODAL OVERLAY VISIBILITY)
+================================================================================
+Last Updated: 2026-06-29
+Fix Date: 2026-06-29
+
+PROBLEM:
+--------
+The BPI Scanner overlay button wouldn't open on mobile APK. Button clicks had
+no effect - the overlay remained invisible even though it worked on desktop.
+
+ROOT CAUSE:
+-----------
+1. Complex nested structure with duplicate `.bpi-scanner-content` divs
+2. Missing `.show` class application on modal-overlay
+3. Insufficient inline styles to force visibility on mobile WebView
+
+SOLUTION IMPLEMENTED:
+---------------------
+1. **Simplified HTML Structure** (index.html line ~16918):
+   - Removed nested `.bpi-scanner-content` wrapper div inside `.custom-modal`
+   - Removed unnecessary `.bpi-scanner-backdrop` div
+   - Now matches working `budget-txn-modal` pattern exactly:
+     ```
+     <div id="bpi-scanner-overlay" class="modal-overlay" ...>
+       <div class="custom-modal" id="bpi-scanner-content" ...>
+         <!-- Direct children: drag handle, header, sections -->
+       </div>
+     </div>
+     ```
+
+2. **Aggressive Force-Show Handler** (index.html HEAD section ~line 52):
+   - Function: `window.openBPIScannerStrict()`
+   - Applies multiple redundant styles to guarantee visibility:
+     * `display: flex !important`
+     * `visibility: visible`
+     * `opacity: 1`
+     * `z-index: 99999`
+     * Adds `.show` class (required by modal-overlay CSS)
+     * Forces position, size, and layout properties
+     * Prevents body scroll
+   - Added console logging for debugging on mobile
+   - Test function: `window.testBPIOpen()` for verification
+
+3. **Added z-index to overlay** (index.html line ~16921):
+   - Added `z-index: 99999` to modal-overlay inline styles
+   - Ensures it's above all other elements
+
+REFERENCE WORKING PATTERN:
+--------------------------
+The fix copies the exact structure of `budget-txn-modal` (line ~14605) which
+works perfectly on APK:
+- Simple two-level structure: modal-overlay > custom-modal
+- Uses `.show` class for visibility
+- Has slideUp animation
+- Inline styles on custom-modal for layout
+
+KEY LEARNINGS:
+--------------
+1. Mobile APK WebView is more strict about CSS application than desktop
+2. Nested wrappers can cause display issues even if CSS looks correct
+3. Force inline styles + classList.add('show') is the safest approach
+4. Always test on actual APK build, not just browser dev tools mobile mode
+5. When debugging APK issues, copy structure from known-working modals
+
+FILES MODIFIED:
+---------------
+- index.html (HEAD script section + BPI overlay structure)
+- No CSS changes needed (slideUp animation and modal-overlay already existed)
+
+TESTING CHECKLIST:
+------------------
+[ ] Build APK: npm run build
+[ ] Sync Android: npx cap sync
+[ ] Fix Java version: .\fix-all-java-21.bat
+[ ] Open Android Studio: .\a
+[ ] Build APK in Android Studio
+[ ] Install on physical device
+[ ] Test "Scan New BPI Transactions" button
+[ ] Verify overlay appears with upload prompt
+[ ] Test file selection works
+[ ] Test close button works
+[ ] Test drag handle works
+
+================================================================================
+END OF BPI SCANNER MOBILE APK FIX
+================================================================================

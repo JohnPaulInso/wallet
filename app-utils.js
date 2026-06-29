@@ -57,9 +57,9 @@ export function repairTextArtifacts(text, shouldTrim = true) {
 
     const processed = repaired
         .replace(/â‚±/g, '\u20B1')
-        .replace(/Ã¢â€šÂ±|ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±|Ã‚â‚±/g, '\u20B1')
-        .replace(/Ã¢â‚¬Â¢|ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢/g, '\u2022')
-        .replace(/Ã¢Ë†â€™|ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢|ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“/g, '\u2212')
+        .replace(/Ã¢â€šÂ±|ÃƒÂ¢"Å¡Ã‚Â±|Ã‚â‚±/g, '\u20B1')
+        .replace(/"Â¢|ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢/g, '\u2022')
+        .replace(/Ã¢Ë†â€™|ÃƒÂ¢Ã‹â€ "â„¢|ÃƒÂ¢Ã¢â€šÂ¬"Å“/g, '\u2212')
         .replace(/Ãƒâ€”/g, '\u00D7')
         .replace(/ÃƒÂ·/g, '\u00F7')
         .replace(/\uFFFD+/g, '')

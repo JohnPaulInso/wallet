@@ -47,6 +47,82 @@
     <!-- Tesseract.js for free client-side OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
+    <!-- BPI Scanner Button Handler - Loaded FIRST to guarantee availability -->
+    <script>
+        // AGGRESSIVE FORCE-SHOW APPROACH - Guarantee visibility on mobile APK
+        window.openBPIScannerStrict = function() {
+            console.log('[BPI] ========== BUTTON CLICKED ==========');
+            console.log('[BPI] Opening scanner modal - FORCE MODE');
+            
+            var modal = document.getElementById('bpi-scanner-overlay');
+            if (!modal) {
+                console.error('[BPI] Modal element not found!');
+                return;
+            }
+            
+            console.log('[BPI] Modal element found:', modal);
+            
+            // FORCE show with multiple approaches (brute force for APK)
+            modal.style.display = 'flex';
+            modal.style.visibility = 'visible';
+            modal.style.opacity = '1';
+            modal.style.zIndex = '99999';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.classList.add('show');
+            modal.classList.remove('closing');
+            
+            // Get the inner content
+            var content = document.getElementById('bpi-scanner-content');
+            if (content) {
+                content.style.display = 'flex';
+                content.style.visibility = 'visible';
+                content.style.opacity = '1';
+                content.style.transform = 'translateY(0)';
+                console.log('[BPI] Content element styled');
+            }
+            
+            // Show upload prompt
+            var uploadPrompt = document.getElementById('bpi-scan-upload-prompt');
+            if (uploadPrompt) {
+                uploadPrompt.style.display = 'flex';
+                console.log('[BPI] Upload prompt shown');
+            }
+            
+            // Hide other sections
+            var preview = document.getElementById('bpi-scan-preview-section');
+            if (preview) {
+                preview.style.display = 'none';
+            }
+            
+            var results = document.getElementById('bpi-scan-results-section');
+            if (results) {
+                results.style.display = 'none';
+            }
+            
+            // Force body to not scroll
+            document.body.style.overflow = 'hidden';
+            
+            console.log('[BPI] Modal FORCE opened - all styles applied');
+            
+            // Verify visibility after a moment
+            setTimeout(function() {
+                var computedDisplay = window.getComputedStyle(modal).display;
+                console.log('[BPI] Modal visibility check:', computedDisplay);
+            }, 100);
+        };
+        
+        // Test function available immediately
+        console.log('[BPI] Handler loaded and ready');
+        window.testBPIOpen = function() {
+            console.log('[BPI] Test function called');
+            window.openBPIScannerStrict();
+        };
+    </script>
+
     <!-- AUTH PERFORMANCE OPTIMIZATION (PRELOADS) -->
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js" crossorigin="anonymous">
     <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js" crossorigin="anonymous">
@@ -635,8 +711,7 @@
                     <!-- FIX SPEC: Relocated above safe spend widget; hidden by default -->
                     <div class="bpi-scan-upload-row" id="bpi-scan-upload-row" style="display:none; margin-bottom: 0px;">
                         <input type="file" id="bpi-scan-file-input" accept="image/*" style="display:none;">
-                        <button class="bpi-scan-upload-btn"
-                            onclick="console.log('BPI button clicked'); document.getElementById('bpi-scan-file-input').click()">
+                        <button class="bpi-scan-upload-btn" id="bpi-scan-upload-btn" onclick="openBPIScannerStrict()">
                             <span class="bpi-scan-btn-icon">
                                 <i class="material-icons">document_scanner</i>
                             </span>
@@ -5451,10 +5526,10 @@
                                 } else if (manualBudgetCategory) {
                                     if (manualBudgetCategory === type) match = true;
                                 } else if (type === 'needs') {
-                                    const needsCats = ['education', 'service', 'vehicle', 'transportation'];
+                                    const needsCats = ['education', 'service', 'vehicle', 'transportation', 'travel', 'financial expenses', 'financial expense'];
                                     if (needsCats.includes(mappedCategory)) match = true;
                                 } else if (type === 'wants') {
-                                    const wantsCats = ['shopping', 'online shopping', 'food & drinks', 'life & entertainment', 'sport', 'financial expenses', 'financial expense'];
+                                    const wantsCats = ['shopping', 'online shopping', 'food & drinks', 'life & entertainment', 'sport'];
                                     if (wantsCats.includes(mappedCategory)) match = true;
                                 } else if (type === 'savings') {
                                     const savingsCats = ['savings', 'investments'];
@@ -5513,6 +5588,23 @@
                         let totalCash = 0;   // added 2026-03-31 - Financial + Cash Logs - 2026-03-31
                         let totalMain = 0;   // added 2026-03-31 - Main section (excludes withdrawals) - 2026-03-31
 
+                        // [FIX 2026-06-29] Calculate totals from ALL transactions, not just filtered ones
+                        // [FIX 2026-06-29] Use EXACT same amount calculation as chart's getBudgetSectionBuckets
+                        filtered.forEach(t => {
+                            const display = getMerchantDisplay(t.name || t.merchant, t);
+                            // Match chart logic: effectiveAmt takes priority, then manualAmount, then amount
+                            const displayAmt = Math.abs(Number(t.effectiveAmt !== undefined ? t.effectiveAmt : (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0))) || 0);
+                            const isCashLog = t.account === 'budget_manual';
+                            const isFinancial = display.category === 'Financial Expenses';
+
+                            // [FIX 2026-06-29] Include ALL transactions (even withdrawals) to match chart total
+                            if (isCashLog || isFinancial) {
+                                totalCash += displayAmt;
+                            } else {
+                                totalMain += displayAmt;
+                            }
+                        });
+
                         visibleFiltered.forEach(t => {
                             const display = getMerchantDisplay(t.name || t.merchant, t);
 
@@ -5526,12 +5618,6 @@
                             const isCashLog = t.account === 'budget_manual';
                             const isFinancial = display.category === 'Financial Expenses';
                             const isWithdrawal = display.name.toLowerCase().includes('withdraw');
-
-                            if (isCashLog || isFinancial) {
-                                totalCash += displayAmt;
-                            } else if (!isWithdrawal) {
-                                totalMain += displayAmt;
-                            }
 
                             const dateObj = t.date?.seconds ? new Date(t.date.seconds * 1000) : (typeof t.date === 'string' ? new Date(t.date) : new Date());
                             const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -16882,34 +16968,58 @@ Be direct, practical, and helpful.`;
             <!-- ================================================================
      BPI OCR SCANNER OVERLAY
      ================================================================ -->
-            <div id="bpi-scanner-overlay" class="bpi-scanner-sheet">
+            <div id="bpi-scanner-overlay" class="modal-overlay"
+                onclick="if(window.BPIScanner && window.BPIScanner.close) window.BPIScanner.close(); event.stopPropagation();"
+                style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
+                
+                <div class="custom-modal" id="bpi-scanner-content" onclick="event.stopPropagation()"
+                    style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 0; margin: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); height: 85vh; overflow: hidden; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y; background: #ffffff; display: flex; flex-direction: column;">
 
-                <!-- Backdrop -->
-                <div class="bpi-scanner-backdrop" onclick="window.BPIScanner.close()"></div>
-
-                <!-- Pull-down Sheet -->
-                <div class="bpi-scanner-content">
-
-                    <!-- Drag Handle -->
-                    <div class="bpi-sheet-handle-area">
-                        <div class="bpi-sheet-handle"></div>
+                    <!-- Header with drag handle and close button -->
+                    <div style="width: 100%; padding: 12px 16px 18px 16px; background: #ffffff; border-radius: 24px 24px 0 0; flex-shrink: 0; border-bottom: 1px solid #f1f5f9; position: relative;">
+                        <!-- Drag Handle -->
+                        <div style="display: flex; justify-content: center; margin-bottom: 12px;">
+                            <div style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
+                        </div>
+                        <!-- Title and Close Button -->
+                        <div style="display: flex; align-items: center; justify-content: center; position: relative;">
+                            <div style="font-weight: 800; font-size: 16px; color: #1e293b;">BPI Scanner</div>
+                            <!-- Close Button - Top Right Square -->
+                            <button onclick="if(window.BPIScanner && window.BPIScanner.close) window.BPIScanner.close(); event.stopPropagation();" 
+                                style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;"
+                                onmouseover="this.style.background='#e2e8f0'" 
+                                onmouseout="this.style.background='#f1f5f9'"
+                                aria-label="Close">
+                                <i class="material-icons" style="color: #64748b; font-size: 20px;">close</i>
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Header -->
-                    <div class="bpi-sheet-header">
-                        <button class="bpi-sheet-close-btn" onclick="window.BPIScanner.close()" aria-label="Close">
-                            <i class="material-icons">close</i>
-                        </button>
-                        <div class="bpi-sheet-header-content">
-                            <h2 class="bpi-sheet-title">BPI Screenshot Scanner</h2>
-                            <p class="bpi-sheet-subtitle" id="bpi-scan-status-text">Upload a screenshot to analyze</p>
+                    <!-- Main scrollable content - ZERO PADDING -->
+                    <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0; margin: 0;">
+
+                    <!-- Upload Prompt Section -->
+                    <div class="bpi-scan-upload-prompt" id="bpi-scan-upload-prompt" style="display:none; padding: 40px 20px;">
+                        <div class="bpi-upload-icon">
+                            <i class="material-icons">upload_file</i>
                         </div>
+                        <h3 class="bpi-upload-title">Select BPI Screenshot</h3>
+                        <p class="bpi-upload-description">Choose a screenshot of your BPI transaction history to scan and import</p>
+                        <button class="bpi-upload-select-btn" onclick="document.getElementById('bpi-scan-file-input').click()">
+                            <i class="material-icons">photo_library</i>
+                            <span>Select Screenshot</span>
+                        </button>
                     </div>
 
                     <!-- Image Preview Section (initially hidden) -->
                     <div class="bpi-scan-preview-section" id="bpi-scan-preview-section" style="display:none;">
-                        <div class="bpi-scan-preview-container">
+                        <div class="bpi-scan-preview-container" id="bpi-scan-preview-container">
                             <img id="bpi-scan-preview-img" class="bpi-scan-preview-img" src="" alt="Screenshot preview">
+
+                            <!-- Clear/Change Image Button -->
+                            <button class="bpi-scan-clear-btn" id="bpi-scan-clear-btn" onclick="if(window.BPIScanner && window.BPIScanner.clearImage) window.BPIScanner.clearImage();" aria-label="Change screenshot" style="display:none;">
+                                <i class="material-icons">close</i>
+                            </button>
 
                             <!-- Scanning Animation Overlay -->
                             <div class="bpi-scan-animation-overlay" id="bpi-scan-animation-overlay"
@@ -16939,7 +17049,7 @@ Be direct, practical, and helpful.`;
                     </div>
 
                     <!-- Results Section -->
-                    <div class="bpi-scan-results-section" id="bpi-scan-results-section">
+                    <div class="bpi-scan-results-section" id="bpi-scan-results-section" style="display:none;">
                         <div class="bpi-scan-results-header">
                             <h3 class="bpi-scan-results-title" id="bpi-scan-results-title">Detected Transactions</h3>
                             <p class="bpi-scan-results-subtitle" id="bpi-scan-results-subtitle">Review and confirm to
@@ -16951,6 +17061,9 @@ Be direct, practical, and helpful.`;
                             <!-- Dynamic content here -->
                         </div>
                     </div>
+
+                    </div>
+                    <!-- END scrollable content -->
 
                 </div>
 
@@ -17801,7 +17914,7 @@ Be direct, practical, and helpful.`;
                     };
 
                     // Attach file input handler after DOM is ready
-                    console.log('[BPI Scanner] Initializing...');
+                    console.log('[BPI Scanner] Initializing file input handler...');
                     console.log('[BPI Scanner] window.BPIScanner defined:', typeof window.BPIScanner);
 
                     const fileInput = document.getElementById('bpi-scan-file-input');
@@ -17830,6 +17943,8 @@ Be direct, practical, and helpful.`;
                             });
                         }
                     }
+
+                    // Note: Button click handler is now in bpi-scanner.js for proper load order
 
                 })();
             </script>

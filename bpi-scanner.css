@@ -20,7 +20,9 @@
 }
 
 .bpi-scanner-sheet.bpi-scan-visible {
-    display: flex;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* Backdrop - darkened blur overlay layer */
@@ -137,6 +139,86 @@
     margin: 3px 0 0;
 }
 
+/* ── UPLOAD PROMPT SECTION ── */
+/* FIX DATE: 2026-06-29 */
+/* FIX SPEC: Mobile-friendly upload prompt shown when overlay opens without file */
+.bpi-scan-upload-prompt {
+    flex-shrink: 0;
+    padding: 48px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.bpi-upload-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.bpi-upload-icon .material-icons {
+    font-size: 40px;
+    color: #dc2626;
+}
+
+.bpi-upload-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.bpi-upload-description {
+    font-size: 13px;
+    font-weight: 500;
+    color: #64748b;
+    text-align: center;
+    margin: 0;
+    max-width: 280px;
+    line-height: 1.5;
+}
+
+.bpi-upload-select-btn {
+    margin-top: 8px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bpi-upload-select-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+}
+
+.bpi-upload-select-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.bpi-upload-select-btn .material-icons {
+    font-size: 20px;
+}
+
 /* ── IMAGE PREVIEW SECTION ── */
 .bpi-scan-preview-section {
     flex-shrink: 0;
@@ -144,6 +226,8 @@
     overflow: hidden;
     background: #0f172a;
     position: relative;
+    padding: 0;
+    margin: 0;
 }
 
 .bpi-scan-preview-container {
@@ -151,9 +235,18 @@
     height: 240px;
     position: relative;
     overflow: hidden;
+    padding: 0;
+    margin: 0;
     /* [FIXED: 2026-06-28] Drag-to-pan handles scrolling content */
     touch-action: none !important;
     /* [FIXED: 2026-06-29] Lock browser gesture control on parent box */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.bpi-scan-preview-container:active {
+    cursor: grabbing;
 }
 
 .bpi-scan-preview-img {
@@ -165,6 +258,84 @@
     pointer-events: auto !important;
     /* [FIXED: 2026-06-28] Force enable touch gestures to override inline pointer-events */
     touch-action: none;
+    cursor: inherit;
+    padding: 0;
+    margin: 0;
+    display: block;
+}
+
+/* Clear/Change Image Button */
+/* FIX DATE: 2026-06-29 */
+/* FIX SPEC: X button on top-right of preview to clear image and upload new one */
+.bpi-scan-clear-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 20;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bpi-scan-clear-btn:hover {
+    background: rgba(239, 68, 68, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.bpi-scan-clear-btn:active {
+    transform: scale(0.95);
+}
+
+.bpi-scan-clear-btn .material-icons {
+    font-size: 18px;
+    color: #ffffff;
+}
+
+/* Clear animation classes */
+.bpi-clear-deleting {
+    animation: clearImageDelete 0.5s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.bpi-clear-fade-out {
+    animation: clearFadeOut 0.4s ease-out forwards;
+}
+
+@keyframes clearImageDelete {
+    0% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.9) translateY(-10px);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.7) translateY(-30px);
+        pointer-events: none;
+    }
+}
+
+@keyframes clearFadeOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
 }
 
 /* ── SCANNING ANIMATION OVERLAY ── */
@@ -328,9 +499,10 @@
 .bpi-scan-results-section {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 14px 100px;
-    /* [FIXED: 2026-06-28] Added 100px bottom padding to avoid interference with system navigation bar */
+    padding: 16px 16px 120px 16px;
+    /* [FIXED: 2026-06-29] Added padding only inside for content, not on container */
     -webkit-overflow-scrolling: touch;
+    margin: 0;
 }
 
 /* Balance divider banner displaying the savings account info */
@@ -347,6 +519,22 @@
     margin-bottom: 14px;
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.04);
     gap: 8px;
+}
+
+/* Green style when balances match */
+.bpi-scan-balance-divider.bpi-balance-match {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.04);
+}
+
+.bpi-scan-balance-divider.bpi-balance-match .bpi-balance-label {
+    color: #16a34a;
+}
+
+.bpi-scan-balance-divider.bpi-balance-match .bpi-scan-divider-val {
+    color: #15803d;
 }
 
 /* Header row: label + scanned balance amount */
@@ -1023,4 +1211,65 @@
     font-weight: 600;
     color: #16a34a;
     margin: 0;
+}
+
+
+/* ============================================================
+   FIX 2026-06-29: FORCE FULL HEIGHT FOR BPI SCANNER
+   ============================================================ */
+#bpi-scanner-content {
+    height: 95vh !important;
+    max-height: 95vh !important;
+    min-height: 95vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+
+/* ============================================================
+   FIX 2026-06-29: REMOVE MODAL OVERLAY PADDING
+   ============================================================ */
+#bpi-scanner-overlay {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+#bpi-scanner-overlay .custom-modal {
+    margin: 0 !important;
+}
+
+
+/* ============================================================
+   UNDO ANIMATION - RED TINT
+   FIX DATE: 2026-06-29
+   ============================================================ */
+.bpi-txn-card.undoing {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    animation: undoShake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.bpi-txn-card.undoing .bpi-txn-status {
+    background: #fee2e2 !important;
+    color: #dc2626 !important;
+}
+
+.bpi-txn-card.undoing .bpi-txn-amount {
+    color: #dc2626 !important;
+}
+
+@keyframes undoShake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-4px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(4px);
+    }
 }

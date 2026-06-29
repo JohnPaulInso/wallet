@@ -422,8 +422,8 @@ function getTxnBudgetAllocations(t, mapped = null) {
 
     const categoryId = mapped?.category || t.manualCategory || t.category || '';
     const categoryLabel = normalizeBudgetCategoryLabel(categoryId);
-    const needsCats = ['education', 'service', 'vehicle', 'transportation'];
-    const wantsCats = ['shopping', 'online shopping', 'food & drinks', 'life & entertainment', 'sport', 'financial expenses', 'financial expense'];
+    const needsCats = ['education', 'service', 'vehicle', 'transportation', 'travel', 'financial expenses', 'financial expense'];
+    const wantsCats = ['shopping', 'online shopping', 'food & drinks', 'life & entertainment', 'sport'];
     const savingsCats = ['savings', 'investments'];
 
     if (needsCats.includes(categoryLabel)) allocations.push({ bucket: 'needs', amount });
@@ -540,8 +540,8 @@ export function renderHistory(txns) {
         header.innerHTML = `
             <span class="month-title">${month}</span>
             <div style="display:flex; align-items:center; gap:12px;">
-                <span class="month-total privacy-mask" data-raw="ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
-                    ${isHidden ? '******' : 'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
+                <span class="month-total privacy-mask" data-raw="ÃƒÂ¢"Å¡Ã‚Â±${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
+                    ${isHidden ? '******' : 'ÃƒÂ¢"Å¡Ã‚Â±' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
                 </span>
                 <i class="material-icons expand-icon">expand_more</i>
             </div>
@@ -633,8 +633,8 @@ export function renderHistory(txns) {
                             ${displayNote ? `<div class="txn-note" style="color: ${getTxnNoteColor(mapped.category, isRefund, isReimbursed)}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                         </div>
                         <div class="txn-right">
-                            <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + 'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                            <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}ÃƒÂ¢"Å¡Ã‚Â±${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + 'ÃƒÂ¢"Å¡Ã‚Â±' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                             </div>
                         </div>
                     </div>
@@ -2165,7 +2165,7 @@ export async function updateCategoryBudgetsUI() {
 
         return `
             <div class="cat-budget-item">
-                <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(spent).toLocaleString()} / ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${limit.toLocaleString()}</span></div>
+                <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>ÃƒÂ¢"Å¡Ã‚Â±${Math.round(spent).toLocaleString()} / ÃƒÂ¢"Å¡Ã‚Â±${limit.toLocaleString()}</span></div>
                 <div class="cat-budget-bar-wrap"><div class="cat-budget-bar" style="width: ${pct}%; background: ${pct > 90 ? '#ef4444' : '#3b82f6'};"></div></div>
             </div>
         `;
@@ -2315,7 +2315,7 @@ export function triggerAdaptiveSync() {
     const token = localStorage.getItem('g_access_token');
 
     if (token) {
-        console.log(`ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Å¾ Auto-syncing ${id} on load (10 emails)...`);
+        console.log(`ÃƒÂ°Ã…Â¸"Â"Å¾ Auto-syncing ${id} on load (10 emails)...`);
         import('./app-data.js').then(m => {
             if (m.handleScan) {
                 setTimeout(() => m.handleScan(10, false), 1500);
@@ -3484,8 +3484,8 @@ export function drawCashFlowChart() {
         html += `
             <div class="bar-group">
                 <div class="bars-pair">
-                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${m.income.toLocaleString()}"></div>
-                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${m.expense.toLocaleString()}"></div>
+                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ÃƒÂ¢"Å¡Ã‚Â±${m.income.toLocaleString()}"></div>
+                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ÃƒÂ¢"Å¡Ã‚Â±${m.expense.toLocaleString()}"></div>
                 </div>
                 <div class="bar-label">${m.name}</div>
             </div>
@@ -3654,10 +3654,10 @@ export function detectSubscriptions() {
                 </div>
                 <div class="sub-info">
                     <div class="sub-name">${g.name}</div>
-                    <div class="sub-label">AVG ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(g.averageSpend).toLocaleString()}</div>
+                    <div class="sub-label">AVG ÃƒÂ¢"Å¡Ã‚Â±${Math.round(g.averageSpend).toLocaleString()}</div>
                 </div>
                 <div class="sub-val" style="color: ${statusColor}">
-                    ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±${Math.round(g.currentMonthSpend).toLocaleString()}
+                    ÃƒÂ¢"Å¡Ã‚Â±${Math.round(g.currentMonthSpend).toLocaleString()}
                 </div>
             </div>
         `;
@@ -3773,7 +3773,7 @@ function renderNotificationItemsIntoList(list, items) {
 export function toggleNotificationCenter(e) {
     if (e) e.stopPropagation();
     const sidebar = document.getElementById('notification-center');
-    console.log('ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬Â toggleNotificationCenter called. Sidebar found:', !!sidebar);
+    console.log('ÃƒÂ°Ã…Â¸"Â"Â toggleNotificationCenter called. Sidebar found:', !!sidebar);
     
     if (!sidebar) {
         console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Notification sidebar element (#notification-center) NOT FOUND in DOM');
@@ -5228,7 +5228,7 @@ window.forceBudgetNotificationCheck = forceBudgetNotificationCheck;
 window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificationTrigger;
  
     window.animateNumber = animateNumber;
-    console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Global bridge complete.');
+    console.log('ÃƒÂ¢Ã…â€œ"Â¦ Global bridge complete.');
     // If cached/live txns landed before app-ui finished wiring globals, paint the dashboard now.
     if (Array.isArray(window.allTxns)) {
         rehydrateDashboardFromCurrentTxns();

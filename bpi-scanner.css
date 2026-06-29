@@ -140,69 +140,69 @@
 }
 
 /* ── UPLOAD PROMPT SECTION ── */
-/* [REDESIGNED: 2026-06-29] Premium mobile-first upload prompt with centered layout and modern styling */
+/* [REDESIGNED: 2026-06-29] Compact mobile-first upload prompt with scaled-down sizes */
 .bpi-scan-upload-prompt {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 48px 32px;
-    gap: 20px;
+    padding: 32px 24px;
+    gap: 14px;
     background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
 }
 
 .bpi-upload-icon {
-    width: 100px;
-    height: 100px;
-    border-radius: 24px;
+    width: 72px;
+    height: 72px;
+    border-radius: 18px;
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.12);
 }
 
 .bpi-upload-icon .material-icons {
-    font-size: 48px;
+    font-size: 36px;
     color: #dc2626;
 }
 
 .bpi-upload-title {
-    font-size: 20px;
+    font-size: 17px;
     font-weight: 900;
     color: #0f172a;
     margin: 0;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.4px;
     text-align: center;
 }
 
 .bpi-upload-description {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 500;
     color: #64748b;
     text-align: center;
     margin: 0;
-    max-width: 300px;
-    line-height: 1.6;
+    max-width: 260px;
+    line-height: 1.5;
 }
 
 .bpi-upload-select-btn {
-    margin-top: 12px;
-    padding: 16px 32px;
+    margin-top: 8px;
+    padding: 13px 26px;
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: #ffffff;
     border: none;
-    border-radius: 16px;
-    font-size: 15px;
+    border-radius: 14px;
+    font-size: 14px;
     font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+    gap: 8px;
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.25);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
 }
 
 .bpi-upload-select-btn:active {
@@ -211,7 +211,7 @@
 }
 
 .bpi-upload-select-btn .material-icons {
-    font-size: 22px;
+    font-size: 20px;
 }
 
 /* ── IMAGE PREVIEW SECTION ── */
@@ -502,6 +502,7 @@
 
 /* Balance divider banner displaying the savings account info */
 /* [FIXED: 2026-06-29] Upgraded to two-row layout with BPI balance + wallet comparison insight */
+/* [UPDATED: 2026-06-29] Red when mismatched, green when balances match */
 .bpi-scan-balance-divider {
     display: flex;
     flex-direction: column;
@@ -510,7 +511,6 @@
     border-radius: 14px;
     border: 1px solid #fee2e2;
     border-left: 4px solid #ef4444;
-    /* BPI Brand Red accent */
     margin-bottom: 14px;
     box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.04);
     gap: 8px;

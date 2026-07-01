@@ -3,6 +3,14 @@
  * This patches the toggleExpensesChartCategory function
  * Bug: When clicking a slice then long-pressing to exclude it, 
  * center shows ₱0 instead of sum of remaining categories
+ * 
+ * VERSION 2 - Updated 2026-07-01
+ * Changes:
+ * - Fixed complete function override (not just wrapping)
+ * - Added proper console logging for debugging
+ * - Fixed animateElementValueCountdown backward compatibility
+ * - Properly exposes both functions globally with window. prefix
+ * - Fixed timeout and state management to match original implementation
  */
 
 (function() {
@@ -54,13 +62,15 @@
                     
                     const remainingTotal = segments
                         .filter(s => !futureExclusions.has(s.name))
-                        .reduce((sum, s) => sum + s.value, 0);
+                        .reduce((sum, s) => sum + (Number(s.value) || 0), 0);
 
                     const startPct = fallbackTotal > 0 ? (seg.value / fallbackTotal) * 100 : 0;
                     const endPct = fallbackTotal > 0 ? (remainingTotal / fallbackTotal) * 100 : 0;
 
+                    console.log('[Fix] Excluding:', categoryName, 'Remaining total:', remainingTotal, 'Segments:', segments.length);
+
                     // Animate from current slice to remaining total
-                    animateElementValueCountdown(
+                    window.animateElementValueCountdown(
                         totalLabel, 
                         totalVal, 
                         totalPct, 
@@ -78,41 +88,53 @@
             clearTimeout(window.__expensesChartTransitionTimers?.[viewKey]);
             window.__expensesChartTransitionTimers = window.__expensesChartTransitionTimers || {};
             window.__expensesChartTransitionTimers[viewKey] = setTimeout(() => {
-                window.prevSelectedCategoryName = null;
+                window.prevSelectedCategoryName = window.selectedCategoryName;
                 
-                if (nextMode === 'exclude') {
-                    exclusions.add(categoryName);
-                    window.selectedCategoryName = null;
-                } else {
+                if (isCurrentlyExcluded) {
                     exclusions.delete(categoryName);
-                    window.selectedCategoryName = categoryName;
+                } else {
+                    exclusions.add(categoryName);
                 }
-
-                // Final redraw without transition
+                
+                if (window.selectedCategoryName === categoryName && exclusions.has(categoryName)) {
+                    window.selectedCategoryName = null;
+                }
+                
+                delete window.__expensesChartTransitions[viewKey];
+                
+                // Calculate final remaining total after exclusion
+                const remainingTotal = segments.reduce((sum, seg) => 
+                    exclusions.has(seg.name) ? sum : sum + (Number(seg.value) || 0), 0
+                );
+                
+                // Final redraw with correct total
                 if (window.drawPieChart) {
-                    window.drawPieChart(segments, fallbackTotal, false);
+                    window.drawPieChart(segments, remainingTotal > 0 ? remainingTotal : fallbackTotal, true);
                 }
-            }, 470);
+            }, 450);
         };
 
         /**
          * Enhanced animation helper that supports animating to a target value
          * instead of always counting down to 0
+         * 
+         * New signature (9 params): (labelEl, valEl, pctEl, categoryName, startAmt, startPct, endAmt, endPct, duration)
+         * Old signature (7 params): (labelEl, valEl, pctEl, categoryName, startAmt, startPct, duration)
          */
         function animateElementValueCountdown(labelEl, valEl, pctEl, categoryName, startAmt, startPct, endAmt, endPct, duration) {
-            if (labelEl) labelEl.innerText = categoryName;
-            const startTime = performance.now();
-
-            // If endAmt is not provided, default to 0 (backward compatibility)
-            if (typeof endAmt === 'number' && typeof endPct !== 'number') {
-                // Old signature: (labelEl, valEl, pctEl, categoryName, startAmt, startPct, duration)
-                duration = endAmt;
+            // Handle backward compatibility with old 7-parameter signature
+            if (arguments.length === 7) {
+                // Old signature: endAmt parameter is actually the duration
+                duration = endAmt; // 7th param is duration in old signature
                 endAmt = 0;
                 endPct = 0;
             } else if (typeof endAmt !== 'number') {
                 endAmt = 0;
                 endPct = 0;
             }
+
+            if (labelEl) labelEl.innerText = categoryName;
+            const startTime = performance.now();
 
             function update(now) {
                 const elapsed = now - startTime;
@@ -146,7 +168,7 @@
             requestAnimationFrame(update);
         }
 
-        // Expose the enhanced animator globally
+        // Expose the enhanced animator globally - this will override the original
         window.animateElementValueCountdown = animateElementValueCountdown;
 
         console.log('[Fix] ✓ Chart exclusion fix applied');

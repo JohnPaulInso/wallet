@@ -296,7 +296,8 @@
                             if (isHidden) val = `****** ${label}`;
                         } else {
                             val = `₱${Math.floor(current).toLocaleString()} / ₱${Math.floor(limit).toLocaleString()}`;
-                            if (isHidden) val = `****** / ₱${Math.floor(limit).toLocaleString()}`;
+                            // [FIX 2026-07-01] Show only ****** when hidden, not ****** / ₱{limit}
+                            if (isHidden) val = `******`;
                         }
 
                         // Set text and add skeleton class (Unified Reveal Gate)
@@ -884,7 +885,7 @@
     </div>
 
     <!-- REUSABLE CONFIRMATION MODAL -->
-    <div id="confirmation-modal" class="goals-modal-overlay" style="z-index: 100000;">
+    <!-- <div id="confirmation-modal" class="goals-modal-overlay" style="z-index: 100000;">
         <div class="goals-modal-card"
             style="max-width: 340px; background: #ffffff; padding: 28px 24px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
             <div id="confirmation-modal-title" class="modal-title"
@@ -900,7 +901,7 @@
                     style="flex: 1; background: #06b6d4; color: #ffffff; font-size: 15px; font-weight: 700; padding: 13px 28px; border-radius: 14px; border: none; cursor: pointer; transition: all 0.2s ease;">OK</button>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <div class="mobile-wrapper">
         <!-- GUEST LOGIN GATE (visible by default for crawlers, hidden via JS for logged-in users) -->
@@ -1020,24 +1021,18 @@
                 <div class="card-viewport" id="cardViewport">
                     <div class="card-carousel-scroll" id="cardCarouselScroll">
                         <!-- DYNAMICALLY RENDERED CARDS -->
-                        <!-- [MODIFIED: 2026-07-01] Changed display: contents to display: flex with flex-shrink: 0 and gap: 16px to fix unstyled vertical card stacking on Android WebViews that do not support display: contents. Added class 'dynamic-balance-cards-container' for easier identification. -->
                         <div id="dynamic-balance-cards" class="dynamic-balance-cards-container" style="display: flex; gap: 16px; flex-shrink: 0;">
-                            <!-- SKELETON CARD (Only Black as requested) -->
-                            <div class="skeleton-card skeleton-card-atome">
-                                <div class="skeleton-card-inner">
-                                    <div class="skeleton skeleton-title" style="opacity: 0.4;"></div>
-                                    <div class="skeleton skeleton-balance" style="opacity: 0.4;"></div>
-                                    <div class="skeleton skeleton-number" style="margin-top: auto; opacity: 0.4;"></div>
+                            <!-- SINGLE CENTER SKELETON CARD - [FIX 2026-07-01] With left spacing to match carousel padding -->
+                            <div class="skeleton-card" data-is-skeleton="true" style="flex: 0 0 80vw; max-width: 80vw; min-width: 280px; width: 80vw; margin-left: 20px; scroll-snap-align: center; scroll-snap-stop: always; min-height: 220px; border-radius: 20px; background: linear-gradient(135deg, #1a1a1a 0%, #080808 100%); position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 24px 20px 18px; box-sizing: border-box; transition: none; transform: scale(1.05); opacity: 1; filter: grayscale(0); z-index: 200; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid rgba(192, 255, 0, 0.15); pointer-events: none; user-select: none;">
+                                <div class="skeleton-card-inner" style="display: flex; flex-direction: column; height: 100%; gap: 0;">
+                                    <div class="skeleton skeleton-title" style="width: 40%; height: 12px; margin: 0 0 8px 0; background: rgba(255,255,255,0.08); border-radius: 6px; position: relative; overflow: hidden; display: block; pointer-events: none; color: transparent; min-height: 0;"></div>
+                                    <div class="skeleton skeleton-balance" style="width: 60%; height: 32px; margin: 0 0 0 0; background: rgba(255,255,255,0.08); border-radius: 6px; position: relative; overflow: hidden; display: block; pointer-events: none; color: transparent; min-height: 0;"></div>
+                                    <div class="skeleton skeleton-number" style="width: 80%; height: 14px; margin-top: auto; margin-bottom: 0; background: rgba(255,255,255,0.08); border-radius: 6px; position: relative; overflow: hidden; display: block; pointer-events: none; color: transparent; min-height: 0;"></div>
                                     <i class="material-icons"
                                         style="position: absolute; bottom: 24px; right: 24px; color: rgba(255,255,255,0.08); font-size: 20px;">sync</i>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- [RESTORED 2026-07-01] Add Card placeholder with teaser peek -->
-                        <div class="add-card-placeholder" onclick="window.location.href='account_setup.html'">
-                            <i class="material-icons">add_circle_outline</i>
-                            <span>Add New<br>Card</span>
+                            <!-- Add Card placeholder will be dynamically added by JavaScript -->
                         </div>
                     </div>
                 </div>
@@ -3109,6 +3104,12 @@
                 window.addEventListener('DOMContentLoaded', async () => {
                     log('-------------------------', 'warn');
 
+                    // [FIX 2026-07-01] Scroll single skeleton card into center view
+                    const skeletonCard = document.querySelector('.skeleton-card');
+                    if (skeletonCard) {
+                        skeletonCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                    }
+
                     // Initialize SPA Navigation & Profile - Added 2026-04-02
                     if (window.NavState) {
                         window.NavState.quickInit('index.html');
@@ -3142,7 +3143,7 @@
                     const cachedBalances = localStorage.getItem('wallet_cached_balances');
 
                     if (lastUid && cachedAccounts && cachedCurrent) {
-                        console.log('⚡ Fast Path: Rendering from cache...');
+                        console.log('⚡ Fast Path: Loading cache data...');
                         try {
                             const accounts = JSON.parse(cachedAccounts);
 
@@ -3164,7 +3165,7 @@
 
                             // Sync UI from cache
                             updateAccountSwitcherUI(accounts);
-                            updateBalanceCardsUI(accounts);
+                            updateBalanceCardsUI(accounts); // [FIX 2026-07-01] Re-enabled for immediate card display
                             applyAccountTheme(cachedCurrent, accounts);
 
                             // Trigger data load using stored UID
@@ -3625,6 +3626,17 @@
 
                     const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
+                    // [FIX 2026-07-01] Check if skeleton is still present
+                    const hasSkeleton = container.querySelector('[data-is-skeleton="true"]');
+                    if (hasSkeleton) {
+                        console.log('🔄 Replacing skeleton with real cards');
+                    } else {
+                        console.log('🔄 Updating existing cards');
+                    }
+
+                    // [FIX 2026-07-01] Clear ALL content first to remove skeleton
+                    container.innerHTML = '';
+
                     container.innerHTML = accounts.map(acc => {
                         const isAtome = acc.id === 'atome';
                         const isBPI = acc.id === 'bpi';
@@ -3635,6 +3647,7 @@
                 <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI && !isWallet ? 'background: ' + acc.color + ';' : ''}">
                     ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
                     ${isBPI ? '<div class="bpi-rays"></div>' : ''}
+                    <div class="card-shimmer"></div>
 
                     <div class="card-header-row">
                         <div style="display: flex; align-items: baseline; gap: 6px;">
@@ -3680,6 +3693,15 @@
                 </div>
                 `;
                     }).join('');
+                    
+                    // [FIX 2026-07-01] Add "Add New Card" placeholder after all cards for peek effect
+                    container.innerHTML += `
+                        <div class="add-card-placeholder" onclick="window.location.href='account_setup.html'">
+                            <i class="material-icons">add_circle_outline</i>
+                            <span>Add New<br>Card</span>
+                        </div>
+                    `;
+                    
                     if (window.repairTextArtifacts) {
                         container.innerHTML = window.repairTextArtifacts(container.innerHTML);
                     }
@@ -3697,6 +3719,46 @@
                     }
                     setupAccountSwitcher(); // Re-bind observer to new cards
                     ensureActiveBalanceCard(activeAccountId);
+                    
+                    // [NEW 2026-07-01] Start random shimmer effects on all cards
+                    startRandomCardShimmers();
+                }
+
+                // [NEW 2026-07-01] Random shimmer effect for all balance cards together
+                // [UPDATED 2026-07-01] Changed to 10-20 second interval
+                function startRandomCardShimmers() {
+                    const cards = document.querySelectorAll('.balance-card');
+                    console.log('🌟 Starting synchronized shimmer for', cards.length, 'cards');
+                    
+                    function triggerAllShimmers() {
+                        console.log('✨ Triggering shimmer on ALL cards');
+                        
+                        // Trigger shimmer on all cards simultaneously
+                        cards.forEach((card, index) => {
+                            const shimmer = card.querySelector('.card-shimmer');
+                            if (!shimmer) {
+                                console.warn('⚠️ No shimmer element found for card', index);
+                                return;
+                            }
+                            
+                            shimmer.classList.add('active');
+                            
+                            // Remove after animation completes
+                            setTimeout(() => {
+                                shimmer.classList.remove('active');
+                            }, 1200);
+                        });
+                        
+                        // Schedule next shimmer randomly between 10-20 seconds
+                        const nextShimmer = 10000 + Math.random() * 10000; // 10-20s
+                        console.log('⏰ Next shimmer in', (nextShimmer/1000).toFixed(1), 'seconds');
+                        setTimeout(triggerAllShimmers, nextShimmer);
+                    }
+                    
+                    // Start with random initial delay (3-8s)
+                    const initialDelay = 3000 + Math.random() * 5000;
+                    console.log('⏱️ First shimmer in', (initialDelay/1000).toFixed(1), 'seconds');
+                    setTimeout(triggerAllShimmers, initialDelay);
                 }
 
                 function scrollToActiveCard(accId) {
@@ -4085,6 +4147,8 @@
                         if (window.__useModuleWalletSwitcher) return;
                         const bestEntry = entries
                             .filter(entry => entry.isIntersecting)
+                            .filter(entry => !entry.target.classList.contains('skeleton-card')) // [FIX 2026-07-01] Exclude skeleton
+                            .filter(entry => !entry.target.dataset.isSkeleton) // [FIX 2026-07-01] Exclude via data attribute
                             .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
 
                         if (!bestEntry) return;
@@ -4092,7 +4156,12 @@
 
                         const account = bestEntry.target.dataset.account;
 
-                        cards.forEach(card => card.classList.toggle('active', card === bestEntry.target));
+                        // [FIX 2026-07-01] Only toggle 'active' on actual balance cards, not skeleton
+                        cards.forEach(card => {
+                            if (!card.classList.contains('skeleton-card') && !card.dataset.isSkeleton) {
+                                card.classList.toggle('active', card === bestEntry.target);
+                            }
+                        });
                         if (window.isInitialLoading) return;
 
                         if (window.currentAccount !== account) {
@@ -4179,7 +4248,12 @@
                     });
 
                     window.accountCardObserver = observer;
-                    cards.forEach(card => observer.observe(card));
+                    // [FIX 2026-07-01] Only observe actual balance cards, not skeleton
+                    cards.forEach(card => {
+                        if (!card.classList.contains('skeleton-card') && !card.dataset.isSkeleton) {
+                            observer.observe(card);
+                        }
+                    });
                     ensureActiveBalanceCard(resolveCurrentAccountId(window.walletAccounts, window.currentAccount));
 
                     // Initial Scroll to saved account

@@ -61,13 +61,26 @@
         const manualCategory = String(txn.manualCategory || '').trim();
         const normalizedManual = manualCategory.toLowerCase();
         const autoCategory = String(mapped?.category || '').trim();
+        const merchantName = String(txn.merchant || txn.name || '').toUpperCase();
+        
+        // [FIXED: 2026-07-01] BALANCING is Income (money received to balance account)
+        if (merchantName.includes('BALANCING')) {
+            return 'Income';
+        }
+        
+        // [FIXED: 2026-07-01] Payment transactions should always be Financial Expenses
+        if (merchantName.includes('PAYMENT') || merchantName.includes('INSTAPAY') || merchantName.includes('TRANSFER')) {
+            return 'Financial Expenses';
+        }
+        
+        // [FIXED: 2026-07-01] Don't treat "Financial Expenses" as generic - it's a valid category
+        // Only treat truly generic categories as fallbacks
         const genericManualCategories = new Set([
-            'financial expenses',
-            'financial expense',
             'other',
             'uncategorized'
         ]);
 
+        // [FIXED: 2026-07-01] Always respect manualCategory if set, except for truly generic ones
         if (manualCategory && !genericManualCategories.has(normalizedManual)) {
             return manualCategory;
         }
@@ -83,7 +96,7 @@
 
         init: function() {
             if (this.initialized) return;
-            console.log("📅 Initializing Calendar View...");
+            console.log("📅 [v4.3] Calendar: Inline CSS, BALANCING=Income, Date format fixed");
             this.initialized = true;
             this.setupListeners();
             this.render();
@@ -237,16 +250,47 @@
             const isAtomePayment = merchantUpper.includes('ATOME PAYMENT');
             const iconName = isAtomePayment ? 'savings' : (mapped.icon || 'receipt_long');
             const iconClass = isAtomePayment ? 'cat-income' : (mapped.catClass || '');
+            
+            // [FIXED: 2026-07-01] Format date as "June 19" instead of "2026-06-19"
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    const monthNum = parseInt(parts[1], 10) - 1;
+                    const day = parseInt(parts[2], 10);
+                    return `${months[monthNum]} ${day}`;
+                }
+                return dateStr;
+            };
+            
+            // [ADDED: 2026-07-01] Get account logo badge
+            const account = t.account || window.currentAccount || 'atome';
+            const accountBadge = account === 'bpi' 
+                ? '<div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 2px solid #fff; overflow: hidden; padding: 1.5px; z-index: 2;"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/BPI_logo.svg/320px-BPI_logo.svg.png" alt="BPI" style="width: 100%; height: 100%; object-fit: contain;"></div>'
+                : '<div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 2px solid #fff; overflow: hidden; padding: 1.5px; z-index: 2;"><img src="https://asset.brandfetch.io/idv-ndb21F/id65dSTrJP.png" alt="Atome" style="width: 100%; height: 100%; object-fit: contain;"></div>';
+            
+            // [ADDED: 2026-07-01] Build meta info string with date and category
+            const dateFormatted = formatDate(t.date);
+            const metaText = `${dateFormatted} • ${mapped.category || ''}`;
+            
+            // [ADDED: 2026-07-01] Include note if available
+            const noteHtml = (t.note && t.note.trim()) 
+                ? `<div style="font-size: 9.03px; font-weight: 700; color: #7c3aed; margin-top: 1px; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${t.note}</div>` 
+                : '';
+            
             return `
-                <div class="calendar-txn-chip ${isInc ? 'income' : 'expense'}" style="display:flex; align-items:center; gap:12px; padding:12px; background:#fff; border:1px solid #f1f5f9; border-radius:12px; margin-bottom:4px; ${t.excluded ? 'opacity:0.5' : ''}">
-                    <div class="history-icon ${iconClass}" style="width:32px; height:32px; border-radius:10px; background:#f8fafc; display:flex; align-items:center; justify-content:center; color:#64748b;">
-                        <i class="material-icons" style="font-size:18px;">${iconName}</i>
+                <div class="calendar-txn-chip ${isInc ? 'income' : 'expense'}" style="display:flex; align-items:center; gap:14px; padding:12px 16px; background:#fff; border:1px solid #f1f5f9; border-radius:16px; margin-bottom:12px; ${t.excluded ? 'opacity:0.5' : ''}; font-family: 'Plus Jakarta Sans', sans-serif !important;">
+                    <div class="history-icon ${iconClass}" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; position:relative;">
+                        <i class="material-icons" style="font-size:20px;">${iconName}</i>
+                        ${accountBadge}
                     </div>
-                    <div style="flex:1;">
-                        <div style="font-size:12px; font-weight:800; color:#1e293b;">${mapped.name || 'UNKNOWN'}</div>
-                        <div style="font-size:10px; color:#94a3b8; font-weight:600;">${mapped.category || ''}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size: 10.91px; font-weight: 800; color: #1e293b; text-transform: uppercase; margin-bottom: 1px; letter-spacing: -0.3px; line-height: 1.3; white-space: nowrap; overflow: hidden; position: relative; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${mapped.name || 'UNKNOWN'}</div>
+                        <div style="font-size: 8.64px; font-weight: 700; color: #475569; text-transform: uppercase; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${metaText}</div>
+                        ${noteHtml}
                     </div>
-                    <div style="font-size:13px; font-weight:900; color:${isInc ? '#10b981' : '#1e293b'};">${isInc ? '+' : '-'}₱${Math.abs(amt).toLocaleString()}</div>
+                    <div style="font-size: 11.8px; font-weight: 800; text-align: right; white-space: nowrap; color: ${isInc ? '#10b981' : '#f43f5e'}; font-family: 'Plus Jakarta Sans', sans-serif !important;">${isInc ? '+' : '-'}₱${Math.abs(amt).toLocaleString()}</div>
                 </div>
             `;
         }

@@ -539,9 +539,9 @@ export function renderHistory(txns) {
         header.className = `month-header ${isCollapsed ? 'collapsed' : ''}`;
         header.innerHTML = `
             <span class="month-title">${month}</span>
-            <div style="display:flex; align-items:center; gap:12px;">
-                <span class="month-total privacy-mask" data-raw="ÃƒÂ¢"Å¡Ã‚Â±${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
-                    ${isHidden ? '******' : 'ÃƒÂ¢"Å¡Ã‚Â±' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
+            <div class="month-header-actions" style="display:flex; align-items:center; gap:12px;"> <!-- COMMENT: 2026-07-01 - Labeled to identify container for month header action elements -->
+                <span class="month-total privacy-mask" data-raw="₱${data.total.toLocaleString(undefined, {minimumFractionDigits:2})}">
+                    ${isHidden ? '******' : '₱' + data.total.toLocaleString(undefined, {minimumFractionDigits:2})}
                 </span>
                 <i class="material-icons expand-icon">expand_more</i>
             </div>
@@ -620,7 +620,8 @@ export function renderHistory(txns) {
                          data-note="${noteSafe}"
                          data-excluded="${t.excluded || false}"
                          data-refund="${t.refund || false}"
-                         data-reimbursed="${t.reimbursed || false}">
+                         data-reimbursed="${t.reimbursed || false}"
+                         data-type="${t.type || 'debit'}"> <!-- [ADDED: 2026-07-01] Type attribute for balance comparison checks -->
                         <div class="icon-box ${mapped.catClass}">
                             <i class="material-icons">${mapped.icon}</i>
                             ${logoHTML}
@@ -628,13 +629,13 @@ export function renderHistory(txns) {
                         <div class="txn-details">
                             <div class="txn-merch" style="${displayTitleColor}">${displayName}${refundChip}${reimbursedChip}${paymentChip}</div>
                             <div class="txn-sub">
-                                <span>${shortDate}</span> ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
+                                <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                             </div>
                             ${displayNote ? `<div class="txn-note" style="color: ${getTxnNoteColor(mapped.category, isRefund, isReimbursed)}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
                         </div>
                         <div class="txn-right">
-                            <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}ÃƒÂ¢"Å¡Ã‚Â±${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
-                                ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + 'ÃƒÂ¢"Å¡Ã‚Â±' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
+                            <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
+                                ${isHidden ? '******' : ((!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : '') + '₱' + Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}
                             </div>
                         </div>
                     </div>
@@ -739,7 +740,7 @@ function renderHistoryClean(txns) {
         header.className = `month-header ${isCollapsed ? 'collapsed' : ''}`;
         header.innerHTML = `
             <span class="month-title">${month}</span>
-            <div style="display:flex; align-items:center; gap:12px;">
+            <div class="month-header-actions" style="display:flex; align-items:center; gap:12px;"> <!-- COMMENT: 2026-07-01 - Labeled to identify container for month header action elements -->
                 <span class="month-total privacy-mask" data-raw="${monthTotalText}">
                     ${isHidden ? '******' : monthTotalText}
                 </span>
@@ -821,7 +822,8 @@ function renderHistoryClean(txns) {
                          data-note="${noteSafe}"
                          data-excluded="${t.excluded || false}"
                          data-refund="${t.refund || false}"
-                         data-reimbursed="${t.reimbursed || false}">
+                         data-reimbursed="${t.reimbursed || false}"
+                         data-type="${t.type || 'debit'}"> <!-- [ADDED: 2026-07-01] Type attribute for balance comparison checks -->
                         <div class="icon-box ${mapped.catClass}">
                             <i class="material-icons">${mapped.icon}</i>
                             ${logoHTML}
@@ -2165,7 +2167,7 @@ export async function updateCategoryBudgetsUI() {
 
         return `
             <div class="cat-budget-item">
-                <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>ÃƒÂ¢"Å¡Ã‚Â±${Math.round(spent).toLocaleString()} / ÃƒÂ¢"Å¡Ã‚Â±${limit.toLocaleString()}</span></div>
+                <div class="cat-budget-label"><span>${displayCategoryName(cat)}</span> <span>₱${Math.round(spent).toLocaleString()} / ₱${limit.toLocaleString()}</span></div>
                 <div class="cat-budget-bar-wrap"><div class="cat-budget-bar" style="width: ${pct}%; background: ${pct > 90 ? '#ef4444' : '#3b82f6'};"></div></div>
             </div>
         `;
@@ -2305,7 +2307,7 @@ export function triggerAdaptiveSync() {
     if (!isAdmin || window.isSyncing) return;
     
     if (window.justLoggedIn) {
-        console.log('ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â Skipping auto-sync: just logged in.');
+        console.log('⏭️ Skipping auto-sync: just logged in.');
         return;
     }
 
@@ -2315,14 +2317,14 @@ export function triggerAdaptiveSync() {
     const token = localStorage.getItem('g_access_token');
 
     if (token) {
-        console.log(`ÃƒÂ°Ã…Â¸"Â"Å¾ Auto-syncing ${id} on load (10 emails)...`);
+        console.log(`🔄 Auto-syncing ${id} on load (10 emails)...`);
         import('./app-data.js').then(m => {
             if (m.handleScan) {
                 setTimeout(() => m.handleScan(10, false), 1500);
             }
         });
     } else {
-        console.log(`ÃƒÂ¢Ã‚ÂÃ‚Â­ÃƒÂ¯Ã‚Â¸Ã‚Â No Gmail token found for ${id}. Use manual Sync to authenticate.`);
+        console.log(`⏭️ No Gmail token found for ${id}. Use manual Sync to authenticate.`);
     }
 }
 
@@ -2721,7 +2723,7 @@ export function updateBalanceCardsUI(accounts) {
             <div class="card-footer">
                 <div class="card-number-box">
                     <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                    <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : 'ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ' + acc.last4}</div>
+                    <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 12px;">
                     ${(isAtome || isBPI) ? `
@@ -3484,8 +3486,8 @@ export function drawCashFlowChart() {
         html += `
             <div class="bar-group">
                 <div class="bars-pair">
-                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ÃƒÂ¢"Å¡Ã‚Â±${m.income.toLocaleString()}"></div>
-                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ÃƒÂ¢"Å¡Ã‚Â±${m.expense.toLocaleString()}"></div>
+                    <div class="bar bar-income" style="height: ${incH}px;" title="Income: ₱${m.income.toLocaleString()}"></div>
+                    <div class="bar bar-expense" style="height: ${expH}px;" title="Expense: ₱${m.expense.toLocaleString()}"></div>
                 </div>
                 <div class="bar-label">${m.name}</div>
             </div>
@@ -3654,10 +3656,10 @@ export function detectSubscriptions() {
                 </div>
                 <div class="sub-info">
                     <div class="sub-name">${g.name}</div>
-                    <div class="sub-label">AVG ÃƒÂ¢"Å¡Ã‚Â±${Math.round(g.averageSpend).toLocaleString()}</div>
+                    <div class="sub-label">AVG ₱${Math.round(g.averageSpend).toLocaleString()}</div>
                 </div>
                 <div class="sub-val" style="color: ${statusColor}">
-                    ÃƒÂ¢"Å¡Ã‚Â±${Math.round(g.currentMonthSpend).toLocaleString()}
+                    ₱${Math.round(g.currentMonthSpend).toLocaleString()}
                 </div>
             </div>
         `;
@@ -3773,10 +3775,10 @@ function renderNotificationItemsIntoList(list, items) {
 export function toggleNotificationCenter(e) {
     if (e) e.stopPropagation();
     const sidebar = document.getElementById('notification-center');
-    console.log('ÃƒÂ°Ã…Â¸"Â"Â toggleNotificationCenter called. Sidebar found:', !!sidebar);
+    console.log('🔔 toggleNotificationCenter called. Sidebar found:', !!sidebar);
     
     if (!sidebar) {
-        console.error('ÃƒÂ¢Ã‚ÂÃ…â€™ Notification sidebar element (#notification-center) NOT FOUND in DOM');
+        console.error('⚠️ Notification sidebar element (#notification-center) NOT FOUND in DOM');
         return;
     }
     
@@ -5140,7 +5142,7 @@ function setupFastPath() {
     const cachedBalances = localStorage.getItem('wallet_cached_balances');
     
     if (lastUid && cachedAccounts && cachedCurrent) {
-        console.log('ÃƒÂ¢Ã…Â¡Ã‚Â¡ Fast Path: Rendering from cache...');
+        console.log('⚡ Fast Path: Rendering from cache...');
         try {
             const accounts = JSON.parse(cachedAccounts);
             
@@ -5180,7 +5182,7 @@ function setupFastPath() {
 
 // LEGACY BRIDGING (Final Export to Global Scope)
 function bridgeGlobals() {
-    console.log('ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â Bridging exports to global scope...');
+    console.log('🌐 Bridging exports to global scope...');
     window.__useModuleWalletSwitcher = true;
     window.updateAccountSwitcherUI = updateAccountSwitcherUI;
     window.updateBalanceCardsUI = updateBalanceCardsUI;
@@ -5228,7 +5230,7 @@ window.forceBudgetNotificationCheck = forceBudgetNotificationCheck;
 window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificationTrigger;
  
     window.animateNumber = animateNumber;
-    console.log('ÃƒÂ¢Ã…â€œ"Â¦ Global bridge complete.');
+    console.log('✅ Global bridge complete.');
     // If cached/live txns landed before app-ui finished wiring globals, paint the dashboard now.
     if (Array.isArray(window.allTxns)) {
         rehydrateDashboardFromCurrentTxns();

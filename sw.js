@@ -1,5 +1,6 @@
-// [FIXED: 2026-06-29] Bumped cache version to v3.9 - Consolidated double-tap zoom + balance insight card - Antigravity
-const CACHE_NAME = 'smartwallet-v3.9';
+// [FIXED: 2026-07-01] Bumped cache version to v4.3 - Inline CSS for calendar, BALANCING as Income
+// Service worker version incremented to force cache refresh
+const CACHE_NAME = 'smartwallet-v4.3';
 const ASSETS = [
     './',
     './index.html',

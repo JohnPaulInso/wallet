@@ -715,8 +715,10 @@
 .bpi-scan-results-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    /* [FIXED: 2026-06-28] Increased list gap for less crammed layout */
+    gap: 8px; /* [ADDED: 2026-07-01] Reduced gaps between scanned transaction cards */
+}
+.bpi-scan-results-list .bpi-txn-card {
+    margin-bottom: 0 !important; /* Remove individual margins to let flex gap manage spacing */
 }
 
 /* Date divider styling */
@@ -785,6 +787,9 @@
     background: #fffdf5;
     border: 1px solid #fef08a;
     animation: premiumPulseGlow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    padding: 14px 16px;
+    gap: 14px;
+    margin-bottom: 8px;
 }
 
 /* Card accepting animation - fade to green */

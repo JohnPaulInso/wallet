@@ -57,11 +57,12 @@ export function repairTextArtifacts(text, shouldTrim = true) {
 
     const processed = repaired
         .replace(/â‚±/g, '\u20B1')
-        .replace(/Ã¢â€šÂ±|ÃƒÂ¢"Å¡Ã‚Â±|Ã‚â‚±/g, '\u20B1')
-        .replace(/"Â¢|ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢/g, '\u2022')
-        .replace(/Ã¢Ë†â€™|ÃƒÂ¢Ã‹â€ "â„¢|ÃƒÂ¢Ã¢â€šÂ¬"Å“/g, '\u2212')
-        .replace(/Ãƒâ€”/g, '\u00D7')
-        .replace(/ÃƒÂ·/g, '\u00F7')
+        .replace(/₱|₱|₱/g, '\u20B1')
+        .replace(/"Â¢|•/g, '\u2022')
+        /* [MODIFIED: 2026-07-01] Removed standard ASCII hyphen '-' from this regex. Previously it converted all standard hyphens in HTML markup to Unicode minus signs, which corrupted DOM class names (e.g. balance-card became balance−card) and broke CSS styling. */
+        .replace(/\u2212/g, '\u2212')
+        .replace(/×/g, '\u00D7')
+        .replace(/÷/g, '\u00F7')
         .replace(/\uFFFD+/g, '')
         .replace(/\s{2,}/g, ' ');
 
@@ -256,6 +257,11 @@ function inferMerchantCategory(name = '', note = '') {
 
     if (combined === 'INCOME' || combined.includes('SALARY') || combined.includes('DIVIDEND') || combined.includes('REFUND SOURCE')) {
         return { category: 'Income', icon: 'savings', catClass: 'cat-income', autoSuggested: true };
+    }
+
+    if (combined.includes('SERVICE FEE') || combined.includes('SERVICEFE') || combined.includes('TAX') || combined.includes('INTEREST') || combined.includes('FEE') || combined.includes('COMMISSION')) {
+        // [ADDED: 2026-07-01] Map Service Fees, Taxes, and Interest keywords to Financial Expenses exactly
+        return { category: 'Financial Expenses', icon: 'payments', catClass: 'cat-financial', autoSuggested: true };
     }
 
     if (combined.includes('TRADERSCONNECT') || combined.includes('TRADERS CONNECT')) {

@@ -371,10 +371,11 @@
         .skeleton-card-atome { 
             background: #121212 !important; 
             opacity: 1 !important;
-            transform: scale(1); /* Active card */
-            filter: grayscale(0);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            border: 1px solid rgba(192, 255, 0, 0.15);
+            transform: scale(1.05) !important; /* [FIX 2026-07-01] Active card scale */
+            filter: grayscale(0) !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3) !important;
+            border: 1px solid rgba(192, 255, 0, 0.15) !important;
+            z-index: 200 !important;
         }
         
         /* Skeleton bars inside colored cards should be lighter */
@@ -383,6 +384,24 @@
         }
         .skeleton-card .skeleton::after {
             background: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0));
+        }
+
+        /* [RESTORED: 2026-07-01] Dark Card Specific Skeleton Bars with Shimmer Animation */
+        .skeleton-card-atome .skeleton {
+            background: linear-gradient(90deg, #2a2a2a 25%, #383838 50%, #2a2a2a 75%) !important;
+            background-size: 200% 100% !important;
+            animation: skeleton-shimmer-dark 2s infinite !important;
+            opacity: 0.6 !important;
+            border-radius: 6px !important;
+        }
+
+        .skeleton-card-atome .skeleton::after {
+            display: none !important; /* Remove the default white shimmer overlay */
+        }
+
+        @keyframes skeleton-shimmer-dark {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
         .skeleton-row { display: flex; align-items: center; gap: 14px; padding: 12px 20px; }
@@ -1017,16 +1036,16 @@
             -ms-overflow-style: none;
             touch-action: pan-x;
             overscroll-behavior-x: contain;
-            scroll-padding-inline: 48px;
+            scroll-padding-inline: 20px; /* [FIX 2026-07-01] Reduced for better centering with peek */
             /* Padding for 'peek' centering */
-            padding: 20px 48px 25px 48px; 
+            padding: 20px 20px 25px 20px; /* [FIX 2026-07-01] Symmetric padding for peek effect */
             gap: 16px;
             cursor: grab;
         }
         .card-carousel-scroll:active { cursor: grabbing; }
         .card-carousel-scroll::-webkit-scrollbar { display: none; }
         .balance-card { /* .balance-card - updated 2026-03-27 - added shimmer effect - 2026-03-27 */
-            flex: 0 0 calc(100%);
+            flex: 0 0 calc(100% - 80px); /* [FIX 2026-07-01] Reduced width to allow peek */
             max-width: 334px;
             scroll-snap-align: center;
             scroll-snap-stop: always; /* Force 1 card per swipe */
@@ -1045,10 +1064,10 @@
             z-index: 100;
             /* Inactive State: Smaller & Faded */
             transform: scale(0.92);
-            opacity: 0.35;
-            /* [FIX 2026-06-29] Reduced from 0.7 to 0.35 to make inactive cards nearly invisible on mobile */
-            filter: grayscale(0.8);
-            /* [FIX 2026-06-29] Increased from 0.5 to 0.8 for more grayscale */
+            opacity: 0.7;
+            /* [FIX 2026-07-01] Restored from 0.35 to 0.7 for better visibility */
+            filter: grayscale(0.5);
+            /* [FIX 2026-07-01] Restored from 0.8 to 0.5 for better visibility */
             will-change: transform, opacity, filter;
             /* Ensure shimmer doesn't leak */
             isolation: isolate;
@@ -1111,10 +1130,11 @@
         }
 
         /* Add Card Placeholder */
+        /* Add Card Placeholder - [FIX 2026-07-01] Adjusted for teaser peek */
         .add-card-placeholder {
             display: flex;
             flex-direction: column;
-            background: rgba(255,255,255,0.05); /* Very subtle bg */
+            background: rgba(255,255,255,0.08); /* [FIX] Slightly more visible */
             border: 2px dashed #cbd5e1;
             box-shadow: none !important;
             color: #94a3b8;
@@ -1123,19 +1143,22 @@
             min-height: 200px;
             width: 140px;
             flex: 0 0 140px;
-            margin-left: 8px;
+            margin-left: 0px; /* [FIX] Remove extra margin */
             scroll-snap-align: center;
             scroll-snap-stop: always;
             border-radius: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
+            /* [FIX] Make it more prominent as a teaser */
+            opacity: 0.85;
         }
         .add-card-placeholder:hover {
             border-color: #3b82f6;
             color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
+            background: rgba(59, 130, 246, 0.08);
+            opacity: 1;
         }
-        .add-card-placeholder i { font-size: 32px; margin-bottom: 12px; color: #cbd5e1; opacity: 0.8; }
+        .add-card-placeholder i { font-size: 32px; margin-bottom: 12px; color: #cbd5e1; opacity: 0.9; }
         .add-card-placeholder span { 
             font-weight: 700; 
             font-size: 11px; 
@@ -1198,6 +1221,30 @@
             box-shadow: 0 5px 15px rgba(92, 10, 10, 0.4); 
             transform: scale(1.05);
             border: 1px solid rgba(255,255,255,0.08); /* Minimalist border */
+        }
+
+        /* [FIX 2026-07-01] MY WALLET CARD - Dark Blue Gradient */
+        .wallet-card {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        
+        .wallet-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0.5px, transparent 0.5px);
+            background-size: 12px 12px;
+            opacity: 0.08;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .wallet-card.active {
+            box-shadow: 0 5px 15px rgba(30, 58, 138, 0.4);
+            transform: scale(1.05);
+            border: 1px solid rgba(59, 130, 246, 0.2);
         }
 
         /* PIE CHART ANIMATION */
@@ -6896,15 +6943,38 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
         .calendar-modal-container .brand-badge img { width: 100%; height: 100%; object-fit: contain; }
 
         .calendar-modal-container .txn-merch-name { 
-            font-size: 11.2px; font-weight: 600; color: #1e293b; text-transform: uppercase; 
-            margin-bottom: 1px; letter-spacing: 0.2px; line-height: 1.3;
+            font-size: 10.91px; font-weight: 800; color: #1e293b; text-transform: uppercase; 
+            margin-bottom: 1px; letter-spacing: -0.3px; line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            position: relative;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
         }
-        .calendar-modal-container .txn-amount-val { font-size: 10px; font-weight: 600; text-align: right; white-space: nowrap; }
+        .calendar-modal-container .txn-amount-val { font-size: 11.8px; font-weight: 800; text-align: right; white-space: nowrap; }
         .calendar-modal-container .txn-amount-val.expense { color: #f43f5e !important; } 
         .calendar-modal-container .txn-amount-val.income { color: #10b981 !important; }
 
-        .calendar-modal-container .txn-meta-info { font-size: 8px; font-weight: 500; color: #64748b; text-transform: uppercase; }
-        .calendar-modal-container .txn-note-text { font-size: 8.5px; font-weight: 600; color: #7c3aed; margin-top: 1px; }
+        .calendar-modal-container .txn-meta-info { 
+            font-size: 8.64px; 
+            font-weight: 700; 
+            color: #475569; 
+            text-transform: uppercase;
+            white-space: nowrap;
+            overflow: hidden;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+        .calendar-modal-container .txn-note-text { 
+            font-size: 9.03px; 
+            font-weight: 700; 
+            color: #7c3aed; 
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            mask-image: linear-gradient(to right, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
 
         .calendar-modal-container #calendar-modal-footer-summary { 
             position: sticky;

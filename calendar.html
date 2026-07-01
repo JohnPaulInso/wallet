@@ -875,7 +875,11 @@
             const finalRaw = cleaned.toUpperCase();
             if (mapping[cleaned]) display.name = mapping[cleaned];
             else if (mapping[finalRaw]) display.name = mapping[finalRaw];
-            if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY') || finalRaw.includes('CAROUSELL')) { display.category = 'Online shopping'; display.icon = 'shopping_bag'; }
+            if (finalRaw.includes('SERVICE FEE') || finalRaw.includes('SERVICEFE') || finalRaw.includes('TAX') || finalRaw.includes('INTEREST') || finalRaw.includes('FEE') || finalRaw.includes('COMMISSION')) {
+                // [ADDED: 2026-07-01] Map Service Fees, Taxes, and Interest keywords to Financial Expenses exactly
+                display.category = 'Financial Expenses'; display.icon = 'payments';
+            }
+            else if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY') || finalRaw.includes('CAROUSELL')) { display.category = 'Online shopping'; display.icon = 'shopping_bag'; }
             else if (finalRaw.includes('LOCQ') || finalRaw.includes('TECFUEL') || finalRaw.includes('SHELL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL') || finalRaw.includes('CALTEX') || finalRaw.includes('UNIOIL') || finalRaw.includes('PHOENIX') || finalRaw.includes('TOTAL')) { display.category = 'Vehicle'; display.icon = 'local_gas_station'; }
             else if (/\bSM\b/.test(finalRaw) || finalRaw.startsWith('SM ') || finalRaw.includes('SM STORE') || finalRaw.includes('SM SUPERMARKET') || finalRaw.includes('SM MALL') || finalRaw.includes('SM CITY') || finalRaw.includes('SM HYPERMARKET') || finalRaw.includes('ROBINSONS') || finalRaw.includes('LANDERS') || finalRaw.includes('PUREGOLD') || finalRaw.includes('WALTERMART') || finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS')) { display.category = 'Shopping'; display.icon = 'shopping_cart'; }
             else if (finalRaw.includes('J AND L MALL') || finalRaw.includes('J & L MALL') || finalRaw.includes('J AND L SHOPPING') || finalRaw.includes('J & L') || finalRaw.includes('NATIONAL BOOKSTORE') || finalRaw.includes('FULLY BOOKED') || finalRaw.includes('ACE HARDWARE') || finalRaw.includes('MERCURY DRUG')) { display.category = 'Shopping'; display.icon = 'shopping_cart'; }

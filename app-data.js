@@ -268,6 +268,15 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                 return b._createKey - a._createKey;
             });
 
+            // [ADDED: 2026-07-01] De-duplicate by ID to prevent duplicate list rendering
+            const seenIds = new Set();
+            txns = txns.filter(t => {
+                if (!t.id) return true;
+                if (seenIds.has(t.id)) return false;
+                seenIds.add(t.id);
+                return true;
+            });
+
             const hasRealtimeAddedTxn = prevTxns.length > 0 && snap.docChanges().some(change => change.type === 'added');
             if (hasRealtimeAddedTxn && window.queueBudgetThresholdNotificationTrigger) {
                 window.queueBudgetThresholdNotificationTrigger(uid, null, 'realtime_snapshot');
@@ -848,9 +857,10 @@ function parseBPIEmail(text, ts, subject) {
         merchant = "ATOME PAYMENT";
         category = "Credit Card Payment";
         if (refNoMatch) note = "Ref No: " + refNoMatch[1].trim();
-    } else if (sLower.includes("incoming") || tLower.includes("received a transfer")) {
+    } else if (sLower.includes("incoming") || tLower.includes("received a transfer") || tLower.includes("balancing")) {
+        // [FIX 2026-07-01] BALANCING is Income (money received to balance account)
         isIncome = true;
-        merchant = "INCOME"; 
+        merchant = tLower.includes("balancing") ? "BALANCING" : "INCOME"; 
         category = "Income";
         const bankMatch = bankNameMatch || text.match(/Transfer From\s*(?:\|\s*)?([^|\n\r]+)/i);
         if (bankMatch) note = "FROM " + bankMatch[1].trim().toUpperCase();
@@ -858,12 +868,33 @@ function parseBPIEmail(text, ts, subject) {
         merchant = payToMatch ? payToMatch[1].trim() : "PAYMENT";
         let bank = bankNameMatch ? bankNameMatch[1].trim() : "";
         note = bank ? "TO " + bank.toUpperCase() : "TO BPI";
-        const inferred = getMerchantDisplay(merchant, { note });
-        if (inferred.category && inferred.category !== 'Financial Expenses') {
-            category = inferred.category;
-            merchant = inferred.name || merchant;
-        } else {
+        
+        // [FIX 2026-07-01] Force Financial Expenses for payment/withdrawal transactions (NOT balancing)
+        const merchantLower = merchant.toLowerCase();
+        const noteLower = note.toLowerCase();
+        const isFinancialTransaction = 
+            merchantLower.includes("payment") ||
+            merchantLower.includes("withdrawal") ||
+            merchantLower.includes("withdraw") ||
+            merchantLower.includes("instapay") ||
+            merchantLower.includes("transfer") ||
+            noteLower.includes("payment") ||
+            noteLower.includes("withdrawal") ||
+            noteLower.includes("instapay") ||
+            noteLower.includes("transfer");
+        
+        if (isFinancialTransaction) {
+            // Always categorize financial transactions as Financial Expenses
             category = "Financial Expenses";
+        } else {
+            // Only use merchant inference for non-financial transactions
+            const inferred = getMerchantDisplay(merchant, { note });
+            if (inferred.category && inferred.category !== 'Financial Expenses') {
+                category = inferred.category;
+                merchant = inferred.name || merchant;
+            } else {
+                category = "Financial Expenses";
+            }
         }
     }
 

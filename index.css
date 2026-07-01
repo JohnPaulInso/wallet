@@ -293,6 +293,20 @@
         .skeleton-text.lg { height: 24px; }
         .skeleton-text.xl { height: 32px; }
         
+        /* PRIVACY MASK - Prevent text selection for sensitive data [FIX 2026-07-01] */
+        /* NOTE: CSS cannot truly prevent screenshots - that requires native platform APIs */
+        /* The actual masking (showing ******) is handled by JavaScript */
+        .privacy-mask {
+            /* Prevent text selection and copying */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -webkit-touch-callout: none;
+            /* Prevent content modification */
+            -webkit-user-modify: read-only;
+        }
+        
         /* Progress Bar Skeleton */
         .progress-bar-bg.skeleton {
             background: linear-gradient(180deg, #e2e8f0 0%, #dbe4ef 100%) !important;
@@ -323,14 +337,38 @@
         .skeleton-insight-sub { width: 70%; height: 10px; opacity: 0.6; }
         
         .skeleton-circle { width: 48px; height: 48px; border-radius: 50%; }
+        
+        /* Skeleton bars for balance card - specific sizing with fixed spacing */
+        .skeleton-card .skeleton-title { 
+            width: 40%; 
+            height: 12px;
+            margin: 0 0 8px 0; /* Fixed top bar spacing */
+        }
+        .skeleton-card .skeleton-balance { 
+            width: 60%; 
+            height: 32px; 
+            margin: 0 0 0 0; /* Middle bar - no extra margin */
+        }
+        .skeleton-card .skeleton-number { 
+            width: 80%; 
+            height: 14px;
+            margin-top: auto; /* Push to bottom */
+            margin-bottom: 0;
+        }
+        
+        /* BALANCE CARD SKELETON - Clean single class */
         .skeleton-card {
-            flex: 0 0 calc(100%);
-            max-width: 334px;
+            flex: 0 0 80vw !important;
+            max-width: 80vw !important;
+            min-width: 280px !important;
+            width: 80vw !important;
+            margin-left: 20px !important; /* Match carousel padding */
             scroll-snap-align: center;
             scroll-snap-stop: always;
-            min-height: 200px;
+            min-height: 210px;
+            max-height: 210px;
             border-radius: 20px;
-            background: #f1f5f9;
+            background: linear-gradient(135deg, #1a1a1a 0%, #080808 100%);
             position: relative;
             overflow: hidden;
             display: flex;
@@ -338,70 +376,51 @@
             padding: 24px 20px 18px;
             box-sizing: border-box;
             transition: none;
-            transform: scale(1.05);
+            transform: scale(1.05); /* Match atome-card.active */
             opacity: 1;
             filter: grayscale(0);
             z-index: 200;
             box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border: 1px solid rgba(192, 255, 0, 0.15);
+            pointer-events: none; /* Prevent interaction */
+            user-select: none; /* Prevent selection */
         }
-        .wallet-card-skeleton.balance-card,
-        .wallet-card-skeleton.balance-card.active,
-        .wallet-card-skeleton.atome-card.active {
-            transition: none !important;
-            transform: scale(1.05) !important;
-            opacity: 1 !important;
-            filter: grayscale(0) !important;
-            z-index: 200 !important;
-            min-height: 200px;
-        }
+        
         .skeleton-card-inner {
             display: flex;
             flex-direction: column;
             height: 100%;
-            gap: 12px;
-        }
-        .skeleton-card-bpi { 
-            background: #931B1B !important; 
-            opacity: 1 !important; 
-            transform: scale(1);
-            filter: grayscale(0);
-            box-shadow: 0 5px 15px rgba(92, 10, 10, 0.4);
-            border: 1px solid rgba(255,255,255,0.08);
-        }
-        .skeleton-card-atome { 
-            background: #121212 !important; 
-            opacity: 1 !important;
-            transform: scale(1.05) !important; /* [FIX 2026-07-01] Active card scale */
-            filter: grayscale(0) !important;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3) !important;
-            border: 1px solid rgba(192, 255, 0, 0.15) !important;
-            z-index: 200 !important;
+            gap: 0; /* Remove gap, use explicit margins on children */
         }
         
-        /* Skeleton bars inside colored cards should be lighter */
+        /* Skeleton progress bars - dark with shimmer and animations */
         .skeleton-card .skeleton { 
-            background: rgba(255,255,255,0.15); 
-        }
-        .skeleton-card .skeleton::after {
-            background: linear-gradient(90deg, rgba(255,255,255,0) 0, rgba(255,255,255,0.1) 20%, rgba(255,255,255,0.2) 60%, rgba(255,255,255,0));
-        }
-
-        /* [RESTORED: 2026-07-01] Dark Card Specific Skeleton Bars with Shimmer Animation */
-        .skeleton-card-atome .skeleton {
-            background: linear-gradient(90deg, #2a2a2a 25%, #383838 50%, #2a2a2a 75%) !important;
-            background-size: 200% 100% !important;
-            animation: skeleton-shimmer-dark 2s infinite !important;
-            opacity: 0.6 !important;
+            background: rgba(255,255,255,0.08) !important;
             border-radius: 6px !important;
+            position: relative !important;
+            overflow: hidden !important;
+            display: block !important;
+            pointer-events: none !important;
+            color: transparent !important;
+            min-height: 0 !important;
+            animation: none !important; /* Disable base skeleton pulse, use custom below */
         }
-
-        .skeleton-card-atome .skeleton::after {
-            display: none !important; /* Remove the default white shimmer overlay */
+        
+        .skeleton-card .skeleton::after {
+            content: "" !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%) !important;
+            animation: skeleton-card-shimmer 2s infinite !important;
+            transform: translateX(-100%) !important;
         }
-
-        @keyframes skeleton-shimmer-dark {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        
+        @keyframes skeleton-card-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
         }
 
         .skeleton-row { display: flex; align-items: center; gap: 14px; padding: 12px 20px; }
@@ -1030,23 +1049,24 @@
             display: flex;
             overflow-x: auto;
             scroll-snap-type: x mandatory;
-            scroll-behavior: auto;
+            scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             -ms-overflow-style: none;
             touch-action: pan-x;
             overscroll-behavior-x: contain;
-            scroll-padding-inline: 20px; /* [FIX 2026-07-01] Reduced for better centering with peek */
+            scroll-padding: 0 20px;
             /* Padding for 'peek' centering */
-            padding: 20px 20px 25px 20px; /* [FIX 2026-07-01] Symmetric padding for peek effect */
+            padding: 20px 20px 25px 20px;
             gap: 16px;
             cursor: grab;
         }
         .card-carousel-scroll:active { cursor: grabbing; }
         .card-carousel-scroll::-webkit-scrollbar { display: none; }
         .balance-card { /* .balance-card - updated 2026-03-27 - added shimmer effect - 2026-03-27 */
-            flex: 0 0 calc(100% - 80px); /* [FIX 2026-07-01] Reduced width to allow peek */
-            max-width: 334px;
+            flex: 0 0 80vw; /* [FIX 2026-07-01] Match skeleton exactly */
+            max-width: 80vw; /* [FIX 2026-07-01] 80vw as requested */
+            min-width: 260px;
             scroll-snap-align: center;
             scroll-snap-stop: always; /* Force 1 card per swipe */
             padding: 24px 20px 18px;
@@ -1058,53 +1078,107 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease, filter 0.32s ease, box-shadow 0.32s ease;
+            /* [PERF 2026-07-01] Removed box-shadow from transition (CPU-bound) */
+            transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease, filter 0.32s ease;
             cursor: pointer;
             user-select: none;
             z-index: 100;
             /* Inactive State: Smaller & Faded */
-            transform: scale(0.92);
+            transform: scale(0.92) translateZ(0); /* translateZ forces GPU layer */
             opacity: 0.7;
-            /* [FIX 2026-07-01] Restored from 0.35 to 0.7 for better visibility */
             filter: grayscale(0.5);
-            /* [FIX 2026-07-01] Restored from 0.8 to 0.5 for better visibility */
             will-change: transform, opacity, filter;
-            /* Ensure shimmer doesn't leak */
+            /* [PERF 2026-07-01] Optimize rendering */
             isolation: isolate;
+            contain: layout style paint;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
-        /* CARD SHIMMER EFFECT - refined for visibility 2026-03-27 */
+        /* CARD SHIMMER EFFECT - [UPDATED 2026-07-01] Smooth synchronized shine with +0.1 opacity */
         @keyframes cardShineSweep {
-            0% { transform: translateX(-160%) skewX(-24deg); opacity: 0; }
-            10% { opacity: 0; }
-            18% { opacity: 0.18; }
-            26% { transform: translateX(160%) skewX(-24deg); opacity: 0.62; }
-            34% { opacity: 0; }
-            100% { transform: translateX(150%) skewX(-25deg); opacity: 0; }
+            0% { transform: translateX(-160%) skewX(-25deg); opacity: 0; }
+            20% { opacity: 0.3; }
+            50% { opacity: 0.4; }
+            80% { opacity: 0.3; }
+            100% { transform: translateX(160%) skewX(-25deg); opacity: 0; }
         }
+        
         .card-shimmer {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, 0.16) 34%, rgba(255, 255, 255, 0.72) 49%, rgba(255, 255, 255, 0.18) 64%, transparent 82%);
-            transform: translateX(-150%) skewX(-25deg);
             pointer-events: none;
-            z-index: 2000; /* FIX: Moved above matte overlay - 2026-03-27 */
-            mix-blend-mode: screen;
-            animation: cardShineSweep 9.5s infinite; /* Reflective pass every few seconds */
+            z-index: 10 !important;
+            opacity: 0;
+            overflow: hidden;
+            /* [PERF 2026-07-01] Force GPU layer for shimmer animation */
+            will-change: transform, opacity;
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        
+        /* Base shimmer layer - very soft glow */
+        .card-shimmer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(100deg, 
+                transparent 0%, 
+                rgba(255, 255, 255, 0.25) 30%, 
+                rgba(255, 255, 255, 0.4) 50%, 
+                rgba(255, 255, 255, 0.25) 70%, 
+                transparent 100%);
+            transform: translateX(-160%) skewX(-25deg);
+            mix-blend-mode: overlay;
+        }
+        
+        /* Very subtle shine highlight - synchronized with base layer */
+        .card-shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(100deg, 
+                transparent 0%, 
+                transparent 42%,
+                rgba(255, 255, 255, 0.2) 47%, 
+                rgba(255, 255, 255, 0.35) 50%, 
+                rgba(255, 255, 255, 0.2) 53%, 
+                transparent 58%,
+                transparent 100%);
+            transform: translateX(-160%) skewX(-25deg);
+            mix-blend-mode: soft-light;
+            filter: blur(1px);
+        }
+        
+        .card-shimmer.active {
+            opacity: 1 !important;
+        }
+        
+        /* Both layers use the same animation for perfect sync */
+        .card-shimmer.active::before,
+        .card-shimmer.active::after {
+            animation: cardShineSweep 1.2s ease-out forwards !important;
         }
         
         .balance-card.active {
-            transform: scale(1.025); 
+            transform: scale(1.025) translateZ(0); /* translateZ for GPU */
             opacity: 1;
             filter: grayscale(0);
             z-index: 200;
         }
 
         .balance-card.instant-active {
-            transform: scale(1.025);
+            transform: scale(1.025) translateZ(0); /* translateZ for GPU */
             opacity: 1;
             filter: grayscale(0);
             z-index: 200;

@@ -96,7 +96,7 @@
 
         init: function() {
             if (this.initialized) return;
-            console.log("📅 [v4.3] Calendar: Inline CSS, BALANCING=Income, Date format fixed");
+            console.log("📅 [v5.6] CALENDAR: Added debug logging for date formatting");
             this.initialized = true;
             this.setupListeners();
             this.render();
@@ -251,16 +251,27 @@
             const iconName = isAtomePayment ? 'savings' : (mapped.icon || 'receipt_long');
             const iconClass = isAtomePayment ? 'cat-income' : (mapped.catClass || '');
             
-            // [FIXED: 2026-07-01] Format date as "June 19" instead of "2026-06-19"
+            // [FIXED: 2026-07-01] Format date as "June 4" instead of "2026-06-04"
             const formatDate = (dateStr) => {
                 if (!dateStr) return '';
+                console.log('🗓️ Formatting date:', dateStr); // DEBUG
                 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                const parts = dateStr.split('-');
+                // [FIX: Handle both "2026-06-04" and "2026-06-04T00:00:00" formats
+                const dateOnly = String(dateStr).split('T')[0].trim();
+                const parts = dateOnly.split('-');
+                console.log('🗓️ Date parts:', parts); // DEBUG
                 if (parts.length === 3) {
+                    const year = parseInt(parts[0], 10);
                     const monthNum = parseInt(parts[1], 10) - 1;
                     const day = parseInt(parts[2], 10);
-                    return `${months[monthNum]} ${day}`;
+                    console.log('🗓️ Parsed:', { year, monthNum, day }); // DEBUG
+                    if (monthNum >= 0 && monthNum < 12 && day > 0 && day <= 31) {
+                        const formatted = `${months[monthNum]} ${day}`;
+                        console.log('🗓️ Formatted:', formatted); // DEBUG
+                        return formatted;
+                    }
                 }
+                console.log('🗓️ Format failed, returning original:', dateStr); // DEBUG
                 return dateStr;
             };
             

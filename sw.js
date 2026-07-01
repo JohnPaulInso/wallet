@@ -1,6 +1,9 @@
-// [FIXED: 2026-07-01] Bumped cache version to v4.3 - Inline CSS for calendar, BALANCING as Income
-// Service worker version incremented to force cache refresh
-const CACHE_NAME = 'smartwallet-v4.3';
+// [UPDATED: 2026-07-01] Bumped cache version to v7.18 - Performance optimizations for 120fps
+// PERF: Removed box-shadow from transitions, added translateZ(0), contain property, backface-visibility
+// PERF: Optimized shimmer with will-change, GPU layers
+// Privacy: Shows only ****** when hidden
+// Shimmer: 10-20s interval, smooth synchronized dual-layer
+const CACHE_NAME = 'smartwallet-v7.18';
 const ASSETS = [
     './',
     './index.html',

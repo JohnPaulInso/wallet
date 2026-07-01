@@ -1212,7 +1212,8 @@ export function updateTripleProgressBar() {
                 return { raw: leftStr, display: isHidden ? `****** LEFT` : leftStr };
             } else {
                 const raw = `${peso}${formatInt(current)} / ${peso}${formatInt(limit)}`;
-                return { raw, display: isHidden ? `****** / ${peso}${formatInt(limit)}` : raw };
+                // [FIX 2026-07-01] Show only ****** when hidden in spent/total mode
+                return { raw, display: isHidden ? `******` : raw };
             }
         };
 
@@ -1240,7 +1241,8 @@ export function updateTripleProgressBar() {
                     const statsVal = isRemainingMode ? 
                         (diff < 0 ? `${peso}-${absDiff.toLocaleString()} ${label}` : `${peso}${absDiff.toLocaleString()} ${label}`) :
                         `${peso}${Math.floor(needsTotal).toLocaleString()} / ${peso}${Math.floor(needsLimit).toLocaleString()}`;
-                    needsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ${peso}${Math.floor(needsLimit).toLocaleString()}`) : statsVal;
+                    // [FIX 2026-07-01] Show only ****** when hidden in spent/total mode
+                    needsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `******`) : statsVal;
                     needsEl.dataset.raw = statsVal;
                 }
             } else {
@@ -1300,7 +1302,8 @@ export function updateTripleProgressBar() {
                     const statsVal = isRemainingMode ?
                         (diff < 0 ? `${peso}-${absDiff.toLocaleString()} ${label}` : `${peso}${absDiff.toLocaleString()} ${label}`) :
                         `${peso}${Math.floor(wantsTotal).toLocaleString()} / ${peso}${Math.floor(wantsLimit).toLocaleString()}`;
-                    wantsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ${peso}${Math.floor(wantsLimit).toLocaleString()}`) : statsVal;
+                    // [FIX 2026-07-01] Show only ****** when hidden in spent/total mode
+                    wantsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `******`) : statsVal;
                     wantsEl.dataset.raw = statsVal;
                 }
             } else {
@@ -1404,7 +1407,8 @@ export function updateTripleProgressBar() {
                     const statsVal = isRemainingMode ? 
                         (diff < 0 ? `${peso}-${absDiff.toLocaleString()} ${label}` : `${peso}${absDiff.toLocaleString()} ${label}`) :
                         `${peso}${Math.floor(combinedSavings).toLocaleString()} / ${peso}${Math.floor(savingsLimit).toLocaleString()}`;
-                    savingsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `****** / ${peso}${Math.floor(savingsLimit).toLocaleString()}`) : statsVal;
+                    // [FIX 2026-07-01] Show only ****** when hidden in spent/total mode
+                    savingsEl.innerText = isHidden ? (isRemainingMode ? `****** ${label}` : `******`) : statsVal;
                     savingsEl.dataset.raw = statsVal;
                 }
             } else {

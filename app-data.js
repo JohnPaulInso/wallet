@@ -3,6 +3,7 @@
  */
 import { db, auth, doc, getDoc, setDoc, addDoc, collection, serverTimestamp, getDocs, onSnapshot, query, orderBy, updateDoc, writeBatch } from "./firebase-config.js";
 import { log, showToast, getMerchantDisplay, formatLocalDate, stripTags, triggerHaptic } from "./app-utils.js";
+import { activateBalanceCardShimmer } from "./budget-analytics.js";
 
 // Global data state
 // Modified 2026-03-27: Initialize to null instead of [] to prevent hasLiveData truthy flickering
@@ -92,6 +93,11 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
     const preserveViewState = Boolean(options.preserveViewState);
     const reason = typeof options.reason === 'string' ? options.reason : '';
     const fastAccountSwitch = reason === 'account_switch' || reason === 'desktop_swipe_observer';
+    
+    // Trigger shimmer effect on balance cards when account changes
+    if (fastAccountSwitch || reason === 'account_switch') {
+        activateBalanceCardShimmer();
+    }
     const hasSharedBudgetBuckets =
         !!window.walletTxns
         && window.walletTxns.atome !== undefined

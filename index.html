@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="app-shell-pending">
 
 <head>
@@ -422,6 +422,7 @@
 
     <link rel="stylesheet" href="index.css" id="app-stylesheet">
     <link rel="stylesheet" href="bpi-scanner.css">
+    <link rel="stylesheet" href="budget-analytics.css">
 
     <!-- [CRITICAL: 2026-06-29] Inline BPI Scanner CSS matching actual HTML structure -->
     <style id="bpi-scanner-inline-styles">
@@ -1184,6 +1185,13 @@
                             </div>
                             <div
                                 style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                                <!-- Budget Analytics Button (2026-07-02) -->
+                                <button class="triple-edit-btn" id="budget-analytics-btn" 
+                                        onclick="if(window.budgetAnalytics && window.budgetAnalytics.open) window.budgetAnalytics.open()"
+                                        title="View Budget Analytics"
+                                        aria-label="Open budget analytics">
+                                    <i class="material-icons">analytics</i>
+                                </button>
                                 <!-- Fix 2026-03-28: Added toggle button -->
                                 <button class="triple-edit-btn" id="budget-view-toggle" onclick="toggleBudgetView()"
                                     title="Switch View">
@@ -3831,6 +3839,11 @@
 
                     if (window.walletAccounts) applyAccountTheme(resolvedId, window.walletAccounts);
                     if (typeof updateHeaderIcon === 'function') updateHeaderIcon(resolvedId);
+                    
+                    // Trigger shimmer effect on balance cards (Budget Analytics Enhancement - 2026-07-02)
+                    if (typeof window.activateBalanceCardShimmer === 'function') {
+                        window.activateBalanceCardShimmer();
+                    }
 
                     // Toggle Safe to Spend Widget Visibility
                     const safeSpendWidget = document.getElementById('safe-spend-widget');
@@ -18456,6 +18469,11 @@ Be direct, practical, and helpful.`;
             
             <!-- Bug Fix: Chart exclusion showing ₱0 - 2026-07-01 -->
             <script src="fix-chart-exclusion.js"></script>
+            
+            <div id="budget-analytics-overlay" class="analytics-overlay"></div>
+            
+            <!-- Budget Analytics Module Script (2026-07-02) -->
+            <script type="module" src="budget-analytics.js"></script>
 </body>
 
 </html>

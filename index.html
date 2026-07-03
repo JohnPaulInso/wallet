@@ -1189,7 +1189,8 @@
                                 <!-- [ADD: 2026-07-03] Wants, Needs, Savings Budget Analysis trigger button - Antigravity -->
                                 <button class="triple-edit-btn" id="budget-analysis-btn" onclick="window.openBudgetAnalysisOverlay && window.openBudgetAnalysisOverlay()"
                                     title="Budget Analysis">
-                                    <i class="material-icons">pie_chart</i>
+                                    <!-- [FIX: 2026-07-03 - Changed icon to bar_chart (graph chart) per user request - Antigravity] -->
+                                    <i class="material-icons">bar_chart</i>
                                 </button>
                                 <!-- Fix 2026-03-28: Added toggle button -->
                                 <button class="triple-edit-btn" id="budget-view-toggle" onclick="toggleBudgetView()"
@@ -15278,19 +15279,41 @@ Be direct, practical, and helpful.`;
                             </div>
                         </div>
 
+                        <!-- 3-Column Legend Cards Grid -->
+                        <div class="budget-analysis-grid">
+                            <div id="analysis-card-needs" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('needs')">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="analysis-card-wants" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('wants')">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="analysis-card-savings" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('savings')">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
                         <!-- Line Chart Card -->
-                        <div class="budget-analysis-chart-card" style="margin-bottom: 20px; padding: 18px; border-radius: 24px; border: 1px solid rgba(15, 23, 42, 0.08); background: linear-gradient(180deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0) 100%), #ffffff; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04); box-sizing: border-box; position: relative;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <!-- [FIX: 2026-07-03 - Removed gradient background from chart card per user request - Antigravity] -->
+                        <div class="budget-analysis-chart-card" style="margin-bottom: 20px; padding: 18px; border-radius: 24px; border: 1px solid rgba(15, 23, 42, 0.08); background: #ffffff; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04); box-sizing: border-box; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                                 <div>
                                     <div class="budget-analysis-card-title">Spending Trend</div>
-                                    <div class="budget-analysis-card-subtitle" style="margin-bottom: 0;">Weekly breakdown of this month.</div>
+                                    <!-- [FIX: 2026-07-03 - Added line break for spending trend subtitle - Antigravity] -->
+                                    <div class="budget-analysis-card-subtitle" style="margin-bottom: 0;">Weekly breakdown<br>of this month.</div>
                                 </div>
                                 <!-- Badge Filters -->
-                                <div style="display: flex; gap: 4px; background: rgba(226, 232, 240, 0.5); padding: 3px; border-radius: 12px;">
-                                    <button class="trend-filter-badge active" onclick="window.setTrendFilter('all')" data-type="all">All</button>
-                                    <button class="trend-filter-badge" onclick="window.setTrendFilter('needs')" data-type="needs">Needs</button>
-                                    <button class="trend-filter-badge" onclick="window.setTrendFilter('wants')" data-type="wants">Wants</button>
-                                    <button class="trend-filter-badge" onclick="window.setTrendFilter('savings')" data-type="savings">Savings</button>
+                                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                                    <div id="trend-filter-container" style="display: flex; gap: 4px; background: rgba(226, 232, 240, 0.5); padding: 3px; border-radius: 12px; position: relative;">
+                                        <div id="trend-filter-slider" class="trend-filter-slider"></div>
+                                        <button class="trend-filter-badge active" onclick="window.setTrendFilter('all')" data-type="all">All</button>
+                                        <button class="trend-filter-badge" onclick="window.setTrendFilter('needs')" data-type="needs">Needs</button>
+                                        <button class="trend-filter-badge" onclick="window.setTrendFilter('wants')" data-type="wants">Wants</button>
+                                        <button class="trend-filter-badge" onclick="window.setTrendFilter('savings')" data-type="savings">Savings</button>
+                                    </div>
+                                    <!-- [FIX: 2026-07-03 - Time range dropdown synced with chart-filter, ID=trend-time-dropdown - Antigravity] -->
+                                    <select id="trend-time-dropdown" class="trend-period-dropdown" onchange="window.setTrendTimeRange(this.value)">
+                                        <!-- Options populated dynamically by renderOverlayContent -->
+                                    </select>
                                 </div>
                             </div>
                             
@@ -15302,7 +15325,8 @@ Be direct, practical, and helpful.`;
                                 </div>
                                 <!-- SVG Plot -->
                                 <div style="flex: 1; position: relative;">
-                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;" id="budget-analysis-line-svg">
+                                    <!-- [FIX: 2026-07-03 - Changed preserveAspectRatio from none to xMidYMid meet to fix invisible lines - Antigravity] -->
+                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow: visible;" id="budget-analysis-line-svg">
                                         <!-- Definitions for gradients -->
                                         <defs>
                                             <linearGradient id="trend-grad-all" x1="0" y1="0" x2="0" y2="1">
@@ -15334,7 +15358,7 @@ Be direct, practical, and helpful.`;
                                         <g id="trend-points-group"></g>
                                     </svg>
                                     <!-- X-Axis Labels below the SVG -->
-                                    <div style="display: flex; justify-content: space-between; position: absolute; bottom: 0; left: 10px; right: 10px; font-size: 9px; color: #94a3b8; font-weight: 700;">
+                                    <div id="trend-x-axis-labels" style="display: flex; justify-content: space-between; position: absolute; bottom: 0; left: 10px; right: 10px; font-size: 9px; color: #94a3b8; font-weight: 700;">
                                         <span>W1</span>
                                         <span>W2</span>
                                         <span>W3</span>
@@ -15350,19 +15374,6 @@ Be direct, practical, and helpful.`;
                             <div style="margin-top: 14px; border-top: 1px dashed rgba(148,163,184,0.15); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
                                 <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;" id="trend-total-label">Total Spent</span>
                                 <span style="font-size: 14px; font-weight: 900; color: #0f172a;" id="trend-total-value">₱0</span>
-                            </div>
-                        </div>
-
-                        <!-- 3-Column Legend Cards Grid -->
-                        <div class="budget-analysis-grid">
-                            <div id="analysis-card-needs" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('needs')">
-                                <!-- Populated dynamically -->
-                            </div>
-                            <div id="analysis-card-wants" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('wants')">
-                                <!-- Populated dynamically -->
-                            </div>
-                            <div id="analysis-card-savings" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('savings')">
-                                <!-- Populated dynamically -->
                             </div>
                         </div>
 

@@ -1,0 +1,48 @@
+INSTRUCTIONS TO FIX 7 DAYS DISPLAY:
+
+1. Find this code in budget-analysis-overlay.js:
+   const trends = {
+       all: new Array(5).fill(0),
+       needs: new Array(5).fill(0),
+       wants: new Array(5).fill(0),
+       savings: new Array(5).fill(0)
+   };
+
+2. Change it to use 7 for last_7_days:
+   const numPoints = (filterVal === 'last_7_days') ? 7 : 5;
+   const trends = {
+       all: new Array(numPoints).fill(0),
+       needs: new Array(numPoints).fill(0),
+       wants: new Array(numPoints).fill(0),
+       savings: new Array(numPoints).fill(0)
+   };
+
+3. Find this code:
+   // Use only 5 days (skip first 2)
+   for (let i = 0; i < 5 && i + 2 < last7Days.length; i++) {
+       trendLabels.push(last7Days[i + 2].label);
+   }
+
+4. Change it to use all 7 days:
+   // Use all 7 days
+   for (let i = 0; i < 7 && i < last7Days.length; i++) {
+       trendLabels.push(last7Days[i].label);
+   }
+
+5. Find this code:
+   budgetData.transactions.all.forEach(t => {
+       for (let i = 0; i < 5 && i + 2 < last7Days.length; i++) {
+           const day = last7Days[i + 2];
+
+6. Change it to:
+   budgetData.transactions.all.forEach(t => {
+       for (let i = 0; i < 7 && i < last7Days.length; i++) {
+           const day = last7Days[i];
+
+7. Find where numWeeks = 5 in renderTrendChart and change to:
+   const numWeeks = budgetData.trendLabels ? budgetData.trendLabels.length : 5;
+
+8. To update dropdown text, find in renderOverlayContent where it syncs dropdown and add:
+   if (filterVal === 'last_7_days') {
+       trendTimeDropdown.value = 'last_7_days';
+   }

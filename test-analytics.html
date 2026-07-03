@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Budget Analytics</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="./analytics-overlay.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            padding: 40px;
+            background: #f8fafc;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin: 0 0 24px;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .test-btn {
+            padding: 14px 24px;
+            background: #4d94ff;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .test-btn:hover {
+            background: #3d84ef;
+        }
+        .info {
+            padding: 16px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-top: 24px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Budget Analytics Test</h1>
+        
+        <button class="test-btn" onclick="testWithSampleData()">
+            Test with Sample Data
+        </button>
+        
+        <button class="test-btn" onclick="testEmptyData()">
+            Test Empty State
+        </button>
+        
+        <div class="info">
+            <strong>Instructions:</strong><br>
+            1. Click "Test with Sample Data" to see analytics with mock transactions<br>
+            2. Click "Test Empty State" to see the empty state message<br>
+            3. Try all time filters and line toggles<br>
+            4. Verify charts render correctly and tooltips work
+        </div>
+    </div>
+
+    <!-- Budget Analytics Overlay HTML -->
+    <div id="analytics-overlay" class="analytics-overlay" style="display: none;">
+        <div class="analytics-backdrop"></div>
+        <div class="analytics-content">
+            <div class="analytics-header">
+                <h2 class="analytics-title">Budget Analytics</h2>
+                <button id="analytics-close-btn" class="analytics-close-btn" aria-label="Close analytics">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            
+            <div class="analytics-controls">
+                <select id="analytics-time-filter" class="analytics-time-select" aria-label="Time period filter">
+                    <option value="last_7_days">Last 7 Days</option>
+                    <option value="this_month" selected>This Month</option>
+                    <option value="last_month">Last Month</option>
+                    <option value="last_last_month">Last Last Month</option>
+                    <option value="3_months_ago">3 Months Ago</option>
+                    <option value="last_3_months">Last 3 Months</option>
+                    <option value="last_6_months">Last 6 Months</option>
+                    <option value="last_year">Last Year</option>
+                    <option value="lifetime">Entire Lifetime</option>
+                </select>
+                
+                <div class="analytics-line-toggles">
+                    <label>
+                        <input type="checkbox" checked data-category="needs">
+                        <span>Needs</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" checked data-category="wants">
+                        <span>Wants</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" checked data-category="savings">
+                        <span>Savings</span>
+                    </label>
+                    <label>
+                        <input type="checkbox" data-category="combined">
+                        <span>Combined</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="analytics-charts-grid">
+                <div class="analytics-line-section">
+                    <div id="analytics-period-label" class="analytics-period-label">JUNE 2026</div>
+                    <div id="analytics-period-total" class="analytics-period-total">PHP 0</div>
+                    <canvas id="analytics-line-chart" aria-label="Spending trends chart"></canvas>
+                </div>
+                <div class="analytics-donut-section">
+                    <canvas id="analytics-donut-chart" aria-label="Category breakdown chart"></canvas>
+                </div>
+            </div>
+            
+            <div id="analytics-empty-state" class="analytics-empty-state" style="display:none;">
+                <i class="material-icons">bar_chart</i>
+                <p>No transactions found for this period</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="./analytics-overlay.js"></script>
+    
+    <script>
+        // Generate sample transaction data
+        function generateSampleTransactions() {
+            const transactions = [];
+            const now = new Date();
+            const categories = [
+                { cat: 'Food & Drinks', budgetRule: 'needs' },
+                { cat: 'Transportation', budgetRule: 'needs' },
+                { cat: 'Shopping', budgetRule: 'wants' },
+                { cat: 'Life & Entertainment', budgetRule: 'wants' },
+                { cat: 'Savings', budgetRule: 'savings' }
+            ];
+            
+            // Generate transactions for the last 30 days
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(now);
+                date.setDate(date.getDate() - i);
+                
+                // 3-5 transactions per day
+                const numTxns = Math.floor(Math.random() * 3) + 3;
+                for (let j = 0; j < numTxns; j++) {
+                    const catInfo = categories[Math.floor(Math.random() * categories.length)];
+                    transactions.push({
+                        id: `txn_${i}_${j}`,
+                        date: date.toISOString().split('T')[0],
+                        amount: -(Math.random() * 500 + 50),
+                        category: catInfo.cat,
+                        budgetRule: catInfo.budgetRule,
+                        merchant: 'Sample Merchant'
+                    });
+                }
+            }
+            
+            return transactions;
+        }
+        
+        function testWithSampleData() {
+            window.allTxns = generateSampleTransactions();
+            console.log('Generated', window.allTxns.length, 'sample transactions');
+            
+            if (window.budgetAnalytics) {
+                window.budgetAnalytics.open();
+            } else {
+                alert('BudgetAnalytics not loaded');
+            }
+        }
+        
+        function testEmptyData() {
+            window.allTxns = [];
+            console.log('Cleared transactions for empty state test');
+            
+            if (window.budgetAnalytics) {
+                window.budgetAnalytics.open();
+            } else {
+                alert('BudgetAnalytics not loaded');
+            }
+        }
+    </script>
+</body>
+</html>

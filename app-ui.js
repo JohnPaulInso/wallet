@@ -2703,7 +2703,8 @@ export function updateBalanceCardsUI(accounts) {
             ${isBPI ? '<div class="bpi-rays"></div>' : ''}
             
             <div class="card-header-row">
-                <div style="display: flex; align-items: baseline; gap: 6px;">
+                <!-- card-header-titles: Wrapper for card name label and debit/credit badge (Labeled: 2026-07-03) -->
+                <div class="card-header-titles" style="display: flex; align-items: baseline; gap: 6px;">
                     <div class="card-label" style="text-transform: uppercase;">${acc.name}</div>
                     ${isBPI ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
                 </div>
@@ -2715,11 +2716,12 @@ export function updateBalanceCardsUI(accounts) {
                 ` : ''}
             </div>
             
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <!-- card-balance-row: Wrapper for current card balance and the visibility toggle button (Labeled: 2026-07-03) -->
+            <div class="card-balance-row" style="display: flex; align-items: center; gap: 8px;">
                  <div class="balance-amount privacy-mask" data-raw="PHP ${acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}">${isHidden ? '******' : 'PHP ' + acc.balance.toLocaleString(undefined, {minimumFractionDigits:2})}</div>
                  <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
                     <i class="material-icons" style="font-size:16px;">visibility</i>
-                 </button>
+                  </button>
             </div>
 
             ${isBPI ? `<div id="bpi-remaining-insight" class="privacy-mask" style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: -8px; margin-bottom: 20px; font-weight: 700; opacity: 1; transition: opacity 0.3s; position: relative; z-index: 2; letter-spacing: 0.3px;">${isHidden ? '******' : 'PHP 0.00 (0.00)'}</div>` : ''}
@@ -2729,7 +2731,8 @@ export function updateBalanceCardsUI(accounts) {
                     <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
                     <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <!-- card-footer-actions: Wrapper for card sync action and mastercard logo (Labeled: 2026-07-03) -->
+                <div class="card-footer-actions" style="display: flex; align-items: center; gap: 12px;">
                     ${(isAtome || isBPI) ? `
                     <button class="sync-icon-btn scan-btn" onclick="handleScan(100, true)" title="Sync Account">
                         <i class="material-icons">sync</i>
@@ -2767,6 +2770,12 @@ export function updateBalanceCardsUI(accounts) {
     ensureActiveBalanceCard(activeAccountId);
     scrollToActiveCard(activeAccountId, 'auto');
     releaseInstantActiveCards(container);
+
+    // [FIX 2026-07-03 - Shimmer Trigger on Card Render - Antigravity]
+    // Restart or trigger the shimmers when balance cards are re-rendered
+    if (typeof window.triggerAllCardShimmers === 'function') {
+        window.triggerAllCardShimmers();
+    }
 }
 
 // Scroll to Active Card
@@ -2829,6 +2838,12 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
     window.__lastSettledWalletAccount = resolvedId;
     scrollToActiveCard(resolvedId);
     if (!silentRestore) triggerHaptic('bump');
+
+    // [FIX 2026-07-03 - Shimmer Trigger on Card Change - Antigravity]
+    // Trigger shimmer immediately on card switch (in app-ui.js module)
+    if (typeof window.triggerAllCardShimmers === 'function') {
+        window.triggerAllCardShimmers();
+    }
     
     // Toggle Safe to Spend Widget Visibility
     const safeSpendWidget = document.getElementById('safe-spend-widget');

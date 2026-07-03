@@ -422,7 +422,8 @@
 
     <link rel="stylesheet" href="index.css" id="app-stylesheet">
     <link rel="stylesheet" href="bpi-scanner.css">
-    <link rel="stylesheet" href="budget-analytics.css">
+    <!-- [ADD: 2026-07-03] Link to Wants, Needs, Savings Budget Analysis Overlay stylesheet - Antigravity -->
+    <link rel="stylesheet" href="budget-analysis-overlay.css">
 
     <!-- [CRITICAL: 2026-06-29] Inline BPI Scanner CSS matching actual HTML structure -->
     <style id="bpi-scanner-inline-styles">
@@ -1185,12 +1186,10 @@
                             </div>
                             <div
                                 style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
-                                <!-- Budget Analytics Button (2026-07-02) -->
-                                <button class="triple-edit-btn" id="budget-analytics-btn" 
-                                        onclick="if(window.budgetAnalytics && window.budgetAnalytics.open) window.budgetAnalytics.open()"
-                                        title="View Budget Analytics"
-                                        aria-label="Open budget analytics">
-                                    <i class="material-icons">analytics</i>
+                                <!-- [ADD: 2026-07-03] Wants, Needs, Savings Budget Analysis trigger button - Antigravity -->
+                                <button class="triple-edit-btn" id="budget-analysis-btn" onclick="window.openBudgetAnalysisOverlay && window.openBudgetAnalysisOverlay()"
+                                    title="Budget Analysis">
+                                    <i class="material-icons">pie_chart</i>
                                 </button>
                                 <!-- Fix 2026-03-28: Added toggle button -->
                                 <button class="triple-edit-btn" id="budget-view-toggle" onclick="toggleBudgetView()"
@@ -3658,7 +3657,8 @@
                     <div class="card-shimmer"></div>
 
                     <div class="card-header-row">
-                        <div style="display: flex; align-items: baseline; gap: 6px;">
+                        <!-- card-header-titles: Wrapper for card name label and debit/credit badge (Labeled: 2026-07-03) -->
+                        <div class="card-header-titles" style="display: flex; align-items: baseline; gap: 6px;">
                             <div class="card-label" style="text-transform: uppercase;">${acc.name}</div>
                             ${isBPI ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
                         </div>
@@ -3670,7 +3670,8 @@
                         ` : ''}
                     </div>
 
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <!-- card-balance-row: Wrapper for current card balance and the visibility toggle button (Labeled: 2026-07-03) -->
+                    <div class="card-balance-row" style="display: flex; align-items: center; gap: 8px;">
                          <div class="balance-amount privacy-mask" data-raw="PHP ${acc.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}">${isHidden ? '******' : 'PHP ' + acc.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                          <button onclick="toggleBalanceVisibility(event)" class="visibility-btn" style="background:none; border:none; color:rgba(255,255,255,0.5); cursor:pointer; padding:4px; display:flex; align-items:center;">
                             <i class="material-icons" style="font-size:16px;">visibility</i>
@@ -3684,7 +3685,8 @@
                             <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
                             <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                        <!-- card-footer-actions: Wrapper for card sync action and mastercard logo (Labeled: 2026-07-03) -->
+                        <div class="card-footer-actions" style="display: flex; align-items: center; gap: 12px;">
                             ${(isAtome || isBPI) ? `
                             <button class="sync-icon-btn scan-btn" onclick="handleScan(100, true)" title="Sync Account">
                                 <i class="material-icons">sync</i>
@@ -3732,41 +3734,60 @@
                     startRandomCardShimmers();
                 }
 
-                // [NEW 2026-07-01] Random shimmer effect for all balance cards together
-                // [UPDATED 2026-07-01] Changed to 10-20 second interval
-                function startRandomCardShimmers() {
-                    const cards = document.querySelectorAll('.balance-card');
-                    console.log('🌟 Starting synchronized shimmer for', cards.length, 'cards');
+                // [FIX 2026-07-03 - Shimmer Trigger Optimization - Antigravity]
+                // Store the timeout ID to prevent duplicate overlapping timer loops/intervals.
+                let shimmerTimeoutId = null;
+
+                // [FIX 2026-07-03 - Shimmer Trigger Optimization - Antigravity]
+                // Expose a global function to trigger the shimmer effect immediately on all cards
+                // and reschedule the next random shimmer. This allows triggering the shimmer
+                // when changing balance cards.
+                window.triggerAllCardShimmers = function() {
+                    console.log('✨ Triggering shimmer on ALL cards');
                     
-                    function triggerAllShimmers() {
-                        console.log('✨ Triggering shimmer on ALL cards');
-                        
-                        // Trigger shimmer on all cards simultaneously
-                        cards.forEach((card, index) => {
-                            const shimmer = card.querySelector('.card-shimmer');
-                            if (!shimmer) {
-                                console.warn('⚠️ No shimmer element found for card', index);
-                                return;
-                            }
-                            
-                            shimmer.classList.add('active');
-                            
-                            // Remove after animation completes
-                            setTimeout(() => {
-                                shimmer.classList.remove('active');
-                            }, 1200);
-                        });
-                        
-                        // Schedule next shimmer randomly between 10-20 seconds
-                        const nextShimmer = 10000 + Math.random() * 10000; // 10-20s
-                        console.log('⏰ Next shimmer in', (nextShimmer/1000).toFixed(1), 'seconds');
-                        setTimeout(triggerAllShimmers, nextShimmer);
+                    // Clear existing scheduled shimmer to reset the interval timer
+                    if (shimmerTimeoutId) {
+                        clearTimeout(shimmerTimeoutId);
+                        shimmerTimeoutId = null;
                     }
+
+                    const cards = document.querySelectorAll('.balance-card');
+                    
+                    // Trigger shimmer on all cards simultaneously
+                    cards.forEach((card, index) => {
+                        const shimmer = card.querySelector('.card-shimmer');
+                        if (!shimmer) {
+                            console.warn('⚠️ No shimmer element found for card', index);
+                            return;
+                        }
+                        
+                        shimmer.classList.add('active');
+                        
+                        // Remove after animation completes
+                        setTimeout(() => {
+                            shimmer.classList.remove('active');
+                        }, 1200);
+                    });
+                    
+                    // Schedule next shimmer randomly between 10-20 seconds
+                    const nextShimmer = 10000 + Math.random() * 10000; // 10-20s
+                    console.log('⏰ Next shimmer in', (nextShimmer/1000).toFixed(1), 'seconds');
+                    shimmerTimeoutId = setTimeout(window.triggerAllCardShimmers, nextShimmer);
+                };
+
+                // [NEW 2026-07-01] [UPDATED 2026-07-03 - Refactored to use window.triggerAllCardShimmers - Antigravity]
+                // Random shimmer effect for all balance cards together
+                function startRandomCardShimmers() {
+                    console.log('🌟 Starting synchronized random shimmers');
                     
                     // Start with random initial delay (3-8s)
                     const initialDelay = 3000 + Math.random() * 5000;
                     console.log('⏱️ First shimmer in', (initialDelay/1000).toFixed(1), 'seconds');
-                    setTimeout(triggerAllShimmers, initialDelay);
+                    
+                    if (shimmerTimeoutId) {
+                        clearTimeout(shimmerTimeoutId);
+                    }
+                    shimmerTimeoutId = setTimeout(window.triggerAllCardShimmers, initialDelay);
                 }
 
                 function scrollToActiveCard(accId) {
@@ -3837,13 +3858,14 @@
                     ensureActiveBalanceCard(resolvedId);
                     scrollToActiveCard(resolvedId);
 
+                    // [FIX 2026-07-03 - Shimmer Trigger on Card Change - Antigravity]
+                    // Trigger shimmer immediately on card switch
+                    if (typeof window.triggerAllCardShimmers === 'function') {
+                        window.triggerAllCardShimmers();
+                    }
+
                     if (window.walletAccounts) applyAccountTheme(resolvedId, window.walletAccounts);
                     if (typeof updateHeaderIcon === 'function') updateHeaderIcon(resolvedId);
-                    
-                    // Trigger shimmer effect on balance cards (Budget Analytics Enhancement - 2026-07-02)
-                    if (typeof window.activateBalanceCardShimmer === 'function') {
-                        window.activateBalanceCardShimmer();
-                    }
 
                     // Toggle Safe to Spend Widget Visibility
                     const safeSpendWidget = document.getElementById('safe-spend-widget');
@@ -4183,6 +4205,12 @@
                             }
                             window.currentAccount = account;
                             localStorage.setItem('wallet_current_account', account);
+
+                            // [FIX 2026-07-03 - Shimmer Trigger on Card Change - Antigravity]
+                            // Trigger shimmer immediately on card swipe/snap switch
+                            if (typeof window.triggerAllCardShimmers === 'function') {
+                                window.triggerAllCardShimmers();
+                            }
 
                             // Apply Dynamic Theme
                             if (typeof applyTheme === 'function') applyTheme(account);
@@ -7935,6 +7963,17 @@ Be direct, practical, and helpful.`;
 
                         const filter = filterEl.value;
                         if (window.persistDashboardMonthSelection) window.persistDashboardMonthSelection(filter);
+                        
+                        // [FIXED: 2026-07-03 - Sync chart-filter changes to budget-month-filter to ensure active month selection updates the budget widget - Antigravity]
+                        const isExplicitMonth = /^\d{4}-\d{2}$/.test(String(filter || '').trim());
+                        if (isExplicitMonth || filter === 'this_month') {
+                            localStorage.setItem('smartwallet_budget_widget_month_filter', filter);
+                            const budgetSelect = document.getElementById('budget-month-filter');
+                            if (budgetSelect) {
+                                budgetSelect.value = filter;
+                            }
+                        }
+
                         if (!window.allTxns) return;
 
                         const skipBudgetRefresh = Boolean(window.__skipBudgetRefreshOnNextChartFilter);
@@ -15192,6 +15231,156 @@ Be direct, practical, and helpful.`;
                 </div>
             </div>
 
+            <!-- [ADD: 2026-07-03] Wants, Needs, Savings Budget Analysis Overlay - Antigravity -->
+            <div id="budget-analysis-overlay" class="budget-analysis-overlay"
+                onclick="window.closeBudgetAnalysisOverlay(); event.stopPropagation();">
+                <div class="budget-analysis-content" id="budget-analysis-content" onclick="event.stopPropagation()">
+                    
+                    <!-- Drag handle -->
+                    <div id="budget-analysis-drag-handle" class="budget-modal-drag-handle-container"
+                        style="width: 100%; padding: 20px 20px 8px 20px; background: #ffffff; border-radius: 24px 24px 0 0 !important; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #f1f5f9; cursor: grab;">
+                        <div class="budget-drag-handle-bar-container"
+                            style="display: flex; justify-content: center; margin-bottom: 12px;">
+                            <div class="budget-drag-handle-visual-indicator"
+                                style="width: 40px; height: 4px; background: #cbd5e1; border-radius: 2px;"></div>
+                        </div>
+                        <div class="budget-modal-header-actions-row"
+                            style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="width: 28px;"></div>
+                            <div id="budget-analysis-title" class="budget-modal-header-title"
+                                style="font-weight: 800; font-size: 18px; color: #1e293b; text-align: center; flex: 1;">
+                                Budget Analysis</div>
+                            <div style="width: 28px; display: flex; justify-content: flex-end;">
+                                <i class="material-icons" onclick="window.closeBudgetAnalysisOverlay()"
+                                    style="color: #64748b; font-size: 28px; cursor: pointer;">close</i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scroll container -->
+                    <div class="budget-analysis-scroll-area">
+                        <!-- Donut Breakdown Card -->
+                        <div class="budget-analysis-breakdown-card">
+                            <div class="budget-analysis-card-title">Budget Breakdown</div>
+                            <div class="budget-analysis-card-subtitle">Tap a slice or legend item to filter.</div>
+                            
+                            <div class="budget-analysis-donut-body">
+                                <div class="budget-analysis-donut-wrapper">
+                                    <svg viewBox="0 0 100 100" class="budget-analysis-donut-svg" id="budget-analysis-donut-svg">
+                                        <!-- Slices generated dynamically -->
+                                    </svg>
+                                </div>
+                                <div class="budget-analysis-donut-center">
+                                    <div class="budget-analysis-donut-label" id="budget-analysis-donut-label">TOTAL SPENT</div>
+                                    <div class="budget-analysis-donut-amount" id="budget-analysis-donut-amount">₱0</div>
+                                    <div class="budget-analysis-donut-pct" id="budget-analysis-donut-pct">0% of budget</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Line Chart Card -->
+                        <div class="budget-analysis-chart-card" style="margin-bottom: 20px; padding: 18px; border-radius: 24px; border: 1px solid rgba(15, 23, 42, 0.08); background: linear-gradient(180deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0) 100%), #ffffff; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04); box-sizing: border-box; position: relative;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <div>
+                                    <div class="budget-analysis-card-title">Spending Trend</div>
+                                    <div class="budget-analysis-card-subtitle" style="margin-bottom: 0;">Weekly breakdown of this month.</div>
+                                </div>
+                                <!-- Badge Filters -->
+                                <div style="display: flex; gap: 4px; background: rgba(226, 232, 240, 0.5); padding: 3px; border-radius: 12px;">
+                                    <button class="trend-filter-badge active" onclick="window.setTrendFilter('all')" data-type="all">All</button>
+                                    <button class="trend-filter-badge" onclick="window.setTrendFilter('needs')" data-type="needs">Needs</button>
+                                    <button class="trend-filter-badge" onclick="window.setTrendFilter('wants')" data-type="wants">Wants</button>
+                                    <button class="trend-filter-badge" onclick="window.setTrendFilter('savings')" data-type="savings">Savings</button>
+                                </div>
+                            </div>
+                            
+                            <!-- SVG Chart Container -->
+                            <div style="position: relative; width: 100%; height: 160px; display: flex; align-items: stretch; margin-top: 10px;">
+                                <!-- Y-Axis labels (amounts on the side) -->
+                                <div id="trend-y-axis" style="width: 50px; display: flex; flex-direction: column; justify-content: space-between; font-size: 8px; color: #94a3b8; font-weight: 700; text-align: right; padding-right: 8px; box-sizing: border-box; padding-top: 10px; padding-bottom: 25px;">
+                                    <!-- Injected dynamically -->
+                                </div>
+                                <!-- SVG Plot -->
+                                <div style="flex: 1; position: relative;">
+                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="none" style="overflow: visible;" id="budget-analysis-line-svg">
+                                        <!-- Definitions for gradients -->
+                                        <defs>
+                                            <linearGradient id="trend-grad-all" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#0f172a" stop-opacity="0.25"></stop>
+                                                <stop offset="100%" stop-color="#0f172a" stop-opacity="0.00"></stop>
+                                            </linearGradient>
+                                            <linearGradient id="trend-grad-needs" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"></stop>
+                                                <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.00"></stop>
+                                            </linearGradient>
+                                            <linearGradient id="trend-grad-wants" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.25"></stop>
+                                                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.00"></stop>
+                                            </linearGradient>
+                                            <linearGradient id="trend-grad-savings" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"></stop>
+                                                <stop offset="100%" stop-color="#10b981" stop-opacity="0.00"></stop>
+                                            </linearGradient>
+                                        </defs>
+                                        <!-- Grid Lines -->
+                                        <g id="trend-grid-lines">
+                                            <!-- Injected dynamically -->
+                                        </g>
+                                        <!-- Area Path -->
+                                        <path id="trend-area-path" d="" fill="url(#trend-grad-all)"></path>
+                                        <!-- Line Path -->
+                                        <path id="trend-line-path" d="" fill="none" stroke="#0f172a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+                                        <!-- Dots / Tooltip interaction points -->
+                                        <g id="trend-points-group"></g>
+                                    </svg>
+                                    <!-- X-Axis Labels below the SVG -->
+                                    <div style="display: flex; justify-content: space-between; position: absolute; bottom: 0; left: 10px; right: 10px; font-size: 9px; color: #94a3b8; font-weight: 700;">
+                                        <span>W1</span>
+                                        <span>W2</span>
+                                        <span>W3</span>
+                                        <span>W4</span>
+                                        <span>W5</span>
+                                    </div>
+                                    <!-- Interactive Tooltip -->
+                                    <div id="trend-tooltip" style="position: absolute; display: none; background: #0f172a; color: #ffffff; padding: 4px 8px; border-radius: 8px; font-size: 9px; font-weight: 800; transform: translate(-50%, -100%); margin-top: -8px; pointer-events: none; z-index: 100; box-shadow: 0 4px 10px rgba(0,0,0,0.15); white-space: nowrap;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Period Total under the trend chart -->
+                            <div style="margin-top: 14px; border-top: 1px dashed rgba(148,163,184,0.15); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;" id="trend-total-label">Total Spent</span>
+                                <span style="font-size: 14px; font-weight: 900; color: #0f172a;" id="trend-total-value">₱0</span>
+                            </div>
+                        </div>
+
+                        <!-- 3-Column Legend Cards Grid -->
+                        <div class="budget-analysis-grid">
+                            <div id="analysis-card-needs" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('needs')">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="analysis-card-wants" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('wants')">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div id="analysis-card-savings" class="budget-analysis-cat-card" onclick="window.setBudgetAnalysisFilter('savings')">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Transaction list -->
+                        <div class="budget-analysis-txns-section">
+                            <h3 class="budget-analysis-section-title">
+                                <span id="budget-analysis-list-title">All Transactions</span>
+                                <span class="budget-analysis-section-count" id="budget-analysis-txn-count">0 transactions</span>
+                            </h3>
+                            <div id="budget-analysis-txn-list">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
             <!-- BUDGET MANUAL ENTRY MODAL (FOR CASH TRANSACTIONS) -->
             <div id="budget-manual-entry-modal" class="modal-overlay"
                 onclick="closeModals('budget-manual-entry-modal'); event.stopPropagation();"
@@ -18469,11 +18658,8 @@ Be direct, practical, and helpful.`;
             
             <!-- Bug Fix: Chart exclusion showing ₱0 - 2026-07-01 -->
             <script src="fix-chart-exclusion.js"></script>
-            
-            <div id="budget-analytics-overlay" class="analytics-overlay"></div>
-            
-            <!-- Budget Analytics Module Script (2026-07-02) -->
-            <script type="module" src="budget-analytics.js"></script>
+            <!-- [ADD: 2026-07-03] Script link to Wants, Needs, Savings Budget Analysis Overlay module - Antigravity -->
+            <script src="budget-analysis-overlay.js"></script>
 </body>
 
 </html>

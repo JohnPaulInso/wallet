@@ -1,0 +1,371 @@
+/* Budget Analytics Overlay Component Styles */
+
+/* Overlay Container - Fullscreen */
+.analytics-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100001;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Glassmorphic Backdrop */
+.analytics-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Content Container - Fullscreen */
+.analytics-content {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header - Sleek Top Bar */
+.analytics-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 32px;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.analytics-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    opacity: 0.9;
+}
+
+.analytics-close-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #ffffff;
+}
+
+.analytics-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.analytics-close-btn:active {
+    transform: scale(0.95);
+}
+
+.analytics-close-btn .material-icons {
+    font-size: 22px;
+}
+
+/* Controls Section - Floating Style */
+.analytics-controls {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.analytics-time-select {
+    width: 100%;
+    max-width: 300px;
+    padding: 14px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.analytics-time-select:focus {
+    outline: none;
+    border-color: #4d94ff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.analytics-time-select option {
+    background: #1e293b;
+    color: #ffffff;
+}
+
+.analytics-line-toggles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.analytics-line-toggles label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.analytics-line-toggles label:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.analytics-line-toggles input[type="checkbox"]:checked + span {
+    color: #ffffff;
+}
+
+.analytics-line-toggles input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #4d94ff;
+}
+
+/* Charts Grid - Professional Layout */
+.analytics-charts-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 40px;
+    padding: 20px 32px 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+}
+
+/* Line Chart Section - Hero Chart */
+.analytics-line-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 32px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.analytics-period-label {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 4px;
+}
+
+.analytics-period-total {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 36px;
+    font-weight: 900;
+    color: #ffffff;
+    margin-bottom: 24px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.analytics-line-section canvas {
+    width: 100% !important;
+    height: 400px !important;
+}
+
+/* Donut Chart Section - Summary Card */
+.analytics-donut-section {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 40px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.analytics-donut-section canvas {
+    width: 100% !important;
+    height: 380px !important;
+    max-width: 380px;
+}
+
+/* Empty State */
+.analytics-empty-state {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 32px;
+    text-align: center;
+}
+
+.analytics-empty-state .material-icons {
+    font-size: 80px;
+    color: rgba(255, 255, 255, 0.2);
+    margin-bottom: 20px;
+}
+
+.analytics-empty-state p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive Design - Mobile */
+@media (max-width: 1024px) {
+    .analytics-charts-grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+        padding: 20px 20px 40px;
+    }
+
+    .analytics-line-section canvas {
+        height: 320px !important;
+    }
+
+    .analytics-donut-section {
+        padding: 32px;
+    }
+
+    .analytics-donut-section canvas {
+        height: 320px !important;
+        max-width: 320px;
+    }
+
+    .analytics-period-total {
+        font-size: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .analytics-header {
+        padding: 20px 20px;
+    }
+
+    .analytics-title {
+        font-size: 14px;
+        letter-spacing: 1.5px;
+    }
+
+    .analytics-controls {
+        padding: 24px 20px;
+    }
+
+    .analytics-time-select {
+        max-width: 100%;
+    }
+
+    .analytics-line-section,
+    .analytics-donut-section {
+        padding: 24px;
+    }
+
+    .analytics-line-section canvas {
+        height: 280px !important;
+    }
+
+    .analytics-donut-section canvas {
+        height: 280px !important;
+        max-width: 280px;
+    }
+
+    .analytics-period-total {
+        font-size: 24px;
+    }
+
+    .analytics-line-toggles {
+        justify-content: center;
+    }
+}
+
+/* Scrollbar Styling */
+.analytics-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.analytics-content::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.analytics-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+}
+
+.analytics-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Accessibility - Focus Indicators */
+.analytics-time-select:focus-visible,
+.analytics-close-btn:focus-visible,
+.analytics-line-toggles input:focus-visible {
+    outline: 2px solid #4d94ff;
+    outline-offset: 2px;
+}
+
+/* Smooth Transitions */
+.analytics-charts-grid,
+.analytics-line-section,
+.analytics-donut-section {
+    transition: all 0.3s ease;
+}
+
+/* Subtle Glow Effects */
+.analytics-line-section:hover,
+.analytics-donut-section:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+

@@ -8481,7 +8481,9 @@ Be direct, practical, and helpful.`;
                     }
                 }
 
-                let selectedCategoryName = null;
+                // [FIX: 2026-07-04] - Antigravity
+                // Exposed selectedCategoryName globally via window.selectedCategoryName to prevent variable shadowing/state mismatch.
+                window.selectedCategoryName = null;
 
                 function getExpensesChartViewKey() {
                     const filterEl = document.getElementById('chart-filter');
@@ -8547,7 +8549,7 @@ Be direct, practical, and helpful.`;
                     const isCurrentlyExcluded = exclusions.has(categoryName);
                     const nextMode = isCurrentlyExcluded ? 'include' : 'exclude';
 
-                    window.prevSelectedCategoryName = selectedCategoryName;
+                    window.prevSelectedCategoryName = window.selectedCategoryName;
                     window.__expensesChartTransitions[viewKey] = { categoryName, mode: nextMode, startedAt: Date.now() };
                     drawPieChart(segments, fallbackTotal, true);
 
@@ -8566,10 +8568,10 @@ Be direct, practical, and helpful.`;
                     clearTimeout(window.__expensesChartTransitionTimers[viewKey]);
                     /* [FIX 2026-06-26: Increased transition timeout from 220ms to 450ms to match the SVG CSS transition timing of 0.45s] */
                     window.__expensesChartTransitionTimers[viewKey] = setTimeout(() => {
-                        window.prevSelectedCategoryName = selectedCategoryName;
+                        window.prevSelectedCategoryName = window.selectedCategoryName;
                         if (isCurrentlyExcluded) exclusions.delete(categoryName);
                         else exclusions.add(categoryName);
-                        if (selectedCategoryName === categoryName && exclusions.has(categoryName)) selectedCategoryName = null;
+                        if (window.selectedCategoryName === categoryName && exclusions.has(categoryName)) window.selectedCategoryName = null;
                         delete window.__expensesChartTransitions[viewKey];
                         const remainingTotal = segments.reduce((sum, seg) => exclusions.has(seg.name) ? sum : sum + (Number(seg.value) || 0), 0);
                         drawPieChart(segments, remainingTotal > 0 ? remainingTotal : fallbackTotal, true);
@@ -8609,13 +8611,13 @@ Be direct, practical, and helpful.`;
                     }
 
                     if (totalLabel && totalVal && !skipStaticLabelUpdate) {
-                        if (!selectedCategoryName) {
+                        if (!window.selectedCategoryName) {
                             totalLabel.innerText = 'TOTAL';
                             totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
                             totalVal.dataset.raw = totalFormatted;
                             if (totalPct) totalPct.innerText = '';
                         } else {
-                            const seg = segments.find(s => s.name === selectedCategoryName);
+                            const seg = segments.find(s => s.name === window.selectedCategoryName);
                             if (seg && !excludedCategories.has(seg.name)) {
                                 totalLabel.innerText = seg.name;
                                 const valText = `${peso}${Math.round(seg.value).toLocaleString()}`;
@@ -8627,8 +8629,8 @@ Be direct, practical, and helpful.`;
                                     totalPct.style.color = seg.color || '#10b981';
                                 }
                             } else {
-                                window.prevSelectedCategoryName = selectedCategoryName;
-                                selectedCategoryName = null;
+                                window.prevSelectedCategoryName = window.selectedCategoryName;
+                                window.selectedCategoryName = null;
                                 totalLabel.innerText = 'TOTAL';
                                 totalVal.innerText = localStorage.getItem('balance_hidden') === 'true' ? '******' : totalFormatted;
                                 totalVal.dataset.raw = totalFormatted;
@@ -8735,8 +8737,8 @@ Be direct, practical, and helpful.`;
                     const renderSegments = visibleSegments.concat(excludedSegments);
 
                     function resetSelection() {
-                        window.prevSelectedCategoryName = selectedCategoryName;
-                        selectedCategoryName = null;
+                        window.prevSelectedCategoryName = window.selectedCategoryName;
+                        window.selectedCategoryName = null;
                         drawPieChart(segments, total, true);
                         if (window.highlightTransactions) window.highlightTransactions(null);
                     }
@@ -8746,8 +8748,8 @@ Be direct, practical, and helpful.`;
                         const after = layoutAfter[seg.name];
                         if (!before || !after) return;
 
-                        const isSelected = selectedCategoryName === seg.name;
-                        const dimOpacity = selectedCategoryName && !isSelected ? 0.2 : 1;
+                        const isSelected = window.selectedCategoryName === seg.name;
+                        const dimOpacity = window.selectedCategoryName && !isSelected ? 0.2 : 1;
                         const wasSelected = window.prevSelectedCategoryName === seg.name;
 
                         const isTransitionTarget = transitionState && transitionState.categoryName === seg.name;
@@ -8785,10 +8787,10 @@ Be direct, practical, and helpful.`;
                                 toggleExclusion();
                                 return;
                             }
-                            window.prevSelectedCategoryName = selectedCategoryName;
-                            selectedCategoryName = (selectedCategoryName === seg.name) ? null : seg.name;
+                            window.prevSelectedCategoryName = window.selectedCategoryName;
+                            window.selectedCategoryName = (window.selectedCategoryName === seg.name) ? null : seg.name;
                             drawPieChart(segments, total, true);
-                            if (window.highlightTransactions) window.highlightTransactions(selectedCategoryName, seg.color);
+                            if (window.highlightTransactions) window.highlightTransactions(window.selectedCategoryName, seg.color);
                         };
 
                         const shouldRenderCircle = !before.isExcluded || !after.isExcluded;
@@ -8890,7 +8892,7 @@ Be direct, practical, and helpful.`;
                                     circle.style.filter = 'grayscale(1) brightness(1.02)';
                                 } else {
                                     const targetAngle = isTransitionOut ? before.angle : after.angle;
-                                    if (!selectedCategoryName || isSelected) {
+                                    if (!window.selectedCategoryName || isSelected) {
                                         circle.style.filter = `brightness(1.04) drop-shadow(0 0 6px ${hoverGlow}66)`;
                                         circle.style.transform = `rotate(${targetAngle}deg) scale(${isSelected ? 1.08 : 1.02})`;
                                     } else {
@@ -15325,8 +15327,8 @@ Be direct, practical, and helpful.`;
                                 </div>
                                 <!-- SVG Plot -->
                                 <div style="flex: 1; position: relative;">
-                                    <!-- [FIX: 2026-07-03 - Changed preserveAspectRatio from none to xMidYMid meet to fix invisible lines - Antigravity] -->
-                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow: visible;" id="budget-analysis-line-svg">
+                                    <!-- [FIX: 2026-07-04 - Added touch-action: none to block default page scrolling on chart dragging - Antigravity] -->
+                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow: visible; touch-action: none;" id="budget-analysis-line-svg">
                                         <!-- Definitions for gradients -->
                                         <defs>
                                             <linearGradient id="trend-grad-all" x1="0" y1="0" x2="0" y2="1">

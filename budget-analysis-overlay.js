@@ -289,18 +289,39 @@
             // Different periods get different segment types (days, weeks, months)
             
             // Determine number of data points based on time period
-let numPoints = 5; // default
-if (filterVal === 'last_7_days') numPoints = 7;
-else if (filterVal === 'last_3_months') numPoints = 12;
-else if (filterVal === 'last_6_months') numPoints = 6;
-else if (filterVal === 'this_year') numPoints = 12;
+            // [FIX: 2026-07-04] - Antigravity
+            // Adjusted dynamically calculated points to exclude future weeks/months that haven't passed or been live yet.
+            let numPoints = 5; // default
+            if (filterVal === 'last_7_days') {
+                numPoints = 7;
+            } else if (filterVal === 'last_3_months') {
+                // Calculate weeks that have started up to referenceDate
+                let count = 0;
+                const today = new Date(referenceDate);
+                for (let m = 2; m >= 0; m--) {
+                    const monthDate = new Date(today.getFullYear(), today.getMonth() - m, 1);
+                    const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+                    for (let weekNum = 1; weekNum <= 4; weekNum++) {
+                        const startDay = (weekNum - 1) * 7 + 1;
+                        const startTime = new Date(monthDate.getFullYear(), monthDate.getMonth(), startDay, 0, 0, 0).getTime();
+                        if (startTime <= referenceDate.getTime()) {
+                            count++;
+                        }
+                    }
+                }
+                numPoints = count;
+            } else if (filterVal === 'last_6_months') {
+                numPoints = 6;
+            } else if (filterVal === 'this_year') {
+                numPoints = referenceDate.getMonth() + 1;
+            }
 
-const trends = {
-    all: new Array(numPoints).fill(0),
-    needs: new Array(numPoints).fill(0),
-    wants: new Array(numPoints).fill(0),
-    savings: new Array(numPoints).fill(0)
-};
+            const trends = {
+                all: new Array(numPoints).fill(0),
+                needs: new Array(numPoints).fill(0),
+                wants: new Array(numPoints).fill(0),
+                savings: new Array(numPoints).fill(0)
+            };
 
             // Store labels for the x-axis
             const trendLabels = [];
@@ -357,12 +378,14 @@ const trends = {
                     // Last 6 Months: show 6 monthly points like "Jan", "Feb", "Mar", "Apr", "May", "Jun"
                     
                     if (filterVal === 'last_3_months') {
-                        // 12 weekly points for 3 months
+                        // Weekly points for the past 3 months (excluding future weeks of the current month)
                         const monthsBack = 3;
                         const today = new Date(referenceDate);
                         const weeks = [];
                         
                         // Generate week ranges for the past 3 months
+                        // [FIX: 2026-07-04] - Antigravity
+                        // Modified to only include weeks that have already started/passed up to the current date.
                         for (let m = monthsBack - 1; m >= 0; m--) {
                             const monthDate = new Date(today.getFullYear(), today.getMonth() - m, 1);
                             const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
@@ -372,16 +395,21 @@ const trends = {
                             for (let weekNum = 1; weekNum <= 4; weekNum++) {
                                 const startDay = (weekNum - 1) * 7 + 1;
                                 const endDay = Math.min(weekNum * 7, lastDay);
-                                weeks.push({
-                                    label: `${monthName} W${weekNum}`,
-                                    startTime: new Date(monthDate.getFullYear(), monthDate.getMonth(), startDay, 0, 0, 0).getTime(),
-                                    endTime: new Date(monthDate.getFullYear(), monthDate.getMonth(), endDay, 23, 59, 59).getTime()
-                                });
+                                const startTime = new Date(monthDate.getFullYear(), monthDate.getMonth(), startDay, 0, 0, 0).getTime();
+                                const endTime = new Date(monthDate.getFullYear(), monthDate.getMonth(), endDay, 23, 59, 59).getTime();
+                                
+                                if (startTime <= referenceDate.getTime()) {
+                                    weeks.push({
+                                        label: `${monthName} W${weekNum}`,
+                                        startTime: startTime,
+                                        endTime: endTime
+                                    });
+                                }
                             }
                         }
                         
-                        // Fill all 12 points
-                        for (let i = 0; i < 12 && i < weeks.length; i++) {
+                        // Fill points
+                        for (let i = 0; i < weeks.length; i++) {
                             trendLabels.push(weeks[i].label);
                             
                             budgetData.transactions.all.forEach(t => {
@@ -434,12 +462,15 @@ const trends = {
                     // Entire Lifetime: show quarterly increments (Q1 2024, Q2 2024, etc.)
                     
                     if (filterVal === 'this_year') {
-                        // 12 monthly points for the current year
+                        // Monthly points for the current year up to the current month
+                        // [FIX: 2026-07-04] - Antigravity
+                        // Modified to exclude future months that haven't been live yet.
                         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
                         const currentYear = referenceDate.getFullYear();
+                        const currentMonthIdx = referenceDate.getMonth();
                         const months = [];
                         
-                        for (let month = 0; month < 12; month++) {
+                        for (let month = 0; month <= currentMonthIdx; month++) {
                             const startTime = new Date(currentYear, month, 1, 0, 0, 0).getTime();
                             const endTime = new Date(currentYear, month + 1, 0, 23, 59, 59).getTime();
                             
@@ -464,11 +495,46 @@ const trends = {
                         // Store period info for click filtering
                         budgetData.periodSegments = months;
                     } else {
-                        // Quarterly increments for all time - START FROM EARLIEST TRANSACTION
+                        // Quarterly increments for all time - START FROM EARLIEST TRANSACTION EVER DETECTED
+                        // [FIX: 2026-07-04] - Antigravity
+                        // Modified to search across all raw transactions (all accounts) to find the absolute earliest transaction.
+                        let earliestTimestamp = null;
+                        const findEarliest = (t) => {
+                            if (!t) return;
+                            let dObj;
+                            if (t.date) {
+                                if (t.date.seconds) dObj = new Date(t.date.seconds * 1000);
+                                else if (t.date instanceof Date) dObj = t.date;
+                                else dObj = new Date(t.date);
+                            }
+                            if (dObj && !isNaN(dObj.getTime())) {
+                                const ts = dObj.getTime();
+                                if (earliestTimestamp === null || ts < earliestTimestamp) {
+                                    earliestTimestamp = ts;
+                                }
+                            }
+                        };
+                        
+                        if (window.walletTxns && typeof window.walletTxns === 'object') {
+                            Object.values(window.walletTxns).forEach(txns => {
+                                (txns || []).forEach(findEarliest);
+                            });
+                        }
+                        if (Array.isArray(window.allTxns)) {
+                            window.allTxns.forEach(findEarliest);
+                        }
+                        if (Array.isArray(window.budgetManualTxns)) {
+                            window.budgetManualTxns.forEach(findEarliest);
+                        }
+                        
+                        // Fallback to budgetData.transactions.all if needed
                         const sortedTxns = [...budgetData.transactions.all].sort((a, b) => a.timestamp - b.timestamp);
-                        if (sortedTxns.length > 0) {
-                            // Use earliest transaction date as the start point
-                            const minDate = new Date(sortedTxns[0].timestamp);
+                        if (earliestTimestamp === null && sortedTxns.length > 0) {
+                            earliestTimestamp = sortedTxns[0].timestamp;
+                        }
+                        
+                        if (earliestTimestamp !== null) {
+                            const minDate = new Date(earliestTimestamp);
                             const maxDate = new Date(); // Use current date as end point
                             
                             const quarters = [];
@@ -487,6 +553,13 @@ const trends = {
                             
                             // Distribute quarters evenly into 5 segments (or use all if ≤5)
                             if (quarters.length <= 5) {
+                                // Resize trend arrays to match quarters length
+                                numPoints = quarters.length;
+                                trends.all = new Array(numPoints).fill(0);
+                                trends.needs = new Array(numPoints).fill(0);
+                                trends.wants = new Array(numPoints).fill(0);
+                                trends.savings = new Array(numPoints).fill(0);
+                                
                                 for (let i = 0; i < quarters.length; i++) {
                                     trendLabels.push(quarters[i].label);
                                     
@@ -1303,6 +1376,8 @@ const trends = {
                 if (points[selectedPeriodIndex]) {
                     const pt = points[selectedPeriodIndex];
                     
+                    // [FIX: 2026-07-04] - Antigravity
+                    // Labeled the dynamic outerRing and innerDot SVG elements with additional specific classes for clarity and trackability.
                     // Draw white outer ring
                     const outerRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                     outerRing.setAttribute('cx', pt.x);
@@ -1310,7 +1385,7 @@ const trends = {
                     outerRing.setAttribute('r', '6');
                     outerRing.setAttribute('fill', '#ffffff');
                     outerRing.setAttribute('stroke', 'none');
-                    outerRing.classList.add('trend-selection-indicator');
+                    outerRing.classList.add('trend-selection-indicator', 'trend-selection-indicator-outer');
                     pointsGroup.appendChild(outerRing);
                     
                     // Draw colored inner dot
@@ -1320,7 +1395,7 @@ const trends = {
                     innerDot.setAttribute('r', '4');
                     innerDot.setAttribute('fill', series.color);
                     innerDot.setAttribute('stroke', 'none');
-                    innerDot.classList.add('trend-selection-indicator');
+                    innerDot.classList.add('trend-selection-indicator', 'trend-selection-indicator-inner');
                     pointsGroup.appendChild(innerDot);
                 }
             });
@@ -1352,8 +1427,10 @@ const trends = {
                 // Each column starts at its proportional position and extends to fill the space
                 const columnStart = padX + (idx * columnWidth);
                 
-                // Create vertical column hit area that covers the ENTIRE column space
+                // [LABEL: 2026-07-04] - Antigravity
+                // Labeled the dynamic week hit-area rect element with 'trend-chart-week-hit-area' class for easier reference/debugging.
                 const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                hitArea.classList.add('trend-chart-week-hit-area');
                 hitArea.setAttribute('x', columnStart);
                 hitArea.setAttribute('y', 0); // Full height from very top
                 hitArea.setAttribute('width', columnWidth);
@@ -1371,93 +1448,229 @@ const trends = {
                 hitArea.dataset.periodIdx = idx;
 
                 hitArea.addEventListener('mouseenter', () => {
-                    if (!tooltipPersistent) {
+                    if (!tooltipPersistent && !isDragging) {
                         showTrendTooltip(pt.x, pt.y, series.data[idx], idx, series.color);
                     }
                 });
                 hitArea.addEventListener('mouseleave', () => {
-                    hideTrendTooltip();
-                });
-                
-                const handleClick = (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (window.triggerHaptic) window.triggerHaptic('light');
-                    tooltipPersistent = true;
-                    
-                    const now = Date.now();
-                    const timeSinceLastTap = now - lastTapTime;
-                    
-                    // Check for double-tap (within 300ms) on the SAME index
-                    const isDoubleTap = timeSinceLastTap < 300 && lastTappedIndex === idx;
-                    
-                    // Update last tap tracking
-                    lastTapTime = now;
-                    lastTappedIndex = idx;
-                    
-                    // Only deselect if it's a double-tap on the same period
-                    if (isDoubleTap && selectedPeriodIndex === idx && activeTrendFilter === series.key) {
-                        // Double-tap detected - deselect
-                        selectedPeriodIndex = null;
-                        activeTrendFilter = filter === 'all' ? 'all' : activeTrendFilter;
+                    if (!isDragging) {
                         hideTrendTooltip();
-                        renderTransactionList();
-                        setTimeout(() => renderTrendChart(), 10);
-                    } else {
-                        // Single tap - always select (even if clicking outside current selection)
-                        const oldPeriodIndex = selectedPeriodIndex;
-                        const oldFilter = activeTrendFilter;
-                        
-                        selectedPeriodIndex = idx;
-                        activeTrendFilter = series.key;
-                        showTrendTooltip(pt.x, pt.y, series.data[idx], idx, series.color);
-                        
-                        // Only update UI if filter changed
-                        if (oldFilter !== series.key) {
-                            // Update badge classes without full re-render
-                            document.querySelectorAll('.trend-filter-badge').forEach(btn => {
-                                const isActive = btn.dataset.type === series.key;
-                                btn.classList.toggle('active', isActive);
-                                btn.style.color = '';
-                            });
+                    }
+                });
+
+                // Track dragging and selection state for this column hit area
+                let startX = 0;
+                let startY = 0;
+                let isDragging = false;
+                let longPressTimer = null;
+                let activeDragSeriesKey = null;
+                let activeDragWeekIdx = idx;
+                let wasAlreadySelected = false;
+
+                const pointerDownHandler = (e) => {
+                    if (e.button !== 0 && e.pointerType === 'mouse') return;
+
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    isDragging = false;
+                    activeDragSeriesKey = null;
+                    activeDragWeekIdx = idx;
+                    wasAlreadySelected = (selectedPeriodIndex === idx);
+
+                    const isMultiLine = (filter === 'all' && !showAllAsTotal);
+                    if (isMultiLine) {
+                        hitArea.setPointerCapture(e.pointerId);
+
+                        longPressTimer = setTimeout(() => {
+                            isDragging = true;
+                            if (window.triggerHaptic) window.triggerHaptic('medium');
                             
-                            // Update slider position
-                            const activeBtn = document.querySelector(`.trend-filter-badge[data-type="${series.key}"]`);
-                            const slider = document.getElementById('trend-filter-slider');
-                            const container = document.getElementById('trend-filter-container');
-                            
-                            if (activeBtn && slider && container) {
-                                const containerRect = container.getBoundingClientRect();
-                                const btnRect = activeBtn.getBoundingClientRect();
-                                const left = btnRect.left - containerRect.left;
-                                const width = btnRect.width;
-                                
-                                slider.style.left = `${left}px`;
-                                slider.style.width = `${width}px`;
-                                
-                                const colorMap = {
-                                    'needs': '#3b82f6',
-                                    'wants': '#f59e0b',
-                                    'savings': '#10b981'
-                                };
-                                slider.style.background = colorMap[series.key] || '#3b82f6';
-                                activeBtn.style.color = '#ffffff';
-                            }
-                            
-                            // Re-render chart with new filter after a tiny delay to prevent flicker
-                            setTimeout(() => renderTrendChart(), 10);
-                        } else if (oldPeriodIndex !== idx) {
-                            // Same filter, different period - just update selection indicators
-                            setTimeout(() => renderTrendChart(), 10);
-                        }
-                        
-                        // Update transaction list
-                        renderTransactionList();
+                            // Highlight the week immediately when the long press activates
+                            selectedPeriodIndex = idx;
+                            updateDragSelection(e.clientX, e.clientY);
+                        }, 250); // 250ms long press delay
                     }
                 };
-                
-                hitArea.addEventListener('click', handleClick);
-                hitArea.addEventListener('touchstart', handleClick);
+
+                const pointerMoveHandler = (e) => {
+                    if (filter !== 'all' || showAllAsTotal) return;
+                    if (!hitArea.hasPointerCapture(e.pointerId)) return;
+
+                    if (!isDragging) {
+                        // [FIX: 2026-07-04] - Antigravity
+                        // Only cancel long-press if the user's initial motion is MOSTLY VERTICAL
+                        // (i.e. a page scroll intent). Horizontal movement should NOT cancel the gesture
+                        // so the user can press and immediately slide across weeks before 250ms fires.
+                        const dx = Math.abs(e.clientX - startX);
+                        const dy = Math.abs(e.clientY - startY);
+                        const moveDist = Math.hypot(dx, dy);
+                        if (moveDist > 10 && dy > dx) {
+                            // Dominant vertical movement → cancel long press, let page scroll
+                            if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                            hitArea.releasePointerCapture(e.pointerId);
+                        }
+                        return;
+                    }
+
+                    updateDragSelection(e.clientX, e.clientY);
+                };
+
+                // [FIX: 2026-07-04] - Antigravity
+                // updateDragSelection: supports BOTH horizontal (week) and vertical (series) scrubbing.
+                // - X: maps clientX → nearest week column index via padX + i * step in viewBox space,
+                //   converted to screen space using the same "xMidYMid meet" scale/offsetX math.
+                // - Y: maps clientY → nearest series line dot in real screen coordinates.
+                // Never calls pointsGroup.innerHTML='' to avoid destroying hitArea <rect> elements.
+                const updateDragSelection = (clientX, clientY) => {
+                    const svgRect = svg.getBoundingClientRect();
+
+                    // viewBox is 320×160, SVG uses "xMidYMid meet" → smaller scale wins, content is centered
+                    const scale = Math.min(svgRect.width / 320, svgRect.height / 160);
+                    const offsetX = (svgRect.width  - 320 * scale) / 2;
+                    const offsetY = (svgRect.height - 160 * scale) / 2;
+
+                    // --- HORIZONTAL: find nearest week column from clientX ---
+                    // viewBox formula: x = padX + i * step  →  i = (viewBoxX - padX) / step
+                    const viewBoxX = (clientX - svgRect.left - offsetX) / scale;
+                    let activeWeekIdx = Math.round((viewBoxX - padX) / step);
+                    activeWeekIdx = Math.max(0, Math.min(numWeeks - 1, activeWeekIdx));
+                    activeDragWeekIdx = activeWeekIdx;
+
+                    // --- VERTICAL: find closest series line by real screen Y distance ---
+                    let closestSeries = null;
+                    let minDist = Infinity;
+                    allSeriesData.forEach(({ series, points }) => {
+                        const dotPt = points[activeWeekIdx];
+                        if (!dotPt) return;
+                        const screenDotY = svgRect.top + offsetY + dotPt.y * scale;
+                        const dist = Math.abs(clientY - screenDotY);
+                        if (dist < minDist) { minDist = dist; closestSeries = { series, pt: dotPt }; }
+                    });
+
+                    if (!closestSeries) return;
+                    activeDragSeriesKey = closestSeries.series.key;
+
+                    // Update indicator circles IN-PLACE using data-drag-id (never wipe pointsGroup)
+                    allSeriesData.forEach(({ series, points }) => {
+                        const dotPt = points[activeWeekIdx];
+                        if (!dotPt) return;
+                        const isCurrent = series.key === closestSeries.series.key;
+                        const outerKey = `drag-outer-${series.key}`;
+                        const innerKey = `drag-inner-${series.key}`;
+
+                        let outerRing = pointsGroup.querySelector(`[data-drag-id="${outerKey}"]`);
+                        if (!outerRing) {
+                            outerRing = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                            outerRing.setAttribute('data-drag-id', outerKey);
+                            outerRing.classList.add('trend-selection-indicator', 'trend-selection-indicator-outer');
+                            pointsGroup.appendChild(outerRing);
+                        }
+                        outerRing.setAttribute('cx', dotPt.x);
+                        outerRing.setAttribute('cy', dotPt.y);
+                        outerRing.setAttribute('r', isCurrent ? '7' : '4');
+                        outerRing.setAttribute('fill', '#ffffff');
+                        outerRing.setAttribute('stroke', isCurrent ? series.color : 'none');
+                        outerRing.setAttribute('stroke-width', isCurrent ? '1.5' : '0');
+
+                        let innerDot = pointsGroup.querySelector(`[data-drag-id="${innerKey}"]`);
+                        if (!innerDot) {
+                            innerDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                            innerDot.setAttribute('data-drag-id', innerKey);
+                            innerDot.classList.add('trend-selection-indicator', 'trend-selection-indicator-inner');
+                            pointsGroup.appendChild(innerDot);
+                        }
+                        innerDot.setAttribute('cx', dotPt.x);
+                        innerDot.setAttribute('cy', dotPt.y);
+                        innerDot.setAttribute('r', isCurrent ? '4.5' : '2.5');
+                        innerDot.setAttribute('fill', series.color);
+                        innerDot.setAttribute('stroke', 'none');
+                        innerDot.style.opacity = isCurrent ? '1' : '0.4';
+                    });
+
+                    // Dim non-active paths
+                    svg.querySelectorAll('.trend-dynamic-path').forEach(path => {
+                        const isActive = path.getAttribute('stroke') === closestSeries.series.color;
+                        path.style.opacity = isActive ? '1' : '0.15';
+                        path.setAttribute('stroke-width', isActive ? '4.5' : '1.5');
+                    });
+
+                    // Update tooltip
+                    tooltipPersistent = true;
+                    showTrendTooltip(
+                        closestSeries.pt.x, closestSeries.pt.y,
+                        closestSeries.series.data[activeWeekIdx], activeWeekIdx,
+                        closestSeries.series.color,
+                        closestSeries.series.key.toUpperCase()
+                    );
+                };
+
+                // Remove only the drag indicator circles, not the hitArea rects
+                const cleanupDragIndicators = () => {
+                    pointsGroup.querySelectorAll('[data-drag-id]').forEach(el => el.remove());
+                    svg.querySelectorAll('.trend-dynamic-path').forEach(path => {
+                        path.style.opacity = '1';
+                        path.setAttribute('stroke-width', '3');
+                    });
+                };
+
+                const pointerUpHandler = (e) => {
+                    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                    if (hitArea.hasPointerCapture(e.pointerId)) hitArea.releasePointerCapture(e.pointerId);
+
+                    if (isDragging) {
+                        isDragging = false;
+                        cleanupDragIndicators();
+
+                        if (activeDragSeriesKey) {
+                            if (window.triggerHaptic) window.triggerHaptic('medium');
+                            // Lift finger → open the selected category filter chart
+                            window.setTrendFilter(activeDragSeriesKey);
+                            selectedPeriodIndex = activeDragWeekIdx;
+                            renderTransactionList();
+                            setTimeout(() => renderTrendChart(), 10);
+                        }
+                    } else {
+                        // Quick tap (lifted before 250ms long-press fired)
+                        const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+                        if (dist <= 12) {
+                            if (window.triggerHaptic) window.triggerHaptic('light');
+                            tooltipPersistent = true;
+
+                            if (wasAlreadySelected) {
+                                selectedPeriodIndex = null;
+                                forceHideTrendTooltip();
+                                renderTransactionList();
+                            } else {
+                                selectedPeriodIndex = idx;
+                                if (activeTrendFilter === 'all') {
+                                    const needsSeries = allSeriesData.find(s => s.series.key === 'needs');
+                                    const tooltipPt = (needsSeries && needsSeries.points[idx]) || pt;
+                                    showTrendTooltip(tooltipPt.x, tooltipPt.y, budgetData.trends.all[idx], idx, '#0f172a', 'TOTAL');
+                                } else {
+                                    showTrendTooltip(pt.x, pt.y, series.data[idx], idx, series.color);
+                                }
+                                setTimeout(() => renderTrendChart(), 10);
+                                renderTransactionList();
+                            }
+                        }
+                    }
+                };
+
+                const pointerCancelHandler = (e) => {
+                    if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+                    if (hitArea.hasPointerCapture(e.pointerId)) hitArea.releasePointerCapture(e.pointerId);
+                    isDragging = false;
+                    cleanupDragIndicators();
+                };
+
+                // Prevent page scroll on mobile during drag (non-passive so e.preventDefault works)
+                hitArea.addEventListener('touchmove', (e) => { if (isDragging) e.preventDefault(); }, { passive: false });
+
+                hitArea.style.touchAction = 'none';
+                hitArea.addEventListener('pointerdown', pointerDownHandler);
+                hitArea.addEventListener('pointermove', pointerMoveHandler);
+                hitArea.addEventListener('pointerup', pointerUpHandler);
+                hitArea.addEventListener('pointercancel', pointerCancelHandler);
 
                 pointsGroup.appendChild(hitArea);
             });
@@ -1484,7 +1697,9 @@ const trends = {
     let tooltipPersistent = false;
     let scrollContainer = null;
 
-    function showTrendTooltip(svgX, svgY, value, weekIdx, color) {
+    // [FIX: 2026-07-04] - Antigravity
+    // Modified showTrendTooltip to support a category label parameter for multi-line dragging selections.
+    function showTrendTooltip(svgX, svgY, value, weekIdx, color, categoryLabel = '') {
         const tooltip = document.getElementById('trend-tooltip');
         if (!tooltip) return;
 
@@ -1504,7 +1719,8 @@ const trends = {
         const label = budgetData.trendLabels && budgetData.trendLabels[weekIdx] 
             ? budgetData.trendLabels[weekIdx] 
             : `W${weekIdx + 1}`;
-        tooltip.innerHTML = `${label}: ${formatPeso(value)}`;
+        const categorySuffix = categoryLabel ? ` ${categoryLabel}` : '';
+        tooltip.innerHTML = `${label}${categorySuffix}: ${formatPeso(value)}`;
     }
 
     function hideTrendTooltip() {
@@ -1549,12 +1765,20 @@ const trends = {
         if (window.triggerHaptic) window.triggerHaptic('light');
         
         // Handle toggle for "ALL" when it's already active
+        // [FIX: 2026-07-04] - Antigravity
+        // Handler for setTrendFilter. Modified to handle re-clicking the active filter badge (e.g. 'savings' or 'all') to toggle/deselect the active week.
         if (filter === 'all' && activeTrendFilter === 'all') {
             // Toggle between 3 lines and single black line
             showAllAsTotal = !showAllAsTotal;
             // Reset period selection when toggling "All"
             selectedPeriodIndex = null;
             forceHideTrendTooltip();
+        } else if (filter === activeTrendFilter) {
+            // Re-clicking the currently active filter badge untoggles the active week
+            if (selectedPeriodIndex !== null) {
+                selectedPeriodIndex = null;
+                forceHideTrendTooltip();
+            }
         } else {
             // Switching to a different filter
             activeTrendFilter = filter;

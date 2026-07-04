@@ -1,6 +1,7 @@
 @echo off
 REM Script to remove API key files from Git tracking
 REM This keeps your local files but stops tracking them in Git
+REM [FIXED] Works correctly when called from scripts/ folder
 
 echo.
 echo ========================================
@@ -16,6 +17,9 @@ echo Your local files will NOT be deleted!
 echo They just won't be tracked by Git anymore.
 echo.
 pause
+
+REM Change to project root directory (parent of scripts folder)
+cd /d "%~dp0.."
 
 echo.
 echo Checking which files are currently tracked...

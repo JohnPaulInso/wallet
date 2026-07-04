@@ -1,10 +1,14 @@
 @echo off
 REM Quick dev script - builds project and opens Android Studio
+REM [FIXED] Works correctly when called from scripts/ folder
 echo.
 echo ========================================
 echo   BUILD AND OPEN ANDROID STUDIO
 echo ========================================
 echo.
+
+REM Change to project root directory (parent of scripts folder)
+cd /d "%~dp0.."
 
 echo [1/3] Running npm run build...
 call npm run build

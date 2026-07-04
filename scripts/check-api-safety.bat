@@ -1,12 +1,16 @@
 @echo off
 REM API Key Safety Verification Script
 REM Run this before committing to GitHub to ensure no API keys will be exposed
+REM [FIXED] Works correctly when called from scripts/ folder
 
 echo.
 echo ========================================
 echo   API KEY SAFETY CHECK
 echo ========================================
 echo.
+
+REM Change to project root directory (parent of scripts folder)
+cd /d "%~dp0.."
 
 REM Check if .gitignore exists
 if not exist ".gitignore" (

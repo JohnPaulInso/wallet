@@ -37,6 +37,18 @@
     const RATE_LIMIT_KEY = 'smartwallet_ai_rate_limit';
     const RATE_LIMIT_COUNT_KEY = 'smartwallet_ai_request_count';
 
+    // Summary conversation flow state
+    let summaryFlowActive = false;
+    let summaryData = {
+        type: null,
+        timeRange: null,
+        specificMerchant: null,
+        customRequest: null
+    };
+    let summaryFlowStep = 0; // Track current step: 0=inactive, 1=type, 2=timerange
+    let currentButtonContainer = null;
+    let abortController = null; // For stopping AI responses
+
     // -----------------------------------------------------------------------
     // DOM REFS
     // -----------------------------------------------------------------------
@@ -743,6 +755,17 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         const selected = sessionsList.find(s => s.id === sessionId);
         conversationHistory = selected ? (selected.messages || []) : [];
 
+        // [FIX] Reset summary flow state
+        summaryFlowActive = false;
+        summaryFlowStep = 0;
+        summaryData = { type: null, timeRange: null, specificMerchant: null, customRequest: null };
+        
+        // [FIX] Remove any existing button containers
+        if (currentButtonContainer) {
+            currentButtonContainer.remove();
+            currentButtonContainer = null;
+        }
+
         // Reset UI message board
         const existingMsgs = messagesEl.querySelectorAll('.ai-message, .ai-time-divider, .ai-error-bubble, .ai-show-older-btn');
         existingMsgs.forEach(m => m.remove());
@@ -775,6 +798,10 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         }
         suggestionsEl.style.display = '';
         buildSuggestions();
+        
+        // [FIX] Ensure input bar is visible
+        showInputBar();
+        
         scrollToBottom();
     }
 
@@ -785,6 +812,17 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         }
         currentSessionId = generateSessionId();
         conversationHistory = [];
+
+        // [FIX] Reset summary flow state
+        summaryFlowActive = false;
+        summaryFlowStep = 0;
+        summaryData = { type: null, timeRange: null, specificMerchant: null, customRequest: null };
+        
+        // [FIX] Remove any existing button containers
+        if (currentButtonContainer) {
+            currentButtonContainer.remove();
+            currentButtonContainer = null;
+        }
 
         // Reset UI panel
         const existingMsgs = messagesEl.querySelectorAll('.ai-message, .ai-time-divider, .ai-error-bubble, .ai-show-older-btn');
@@ -812,14 +850,14 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
     function buildSuggestions() {
         suggestionsEl.innerHTML = '';
         
-        // Add "Complete Summary" button first
+        // Add "Complete Summary" button first - now triggers conversational flow
         const summaryBtn = document.createElement('button');
         summaryBtn.className = 'ai-chip ai-chip-summary';
         summaryBtn.innerHTML = '<span class="material-icons" style="font-size: 16px; margin-right: 4px;">summarize</span>Complete Summary';
         summaryBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            showSummaryOptions();
+            startSummaryFlow(); // Start Claude-style conversational flow
         });
         suggestionsEl.appendChild(summaryBtn);
         
@@ -837,105 +875,15 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         });
     }
     
-    // Show summary customization options
+    // [DEPRECATED - Replaced with Claude-style conversational flow]
+    // Old modal-based summary selection - keeping for reference
+    /*
     function showSummaryOptions() {
         const modal = document.createElement('div');
         modal.className = 'ai-summary-modal';
-        modal.innerHTML = `
-            <div class="ai-summary-modal-content">
-                <div class="ai-summary-modal-header">
-                    <h3><span class="material-icons">summarize</span> Complete Summary Options</h3>
-                    <button class="ai-summary-close" aria-label="Close">&times;</button>
-                </div>
-                <div class="ai-summary-modal-body">
-                    <div class="ai-summary-option">
-                        <label>
-                            <span class="material-icons">category</span>
-                            <span>Category</span>
-                        </label>
-                        <select id="summary-category">
-                            <option value="all">All Categories</option>
-                            <option value="Food & Drinks">Food & Drinks</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Transportation">Transportation</option>
-                            <option value="Life & Entertainment">Life & Entertainment</option>
-                            <option value="Service">Service</option>
-                            <option value="Education">Education</option>
-                            <option value="Financial Expenses">Financial Expenses</option>
-                            <option value="Online Shopping">Online Shopping</option>
-                        </select>
-                    </div>
-                    <div class="ai-summary-option">
-                        <label>
-                            <span class="material-icons">account_balance_wallet</span>
-                            <span>Budget Type</span>
-                        </label>
-                        <select id="summary-budget-type">
-                            <option value="all">All</option>
-                            <option value="wants">Wants</option>
-                            <option value="needs">Needs</option>
-                            <option value="savings">Savings</option>
-                        </select>
-                    </div>
-                    <div class="ai-summary-option">
-                        <label>
-                            <span class="material-icons">calendar_today</span>
-                            <span>Time Period</span>
-                        </label>
-                        <select id="summary-timeframe">
-                            <option value="this_month">This Month</option>
-                            <option value="last_7_days">Last 7 Days</option>
-                            <option value="last_3_months">Last 3 Months</option>
-                            <option value="last_6_months">Last 6 Months</option>
-                            <option value="this_year">This Year</option>
-                            <option value="all_time">All Time</option>
-                        </select>
-                    </div>
-                    <div class="ai-summary-option">
-                        <label>
-                            <span class="material-icons">description</span>
-                            <span>Additional Details</span>
-                        </label>
-                        <textarea id="summary-details" placeholder="e.g., Focus on online shopping trends, compare with last month..." rows="3" maxlength="200"></textarea>
-                    </div>
-                </div>
-                <div class="ai-summary-modal-footer">
-                    <button class="ai-summary-cancel">Cancel</button>
-                    <button class="ai-summary-generate"><span class="material-icons">auto_awesome</span> Generate Summary</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Fade in animation
-        requestAnimationFrame(() => {
-            modal.classList.add('ai-summary-modal-visible');
-        });
-        
-        // Close handlers
-        const closeModal = () => {
-            modal.classList.remove('ai-summary-modal-visible');
-            setTimeout(() => modal.remove(), 300);
-        };
-        
-        modal.querySelector('.ai-summary-close').addEventListener('click', closeModal);
-        modal.querySelector('.ai-summary-cancel').addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) closeModal();
-        });
-        
-        // Generate handler
-        modal.querySelector('.ai-summary-generate').addEventListener('click', () => {
-            const category = document.getElementById('summary-category').value;
-            const budgetType = document.getElementById('summary-budget-type').value;
-            const timeframe = document.getElementById('summary-timeframe').value;
-            const details = document.getElementById('summary-details').value.trim();
-            
-            closeModal();
-            generateSummary(category, budgetType, timeframe, details);
-        });
+        // ... modal implementation ...
     }
+    */
     
     // Generate complete summary based on user selections
     function generateSummary(category, budgetType, timeframe, details) {
@@ -969,6 +917,529 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         prompt += '. Include total spending, top merchants, trends, and actionable recommendations.';
         
         sendMessage(prompt);
+    }
+
+    // -----------------------------------------------------------------------
+    // CLAUDE-STYLE CONVERSATIONAL SUMMARY FLOW
+    // -----------------------------------------------------------------------
+    function startSummaryFlow() {
+        summaryFlowActive = true;
+        summaryFlowStep = 1;
+        summaryData = { type: null, timeRange: null, specificMerchant: null, customRequest: null };
+        
+        // Hide input bar, show button options
+        hideInputBar();
+        
+        // Show AI message asking first question
+        appendMessage('bot', "What kind of summary would you like?");
+        
+        // Show button options
+        showSummaryButtons([
+            { emoji: '💰', label: 'Expenses Summary', value: 'expenses' },
+            { emoji: '📊', label: 'Category Breakdown', value: 'categories' },
+            { emoji: '🎯', label: 'Needs/Wants/Savings', value: 'needs_wants_savings' },
+            { emoji: '🎁', label: 'Goals Progress', value: 'goals' },
+            { emoji: '🏪', label: 'Specific Merchant', value: 'merchant' },
+            { emoji: '✏️', label: 'Custom Request', value: 'custom' }
+        ], handleSummaryTypeSelection, false); // No back button on first step
+    }
+
+    function handleSummaryTypeSelection(option) {
+        summaryData.type = option.value;
+        summaryFlowStep = 2;
+        
+        // Show user's selection as a message
+        appendMessage('user', `${option.emoji} ${option.label}`);
+        
+        // If custom request selected, ask for custom text
+        if (option.value === 'custom') {
+            appendMessage('bot', "What would you like to know about your finances? Please describe your request.");
+            showInputBar();
+            // Set flag to capture next input as custom request
+            summaryFlowActive = 'awaiting_custom';
+            return;
+        }
+        
+        // If goals selected, ask which goal and what question
+        if (option.value === 'goals') {
+            askGoalSelection();
+            return;
+        }
+        
+        // If merchant selected, ask for merchant name with text input
+        if (option.value === 'merchant') {
+            appendMessage('bot', "Which merchant would you like to see?");
+            showInputBar();
+            // Set flag to capture next input as merchant name
+            summaryFlowActive = 'awaiting_merchant';
+            return;
+        }
+        
+        // Ask for time range for other types
+        askTimeRange();
+    }
+
+    async function askGoalSelection() {
+        appendMessage('bot', "Which goal would you like to know about?");
+        
+        // Fetch goals directly from Firebase
+        let goalOptions = [];
+        try {
+            const uid = window.auth?.currentUser?.uid;
+            if (uid && window.db) {
+                const goalsRef = window.collection(window.db, `users/${uid}/goals`);
+                const q = window.query(goalsRef, window.orderBy("order", "asc"));
+                const snapshot = await window.getDocs(q);
+                
+                const goalsData = [];
+                snapshot.forEach((doc) => {
+                    goalsData.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort by order
+                goalsData.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+                
+                if (goalsData.length > 0) {
+                    // Show actual goals as buttons
+                    goalOptions = goalsData.map(g => ({
+                        emoji: '🎯',
+                        label: g.title || g.name || g.goalName || 'Goal',
+                        value: g.title || g.name || g.goalName || 'Goal'
+                    }));
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load goals from Firebase:', e);
+        }
+        
+        // Add "All Goals" option first
+        goalOptions.unshift({
+            emoji: '🎁',
+            label: 'All Goals',
+            value: 'all_goals'
+        });
+        
+        // If no goals found, add a helpful message option
+        if (goalOptions.length === 1) {
+            goalOptions.push({
+                emoji: 'ℹ️',
+                label: 'No goals found - Create one first',
+                value: 'no_goals'
+            });
+        }
+        
+        showSummaryButtons(goalOptions, handleGoalSelection, true); // Show back button
+    }
+
+    function handleGoalSelection(option) {
+        if (option.value === 'no_goals') {
+            appendMessage('user', `${option.emoji} ${option.label}`);
+            appendMessage('bot', "It looks like you haven't created any savings goals yet. Would you like me to help you understand how to create one, or would you like to ask about something else?");
+            summaryFlowActive = false;
+            summaryFlowStep = 0;
+            showInputBar();
+            return;
+        }
+        
+        summaryData.specificMerchant = option.value; // Reusing this field for goal name
+        
+        // Show user's selection
+        appendMessage('user', `${option.emoji} ${option.label}`);
+        
+        // Ask what they want to know about the goal
+        askGoalQuestion();
+    }
+
+    function askGoalQuestion() {
+        summaryFlowStep = 3; // Now at step 3 (goal question selection)
+        
+        appendMessage('bot', "What would you like to know about this goal?");
+        
+        showSummaryButtons([
+            { emoji: '📊', label: 'Current Progress', value: 'goal_progress' },
+            { emoji: '📅', label: 'Projected Completion Date', value: 'goal_completion' },
+            { emoji: '💰', label: 'How Much More Needed', value: 'goal_remaining' },
+            { emoji: '📈', label: 'Saving Rate & Tips', value: 'goal_tips' },
+            { emoji: '🔄', label: 'Compare to Budget', value: 'goal_budget' },
+            { emoji: '✏️', label: 'Custom Question', value: 'goal_custom' }
+        ], handleGoalQuestionSelection, true); // Show back button
+    }
+
+    function handleGoalQuestionSelection(option) {
+        if (option.value === 'goal_custom') {
+            appendMessage('bot', "What would you like to know about this goal?");
+            showInputBar();
+            summaryFlowActive = 'awaiting_goal_custom_question';
+            return;
+        }
+        
+        summaryData.customRequest = option.value; // Store question type
+        
+        // Show user's selection
+        appendMessage('user', `${option.emoji} ${option.label}`);
+        
+        // Generate goal summary
+        generateGoalSummary();
+    }
+
+    function generateGoalSummary() {
+        let prompt = '';
+        const goalName = summaryData.specificMerchant; // We reused this field
+        const questionType = summaryData.customRequest;
+        
+        if (goalName === 'all_goals') {
+            // All goals questions
+            if (questionType === 'goal_progress') {
+                prompt = `Show me the current progress for all my savings goals. Include percentage complete, current amount, and target for each goal.`;
+            } else if (questionType === 'goal_completion') {
+                prompt = `When will I reach each of my savings goals? Show projected completion dates based on my current saving rate.`;
+            } else if (questionType === 'goal_remaining') {
+                prompt = `How much more do I need to save for each of my goals? Show remaining amounts and what I need to save per month.`;
+            } else if (questionType === 'goal_tips') {
+                prompt = `Analyze my savings rate for all goals and give me tips on how to reach them faster.`;
+            } else if (questionType === 'goal_budget') {
+                prompt = `Compare my savings goals progress to my budget. Am I saving enough to reach my targets?`;
+            }
+        } else {
+            // Specific goal questions
+            if (questionType === 'goal_progress') {
+                prompt = `Show me the current progress for my "${goalName}" goal. Include percentage complete, current amount, target amount, and how much I've saved recently.`;
+            } else if (questionType === 'goal_completion') {
+                prompt = `When will I reach my "${goalName}" goal? Calculate the projected completion date based on my current saving rate.`;
+            } else if (questionType === 'goal_remaining') {
+                prompt = `How much more do I need to save for my "${goalName}" goal? Tell me the remaining amount and what I need to save per month to reach it.`;
+            } else if (questionType === 'goal_tips') {
+                prompt = `Analyze my savings rate for the "${goalName}" goal and give me actionable tips on how to reach it faster.`;
+            } else if (questionType === 'goal_budget') {
+                prompt = `Compare my "${goalName}" goal progress to my overall budget. Am I allocating enough to reach this goal?`;
+            }
+        }
+        
+        // Reset flow state
+        summaryFlowActive = false;
+        summaryFlowStep = 0;
+        showInputBar();
+        
+        // Send the constructed prompt
+        sendMessage(prompt);
+    }
+
+    function askTimeRange() {
+        appendMessage('bot', "What time range?");
+        
+        showSummaryButtons([
+            { emoji: '📅', label: 'This Month', value: 'this_month' },
+            { emoji: '🗓️', label: 'June', value: 'june' },
+            { emoji: '🗓️', label: 'May', value: 'may' },
+            { emoji: '📆', label: 'Last 3 Months', value: 'last_3_months' },
+            { emoji: '📆', label: 'Last 6 Months', value: 'last_6_months' },
+            { emoji: '📆', label: 'This Year', value: 'this_year' },
+            { emoji: '📆', label: 'All Time', value: 'all_time' },
+            { emoji: '🗓️', label: 'Custom Period', value: 'custom_period' }
+        ], handleTimeRangeSelection, true); // Show back button
+    }
+
+    function handleTimeRangeSelection(option) {
+        summaryData.timeRange = option.value;
+        
+        // Show user's selection
+        appendMessage('user', `${option.emoji} ${option.label}`);
+        
+        // If custom period selected, ask for custom input
+        if (option.value === 'custom_period') {
+            appendMessage('bot', "Please specify the time period (e.g., 'from January to March', 'the first week of June', 'last 2 weeks').");
+            showInputBar();
+            summaryFlowActive = 'awaiting_custom_period';
+            return;
+        }
+        
+        // Generate and send the summary request
+        generateAndSendSummary();
+    }
+
+    function generateAndSendSummary() {
+        let prompt = '';
+        
+        const timeLabels = {
+            'this_month': 'this month',
+            'june': 'June',
+            'may': 'May',
+            'last_3_months': 'the last 3 months',
+            'last_6_months': 'the last 6 months',
+            'this_year': 'this year',
+            'all_time': 'all time'
+        };
+        
+        // Handle custom request (freeform)
+        if (summaryData.type === 'custom' && summaryData.customRequest) {
+            prompt = summaryData.customRequest;
+            // If they didn't mention time, optionally append context
+            if (summaryData.timeRange && summaryData.timeRange !== 'custom_period') {
+                const timeLabel = timeLabels[summaryData.timeRange];
+                prompt += ` (Focus on data from ${timeLabel})`;
+            }
+        } else {
+            // Standard summary types
+            const timeLabel = summaryData.timeRange === 'custom_period' 
+                ? summaryData.customRequest 
+                : (timeLabels[summaryData.timeRange] || 'this month');
+            
+            if (summaryData.type === 'expenses') {
+                prompt = `Give me a detailed expense summary for ${timeLabel}. Include total spent, top categories, top merchants, and spending trends.`;
+            } else if (summaryData.type === 'categories') {
+                prompt = `Give me a category breakdown for ${timeLabel}. Show spending by category with percentages and trends.`;
+            } else if (summaryData.type === 'needs_wants_savings') {
+                prompt = `Give me a needs/wants/savings analysis for ${timeLabel}. Show how much I spent on each, compare to budget, and provide recommendations.`;
+            } else if (summaryData.type === 'goals') {
+                prompt = `Give me my savings goals progress report. Show current progress, how much more needed, and projected completion dates.`;
+            } else if (summaryData.type === 'merchant' && summaryData.specificMerchant) {
+                prompt = `Give me a detailed summary of my spending at ${summaryData.specificMerchant} for ${timeLabel}.`;
+            }
+        }
+        
+        // Reset flow state
+        summaryFlowActive = false;
+        summaryFlowStep = 0;
+        showInputBar();
+        
+        // Send the constructed prompt as a normal message
+        sendMessage(prompt);
+    }
+
+    function showSummaryButtons(options, callback, showBackButton) {
+        // Remove any existing button container
+        if (currentButtonContainer) {
+            currentButtonContainer.remove();
+        }
+        
+        // Create button container
+        currentButtonContainer = document.createElement('div');
+        currentButtonContainer.className = 'ai-button-options';
+        currentButtonContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 0 16px 12px;
+            flex-shrink: 0;
+            animation: ai-msg-in 0.3s ease both;
+        `;
+        
+        // Create buttons for options
+        options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'ai-option-button';
+            btn.innerHTML = `${option.emoji} ${option.label}`;
+            btn.style.cssText = `
+                padding: 14px 20px;
+                border-radius: 14px;
+                border: 1px solid rgba(34, 197, 94, 0.3);
+                background: rgba(34, 197, 94, 0.08);
+                color: #86efac;
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-align: left;
+                font-family: inherit;
+            `;
+            
+            btn.addEventListener('mouseenter', () => {
+                btn.style.background = 'rgba(34, 197, 94, 0.18)';
+                btn.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+                btn.style.transform = 'translateY(-2px)';
+            });
+            
+            btn.addEventListener('mouseleave', () => {
+                btn.style.background = 'rgba(34, 197, 94, 0.08)';
+                btn.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                btn.style.transform = 'translateY(0)';
+            });
+            
+            btn.addEventListener('click', () => {
+                // Remove button container
+                currentButtonContainer.remove();
+                currentButtonContainer = null;
+                // Call callback with selected option
+                callback(option);
+            });
+            
+            currentButtonContainer.appendChild(btn);
+        });
+        
+        // Add "Go Back" button if requested
+        if (showBackButton) {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'ai-option-button ai-back-button';
+            backBtn.innerHTML = `⬅️ Go Back`;
+            backBtn.style.cssText = `
+                padding: 12px 20px;
+                border-radius: 14px;
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                background: rgba(239, 68, 68, 0.08);
+                color: #fca5a5;
+                font-size: 13px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-align: center;
+                font-family: inherit;
+                margin-top: 4px;
+            `;
+            
+            backBtn.addEventListener('mouseenter', () => {
+                backBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+                backBtn.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+                backBtn.style.transform = 'translateY(-2px)';
+            });
+            
+            backBtn.addEventListener('mouseleave', () => {
+                backBtn.style.background = 'rgba(239, 68, 68, 0.08)';
+                backBtn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                backBtn.style.transform = 'translateY(0)';
+            });
+            
+            backBtn.addEventListener('click', () => {
+                // Remove button container
+                currentButtonContainer.remove();
+                currentButtonContainer = null;
+                // Go back to previous step
+                goBackInSummaryFlow();
+            });
+            
+            currentButtonContainer.appendChild(backBtn);
+        }
+        
+        // Insert before typing indicator
+        messagesEl.insertBefore(currentButtonContainer, typingEl);
+        scrollToBottom();
+    }
+
+    function goBackInSummaryFlow() {
+        // Show user's action
+        appendMessage('user', '⬅️ Go Back');
+        
+        // Determine which step to go back to
+        if (summaryFlowStep === 3) {
+            // Currently at goal question selection, go back to goal selection
+            summaryFlowStep = 2;
+            summaryData.customRequest = null;
+            
+            if (summaryData.type === 'goals') {
+                askGoalSelection();
+            }
+        } else if (summaryFlowStep === 2) {
+            // Currently at time range or goal selection, go back to summary type
+            summaryFlowStep = 1;
+            summaryData.timeRange = null;
+            summaryData.specificMerchant = null;
+            summaryData.customRequest = null;
+            
+            appendMessage('bot', "What kind of summary would you like?");
+            showSummaryButtons([
+                { emoji: '💰', label: 'Expenses Summary', value: 'expenses' },
+                { emoji: '📊', label: 'Category Breakdown', value: 'categories' },
+                { emoji: '🎯', label: 'Needs/Wants/Savings', value: 'needs_wants_savings' },
+                { emoji: '🎁', label: 'Goals Progress', value: 'goals' },
+                { emoji: '🏪', label: 'Specific Merchant', value: 'merchant' },
+                { emoji: '✏️', label: 'Custom Request', value: 'custom' }
+            ], handleSummaryTypeSelection, false);
+        }
+    }
+
+    function hideInputBar() {
+        const inputBar = document.querySelector('.ai-input-bar');
+        if (inputBar) inputBar.style.display = 'none';
+    }
+
+    function showInputBar() {
+        const inputBar = document.querySelector('.ai-input-bar');
+        if (inputBar) inputBar.style.display = 'flex';
+    }
+
+    function transformSendButtonToStop() {
+        sendBtn.innerHTML = '<span class="material-icons">stop</span>';
+        // Keep the same green gradient (not red)
+        sendBtn.style.background = 'linear-gradient(135deg, #16a34a, #059669)';
+        sendBtn.onclick = stopAIResponse;
+    }
+
+    function transformStopButtonToSend() {
+        sendBtn.innerHTML = '<span class="material-icons">send</span>';
+        sendBtn.style.background = 'linear-gradient(135deg, #16a34a, #059669)';
+        sendBtn.onclick = null; // Reset to default behavior
+    }
+
+    function stopAIResponse() {
+        if (abortController) {
+            abortController.abort();
+            abortController = null;
+        }
+        hideTyping();
+        appendMessage('bot', '_Response stopped by user._');
+        isWaitingForResponse = false;
+        sendBtn.disabled = false;
+        transformStopButtonToSend();
+    }
+
+    async function callGeminiWithAbort(userText) {
+        conversationHistory.push({ role: 'user', parts: [{ text: userText }] });
+
+        const systemPrompt = buildSystemPrompt();
+        const recentHistory = conversationHistory.slice(-MAX_HISTORY_SENT);
+
+        const payload = {
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents: recentHistory,
+            generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 1024,
+                topP: 0.9,
+            }
+        };
+
+        const geminiUrl = getGeminiUrl();
+        abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), 120000); // 2 min timeout
+
+        let res;
+        try {
+            res = await fetch(geminiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: abortController.signal
+            });
+            clearTimeout(timeoutId);
+        } catch (err) {
+            clearTimeout(timeoutId);
+            if (err.name === 'AbortError') {
+                // User stopped the response
+                return null;
+            }
+            throw err;
+        }
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            const errorMessage = errData?.error?.message || '';
+            
+            if (res.status === 429 || errorMessage.toLowerCase().includes('quota') || errorMessage.toLowerCase().includes('rate limit')) {
+                throw new Error('RATE_LIMIT');
+            }
+            
+            throw new Error(errorMessage || `HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const botText = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+
+        conversationHistory.push({ role: 'model', parts: [{ text: botText }] });
+        incrementRequestCount();
+
+        saveActiveSession().catch(() => {});
+        saveHistory().catch(() => {});
+
+        return botText;
     }
 
     // -----------------------------------------------------------------------
@@ -1015,6 +1486,10 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         });
 
         optimizeDOMMessages();
+        
+        // [FIX] Ensure input bar is visible when loading conversation history
+        showInputBar();
+        
         scrollToBottom();
     }
 
@@ -1058,6 +1533,66 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
                 return;
             }
 
+            // [NEW] Detect summary keyword and start conversational flow
+            if (/\b(summary|summarize|give me a summary|show summary|complete summary)\b/i.test(text)) {
+                startSummaryFlow();
+                return;
+            }
+            
+            // [NEW] Handle goal name input during summary flow
+            if (summaryFlowActive === 'awaiting_goal_name') {
+                summaryData.specificMerchant = text; // Reusing this field for goal name
+                summaryFlowActive = true;
+                summaryFlowStep = 2;
+                askGoalQuestion();
+                return;
+            }
+            
+            // [NEW] Handle goal custom question input
+            if (summaryFlowActive === 'awaiting_goal_custom_question') {
+                const goalName = summaryData.specificMerchant;
+                let prompt = '';
+                if (goalName === 'all_goals') {
+                    prompt = `${text} (regarding all my savings goals)`;
+                } else {
+                    prompt = `${text} (regarding my "${goalName}" goal)`;
+                }
+                summaryFlowActive = false;
+                summaryFlowStep = 0;
+                showInputBar();
+                sendMessage(prompt);
+                return;
+            }
+            
+            // [NEW] Handle custom request input during summary flow
+            if (summaryFlowActive === 'awaiting_custom') {
+                summaryData.customRequest = text;
+                summaryData.type = 'custom';
+                summaryFlowActive = true;
+                summaryFlowStep = 2;
+                askTimeRange();
+                return;
+            }
+            
+            // [NEW] Handle custom period input during summary flow
+            if (summaryFlowActive === 'awaiting_custom_period') {
+                summaryData.customRequest = text;
+                summaryData.timeRange = 'custom_period';
+                summaryFlowActive = false;
+                summaryFlowStep = 0;
+                generateAndSendSummary();
+                return;
+            }
+            
+            // [NEW] Handle merchant name input during summary flow
+            if (summaryFlowActive === 'awaiting_merchant') {
+                summaryData.specificMerchant = text;
+                summaryFlowActive = true;
+                summaryFlowStep = 2;
+                askTimeRange();
+                return;
+            }
+
             const isGreeting = /^(hey|hello|hi|yo|good\s+morning|good\s+afternoon|good\s+evening|greeting|whats\s+up|sup)\b/i.test(text);
             const isSaveMemory = /save\s+(on|to)\s+memory/i.test(text);
 
@@ -1068,11 +1603,13 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
 
             appendMessage('user', text);
             showTyping();
+            transformSendButtonToStop(); // Transform send button while AI is responding
 
             if (isSaveMemory) {
                 // Memory vault routine
                 const facts = await extractAndSaveMemory(text);
                 hideTyping();
+                transformStopButtonToSend();
                 if (facts && facts.length > 0) {
                     const factsList = facts.map(f => `* ${f}`).join('\n');
                     appendMessage('bot', `Done! I've saved the following statement to my memory folder. I will remember this in our future chats:\n\n${factsList}`);
@@ -1080,10 +1617,13 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
                     appendMessage('bot', `I've registered your request to update my memory, but couldn't extract any specific financial preferences or facts from that statement. Could you please specify exactly what you'd like me to remember?`);
                 }
             } else {
-                // Regular Gemini Response
-                const reply = await callGemini(text);
+                // Regular Gemini Response with abort controller
+                const reply = await callGeminiWithAbort(text);
                 hideTyping();
-                appendMessage('bot', reply);
+                transformStopButtonToSend();
+                if (reply) { // Only append if not aborted
+                    appendMessage('bot', reply);
+                }
 
                 if (isGreeting) {
                     suggestionsEl.style.display = 'flex';
@@ -1105,9 +1645,10 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
             
             if (err.message === 'RATE_LIMIT') {
                 showError('RATE_LIMIT');
-            } else {
+            } else if (err.name !== 'AbortError') {
                 showError(`We encountered an issue: ${err.message}. Please check your connection and try again.`);
             }
+            transformStopButtonToSend();
         } finally {
             sendBtn.disabled = false;
             isWaitingForResponse = false;
@@ -1132,6 +1673,20 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
     function closeChat() {
         overlay.classList.remove('ai-open');
         document.body.style.overflow = '';
+        
+        // [FIX] Reset summary flow state when closing
+        summaryFlowActive = false;
+        summaryFlowStep = 0;
+        summaryData = { type: null, timeRange: null, specificMerchant: null, customRequest: null };
+        
+        // [FIX] Remove any existing button containers
+        if (currentButtonContainer) {
+            currentButtonContainer.remove();
+            currentButtonContainer = null;
+        }
+        
+        // [FIX] Ensure input bar is visible for next time
+        showInputBar();
     }
 
     // -----------------------------------------------------------------------

@@ -161,6 +161,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- ES Module Bridge: Expose shared utilities to standard scripts (2026-04-03) -->
     <script type="module">
@@ -424,6 +425,8 @@
     <link rel="stylesheet" href="bpi-scanner.css">
     <!-- [ADD: 2026-07-03] Link to Wants, Needs, Savings Budget Analysis Overlay stylesheet - Antigravity -->
     <link rel="stylesheet" href="budget-analysis-overlay.css">
+    <!-- [ADD: 2026-07-04] SmartWallet AI chatbot stylesheet - Antigravity -->
+    <link rel="stylesheet" href="wallet-ai.css">
 
     <!-- [CRITICAL: 2026-06-29] Inline BPI Scanner CSS matching actual HTML structure -->
     <style id="bpi-scanner-inline-styles">
@@ -3127,7 +3130,7 @@
                     const chartFilter = document.getElementById('chart-filter');
                     if (chartFilter) {
                         const now = new Date();
-                        const last15Option = chartFilter.querySelector('option[value="last_15"]');
+                        const thisMonthOption = chartFilter.querySelector('option[value="this_month"]');
 
                         // Generate previous 3 months (reverse order so they appear chronologically)
                         for (let i = 3; i >= 1; i--) {
@@ -3139,8 +3142,8 @@
                             option.value = monthValue;
                             option.textContent = monthName;
 
-                            // Insert after "Last 15 of Month"
-                            last15Option.insertAdjacentElement('afterend', option);
+                            // Insert after "This Month"
+                            thisMonthOption.insertAdjacentElement('afterend', option);
                         }
                     }
 
@@ -7180,7 +7183,19 @@
                 };
 
                 // --- AI SUMMARY GENERATION ---
-                async function updateAISummary(thisMonthTxns, force = false) {
+                async function updateAISummary(rawThisMonthTxns, force = false) {
+                    const getAmt = t => t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                    const isExpenseTransaction = (t) => {
+                        const amt = getAmt(t);
+                        const mapped = typeof getMerchantDisplay === 'function' ? getMerchantDisplay(t.merchant, t) : null;
+                        const mName = mapped?.name || t.merchant || t.description || '';
+                        const cat = t.category || t.manualCategory || mapped?.category || 'Other';
+                        const isIncome = t.type === 'income' || t.isIncome || cat === 'Income' || amt < 0;
+                        const isAtome = /atome/i.test(mName || t.merchant || t.description || '');
+                        return !isIncome && !isAtome;
+                    };
+                    window.__dashboardIsExpenseTxn = isExpenseTransaction; // Cache helper for use inside generateSummary
+                    const thisMonthTxns = (rawThisMonthTxns || []).filter(isExpenseTransaction);
 
                     // Ensure LocalAI is available (dynamic import for Edge AI/Fallback)
                     if (!window.LocalAI) {
@@ -7322,9 +7337,10 @@
                             const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), 1);
 
                             const historicalTxns = allTxns.filter(t => {
-                                const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
-                                return d >= oneYearAgo && !t.excluded && !t.refund;
-                            });
+                                 const d = (t.date && t.date.seconds) ? new Date(t.date.seconds * 1000) : new Date(t.date);
+                                 const isExp = typeof window.__dashboardIsExpenseTxn === 'function' ? window.__dashboardIsExpenseTxn(t) : true;
+                                 return d >= oneYearAgo && !t.excluded && !t.refund && isExp;
+                             });
 
                             const monthlyTotals = {};
                             const merchantStats = {}; // { mName: { total: 0, count: 0, months: Set } }
@@ -7493,7 +7509,8 @@ Be direct, practical, and helpful.`;
                             if (preferredEngine === 'auto' || preferredEngine === 'Gemini') {
                                 console.log('🤖 [AI] Attempting Gemini...');
                                 try {
-                                    const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
+                                    // [FIX: 2026-07-04] - Antigravity: Use gemini-2.5-flash and v1beta REST route matching chatbot key
+                                    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${window.CONFIG?.GEMINI_API_KEY || CONFIG.GEMINI_API_KEY}`;
                                     let geminiData;
 
                                     if (window.Capacitor?.Plugins?.CapacitorHttp) {
@@ -8920,8 +8937,8 @@ Be direct, practical, and helpful.`;
                         lItem.style.cursor = 'pointer';
 
                         const legendDotColor = seg.color || '#64748b';
-                        const excludedBadge = before.isExcluded ? '<span class="legend-item-excluded-badge" style="font-size:7px; color:#94a3b8; font-weight:700; margin-left:4px; text-transform:uppercase; letter-spacing:0.3px;">excluded</span>' : '';
-                        lItem.innerHTML = `<div class="legend-color" style="background: ${legendDotColor}"></div><span>${seg.name}</span>${excludedBadge}`;
+                        const excludedBadge = before.isExcluded ? '<br><span class="legend-item-excluded-badge" style="font-size:7px; color:#94a3b8; font-weight:700; display:inline-block; margin-top:2px; text-transform:uppercase; letter-spacing:0.3px; line-height:1;">excluded</span>' : '';
+                        lItem.innerHTML = `<div class="legend-color" style="background: ${legendDotColor}"></div><span style="display:inline-block; vertical-align:middle; line-height:1.2;">${seg.name}${excludedBadge}</span>`;
 
                         lItem.onclick = handleInteraction;
                         lItem.addEventListener('pointerdown', beginLongPress);
@@ -18673,6 +18690,8 @@ Be direct, practical, and helpful.`;
             <script src="fix-chart-exclusion.js"></script>
             <!-- [ADD: 2026-07-03] Script link to Wants, Needs, Savings Budget Analysis Overlay module - Antigravity -->
             <script src="budget-analysis-overlay.js"></script>
+            <!-- [ADD: 2026-07-04] SmartWallet AI chatbot engine (Gemini 2.5 Flash, Firebase history) - Antigravity -->
+            <script src="wallet-ai.js"></script>
 </body>
 
 </html>

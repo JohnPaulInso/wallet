@@ -30,4 +30,5 @@ lines.txt
 
 # Local config and secrets
 config.js
+ai-config.js
 service-account.json

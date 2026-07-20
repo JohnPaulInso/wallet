@@ -46,14 +46,14 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo Checking if sensitive files are tracked by Git...
-git ls-files | findstr /i "config.js ai-config.js service-account.json" > nul
+REM (2026-07-13) exact file match for sensitive check; prev: loose substring match
+git ls-files | findstr /i /r /c:"^config\.js$" /c:"^ai-config\.js$" /c:"^service-account\.json$" > nul
 if %errorlevel% equ 0 (
     echo.
     echo [ERROR] SENSITIVE FILES ARE BEING TRACKED!
     echo.
     echo The following files contain API keys and are being tracked:
-    git ls-files | findstr /i "config.js ai-config.js service-account.json"
+    git ls-files | findstr /i /r /c:"^config\.js$" /c:"^ai-config\.js$" /c:"^service-account\.json$"
     echo.
     echo To remove them from Git tracking (but keep local files):
     echo   git rm --cached config.js

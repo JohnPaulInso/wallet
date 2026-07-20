@@ -89,7 +89,12 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     z-index: 10;
 }
 
+/* (2026-07-13) make sidebar header sticky; prev: non-sticky static position */
 .ai-sidebar-header {
+    position: sticky;
+    top: 0;
+    background: rgba(4, 12, 6, 0.98);
+    z-index: 100;
     display: flex;
     align-items: center;
     gap: 10px;

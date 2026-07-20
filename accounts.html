@@ -156,9 +156,8 @@
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
-            background: rgba(255, 255, 255, 0.72); 
-            backdrop-filter: blur(20px) saturate(180%); 
-            -webkit-backdrop-filter: blur(20px) saturate(180%); 
+            /* (2026-07-13) Solid header bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98); 
             position: fixed; 
             top: 0; 
             left: 50%; 
@@ -333,9 +332,8 @@
             width: 100%; 
             max-width: 430px; 
             height: 75px; 
-            background: rgba(255, 255, 255, 0.72);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            /* (2026-07-13) Solid nav bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98);
             border-top: 1px solid rgba(0,0,0,0.06);
             display: flex; 
             justify-content: space-around; 
@@ -400,9 +398,8 @@
 
         body.dark-mode #header,
         body.dark-mode .bottom-nav {
-            background: rgba(255, 255, 255, 0.72) !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            /* (2026-07-13) Solid bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98) !important;
             border-color: rgba(0,0,0,0.06) !important;
         }
         body.dark-mode .bottom-nav {

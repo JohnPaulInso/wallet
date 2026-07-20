@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../wallet backup/backup_index"
+		}
+	],
+	"settings": {
+		"liveServer.settings.port": 5503,
+		"liveServer.settings.multiRootWorkspaceName": "wallet app"
+	}
+}

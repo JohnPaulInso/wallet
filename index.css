@@ -33,6 +33,9 @@
             overflow-x: hidden; 
             overflow-y: auto;
             overscroll-behavior-y: contain; /* Prevent browser pull-to-refresh */
+            /* [FIX: 2026-07-20] GPU-promote scroll container - prev: no will-change */
+            -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
+            will-change: scroll-position;      /* compositor-thread scroll */
         }
         @media (min-width: 431px) {
             .mobile-wrapper { height: 100vh; overflow-y: auto; }
@@ -576,9 +579,8 @@
             align-items: center; 
             justify-content: space-between; 
             /* Match the bottom nav frosted glass recipe exactly */
-            background: rgba(255, 255, 255, 0.72) !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            /* (2026-07-13) Solid header bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98) !important;
             position: fixed; 
             top: 0; 
             left: 50%; 
@@ -1491,8 +1493,10 @@
         @keyframes amberPulse { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
 
         /* ACCORDION */
-        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; transition: box-shadow 0.2s; position: relative; overflow: hidden; }
-        .month-accordion:hover { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        /* (2026-07-13) Use border only to fix scroll lag; prev: border and box-shadow */
+        .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; transition: border-color 0.2s; position: relative; overflow: hidden; }
+        /* (2026-07-13) Remove hover shadow to fix scroll lag; prev: box-shadow on hover */
+        .month-accordion:hover { border-color: #cbd5e1; }
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
         .month-header:hover { background: #f8fafc; }
         .month-header .month-title { font-weight: 700; font-size: 0.738rem; color: #1e293b; }
@@ -2090,13 +2094,12 @@
             position: fixed; 
   bottom: -5px;
             left: 50%; 
-            transform: translateX(-50%); 
+            transform: translateX(-50%) translateZ(0); 
             width: 100%; 
             max-width: 430px; 
             height: calc(68px + var(--app-bottom-safe)); 
-            background: rgba(255, 255, 255, 0.72) !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            /* (2026-07-13) Solid nav bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98) !important;
             border-top: 1px solid rgba(0,0,0,0.06);
             display: flex; 
             justify-content: space-around; 
@@ -2104,9 +2107,13 @@
             padding: 0 8px calc(4px + var(--app-bottom-safe)); 
             z-index: 120; 
             box-shadow: 0 -1px 8px rgba(0,0,0,0.04) !important;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, all 0.3s ease !important;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease !important;
             pointer-events: auto;
             touch-action: manipulation;
+            /* [FIX: 2026-07-20] GPU-promote bottom nav - prev: no will-change, translateX only */
+            will-change: transform, opacity;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         /* .nav-item - updated 2026-03-31 - set to Light Mode (dark icons on frosted white bar) */
@@ -2548,8 +2555,8 @@
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 12px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+            /* (2026-07-13) Use border only to fix scroll lag; prev: border and box-shadow */
+            border: 1px solid #cbd5e1;
             transition: all 0.3s ease;
         }
         body.dark-mode .cat-budget-card {
@@ -2818,38 +2825,39 @@
             pointer-events: auto;
         }
         
-        /* iOS-STYLE LONG-PRESS BLUR EFFECT */
-        .blur-overlay { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 2000; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+        /* [FIX: 2026-07-20] Single-layer backdrop-filter only — no content CSS filter (lag fix kept) */
+        /* iOS-STYLE LONG-PRESS BLUR EFFECT — overlay only, GPU composited single layer */
+        .blur-overlay { position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateZ(0); width: 100%; max-width: 430px; height: 100%; background: rgba(0,0,0,0.72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); contain: paint; z-index: 2000; opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 0.25s ease, visibility 0.25s ease; will-change: opacity; }
         .blur-overlay.active { opacity: 1; pointer-events: auto; visibility: visible; }
         
-        /* Global Blur - only content areas, NOT header/bottom-nav */
-        .mui-container, .card-viewport, .sticky-banner { transition: filter 0.3s ease, transform 0.3s ease; }
+        /* [FIX: 2026-07-20] Removed CSS filter:blur on content (main lag cause) prev: filter:blur(3px) */
+        /* Content dim only - no expensive GPU blur filter */
         .mobile-wrapper.blur-active .mui-container,
         .mobile-wrapper.blur-active .card-viewport,
-        .mobile-wrapper.blur-active .sticky-banner { filter: blur(3px) brightness(0.97); -webkit-filter: blur(3px) brightness(0.97); pointer-events: none; }
-        /* Keep header, bottom-nav and fab visible and unblurred */
+        .mobile-wrapper.blur-active .sticky-banner { pointer-events: none; }
+        /* Keep header, bottom-nav and fab interactive */
         .mobile-wrapper.blur-active #header,
         .mobile-wrapper.blur-active .fab,
-        .mobile-wrapper.blur-active .bottom-nav { filter: none !important; pointer-events: auto; }
+        .mobile-wrapper.blur-active .bottom-nav { pointer-events: auto; }
         
         /* Long-press scaling for transactions - QUICK initial animation */
-        .premium-txn { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s, filter 0.2s; }
+        /* [FIX: 2026-07-20] Removed filter from transition (no longer using CSS blur) prev: filter 0.2s */
+        .premium-txn { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s; }
         .premium-txn:active:not(.elevated-clone) { transform: scale(1); }
         .premium-txn.popped { transform: scale(1.05); z-index: 2100; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.1s; }
         
         /* Shadow for the elevated clone - 0.3s transitions */
         .premium-txn.elevated-clone { position: fixed; z-index: 2200; background: var(--card-bg) !important; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); transform: scale(1.02); pointer-events: auto; border: 1px solid var(--border-color); transition: transform 0.3s ease-out, box-shadow 0.3s ease-out; }
         
+        /* [FIX: 2026-07-20] Removed backdrop-filter:blur from menu (solid bg, no visual effect) prev: blur(20px) */
         /* iOS Action Menu - HIGHEST z-index, above all modals */
         .ios-action-menu { 
             display: none; 
             position: fixed; 
             background: #fff; 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px); 
             border-radius: 14px; 
             padding: 4px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.22); 
             z-index: 100000; 
             min-width: 180px; 
             max-width: 200px; 
@@ -2857,10 +2865,12 @@
             transform: scale(0.9); 
             opacity: 0; 
             border: 1px solid var(--border-color);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            /* (2026-07-13) Added GPU promotion; previous: no will-change */
+            will-change: transform, opacity;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out; 
         }
-        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuFadeIn 0.2s ease-out; }
-        @keyframes menuFadeIn { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .ios-action-menu.show { display: block; transform: scale(1); opacity: 1; animation: menuFadeIn 0.15s ease-out; }
+        @keyframes menuFadeIn { from { opacity: 0; transform: translateY(-5px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         
         /* BRAND LOGO BADGE */
         .brand-badge {
@@ -3516,8 +3526,8 @@
             background: #fff;
             border-radius: 20px;
             padding: 18px 20px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+            /* (2026-07-13) Use border only to fix scroll lag; prev: border and box-shadow */
+            border: 1px solid #cbd5e1;
         }
         .insight-card .insight-label {
             font-size: 9px;
@@ -3625,12 +3635,11 @@
         .ai-insight-section {
             margin: 20px 0 10px 0;
             padding: 18px 20px;
-            background: linear-gradient(135deg, rgba(237,233,254,0.6) 0%, rgba(245,243,255,0.9) 100%);
+            /* (2026-07-13) Solid bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: linear-gradient(135deg, rgba(237,233,254,0.95) 0%, rgba(245,243,255,0.98) 100%);
             border-radius: 20px;
             border: 1.5px solid rgba(139, 92, 246, 0.2);
             box-shadow: 0 2px 6px rgba(139, 92, 246, 0.08), inset 0 2px 5px rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
             position: relative;
             overflow: hidden;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -4499,8 +4508,8 @@ body.keyboard-active .dialog-overlay.show .dialog-card {
     align-items: center;
     gap: 6px; /* Reduced from 10px */
     margin-bottom: 8px;
-    border: 1px solid #f1f5f9;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    /* (2026-07-13) Use border only to fix scroll lag; prev: border and box-shadow */
+    border: 1px solid #cbd5e1;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     content-visibility: auto;
     contain-intrinsic-size: 60px;
@@ -6169,7 +6178,8 @@ body.dark-mode .goals-progress-bar-bg { background: #262626; }
 .goals-edit-overlay.active { transform: translateX(0); }
 
 .goals-edit-header {
-    background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    /* (2026-07-13) Solid edit header to fix lag; prev: rgba/backdrop blur */
+    background: rgba(255, 255, 255, 0.98);
     padding: 10px 24px 16px; padding-top: calc(env(safe-area-inset-top, 20px) + 20px); /* REFINED: Taller height per user request - 2026-04-03 */
     display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(0,0,0,0.06);
     position: sticky; top: 0; z-index: 10;
@@ -6652,9 +6662,8 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
 
         /* Dark Mode Nav & Toast Fixes */
         body.dark-mode .bottom-nav {
-            background: rgba(255, 255, 255, 0.72) !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            /* (2026-07-13) Solid dark nav to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98) !important;
             border-top-color: rgba(0,0,0,0.06) !important;
         }
         body.dark-mode .nav-item.active {
@@ -7270,9 +7279,8 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
 /* [FIXED: 2026-04-06 - SINGLE SOURCE OF TRUTH for frosted glass header] */
 #header,
 body.dark-mode #header {
-    background: rgba(255, 255, 255, 0.72) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    /* (2026-07-13) Solid header bg to fix scroll lag; prev: rgba/backdrop blur */
+    background: rgba(255, 255, 255, 0.98) !important;
     border-bottom: 1px solid rgba(0,0,0,0.06) !important;
     box-shadow: 0 1px 8px rgba(0,0,0,0.04) !important;
 }
@@ -7291,9 +7299,8 @@ body.dark-mode #header {
 
 .bottom-nav,
 body.dark-mode .bottom-nav {
-    background: rgba(255, 255, 255, 0.72) !important;
-    backdrop-filter: blur(20px) saturate(180%) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    /* (2026-07-13) Solid nav bg to fix scroll lag; prev: rgba/backdrop blur */
+    background: rgba(255, 255, 255, 0.98) !important;
     border-top: 1px solid rgba(0,0,0,0.06) !important;
     box-shadow: 0 -1px 8px rgba(0,0,0,0.04) !important;
 }
@@ -7409,10 +7416,8 @@ body.dark-mode .nav-item.active {
     transform: none;
     border-radius: 0;
     padding: 16px 28px 14px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.54)) !important;
-    backdrop-filter: blur(28px) saturate(220%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
+    /* (2026-07-13) Solid header bg to fix scroll lag; prev: rgba/backdrop blur */
+    background: #ffffff !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.72);
     box-shadow:
       0 10px 30px rgba(15, 23, 42, 0.06),
@@ -7462,10 +7467,8 @@ body.dark-mode .nav-item.active {
     padding: 18px 10px 22px;
     flex-direction: column;
     justify-content: space-between;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.54)) !important;
-    backdrop-filter: blur(28px) saturate(220%) !important;
-    -webkit-backdrop-filter: blur(28px) saturate(220%) !important;
+    /* (2026-07-13) Solid nav bg to fix scroll lag; prev: rgba/backdrop blur */
+    background: #ffffff !important;
     border-right: 1px solid rgba(255, 255, 255, 0.72);
     box-shadow:
       0 20px 45px rgba(15, 23, 42, 0.08),

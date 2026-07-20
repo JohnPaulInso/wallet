@@ -170,9 +170,8 @@
             max-width: 430px;
             padding: 15px 24px 10px;
             padding-top: calc(env(safe-area-inset-top, 24px) + 12px); /* updated 2026-03-31 - added safe area padding for seamless status bar - 2026-03-31 */
-            background: rgba(255, 255, 255, 0.72); 
-            backdrop-filter: blur(20px) saturate(180%); 
-            -webkit-backdrop-filter: blur(20px) saturate(180%); 
+            /* (2026-07-13) Solid header bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98); 
             z-index: 3000;
             display: flex;
             align-items: center;
@@ -212,9 +211,8 @@
             width: 100%; 
             max-width: 430px; 
             height: 75px; 
-            background: rgba(255, 255, 255, 0.72);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            /* (2026-07-13) Solid nav bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98);
             border-top: 1px solid rgba(0,0,0,0.06);
             display: flex; 
             justify-content: space-around; 
@@ -961,9 +959,8 @@
         /* Dark Mode Overrides */
         body.dark-mode #header,
         body.dark-mode .bottom-nav {
-            background: rgba(255, 255, 255, 0.72) !important;
-            backdrop-filter: blur(20px) saturate(180%) !important;
-            -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+            /* (2026-07-13) Solid bg to fix scroll lag; prev: rgba/backdrop blur */
+            background: rgba(255, 255, 255, 0.98) !important;
             border-color: rgba(0,0,0,0.06) !important;
         }
         body.dark-mode .bottom-nav {

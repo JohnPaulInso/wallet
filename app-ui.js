@@ -499,6 +499,11 @@ function initKeyboardViewportBridge() {
 
 // Render Transaction History
 export function renderHistory(txns) {
+    // (2026-07-13) de-dupe txns to avoid duplicates; prev: no de-duplication
+    if (Array.isArray(txns)) {
+        const seenIds = new Set();
+        txns = txns.filter(t => !t.id ? true : (seenIds.has(t.id) ? false : (seenIds.add(t.id), true)));
+    }
     const container = document.getElementById('history-container');
     const fragment = document.createDocumentFragment();
     
@@ -700,6 +705,11 @@ export function renderHistory(txns) {
 }
 
 function renderHistoryClean(txns) {
+    // (2026-07-13) de-dupe txns to avoid duplicates; prev: no de-duplication
+    if (Array.isArray(txns)) {
+        const seenIds = new Set();
+        txns = txns.filter(t => !t.id ? true : (seenIds.has(t.id) ? false : (seenIds.add(t.id), true)));
+    }
     const container = document.getElementById('history-container');
     const fragment = document.createDocumentFragment();
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
@@ -3395,9 +3405,12 @@ export function updateInsightCards(txns) {
         }
 
         if (summaryChange) {
+            // (2026-07-13) Added diff amount next to comparison pct; prev: only pct
             if (lastMonthTotal > 0) {
                 const pct = ((thisMonthTotal - lastMonthTotal) / lastMonthTotal) * 100;
-                summaryChange.textContent = `${pct > 0 ? arrowUp : arrowDown} ${Math.abs(pct).toFixed(0)}%`;
+                const diff = Math.abs(thisMonthTotal - lastMonthTotal);
+                const diffStr = isHidden ? '******' : ((thisMonthTotal >= lastMonthTotal ? '+' : '-') + peso + Math.round(diff).toLocaleString());
+                summaryChange.textContent = `${pct > 0 ? arrowUp : arrowDown} ${Math.abs(pct).toFixed(0)}% (${diffStr})`;
                 summaryChange.className = `s-value ${pct > 0 ? 'red' : 'green'}`;
             } else {
                 summaryChange.textContent = emDash;

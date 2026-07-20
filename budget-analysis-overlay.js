@@ -129,32 +129,27 @@
                             txnDate = new Date();
                         }
                         
-                        // Custom period checking for extended time ranges
-                        let inPeriod = true;
-                        if (filterVal === 'last_7_days') {
-                            const sevenDaysAgo = new Date(referenceDate);
-                            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                            inPeriod = txnDate >= sevenDaysAgo && txnDate <= referenceDate;
-                            if (inPeriod) console.log('Last 7 days match:', t.name, txnDate);
-                        } else if (filterVal === 'last_3_months') {
-                            const threeMonthsAgo = new Date(referenceDate);
-                            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-                            inPeriod = txnDate >= threeMonthsAgo && txnDate <= referenceDate;
-                            if (inPeriod) console.log('Last 3 months match:', t.name, txnDate);
-                        } else if (filterVal === 'last_6_months') {
-                            const sixMonthsAgo = new Date(referenceDate);
-                            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-                            inPeriod = txnDate >= sixMonthsAgo && txnDate <= referenceDate;
-                            if (inPeriod) console.log('Last 6 months match:', t.name, txnDate);
-                        } else if (filterVal === 'this_year') {
-                            const yearStart = new Date(referenceDate.getFullYear(), 0, 1);
-                            inPeriod = txnDate >= yearStart && txnDate <= referenceDate;
-                            if (inPeriod) console.log('This year match:', t.name, txnDate);
-                        } else if (filterVal === 'all_time') {
-                            inPeriod = true; // Include all transactions
-                        } else {
-                            // Use checkPeriod for standard filters
-                            inPeriod = !window.checkPeriod || window.checkPeriod(t, filterVal, 0, referenceDate);
+                        // (2026-07-13) Use window.checkPeriod for consistency; prev: custom checks
+                        let inPeriod = window.checkPeriod ? window.checkPeriod(t, filterVal, 0, referenceDate) : true;
+                        if (!window.checkPeriod) {
+                            if (filterVal === 'last_7_days') {
+                                const sevenDaysAgo = new Date(referenceDate);
+                                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                                inPeriod = txnDate >= sevenDaysAgo && txnDate <= referenceDate;
+                            } else if (filterVal === 'last_3_months') {
+                                const threeMonthsAgo = new Date(referenceDate);
+                                threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+                                inPeriod = txnDate >= threeMonthsAgo && txnDate <= referenceDate;
+                            } else if (filterVal === 'last_6_months') {
+                                const sixMonthsAgo = new Date(referenceDate);
+                                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+                                inPeriod = txnDate >= sixMonthsAgo && txnDate <= referenceDate;
+                            } else if (filterVal === 'this_year') {
+                                const yearStart = new Date(referenceDate.getFullYear(), 0, 1);
+                                inPeriod = txnDate >= yearStart && txnDate <= referenceDate;
+                            } else if (filterVal === 'all_time') {
+                                inPeriod = true;
+                            }
                         }
                         
                         if (!inPeriod) return;
@@ -1682,12 +1677,14 @@
             xAxisLabels.innerHTML = labels.map(label => `<span>${label}</span>`).join('');
         }
 
+        // [FIX: 2026-07-20] Use budgetData.totals (exact) not trend bucket sum (misses edge txns)
         // Update total
         if (totalLabel && totalValue) {
             const labelMap = { all: 'TOTAL SPENT', needs: 'NEEDS TOTAL', wants: 'WANTS TOTAL', savings: 'SAVINGS TOTAL' };
             totalLabel.textContent = labelMap[filter];
-            const sum = trends[filter].reduce((a, b) => a + b, 0);
-            totalValue.textContent = formatPeso(sum);
+            // Use authoritative totals from aggregation, not chart bucket sum which misses boundary txns
+            const exactTotal = filter === 'all' ? budgetData.totals.total : budgetData.totals[filter];
+            totalValue.textContent = formatPeso(exactTotal || 0);
         }
     }
 

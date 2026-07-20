@@ -282,15 +282,20 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                 window.queueBudgetThresholdNotificationTrigger(uid, null, 'realtime_snapshot');
             }
 
+            // (2026-07-13) check all fields for matches; prev: checked few fields
             const isSame = prevTxns.length === txns.length && 
                            txns.every((t, i) => 
                                prevTxns[i] && 
                                prevTxns[i].id === t.id && 
                                prevTxns[i].note === t.note && 
                                prevTxns[i].manualCategory === t.manualCategory &&
+                               prevTxns[i].category === t.category &&
+                               prevTxns[i].merchant === t.merchant &&
+                               prevTxns[i].date === t.date &&
                                prevTxns[i].manualAmount === t.manualAmount &&
                                prevTxns[i].excluded === t.excluded &&
-                               prevTxns[i].refund === t.refund
+                               prevTxns[i].refund === t.refund &&
+                               prevTxns[i].reimbursed === t.reimbursed
                            );
 
             if (isSame && document.getElementById('history-container').children.length > 0) {

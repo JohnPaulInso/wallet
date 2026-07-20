@@ -1664,15 +1664,30 @@ Return ONLY a raw list of bullet points starting with a hyphen (e.g. "- Loves sa
         document.body.style.overflow = 'hidden';
         inputEl.focus();
 
+        // (2026-07-13) push state to stack for back key support; prev: no stack push
+        if (window.NavState) {
+            window.NavState.pushModalState('smartwallet-ai-overlay', () => closeChat(true));
+        }
+
         if (!dataLoaded) {
             await loadAllData();
         }
         scrollToBottom();
     }
 
-    function closeChat() {
+    function closeChat(fromPopState = false) {
+        // (2026-07-13) sync stack and state on close; prev: direct overlay close only
+        if (!fromPopState && window.NavState && window.NavState.modalStack.some(m => m.id === 'smartwallet-ai-overlay')) {
+            history.back();
+            return;
+        }
+
         overlay.classList.remove('ai-open');
         document.body.style.overflow = '';
+        
+        if (window.NavState) {
+            window.NavState.popModalState('smartwallet-ai-overlay');
+        }
         
         // [FIX] Reset summary flow state when closing
         summaryFlowActive = false;

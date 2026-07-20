@@ -8,8 +8,8 @@ echo ========================================
 echo.
 
 REM Check if sensitive files are being tracked
-echo Checking for sensitive files...
-git ls-files | findstr /i "config.js ai-config.js service-account.json" > nul
+REM (2026-07-13) exact file match for sensitive check; prev: loose substring match
+git ls-files | findstr /i /r /c:"^config\.js$" /c:"^ai-config\.js$" /c:"^service-account\.json$" > nul
 if %errorlevel% equ 0 (
     echo.
     echo ============================================

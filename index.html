@@ -1012,8 +1012,8 @@
                         </div>
                     </div>
 
-                    <!-- (2026-07-13) Unified monthly summary and reimbursements in one card; prev: standalone card -->
-                    <div class="monthly-summary-card">
+                    <!-- (2026-07-13) Monthly Summary card without reimbursements; prev: unified with reimbursements -->
+                    <div class="monthly-summary-card" style="margin-bottom: 8px;">
                         <div class="monthly-summary-header" onclick="toggleMonthlySummary()">
                             <h3>Monthly Summary</h3>
                             <div class="monthly-summary-toggle" id="summary-toggle">
@@ -1049,29 +1049,6 @@
                                 </div>
                             </div>
 
-                            <!-- (2026-07-13) Reimbursements grid inside Monthly Summary; prev: standalone card -->
-                            <div style="margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
-                                <div class="summary-grid" style="margin-top: 8px;">
-                                    <div class="summary-item">
-                                        <span class="s-label">Cash Reimb.</span>
-                                        <span class="s-value" id="summary-reimb-cash">₱0</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="s-label">Online Reimb.</span>
-                                        <span class="s-value" id="summary-reimb-online">₱0</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="s-label">Total Reimb.</span>
-                                        <span class="s-value" id="summary-reimbursed-total" style="color: #d97706;">₱0</span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="s-label">Unpaid Reimb.</span>
-                                        <span class="s-value" id="summary-reimb-unpaid">₱0</span>
-                                    </div>
-                                </div>
-                                <span style="display:none;" id="summary-reimbursed-breakdown"></span>
-                            </div>
-
                             <!-- AI INSIGHT SECTION -->
                             <div class="ai-insight-section" id="ai-insight-box" style="display: none;">
                                 <div class="ai-insight-header">
@@ -1104,6 +1081,35 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- (2026-07-13) Moved Reimbursements card under Monthly Summary; prev: above it -->
+                    <div class="monthly-summary-card" id="reimbursements-widget-card" style="margin-bottom: 8px; padding: 18px 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                            <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary);">Reimbursements</h3>
+                        </div>
+                        <!-- 2x2 grid with uniform fonts matching Monthly Summary card -->
+                        <div class="summary-grid" style="margin-top: 0; grid-template-columns: 1fr 1fr; gap: 12px 16px;">
+                            <div class="summary-item">
+                                <span class="s-label">Cash Reimb.</span>
+                                <span class="s-value" id="summary-reimb-cash">₱0</span>
+                            </div>
+                            <!-- (2026-07-13) Swapped Online Reimb and Total Reimb; prev: Online was second -->
+                            <div class="summary-item">
+                                <span class="s-label">Total Reimb.</span>
+                                <span class="s-value" id="summary-reimbursed-total" style="color: #d97706;">₱0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="s-label">Online Reimb.</span>
+                                <span class="s-value" id="summary-reimb-online">₱0</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="s-label">Unpaid Reimb.</span>
+                                <span class="s-value" id="summary-reimb-unpaid">₱0</span>
+                            </div>
+                        </div>
+                        <span style="display:none;" id="summary-reimbursed-breakdown"></span>
+                    </div>
+
                     <!-- (2026-07-13) Removed duplicate model selection snippet; prev: raw text -->
 
                 <!-- (2026-07-13) Removed allocation overlay modal; prev: modal overlay -->

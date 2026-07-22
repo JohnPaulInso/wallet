@@ -599,9 +599,15 @@ export function renderHistory(txns) {
             let displayName = mapped.name;
             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
             
-            // (2026-07-13) Remove prefix from refund/reimbursed badges; prev: prefixed
+            // (2026-07-13) Add red dot to partial reimbursement badge; prev: no dot
+            let reimbursedChip = '';
+            if (isReimbursed) {
+                const origAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
+                const paidAmt = t.reimbursementAmount !== undefined ? Number(t.reimbursementAmount) : origAmt;
+                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-left:4px; vertical-align:middle;"></span>` : '';
+                reimbursedChip = `<span class="reimbursed-badge">REIMBURSED${redDot}</span>`;
+            }
             let refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
-            let reimbursedChip = isReimbursed ? `<span class="reimbursed-badge">REIMBURSED</span>` : '';
             
             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
             const paymentChip = isPaymentDuplicate ? '<span class="payment-badge" style="display: inline-block; background: #d1fae5; color: #059669; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">PAYMENT</span>' : '';
@@ -804,9 +810,15 @@ function renderHistoryClean(txns) {
             let displayName = mapped.name;
             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
 
-            // (2026-07-13) Remove prefix from refund/reimbursed badges; prev: prefixed
+            // (2026-07-13) Add red dot to partial reimbursement badge; prev: no dot
+            let reimbursedChip = '';
+            if (isReimbursed) {
+                const origAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
+                const paidAmt = t.reimbursementAmount !== undefined ? Number(t.reimbursementAmount) : origAmt;
+                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-left:4px; vertical-align:middle;"></span>` : '';
+                reimbursedChip = `<span class="reimbursed-badge">REIMBURSED${redDot}</span>`;
+            }
             const refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
-            const reimbursedChip = isReimbursed ? `<span class="reimbursed-badge">REIMBURSED</span>` : '';
 
             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
             const paymentChip = isPaymentDuplicate ? '<span class="payment-badge" style="display: inline-block; background: #d1fae5; color: #059669; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">PAYMENT</span>' : '';
@@ -3469,8 +3481,8 @@ export function updateInsightCards(txns) {
                 unpaidTotal += Math.max(0, originalAmt - paidAmt);
             });
             summaryReimbUnpaidEl.textContent = isHidden ? '₱******' : `${peso}${unpaidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            // (2026-07-22) Color unpaid red when >0, dark when zero; prev: always slate
-            summaryReimbUnpaidEl.style.color = unpaidTotal > 0 ? '#ef4444' : '#1e293b';
+            // (2026-07-22) Color unpaid red when >0, otherwise fall back to theme default; prev: set to #1e293b
+            summaryReimbUnpaidEl.style.color = unpaidTotal > 0 ? '#ef4444' : '';
             triggerSoftFadeInElement(summaryReimbUnpaidEl);
         }
         if (summaryCount) {

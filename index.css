@@ -3523,6 +3523,8 @@
         }
         .insight-card {
             flex: 1;
+            /* (2026-07-13) Fix long merchant card stretch; prev: no min-width */
+            min-width: 0;
             background: #fff;
             border-radius: 20px;
             padding: 18px 20px;
@@ -3627,6 +3629,10 @@
         .summary-item .s-value.red { color: #ef4444; }
         .summary-item .s-value.green { color: #10b981; }
         body.dark-mode .monthly-summary-card { background: var(--card-bg); border-color: var(--border-color); }
+        /* (2026-07-13) Add dark mode styles for reimbursement widget; prev: none */
+        body.dark-mode .reimbursement-allocation-card { background: var(--card-bg) !important; border-color: var(--border-color) !important; }
+        body.dark-mode .reimbursement-allocation-header h3 { color: var(--text-primary) !important; }
+        body.dark-mode .reimbursement-allocation-item { background: rgba(255,255,255,0.02) !important; border-color: rgba(255,255,255,0.04) !important; }
         body.dark-mode .monthly-summary-header h3 { color: var(--text-primary); }
         body.dark-mode .summary-item .s-value { color: var(--text-primary); }
         body.dark-mode .monthly-summary-toggle { background: var(--border-color); }

@@ -1012,7 +1012,7 @@
                         </div>
                     </div>
 
-                    <!-- MONTHLY SUMMARY (Collapsible) -->
+                    <!-- (2026-07-13) Unified monthly summary and reimbursements in one card; prev: standalone card -->
                     <div class="monthly-summary-card">
                         <div class="monthly-summary-header" onclick="toggleMonthlySummary()">
                             <h3>Monthly Summary</h3>
@@ -1049,6 +1049,29 @@
                                 </div>
                             </div>
 
+                            <!-- (2026-07-13) Reimbursements grid inside Monthly Summary; prev: standalone card -->
+                            <div style="margin-top: 16px; border-top: 1px dashed #e2e8f0; padding-top: 12px;">
+                                <div class="summary-grid" style="margin-top: 8px;">
+                                    <div class="summary-item">
+                                        <span class="s-label">Cash Reimb.</span>
+                                        <span class="s-value" id="summary-reimb-cash">₱0</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="s-label">Online Reimb.</span>
+                                        <span class="s-value" id="summary-reimb-online">₱0</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="s-label">Total Reimb.</span>
+                                        <span class="s-value" id="summary-reimbursed-total" style="color: #d97706;">₱0</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span class="s-label">Unpaid Reimb.</span>
+                                        <span class="s-value" id="summary-reimb-unpaid">₱0</span>
+                                    </div>
+                                </div>
+                                <span style="display:none;" id="summary-reimbursed-breakdown"></span>
+                            </div>
+
                             <!-- AI INSIGHT SECTION -->
                             <div class="ai-insight-section" id="ai-insight-box" style="display: none;">
                                 <div class="ai-insight-header">
@@ -1081,17 +1104,11 @@
                             </div>
                         </div>
                     </div>
+                    <!-- (2026-07-13) Removed duplicate model selection snippet; prev: raw text -->
 
-                    <!-- Set initial model selection -->
-                    <script>
-                        document.addEventListener('DOMContentLoaded', () => {
-                            const pref = localStorage.getItem('ai_preferred_model') || 'auto';
-                            const sel = document.getElementById('dashboard-ai-model');
-                            if (sel) sel.value = pref;
-                        });
-                    </script>
+                <!-- (2026-07-13) Removed allocation overlay modal; prev: modal overlay -->
 
-                    <!-- OFFLINE QUEUE CARD -->
+                <!-- OFFLINE QUEUE CARD -->
                     <div id="offline-queue-card" class="offline-queue-card">
                         <div class="offline-queue-row">
                             <div class="offline-queue-icon">
@@ -5819,7 +5836,8 @@
                             </div>
                             <div style="flex: 1; min-width: 0;">
                                 <div class="line-clamp-3" style="font-size: ${fontSize}; font-weight: 800; color: #1e293b; margin-bottom: 1px; letter-spacing: 0.2px; text-transform: uppercase; line-height: 1.3;">${display.name}</div> <!-- updated 2026-03-31 - enabled 3-line clamping - 2026-03-31 -->
-                                <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${dateStr} \u2022 ${display.category} \u2022 ${accountLabel}${isEditable ? ' \u2022 CASH LOG' : ''}</div> <!-- FIX 2026-06-26: Used unicode escape for bullet to prevent encoding garble -->
+                                <!-- (2026-07-13) Simplify cash log subtext; prev: full category/account -->
+                                <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${isEditable ? `${dateStr} \u2022 CASH LOG` : `${dateStr} \u2022 ${display.category} \u2022 ${accountLabel}`}</div>
                                 ${displayNote ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayNote}</div>` : ''}
                             </div>
                             <div style="text-align: right; display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0;"> <!-- updated 2026-03-28 - used margin-left, gap and flex-shrink to prevent overlapping - 2026-03-28 -->
@@ -5861,30 +5879,24 @@
                     <!-- [FIX 2026-06-27: Made the 3-card summary inside the budget transactions modal even more compact - Antigravity] -->
                     <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
                         <!-- Card 1: Cash Expenses (Financial + Manual) -->
-                        <div class="cash-expenses-card" style="padding: 10px 14px; background: #fff1f2; border-radius: 12px; border: 1px dashed #fecdd3; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="font-size: 10px; font-weight: 900; color: #e11d48; text-transform: uppercase; letter-spacing: 0.5px;">Cash Expenses</div>
-                            <div style="font-size: 13px; font-weight: 900; color: #be123c;">₱${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div class="cash-expenses-card" style="padding: 10px 14px; background: #fff1f2; border-radius: 12px; border: 1px solid #ffe4e6; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 10px; font-weight: 800; color: #e11d48; text-transform: uppercase; letter-spacing: 0.5px;">Cash Expenses</div>
+                            <div style="font-size: 13px; font-weight: 800; color: #be123c;">₱${totalCash.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </div>
 
                         <!-- Card 2: Section Expenses (Theme Aware) -->
-                        <div class="section-total-card" style="padding: 10px 14px; background: ${theme.bg}; border-radius: 12px; border: 1px dashed ${theme.border}; display: flex; justify-content: space-between; align-items: center;">
-                            <div style="font-size: 10px; font-weight: 900; color: ${theme.color}; text-transform: uppercase; letter-spacing: 0.5px;">${mainLabel}</div>
-                            <div style="font-size: 13px; font-weight: 900; color: ${theme.val};">₱${totalMain.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div class="section-total-card" style="padding: 10px 14px; background: ${theme.bg}; border-radius: 12px; border: 1px solid ${theme.border}; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="font-size: 10px; font-weight: 800; color: ${theme.color}; text-transform: uppercase; letter-spacing: 0.5px;">${mainLabel}</div>
+                            <div style="font-size: 13px; font-weight: 800; color: ${theme.val};">₱${totalMain.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </div>
 
                         <!-- Card 3: Overall Summary (Premium Accent Light Design) -->
-                        <div class="overall-total-card" style="margin-top: 2px; padding: 12px 16px; background: #ffffff; border-radius: 14px; border-left: 5px solid ${theme.color}; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05); position: relative; overflow: hidden;">
-                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, ${theme.bg}55 0%, #ffffff 100%); pointer-events: none;"></div>
-                            <div style="position: relative; z-index: 1;">
-                                <div style="font-size: 7.5px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px;">Overall ${sectionLabel}</div>
-                                <div style="font-size: 8.5px; font-weight: 900; color: ${theme.color}; text-transform: uppercase; letter-spacing: 0.5px;">Summary</div>
-                            </div>
-                            <div style="position: relative; z-index: 1; text-align: right;">
-                                <div style="font-size: 15.5px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">₱${totalOverall.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                            </div>
+                        <div class="overall-total-card" style="padding: 10px 14px; background: #ffffff; border-radius: 12px; border-left: 4px solid ${theme.color}; border-top: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                            <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Overall ${sectionLabel} Total</div>
+                            <div style="font-size: 13.5px; font-weight: 900; color: #1e293b;">₱${totalOverall.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                         </div>
                     </div>
-                    <div style="height: 54px;"></div> <!-- updated 2026-03-31 - increased bottom spacing - 2026-03-31 -->
+                    <div style="height: 54px;"></div>
                 `;
 
                         /* [FIX 2026-06-27: Updated summaryMarker to match the new compact summary container comment to restore sticky behavior - Antigravity] */
@@ -6146,6 +6158,21 @@
                         const uid = auth.currentUser?.uid;
                         if (!uid) return;
                         await deleteDoc(doc(db, "users", uid, "budget_manual_txns", id));
+                        
+                        // (2026-07-13) Disassociate manual log from parent transaction; prev: left parent
+                        const parentTxn = window.allTxns ? window.allTxns.find(t => t.reimbursementAllocationTxnId === id) : null;
+                        if (parentTxn) {
+                            const colName = getCollectionName(parentTxn.account || 'wallet');
+                            await updateDoc(doc(db, "users", uid, colName, parentTxn.id), {
+                                reimbursementAllocated: false,
+                                reimbursementAllocationCategory: null,
+                                reimbursementAllocationTxnId: null
+                            });
+                            parentTxn.reimbursementAllocated = false;
+                            parentTxn.reimbursementAllocationCategory = null;
+                            parentTxn.reimbursementAllocationTxnId = null;
+                        }
+
                         showToast('Log deleted');
 
                         const titleText = document.getElementById('budget-modal-title').innerText.split(' ')[0].toLowerCase();
@@ -8926,8 +8953,9 @@ Be direct, practical, and helpful.`;
                             // Let's ensure 'ATOME PAYMENT' is honored if that was the intent.
                             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
                             // else if (isIncome) displayName = 'INCOME'; // REMOVED to allow database overrides
-                            let refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
-                            let reimbursedChip = isReimbursed ? '<span class="reimbursed-badge">REIMBURSED</span>' : '';
+                            // (2026-07-13) Remove prefix from refund/reimbursed badges; prev: prefixed
+                            let refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
+                            let reimbursedChip = isReimbursed ? `<span class="reimbursed-badge">REIMBURSED</span>` : '';
 
                             // Payment chip for duplicated ATOME PAYMENT from BPI to Atome
                             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
@@ -9093,6 +9121,8 @@ Be direct, practical, and helpful.`;
                     try { drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart failed:', error); }
                     try { detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions failed:', error); }
                     try { updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI failed:', error); }
+                    // (2026-07-13) Render reimbursement allocation widget; prev: no widget update
+                    try { if (window.renderReimbursementWidget) window.renderReimbursementWidget(); } catch (error) { console.warn('renderReimbursementWidget failed:', error); }
                 }
 
                 // CATEGORY BUDGET LIMITER LOGIC
@@ -11331,10 +11361,20 @@ Be direct, practical, and helpful.`;
                             toggleExclusion(txnId, args[1], args[0]);
                             break;
                         case 'refund':
-                            toggleRefund(txnId, args[0]);
+                            // (2026-07-13) Set all refunds to online directly; prev: prompt for type
+                            if (args[0]) {
+                                toggleRefund(txnId, true);
+                            } else {
+                                toggleRefund(txnId, false, 'online');
+                            }
                             break;
                         case 'reimbursed':
-                            toggleReimbursed(txnId, args[0]);
+                            // (2026-07-13) Prompt for reimbursement type; prev: direct toggle
+                            if (args[0]) {
+                                toggleReimbursed(txnId, true);
+                            } else {
+                                promptReimbursementType(txnId);
+                            }
                             break;
                         case 'delete':
                             openDeleteModal(txnId, window.currentAccount);
@@ -11459,7 +11499,8 @@ Be direct, practical, and helpful.`;
                     }
                 };
 
-                window.toggleRefund = async (id, isCurrentlyRefund) => {
+                // (2026-07-13) Update toggleRefund to support refund type; prev: boolean only
+                window.toggleRefund = async (id, isCurrentlyRefund, type = null) => {
                     if (auth.currentUser?.isAnonymous) {
                         if (confirm('Your data is in "Local Mode". Sign in with Google to sync changes to the cloud?')) {
                             handleAuthClick();
@@ -11470,8 +11511,10 @@ Be direct, practical, and helpful.`;
                     // OPTIMISTIC UPDATE
                     const idx = window.allTxns.findIndex(t => t.id === id);
                     const originalState = isCurrentlyRefund;
+                    const originalType = window.allTxns[idx]?.refundType || null;
                     if (idx > -1) {
                         window.allTxns[idx].refund = !isCurrentlyRefund;
+                        window.allTxns[idx].refundType = !isCurrentlyRefund ? type : null;
                         renderHistory(window.allTxns);
                         updateBalanceToThisMonth(window.allTxns);
                         if (window.drawCashFlowChart) drawCashFlowChart();
@@ -11481,19 +11524,24 @@ Be direct, practical, and helpful.`;
                         if (!auth.currentUser) return;
                         const uid = auth.currentUser.uid;
                         const col = getCollectionName(window.currentAccount);
-                        await updateDoc(doc(db, "users", uid, col, id), { refund: !isCurrentlyRefund });
+                        await updateDoc(doc(db, "users", uid, col, id), { 
+                            refund: !isCurrentlyRefund,
+                            refundType: !isCurrentlyRefund ? type : null
+                        });
                         showToast(isCurrentlyRefund ? 'Unmarked as refund' : 'Marked as refund');
                     } catch (e) {
                         log('Toggle refund failed: ' + e.message, 'error');
                         // Revert
                         if (idx > -1) {
                             window.allTxns[idx].refund = originalState;
+                            window.allTxns[idx].refundType = originalType;
                             renderHistory(window.allTxns);
                         }
                     }
                 };
 
-                window.toggleReimbursed = async (id, isCurrentlyReimbursed) => {
+                // (2026-07-13) Update toggleReimbursed for type support; prev: boolean only
+                window.toggleReimbursed = async (id, isCurrentlyReimbursed, type = null) => {
                     if (auth.currentUser?.isAnonymous) {
                         if (confirm('Your data is in "Local Mode". Sign in with Google to sync changes to the cloud?')) {
                             handleAuthClick();
@@ -11504,8 +11552,14 @@ Be direct, practical, and helpful.`;
                     // OPTIMISTIC UPDATE
                     const idx = window.allTxns.findIndex(t => t.id === id);
                     const originalState = isCurrentlyReimbursed;
+                    const originalType = window.allTxns[idx]?.reimbursementType || null;
+                    const originalAllocated = window.allTxns[idx]?.reimbursementAllocated || false;
                     if (idx > -1) {
                         window.allTxns[idx].reimbursed = !isCurrentlyReimbursed;
+                        window.allTxns[idx].reimbursementType = !isCurrentlyReimbursed ? type : null;
+                        if (isCurrentlyReimbursed) {
+                            window.allTxns[idx].reimbursementAllocated = false;
+                        }
                         renderHistory(window.allTxns);
                         // No updateBalanceToThisMonth call - reimbursed txns stay in balance
                         if (window.detectSubscriptions) detectSubscriptions();
@@ -11516,12 +11570,23 @@ Be direct, practical, and helpful.`;
                         if (!auth.currentUser) return;
                         const uid = auth.currentUser.uid;
                         const col = getCollectionName(window.currentAccount);
-                        await updateDoc(doc(db, "users", uid, col, id), { reimbursed: !isCurrentlyReimbursed });
+                        
+                        const updateData = { 
+                            reimbursed: !isCurrentlyReimbursed,
+                            reimbursementType: !isCurrentlyReimbursed ? type : null
+                        };
+                        if (isCurrentlyReimbursed) {
+                            updateData.reimbursementAllocated = false;
+                        }
+                        
+                        await updateDoc(doc(db, "users", uid, col, id), updateData);
                         showToast(isCurrentlyReimbursed ? 'Reimbursed status removed' : 'Marked as Reimbursed');
                     } catch (e) {
                         console.error('Toggle reimbursed failed', e);
                         if (idx > -1) {
                             window.allTxns[idx].reimbursed = originalState;
+                            window.allTxns[idx].reimbursementType = originalType;
+                            window.allTxns[idx].reimbursementAllocated = originalAllocated;
                             renderHistory(window.allTxns);
                         }
                     }
@@ -12778,6 +12843,239 @@ Be direct, practical, and helpful.`;
                     window.updateManualExcludeUI(newState);
                 };
 
+                // (2026-07-13) Add reimbursement/refund prompt helpers; prev: none
+                let activePromptTxnId = null;
+                let activePromptMode = null;
+
+                window.promptReimbursementType = (txnId) => {
+                    activePromptTxnId = txnId;
+                    activePromptMode = 'reimbursed';
+                    document.getElementById('reimbursement-prompt-title').innerText = 'Reimbursement Type';
+                    document.getElementById('reimbursement-prompt-desc').innerText = 'Specify how you received this reimbursement to help track your real money.';
+                    const modal = document.getElementById('reimbursement-type-modal');
+                    if (modal) modal.style.display = 'flex';
+                    if (window.NavState) {
+                        window.NavState.pushModalState('reimbursement-type-modal', () => closeModals('reimbursement-type-modal'));
+                    }
+                };
+
+                window.promptRefundType = (txnId) => {
+                    activePromptTxnId = txnId;
+                    activePromptMode = 'refund';
+                    document.getElementById('reimbursement-prompt-title').innerText = 'Refund Type';
+                    document.getElementById('reimbursement-prompt-desc').innerText = 'Specify how you received this refund to help track your real money.';
+                    const modal = document.getElementById('reimbursement-type-modal');
+                    if (modal) modal.style.display = 'flex';
+                    if (window.NavState) {
+                        window.NavState.pushModalState('reimbursement-type-modal', () => closeModals('reimbursement-type-modal'));
+                    }
+                };
+
+                window.confirmReimbursementSelection = async (type) => {
+                    const txnId = activePromptTxnId;
+                    const mode = activePromptMode;
+                    closeModals('reimbursement-type-modal');
+                    if (!txnId) return;
+                    if (mode === 'reimbursed') {
+                        await toggleReimbursed(txnId, false, type);
+                    } else if (mode === 'refund') {
+                        await toggleRefund(txnId, false, type);
+                    }
+                };
+
+                window.allocateReimbursement = async (id, targetCategory) => {
+                    if (auth.currentUser?.isAnonymous) {
+                        if (confirm('Your data is in "Local Mode". Sign in with Google to sync changes to the cloud?')) {
+                            handleAuthClick();
+                            return;
+                        }
+                    }
+                    const idx = window.allTxns.findIndex(t => t.id === id);
+                    if (idx === -1) return;
+                    const txn = window.allTxns[idx];
+                    const raw = txn.manualAmount !== undefined ? txn.manualAmount : (txn.amount ?? 0);
+                    const amount = Math.abs(Number(raw));
+                    try {
+                        const uid = auth.currentUser.uid;
+                        const col = getCollectionName(window.currentAccount);
+                        window.allTxns[idx].reimbursementAllocated = true;
+                        window.allTxns[idx].reimbursementAllocationTxnId = 'pending';
+                        await updateDoc(doc(db, "users", uid, col, id), {
+                            reimbursementAllocated: true
+                        });
+                        // (2026-07-13) Set Cash Allowance/Financial Expenses & note; prev: inherited parent
+                        const manualData = {
+                            amount: amount,
+                            manualAmount: amount,
+                            merchant: 'Cash Allowance',
+                            category: 'Financial Expenses',
+                            manualCategory: 'Financial Expenses',
+                            manualBudgetCategory: targetCategory,
+                            account: 'budget_manual',
+                            note: `Substitute for ${txn.merchant || 'Unknown'}`,
+                            date: formatLocalDate(new Date()),
+                            createdAt: serverTimestamp()
+                        };
+                        const newRef = await addDoc(collection(db, "users", uid, "budget_manual_txns"), manualData);
+                        await updateDoc(doc(db, "users", uid, col, id), {
+                            reimbursementAllocationTxnId: newRef.id
+                        });
+                        window.allTxns[idx].reimbursementAllocationTxnId = newRef.id;
+                        const peso = '\u20B1';
+                        showToast(`Logged ${peso}${amount} to ${targetCategory.toUpperCase()}`);
+                        if (window.renderReimbursementWidget) window.renderReimbursementWidget();
+                        if (window.updateInsightCards) window.updateInsightCards(window.allTxns);
+                        if (window.debouncedUpdateBudget) window.debouncedUpdateBudget();
+                    } catch (e) {
+                        console.error('Failed to allocate reimbursement:', e);
+                        showToast('Allocation failed');
+                        if (idx > -1) {
+                            window.allTxns[idx].reimbursementAllocated = false;
+                            window.allTxns[idx].reimbursementAllocationTxnId = null;
+                        }
+                        if (window.renderReimbursementWidget) window.renderReimbursementWidget();
+                    }
+                };
+
+                // (2026-07-13) Fix renderReimbursementWidget declaration; prev: syntax error
+                window.renderReimbursementWidget = () => {
+                    // No-op to preserve compatibility with history rendering updates
+                };
+
+                window.currentSpecialStatus = 'normal';
+                window.currentPaymentMethod = 'cash';
+                window.currentReimbursementAllocation = 'none';
+
+                window.setSpecialStatus = (status) => {
+                    window.currentSpecialStatus = status;
+                    const btnNormal = document.getElementById('btn-status-normal');
+                    const btnRefund = document.getElementById('btn-status-refund');
+                    const btnReimb = document.getElementById('btn-status-reimbursement');
+                    const paymentRow = document.getElementById('special-status-payment-row');
+
+                    [btnNormal, btnRefund, btnReimb].forEach(btn => {
+                        if (btn) {
+                            btn.style.background = 'transparent';
+                            btn.style.color = '#64748b';
+                            btn.style.fontWeight = '600';
+                            btn.style.boxShadow = 'none';
+                        }
+                    });
+
+                    let activeBtn = btnNormal;
+                    let activeBg = '#64748b';
+                    if (status === 'refund') {
+                        activeBtn = btnRefund;
+                        activeBg = '#d97706';
+                    } else if (status === 'reimbursement') {
+                        activeBtn = btnReimb;
+                        activeBg = '#d97706';
+                    }
+
+                    if (activeBtn) {
+                        activeBtn.style.background = activeBg;
+                        activeBtn.style.color = '#fff';
+                        activeBtn.style.fontWeight = '700';
+                        activeBtn.style.boxShadow = `0 4px 10px ${activeBg}4d`;
+                    }
+
+                    // (2026-07-13) Show payment row only for reimbursement; prev: shown for refund too
+                    if (paymentRow) {
+                        paymentRow.style.display = (status === 'reimbursement') ? 'flex' : 'none';
+                    }
+
+                    const showReimbAmt = (window.currentSpecialStatus === 'reimbursement');
+                    const reimbAmtRow = document.getElementById('reimbursement-amount-row');
+                    if (reimbAmtRow) {
+                        reimbAmtRow.style.display = showReimbAmt ? 'flex' : 'none';
+                    }
+
+                    const showAlloc = (window.currentSpecialStatus === 'reimbursement' && window.currentPaymentMethod === 'cash');
+                    const allocRow = document.getElementById('cash-allocation-row');
+                    if (allocRow) {
+                        allocRow.style.display = showAlloc ? 'flex' : 'none';
+                    }
+                };
+
+                window.setPaymentMethod = (method) => {
+                    window.currentPaymentMethod = method;
+                    const btnCash = document.getElementById('btn-method-cash');
+                    const btnOnline = document.getElementById('btn-method-online');
+
+                    [btnCash, btnOnline].forEach(btn => {
+                        if (btn) {
+                            btn.style.background = 'transparent';
+                            btn.style.color = '#64748b';
+                            btn.style.fontWeight = '600';
+                            btn.style.boxShadow = 'none';
+                        }
+                    });
+
+                    let activeBtn = btnCash;
+                    let activeBg = '#16a34a';
+                    if (method === 'online') {
+                        activeBtn = btnOnline;
+                        activeBg = '#2563eb';
+                    }
+
+                    if (activeBtn) {
+                        activeBtn.style.background = activeBg;
+                        activeBtn.style.color = '#fff';
+                        activeBtn.style.fontWeight = '700';
+                        activeBtn.style.boxShadow = `0 3px 6px ${activeBg}33`;
+                    }
+
+                    const showReimbAmt = (window.currentSpecialStatus === 'reimbursement');
+                    const reimbAmtRow = document.getElementById('reimbursement-amount-row');
+                    if (reimbAmtRow) {
+                        reimbAmtRow.style.display = showReimbAmt ? 'flex' : 'none';
+                    }
+
+                    const showAlloc = (window.currentSpecialStatus === 'reimbursement' && window.currentPaymentMethod === 'cash');
+                    const allocRow = document.getElementById('cash-allocation-row');
+                    if (allocRow) {
+                        allocRow.style.display = showAlloc ? 'flex' : 'none';
+                    }
+                };
+
+                window.setReimbursementAllocation = (alloc) => {
+                    window.currentReimbursementAllocation = alloc;
+                    const btnNone = document.getElementById('btn-alloc-none');
+                    const btnNeeds = document.getElementById('btn-alloc-needs');
+                    const btnWants = document.getElementById('btn-alloc-wants');
+                    const btnSavings = document.getElementById('btn-alloc-savings');
+
+                    [btnNone, btnNeeds, btnWants, btnSavings].forEach(btn => {
+                        if (btn) {
+                            btn.style.background = 'transparent';
+                            btn.style.color = '#64748b';
+                            btn.style.fontWeight = '600';
+                            btn.style.boxShadow = 'none';
+                        }
+                    });
+
+                    // (2026-07-13) Set active buttons to dark colors with white text; prev: pastel
+                    let activeBtn = btnNone;
+                    let activeBg = '#64748b';
+                    if (alloc === 'needs') {
+                        activeBtn = btnNeeds;
+                        activeBg = '#2563eb';
+                    } else if (alloc === 'wants') {
+                        activeBtn = btnWants;
+                        activeBg = '#d97706';
+                    } else if (alloc === 'savings') {
+                        activeBtn = btnSavings;
+                        activeBg = '#16a34a';
+                    }
+
+                    if (activeBtn) {
+                        activeBtn.style.background = activeBg;
+                        activeBtn.style.color = '#ffffff';
+                        activeBtn.style.fontWeight = '700';
+                        activeBtn.style.boxShadow = `0 3px 6px ${activeBg}33`;
+                    }
+                };
+
                 window.openManualTxnModal = () => {
                     const fab = document.querySelector('.fab');
                     if (fab) {
@@ -12789,6 +13087,10 @@ Be direct, practical, and helpful.`;
                     document.getElementById('manual-merchant').value = '';
                     document.getElementById('manual-note').value = '';
                     window.updateManualExcludeUI(false); // Reset to included
+                    window.setSpecialStatus('normal');
+                    window.setPaymentMethod('cash');
+                    window.setReimbursementAllocation('none');
+                    document.getElementById('reimbursement-custom-amount').value = '';
 
                     // Dynamic Account Population
                     const select = document.getElementById('manual-account');
@@ -12952,6 +13254,34 @@ Be direct, practical, and helpful.`;
                         setTxnType('income');
                     } else {
                         setTxnType('expense');
+                    }
+
+                    // Populate special status toggles
+                    if (txn) {
+                        const status = txn.refund ? 'refund' : txn.reimbursed ? 'reimbursement' : 'normal';
+                        const method = (txn.refund ? txn.refundType : txn.reimbursementType) || 'cash';
+                        window.setSpecialStatus(status);
+                        window.setPaymentMethod(method);
+                        // (2026-07-13) Check if manual log exists, otherwise reset allocation; prev: raw value
+                        let allocCat = txn.reimbursementAllocationCategory || 'none';
+                        if (allocCat !== 'none' && txn.reimbursementAllocationTxnId) {
+                            const exists = window.budgetManualTxns && window.budgetManualTxns.some(t => t.id === txn.reimbursementAllocationTxnId);
+                            if (!exists) allocCat = 'none';
+                        }
+                        window.setReimbursementAllocation(allocCat);
+
+                        const defaultReimbAmt = Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : (txn.amount || 0)));
+                        document.getElementById('reimbursement-custom-amount').value = txn.reimbursementAmount !== undefined ? txn.reimbursementAmount : defaultReimbAmt;
+                        // (2026-07-22) Set original amount denominator label; prev: no denominator shown
+                        const origLbl = document.getElementById('reimb-original-amount-label');
+                        if (origLbl) origLbl.textContent = defaultReimbAmt > 0 ? `/ \u20b1${defaultReimbAmt.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '';
+                    } else {
+                        window.setSpecialStatus('normal');
+                        window.setPaymentMethod('cash');
+                        window.setReimbursementAllocation('none');
+                        document.getElementById('reimbursement-custom-amount').value = '';
+                        const origLblClear = document.getElementById('reimb-original-amount-label');
+                        if (origLblClear) origLblClear.textContent = '';
                     }
 
                     // Enable Button
@@ -13333,6 +13663,73 @@ Be direct, practical, and helpful.`;
                         btn.style.opacity = '0.7';
                         btn.innerHTML = '<i class="material-icons spin" style="font-size:16px;">sync</i>';
 
+                        const specialStatus = window.currentSpecialStatus || 'normal';
+                        const isRefund = specialStatus === 'refund';
+                        const isReimbursed = specialStatus === 'reimbursement';
+                        const paymentMethod = window.currentPaymentMethod || 'cash';
+                        const allocCategory = window.currentReimbursementAllocation || 'none';
+                        const reimbAmtVal = document.getElementById('reimbursement-custom-amount').value;
+                        const reimbursementAmount = isReimbursed ? (parseCurrencyAmount(reimbAmtVal) || amountValue) : null;
+                        const hasAlloc = isReimbursed && paymentMethod === 'cash' && allocCategory !== 'none';
+
+                        let allocationTxnId = null;
+                        if (window.editingTxnId) {
+                            const existingTxn = window.allTxns ? window.allTxns.find(t => t.id === window.editingTxnId) : null;
+                            if (existingTxn && existingTxn.reimbursementAllocationTxnId && existingTxn.reimbursementAllocationTxnId !== 'pending') {
+                                allocationTxnId = existingTxn.reimbursementAllocationTxnId;
+                            }
+                        }
+
+                        if (hasAlloc) {
+                            // (2026-07-13) Set Cash Allowance/Financial Expenses & note; prev: inherited parent
+                            const parentMerchant = merchantName || (cat ? cat.label : 'Transaction');
+                            const manualTxnData = {
+                                amount: reimbursementAmount,
+                                manualAmount: reimbursementAmount,
+                                merchant: 'Cash Allowance',
+                                category: 'Financial Expenses',
+                                manualCategory: 'Financial Expenses',
+                                manualBudgetCategory: allocCategory,
+                                account: 'budget_manual',
+                                note: `Substitute for ${parentMerchant}`,
+                                date: formatLocalDate(dateObj)
+                            };
+
+                            // (2026-07-13) Verify allocation ID exists before update to prevent crash; prev: unchecked
+                            const exists = window.budgetManualTxns && window.budgetManualTxns.some(t => t.id === allocationTxnId);
+                            if (allocationTxnId && exists) {
+                                if (!navigator.onLine) {
+                                    updateDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId), manualTxnData);
+                                } else {
+                                    await updateDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId), manualTxnData);
+                                }
+                            } else {
+                                let newRef;
+                                if (!navigator.onLine) {
+                                    newRef = doc(collection(db, "users", uid, "budget_manual_txns"));
+                                    setDoc(newRef, {
+                                        ...manualTxnData,
+                                        createdAt: serverTimestamp()
+                                    });
+                                } else {
+                                    newRef = await addDoc(collection(db, "users", uid, "budget_manual_txns"), {
+                                        ...manualTxnData,
+                                        createdAt: serverTimestamp()
+                                    });
+                                }
+                                allocationTxnId = newRef.id;
+                            }
+                        } else {
+                            if (allocationTxnId) {
+                                if (!navigator.onLine) {
+                                    deleteDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId));
+                                } else {
+                                    await deleteDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId));
+                                }
+                                allocationTxnId = null;
+                            }
+                        }
+
                         const updateData = {
                             date: formatLocalDate(dateObj),
                             amount: amountValue,
@@ -13344,7 +13741,16 @@ Be direct, practical, and helpful.`;
                             type: manualTxnType,
                             excluded: document.getElementById('manual-exclude-toggle').checked,
                             manualBudgetCategory: selectedAccount === 'bpi' && !window.editingTxnId ? 'n/a' : (window.currentManualClassification || 'n/a'),
-                            budgetSplit: budgetSplit
+                            budgetSplit: budgetSplit,
+                            refund: isRefund,
+                            // (2026-07-13) Save refundType as online always; prev: paymentMethod
+                            refundType: isRefund ? 'online' : null,
+                            reimbursed: isReimbursed,
+                            reimbursementType: isReimbursed ? paymentMethod : null,
+                            reimbursementAllocated: hasAlloc,
+                            reimbursementAllocationCategory: hasAlloc ? allocCategory : null,
+                            reimbursementAllocationTxnId: allocationTxnId,
+                            reimbursementAmount: reimbursementAmount
                         };
 
                         const getAffectedBudgetCategories = () => {
@@ -14845,6 +15251,34 @@ Be direct, practical, and helpful.`;
                 </div>
             </div>
 
+            <!-- (2026-07-13) Added reimbursement/refund type prompt modal; prev: none -->
+            <!-- Modal wrapper for selection -->
+            <div id="reimbursement-type-modal" class="modal-overlay"
+                style="align-items: flex-end; justify-content: center; backdrop-filter: blur(8px); background: rgba(15, 23, 42, 0.4); display: none; z-index: 100100;">
+                <!-- Container for type prompt -->
+                <div class="custom-modal" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px 24px calc(env(safe-area-inset-bottom, 24px) + 24px); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); background: #ffffff;">
+                    <!-- Title label for prompt -->
+                    <div style="font-weight: 800; font-size: 18px; color: #1e293b; margin-bottom: 8px;" id="reimbursement-prompt-title">Reimbursement Type</div>
+                    <!-- Description text for prompt -->
+                    <p style="color: #64748b; font-size: 13px; margin: 0 0 20px 0;" id="reimbursement-prompt-desc">Specify how you received this reimbursement to help track your real money.</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <button class="mui-btn mui-btn--raised" onclick="confirmReimbursementSelection('cash')"
+                            style="border-radius: 16px; font-weight: 700; background-color: #f1f5f9; color: #1e293b; height: 50px; text-transform: none; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: none;">
+                            <i class="material-icons" style="color: #16a34a;">payments</i>
+                            <span>Cash (IRL)</span>
+                        </button>
+                        <button class="mui-btn mui-btn--raised" onclick="confirmReimbursementSelection('online')"
+                            style="border-radius: 16px; font-weight: 700; background-color: #f1f5f9; color: #1e293b; height: 50px; text-transform: none; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: none;">
+                            <i class="material-icons" style="color: #2563eb;">account_balance</i>
+                            <span>Online / Bank Transfer</span>
+                        </button>
+                    </div>
+                    <div style="margin-top: 20px; display: flex; justify-content: center;">
+                        <div class="cancel-link" onclick="closeModals('reimbursement-type-modal')" style="padding: 10px; cursor: pointer; font-weight: 800; color: #64748b; font-size: 13px; text-transform: uppercase;">Cancel</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- DUPLICATE TRANSACTION MODAL -->
             <div id="duplicate-modal" class="modal-overlay"
                 style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
@@ -15279,6 +15713,8 @@ Be direct, practical, and helpful.`;
                                 </div>
                             </div>
 
+                             <!-- Empty block to delete upper Special Status row -->
+
                             <!-- Include/Exclude Toggle Row -->
                             <div style="display: flex; align-items: center; background: #fff; border: 1px solid #e2e8f0; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); cursor: pointer;"
                                 onclick="toggleManualTxnExclusion()">
@@ -15303,7 +15739,7 @@ Be direct, practical, and helpful.`;
 
                             <!-- Classification Card -->
                             <div id="classification-card"
-                                style="background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 4px; margin-bottom: 60px;">
+                                style="background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 4px;">
                                 <div
                                     style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">
                                     Budget Classification</div>
@@ -15355,6 +15791,93 @@ Be direct, practical, and helpful.`;
                                     </div>
                                     <div id="split-remaining-hint"
                                         style="font-size: 9px; font-weight: 700; text-align: center; margin-top: 4px;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- (2026-07-13) Added 3-switch status and cash allocation; prev: none -->
+                            <!-- Container for special status selection -->
+                            <!-- (2026-07-22) Added padding-bottom; prev: no bottom padding on special status -->
+                            <div style="background: #fff; border: 1px solid #e2e8f0; padding: 16px; padding-bottom: 24px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 4px; margin-bottom: 60px;">
+                                <div style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">Special Status</div>
+                                <!-- Container for status segment toggles -->
+                                <div style="display: flex; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 12px;" id="special-status-toggle-container">
+                                    <!-- Normal segment state button -->
+                                    <div id="btn-status-normal" onclick="setSpecialStatus('normal')"
+                                        style="flex: 1; padding: 8px; text-align: center; background: #64748b; color: #fff; font-weight: 700; border-radius: 8px; font-size: 10.5px; transition: all 0.2s; cursor: pointer;">
+                                        Off</div>
+                                    <!-- Segment button for refund -->
+                                    <div id="btn-status-refund" onclick="setSpecialStatus('refund')"
+                                        style="flex: 1; padding: 8px; text-align: center; color: #64748b; font-weight: 600; font-size: 10.5px; border-radius: 8px; transition: all 0.2s; cursor: pointer;">
+                                        Refund</div>
+                                    <!-- Segment button for reimbursement -->
+                                    <div id="btn-status-reimbursement" onclick="setSpecialStatus('reimbursement')"
+                                        style="flex: 1; padding: 8px; text-align: center; color: #64748b; font-weight: 600; font-size: 10.5px; border-radius: 8px; transition: all 0.2s; cursor: pointer;">
+                                        Reimbursement</div>
+                                </div>
+                                
+                                <!-- Payment method toggle sub-row -->
+                                <div id="special-status-payment-row" style="display: none; align-items: center; justify-content: space-between; border-top: 1px dashed #e2e8f0; padding-top: 12px; margin-top: 12px;">
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span style="font-size: 10.5px; font-weight: 800; color: #475569;">Received Method</span>
+                                        <span style="font-size: 8px; color: #94a3b8; font-weight: 600;">How was this received?</span>
+                                    </div>
+                                    <div style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 8px; width: 150px;">
+                                        <!-- Toggle button for cash -->
+                                        <div id="btn-method-cash" onclick="setPaymentMethod('cash')"
+                                            style="flex: 1; padding: 5px; text-align: center; background: #16a34a; color: #fff; font-weight: 700; border-radius: 6px; font-size: 9.5px; transition: all 0.2s; cursor: pointer;">
+                                            Cash</div>
+                                        <!-- Toggle button for online -->
+                                        <div id="btn-method-online" onclick="setPaymentMethod('online')"
+                                            style="flex: 1; padding: 5px; text-align: center; color: #64748b; font-weight: 600; font-size: 9.5px; border-radius: 6px; transition: all 0.2s; cursor: pointer;">
+                                            Online</div>
+                                    </div>
+                                </div>
+
+                                <!-- Reimbursement Amount Input Row -->
+                                <div id="reimbursement-amount-row" style="display: none; align-items: center; justify-content: space-between; border-top: 1px dashed #e2e8f0; padding-top: 12px; margin-top: 12px;">
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span style="font-size: 10.5px; font-weight: 800; color: #475569;">Reimbursed Amount</span>
+                                        <span style="font-size: 8px; color: #94a3b8; font-weight: 600;">Full or partial amount received</span>
+                                    </div>
+                                    <!-- (2026-07-22) Added original amount denominator suffix; prev: input only -->
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="display: flex; align-items: center; background: #f1f5f9; border-radius: 8px; padding: 4px 8px; width: 100px;">
+                                            <span style="font-size: 10.5px; font-weight: 800; color: #94a3b8; margin-right: 4px;">₱</span>
+                                            <input type="number" id="reimbursement-custom-amount" placeholder="0.00" step="0.01"
+                                                style="width: 100%; border: none; outline: none; font-size: 11.5px; font-weight: 700; color: #1e293b; background: transparent; text-align: right; padding: 0;">
+                                        </div>
+                                        <!-- Original txn amount denominator display -->
+                                        <span id="reimb-original-amount-label" style="font-size: 10.5px; font-weight: 700; color: #94a3b8; white-space: nowrap;"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Cash Reimbursement Allocation Row -->
+                                <div id="cash-allocation-row" style="display: none; flex-direction: column; border-top: 1px dashed #e2e8f0; padding-top: 12px; margin-top: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                        <div style="display: flex; flex-direction: column;">
+                                            <span style="font-size: 10.5px; font-weight: 800; color: #475569;">Auto-Log Cash Spend</span>
+                                            <span style="font-size: 8px; color: #94a3b8; font-weight: 600;">Log as a spent expense immediately</span>
+                                        </div>
+                                    </div>
+                                    <!-- Cash allocation segment container -->
+                                    <div style="display: flex; background: #f1f5f9; padding: 3px; border-radius: 8px; gap: 4px;">
+                                        <!-- Segment button for none -->
+                                        <div id="btn-alloc-none" onclick="setReimbursementAllocation('none')"
+                                            style="flex: 1; padding: 6px; text-align: center; background: #64748b; color: #fff; font-weight: 700; border-radius: 6px; font-size: 9.5px; transition: all 0.2s; cursor: pointer;">
+                                            None</div>
+                                        <!-- Segment button for needs -->
+                                        <div id="btn-alloc-needs" onclick="setReimbursementAllocation('needs')"
+                                            style="flex: 1; padding: 6px; text-align: center; color: #64748b; font-weight: 600; font-size: 9.5px; border-radius: 6px; transition: all 0.2s; cursor: pointer;">
+                                            Needs</div>
+                                        <!-- Segment button for wants -->
+                                        <div id="btn-alloc-wants" onclick="setReimbursementAllocation('wants')"
+                                            style="flex: 1; padding: 6px; text-align: center; color: #64748b; font-weight: 600; font-size: 9.5px; border-radius: 6px; transition: all 0.2s; cursor: pointer;">
+                                            Wants</div>
+                                        <!-- Segment button for savings -->
+                                        <div id="btn-alloc-savings" onclick="setReimbursementAllocation('savings')"
+                                            style="flex: 1; padding: 6px; text-align: center; color: #64748b; font-weight: 600; font-size: 9.5px; border-radius: 6px; transition: all 0.2s; cursor: pointer;">
+                                            Savings</div>
                                     </div>
                                 </div>
                             </div>

@@ -599,8 +599,9 @@ export function renderHistory(txns) {
             let displayName = mapped.name;
             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
             
-            let refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
-            let reimbursedChip = isReimbursed ? '<span class="reimbursed-badge">REIMBURSED</span>' : '';
+            // (2026-07-13) Remove prefix from refund/reimbursed badges; prev: prefixed
+            let refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
+            let reimbursedChip = isReimbursed ? `<span class="reimbursed-badge">REIMBURSED</span>` : '';
             
             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
             const paymentChip = isPaymentDuplicate ? '<span class="payment-badge" style="display: inline-block; background: #d1fae5; color: #059669; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">PAYMENT</span>' : '';
@@ -803,8 +804,9 @@ function renderHistoryClean(txns) {
             let displayName = mapped.name;
             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
 
-            const refundChip = isRefund ? '<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>' : '';
-            const reimbursedChip = isReimbursed ? '<span class="reimbursed-badge">REIMBURSED</span>' : '';
+            // (2026-07-13) Remove prefix from refund/reimbursed badges; prev: prefixed
+            const refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
+            const reimbursedChip = isReimbursed ? `<span class="reimbursed-badge">REIMBURSED</span>` : '';
 
             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
             const paymentChip = isPaymentDuplicate ? '<span class="payment-badge" style="display: inline-block; background: #d1fae5; color: #059669; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">PAYMENT</span>' : '';
@@ -918,7 +920,8 @@ function renderHistoryClean(txns) {
     try { if (typeof window.drawCashFlowChart === 'function') window.drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart failed:', error); }
     try { if (typeof window.detectSubscriptions === 'function') window.detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions failed:', error); }
     try { if (typeof window.updateCategoryBudgetsUI === 'function') window.updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI failed:', error); }
-    try { if (typeof window.updateInsightCards === 'function') window.updateInsightCards(window.allTxns || txns); } catch (error) { console.warn('updateInsightCards failed:', error); }
+    // (2026-07-13) Render reimbursement allocation widget; prev: no widget update
+    try { if (typeof window.renderReimbursementWidget === 'function') window.renderReimbursementWidget(); } catch (error) { console.warn('renderReimbursementWidget failed:', error); }
 }
 
 // Update Triple Progress Bar
@@ -3398,6 +3401,77 @@ export function updateInsightCards(txns) {
             summaryTotal.dataset.raw = formatted;
             summaryTotal.textContent = isHidden ? '******' : formatted;
             triggerSoftFadeInElement(summaryTotal);
+        }
+
+        // (2026-07-13) Calculate and display monthly summary reimbursements; prev: none
+        let totalReimbursed = 0;
+        let cashReimbursed = 0;
+        let onlineReimbursed = 0;
+
+        // (2026-07-13) Filter reimbursements by selected period; prev: hardcoded month
+        const activeValue = monthContext.filterValue;
+        rawTxns.forEach((t) => {
+            if (!t || t.deleted || t.excluded) return;
+            if (!t.reimbursed) return;
+            const match = window.checkPeriod ? window.checkPeriod(t, activeValue, 0) : (() => {
+                const d = parseTxnDate(t.date || t.createdAt);
+                return d && d.getFullYear() === year && d.getMonth() === month;
+            })();
+            if (!match) return;
+
+            const amt = getAmt(t);
+            totalReimbursed += amt;
+            if (t.reimbursementType === 'online') {
+                onlineReimbursed += amt;
+            } else {
+                cashReimbursed += amt;
+            }
+        });
+
+        const summaryReimbTotalEl = document.getElementById('summary-reimbursed-total');
+        const summaryReimbBreakdownEl = document.getElementById('summary-reimbursed-breakdown');
+        // (2026-07-22) Populate new cash/online/unpaid elements; prev: breakdown span only
+        const summaryReimbCashEl = document.getElementById('summary-reimb-cash');
+        const summaryReimbOnlineEl = document.getElementById('summary-reimb-online');
+        const summaryReimbUnpaidEl = document.getElementById('summary-reimb-unpaid');
+
+        if (summaryReimbTotalEl) {
+            const formatted = `${peso}${totalReimbursed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            summaryReimbTotalEl.textContent = isHidden ? '******' : formatted;
+            triggerSoftFadeInElement(summaryReimbTotalEl);
+        }
+        if (summaryReimbBreakdownEl) {
+            const cashFormatted = `${peso}${cashReimbursed.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+            const onlineFormatted = `${peso}${onlineReimbursed.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+            summaryReimbBreakdownEl.textContent = isHidden ? 'Cash: ****** · Online: ******' : `Cash: ${cashFormatted} · Online: ${onlineFormatted}`;
+            triggerSoftFadeInElement(summaryReimbBreakdownEl);
+        }
+        if (summaryReimbCashEl) {
+            summaryReimbCashEl.textContent = isHidden ? '₱******' : `${peso}${cashReimbursed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            triggerSoftFadeInElement(summaryReimbCashEl);
+        }
+        if (summaryReimbOnlineEl) {
+            summaryReimbOnlineEl.textContent = isHidden ? '₱******' : `${peso}${onlineReimbursed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            triggerSoftFadeInElement(summaryReimbOnlineEl);
+        }
+        if (summaryReimbUnpaidEl) {
+            // Unpaid = sum of (original txn amount - reimbursementAmount) for all reimbursed txns in period
+            let unpaidTotal = 0;
+            rawTxns.forEach((t) => {
+                if (!t || t.deleted || t.excluded || !t.reimbursed) return;
+                const match = window.checkPeriod ? window.checkPeriod(t, activeValue, 0) : (() => {
+                    const d = parseTxnDate(t.date || t.createdAt);
+                    return d && d.getFullYear() === year && d.getMonth() === month;
+                })();
+                if (!match) return;
+                const originalAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
+                const paidAmt = Number(t.reimbursementAmount) || originalAmt;
+                unpaidTotal += Math.max(0, originalAmt - paidAmt);
+            });
+            summaryReimbUnpaidEl.textContent = isHidden ? '₱******' : `${peso}${unpaidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            // (2026-07-22) Color unpaid red when >0, dark when zero; prev: always slate
+            summaryReimbUnpaidEl.style.color = unpaidTotal > 0 ? '#ef4444' : '#1e293b';
+            triggerSoftFadeInElement(summaryReimbUnpaidEl);
         }
         if (summaryCount) {
             summaryCount.textContent = String(thisMonthTxns.length);

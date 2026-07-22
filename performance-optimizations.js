@@ -111,9 +111,9 @@
 
     // ===== 4. ADD WILL-CHANGE HINTS FOR GPU ACCELERATION =====
     const addWillChangeHints = () => {
+        // (2026-07-13) Remove premium-txn GPU layer promotion; prev: included
         const heavyElements = [
             '.balance-card',
-            '.premium-txn',
             '.chart-card',
             '.trend-card',
             '.goals-list',

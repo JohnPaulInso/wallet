@@ -1083,7 +1083,7 @@
                     </div>
 
                     <!-- (2026-07-13) Moved Reimbursements card under Monthly Summary; prev: above it -->
-                    <div class="monthly-summary-card" id="reimbursements-widget-card" style="margin-bottom: 8px; padding: 18px 20px;">
+                    <div class="monthly-summary-card" id="reimbursements-widget-card" style="margin-bottom: 8px; padding: 14px 20px 18px 20px;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
                             <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary);">Reimbursements</h3>
                         </div>
@@ -4176,7 +4176,7 @@
                                 window.queueBudgetThresholdNotificationTrigger(uid, null, 'realtime_snapshot');
                             }
 
-                            // (2026-07-13) check all fields for matches; prev: checked few fields
+                            // (2026-07-13) Include reimbursement fields in isSame check; prev: skipped
                             const isSame = prevTxns.length === txns.length &&
                                 txns.every((t, i) =>
                                     prevTxns[i] &&
@@ -4189,7 +4189,10 @@
                                     prevTxns[i].manualAmount === t.manualAmount &&
                                     prevTxns[i].excluded === t.excluded &&
                                     prevTxns[i].refund === t.refund &&
-                                    prevTxns[i].reimbursed === t.reimbursed
+                                    prevTxns[i].reimbursed === t.reimbursed &&
+                                    prevTxns[i].reimbursementAmount === t.reimbursementAmount &&
+                                    prevTxns[i].reimbursementType === t.reimbursementType &&
+                                    prevTxns[i].reimbursementAllocationCategory === t.reimbursementAllocationCategory
                                 );
 
                             if (isSame && document.getElementById('history-container').children.length > 0) {
@@ -12918,7 +12921,8 @@ Be direct, practical, and helpful.`;
                             manualCategory: 'Financial Expenses',
                             manualBudgetCategory: targetCategory,
                             account: 'budget_manual',
-                            note: `Substitute for ${txn.merchant || 'Unknown'}`,
+                            // (2026-07-13) Use parent note for substitute if present; prev: merchant
+                            note: txn.note ? txn.note : `Substitute for ${txn.merchant || 'Unknown'}`,
                             date: formatLocalDate(new Date()),
                             createdAt: serverTimestamp()
                         };
@@ -13697,7 +13701,8 @@ Be direct, practical, and helpful.`;
                                 manualCategory: 'Financial Expenses',
                                 manualBudgetCategory: allocCategory,
                                 account: 'budget_manual',
-                                note: `Substitute for ${parentMerchant}`,
+                                // (2026-07-13) Use parent note for substitute if present; prev: merchant
+                                note: note ? note : `Substitute for ${parentMerchant}`,
                                 date: formatLocalDate(dateObj)
                             };
 

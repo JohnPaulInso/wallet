@@ -599,13 +599,16 @@ export function renderHistory(txns) {
             let displayName = mapped.name;
             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
             
-            // (2026-07-13) Add red dot to partial reimbursement badge; prev: no dot
+            // (2026-07-13) Add red dot to left side of partial reimbursement badge; prev: on right
             let reimbursedChip = '';
             if (isReimbursed) {
                 const origAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
                 const paidAmt = t.reimbursementAmount !== undefined ? Number(t.reimbursementAmount) : origAmt;
-                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-left:4px; vertical-align:middle;"></span>` : '';
-                reimbursedChip = `<span class="reimbursed-badge">REIMBURSED${redDot}</span>`;
+                if (t.merchant && t.merchant.toUpperCase().includes('SHOPEE')) {
+                    console.log("SHOPEE DEBUG (main list):", t.merchant, "origAmt:", origAmt, "paidAmt:", paidAmt, "t.reimbursementAmount:", t.reimbursementAmount);
+                }
+                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
+                reimbursedChip = `<span class="reimbursed-badge">${redDot}REIMBURSED</span>`;
             }
             let refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
             
@@ -810,13 +813,16 @@ function renderHistoryClean(txns) {
             let displayName = mapped.name;
             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
 
-            // (2026-07-13) Add red dot to partial reimbursement badge; prev: no dot
+            // (2026-07-13) Add red dot to left side of partial reimbursement badge; prev: on right
             let reimbursedChip = '';
             if (isReimbursed) {
                 const origAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
                 const paidAmt = t.reimbursementAmount !== undefined ? Number(t.reimbursementAmount) : origAmt;
-                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-left:4px; vertical-align:middle;"></span>` : '';
-                reimbursedChip = `<span class="reimbursed-badge">REIMBURSED${redDot}</span>`;
+                if (t.merchant && t.merchant.toUpperCase().includes('SHOPEE')) {
+                    console.log("SHOPEE DEBUG (filtered list):", t.merchant, "origAmt:", origAmt, "paidAmt:", paidAmt, "t.reimbursementAmount:", t.reimbursementAmount);
+                }
+                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
+                reimbursedChip = `<span class="reimbursed-badge">${redDot}REIMBURSED</span>`;
             }
             const refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
 

@@ -282,7 +282,7 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                 window.queueBudgetThresholdNotificationTrigger(uid, null, 'realtime_snapshot');
             }
 
-            // (2026-07-13) check all fields for matches; prev: checked few fields
+            // (2026-07-13) Include reimbursement fields in isSame check; prev: skipped
             const isSame = prevTxns.length === txns.length && 
                            txns.every((t, i) => 
                                prevTxns[i] && 
@@ -295,7 +295,10 @@ export async function loadData(providedUidOrOptions = null, maybeOptions = null)
                                prevTxns[i].manualAmount === t.manualAmount &&
                                prevTxns[i].excluded === t.excluded &&
                                prevTxns[i].refund === t.refund &&
-                               prevTxns[i].reimbursed === t.reimbursed
+                               prevTxns[i].reimbursed === t.reimbursed &&
+                               prevTxns[i].reimbursementAmount === t.reimbursementAmount &&
+                               prevTxns[i].reimbursementType === t.reimbursementType &&
+                               prevTxns[i].reimbursementAllocationCategory === t.reimbursementAllocationCategory
                            );
 
             if (isSame && document.getElementById('history-container').children.length > 0) {

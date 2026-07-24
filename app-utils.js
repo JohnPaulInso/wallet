@@ -236,7 +236,8 @@ export const CATEGORIES = [
     { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
     { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
     { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
-    { id: 'Savings', icon: 'account_balance', label: 'Savings', cls: 'cat-investments' },
+    // (2026-07-13) Set Savings category icon to savings (piggy bank); prev: account_balance
+    { id: 'Savings', icon: 'savings', label: 'Savings', cls: 'cat-investments' },
     { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
 ];
 

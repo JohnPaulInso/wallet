@@ -22,7 +22,7 @@
         const originalToggle = window.toggleExpensesChartCategory;
         
         if (!originalToggle) {
-            console.warn('[Fix] toggleExpensesChartCategory not found yet, will retry...');
+            // (2026-07-13) Silenced repetitive retry warnings in console log; prev: console.warn on every retry
             return false;
         }
 

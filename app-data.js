@@ -54,6 +54,8 @@ function applyPreferredDashboardFilter() {
     filterEl.value = filterEl.querySelector(`option[value="${preferred}"]`) ? preferred : 'this_month';
     if (window.filterChart) window.filterChart();
     try { if (window.updateInsightCards) window.updateInsightCards(window.allTxns || []); } catch (error) { console.warn('updateInsightCards rehydrate failed:', error); }
+    // (2026-07-13) Rehydrate triple budget progress bar on dashboard filter apply; prev: missing
+    try { if (window.updateTripleProgressBar) window.updateTripleProgressBar(); } catch (error) { console.warn('updateTripleProgressBar rehydrate failed:', error); }
     try { if (window.refreshTrendChart) window.refreshTrendChart(); } catch (error) { console.warn('refreshTrendChart rehydrate failed:', error); }
     try { if (window.drawCashFlowChart) window.drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart rehydrate failed:', error); }
     try { if (window.detectSubscriptions) window.detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions rehydrate failed:', error); }

@@ -1083,28 +1083,71 @@
                     </div>
 
                     <!-- (2026-07-13) Moved Reimbursements card under Monthly Summary; prev: above it -->
-                    <div class="monthly-summary-card" id="reimbursements-widget-card" style="margin-bottom: 8px; padding: 14px 20px 18px 20px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
+                    <div class="monthly-summary-card" id="reimbursements-widget-card" style="margin-bottom: 8px; padding: 16px 20px 18px 20px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
                             <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: var(--text-primary);">Reimbursements</h3>
                         </div>
-                        <!-- 2x2 grid with uniform fonts matching Monthly Summary card -->
-                        <div class="summary-grid" style="margin-top: 0; grid-template-columns: 1fr 1fr; gap: 12px 16px;">
-                            <div class="summary-item">
-                                <span class="s-label">Cash Reimb.</span>
-                                <span class="s-value" id="summary-reimb-cash">₱0</span>
+                        <!-- 2x3 grid with squircle icon boxes on left side of each item -->
+                        <div class="summary-grid" style="margin-top: 0; grid-template-columns: 1fr 1fr; gap: 12px 8px;">
+                            <!-- (2026-07-13) Cash Reimb item with click toggle and data-reimb-type; prev: no click handler -->
+                            <div class="reimb-summary-item" data-reimb-type="cash" onclick="window.toggleReimbHighlight('cash')" style="cursor: pointer;">
+                                <div class="reimb-icon-box" style="background: linear-gradient(135deg, rgba(100,116,139,0.12), rgba(71,85,105,0.22)); display: flex; align-items: center; justify-content: center;">
+                                    <i class="material-icons" style="color: #475569;">payments</i>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                                    <span class="s-label" id="summary-reimb-cash-label">Cash Reimb. (0)</span>
+                                    <span class="s-value" id="summary-reimb-cash" style="color: var(--text-primary);">₱0</span>
+                                </div>
                             </div>
-                            <!-- (2026-07-13) Swapped Online Reimb and Total Reimb; prev: Online was second -->
-                            <div class="summary-item">
-                                <span class="s-label">Total Reimb.</span>
-                                <span class="s-value" id="summary-reimbursed-total" style="color: #d97706;">₱0</span>
+                            <!-- (2026-07-13) Total Reimb item with click toggle and data-reimb-type; prev: no click handler -->
+                            <div class="reimb-summary-item" data-reimb-type="total" onclick="window.toggleReimbHighlight('total')" style="cursor: pointer;">
+                                <div class="reimb-icon-box" style="background: linear-gradient(135deg, rgba(217,119,6,0.12), rgba(245,158,11,0.22)); display: flex; align-items: center; justify-content: center;">
+                                    <i class="material-icons" style="color: #d97706;">receipt_long</i>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                                    <span class="s-label" id="summary-reimb-total-label">Total Reimb. (0)</span>
+                                    <span class="s-value" id="summary-reimbursed-total" style="color: #d97706;">₱0</span>
+                                </div>
                             </div>
-                            <div class="summary-item">
-                                <span class="s-label">Online Reimb.</span>
-                                <span class="s-value" id="summary-reimb-online">₱0</span>
+                            <!-- (2026-07-13) Online Reimb item with click toggle and data-reimb-type; prev: no click handler -->
+                            <div class="reimb-summary-item" data-reimb-type="online" onclick="window.toggleReimbHighlight('online')" style="cursor: pointer;">
+                                <div class="reimb-icon-box" style="background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(59,130,246,0.22)); display: flex; align-items: center; justify-content: center;">
+                                    <i class="material-icons" style="color: #2563eb;">shopping_bag</i>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                                    <span class="s-label" id="summary-reimb-online-label">Online Reimb. (0)</span>
+                                    <span class="s-value" id="summary-reimb-online" style="color: var(--text-primary);">₱0</span>
+                                </div>
                             </div>
-                            <div class="summary-item">
-                                <span class="s-label">Unpaid Reimb.</span>
-                                <span class="s-value" id="summary-reimb-unpaid">₱0</span>
+                            <!-- (2026-07-13) Unpaid Reimb item with click toggle and data-reimb-type; prev: toggleUnpaidReimbHighlight -->
+                            <div class="reimb-summary-item" data-reimb-type="unpaid" onclick="window.toggleReimbHighlight('unpaid')" style="cursor: pointer;">
+                                <div class="reimb-icon-box" style="background: linear-gradient(135deg, rgba(225,29,72,0.12), rgba(244,63,94,0.22)); display: flex; align-items: center; justify-content: center;">
+                                    <i class="material-icons" style="color: #e11d48;">pending_actions</i>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                                    <span class="s-label" id="summary-reimb-unpaid-label">Unpaid Reimb. (0)</span>
+                                    <span class="s-value" id="summary-reimb-unpaid" style="color: #ef4444;">₱0</span>
+                                </div>
+                            </div>
+                            <!-- (2026-07-13) Pending Reimb item with click toggle and data-reimb-type; prev: no click handler -->
+                            <div class="reimb-summary-item" data-reimb-type="pending" onclick="window.toggleReimbHighlight('pending')" style="cursor: pointer;">
+                                <div class="reimb-icon-box" style="background: linear-gradient(135deg, rgba(234,88,12,0.12), rgba(249,115,22,0.22)); display: flex; align-items: center; justify-content: center;">
+                                    <i class="material-icons" style="color: #ea580c;">history_toggle_off</i>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                                    <span class="s-label" id="summary-reimb-pending-label">Pending Reimb. (0)</span>
+                                    <span class="s-value" id="summary-reimb-pending" style="color: #ea580c;">₱0</span>
+                                </div>
+                            </div>
+                            <!-- (2026-07-13) Paid Reimb item with click toggle and data-reimb-type; prev: no click handler -->
+                            <div class="reimb-summary-item" data-reimb-type="paid" onclick="window.toggleReimbHighlight('paid')" style="cursor: pointer;">
+                                <div class="reimb-icon-box" style="background: linear-gradient(135deg, rgba(22,163,74,0.12), rgba(34,197,94,0.22)); display: flex; align-items: center; justify-content: center;">
+                                    <i class="material-icons" style="color: #16a34a;">task_alt</i>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+                                    <span class="s-label" id="summary-reimb-paid-label">Paid Reimb. (0)</span>
+                                    <span class="s-value" id="summary-reimb-paid" style="color: #16a34a;">₱0</span>
+                                </div>
                             </div>
                         </div>
                         <span style="display:none;" id="summary-reimbursed-breakdown"></span>
@@ -5671,7 +5714,11 @@
                             if (!window.checkPeriod(t, currentFilter, 0, now)) return;
 
                             const display = getMerchantDisplay(t.name || t.merchant, t);
-                            const totalAmt = Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                            // (2026-07-13) Support signed and zero values for manual cash logs; prev: Math.abs
+                            const isCashLog = account === 'budget_manual';
+                            const totalAmt = isCashLog
+                                ? (Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)) || 0)
+                                : Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)) || 0);
 
                             // Handle Split Logic: Only show the portion allocated to this specific 'type'
                             let effectiveAmt = totalAmt;
@@ -5773,8 +5820,11 @@
                         filtered.forEach(t => {
                             const display = getMerchantDisplay(t.name || t.merchant, t);
                             // Match chart logic: effectiveAmt takes priority, then manualAmount, then amount
-                            const displayAmt = Math.abs(Number(t.effectiveAmt !== undefined ? t.effectiveAmt : (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0))) || 0);
+                            // (2026-07-13) Support signed/zero values for cash logs; prev: Math.abs forced positive
                             const isCashLog = t.account === 'budget_manual';
+                            const displayAmt = isCashLog
+                                ? (Number(t.effectiveAmt !== undefined ? t.effectiveAmt : (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0))) || 0)
+                                : Math.abs(Number(t.effectiveAmt !== undefined ? t.effectiveAmt : (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0))) || 0);
                             const isFinancial = display.category === 'Financial Expenses';
 
                             // [FIX 2026-06-29] Include ALL transactions (even withdrawals) to match chart total
@@ -5789,13 +5839,18 @@
                             const display = getMerchantDisplay(t.name || t.merchant, t);
 
                             // Split-specific amount display
-                            let displayAmt = t.isSplit ? t.effectiveAmt : Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
+                            // (2026-07-13) Support signed/zero values for cash logs in list display; prev: Math.abs forced positive
+                            const isCashLog = t.account === 'budget_manual';
+                            let displayAmt = t.isSplit
+                                ? t.effectiveAmt
+                                : (isCashLog
+                                    ? (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0))
+                                    : Math.abs(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
                             let subtext = '';
                             if (t.isSplit) {
                                 subtext = `<div style="font-size: 8.5px; opacity: 0.6; margin-top: -2px;">of ₱${t.totalAmt.toLocaleString()}</div>`;
                             }
 
-                            const isCashLog = t.account === 'budget_manual';
                             const isFinancial = display.category === 'Financial Expenses';
                             const isWithdrawal = display.name.toLowerCase().includes('withdraw');
 
@@ -5851,7 +5906,8 @@
                             </div>
                             <div style="text-align: right; display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0;"> <!-- updated 2026-03-28 - used margin-left, gap and flex-shrink to prevent overlapping - 2026-03-28 -->
                                 <div style="text-align: right;">
-                                    <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; white-space: nowrap;">\u20B1${displayAmt.toLocaleString()}</div> <!-- FIX 2026-06-26: Used unicode escape for peso sign to prevent encoding garble -->
+                                    <!-- (2026-07-13) Format signed cash log amounts; prev: always showed positive -->
+                                    <div style="font-size: 12.5px; font-weight: 800; color: ${displayAmt < 0 ? '#ef4444' : '#1e293b'}; white-space: nowrap;">${displayAmt < 0 ? '-\u20B1' + Math.abs(displayAmt).toLocaleString() : '\u20B1' + Number(displayAmt).toLocaleString()}</div> <!-- FIX 2026-06-26: Used unicode escape for peso sign to prevent encoding garble -->
                                     ${subtext}
                                 </div>
 
@@ -6078,7 +6134,8 @@
                     const name = document.getElementById('budget-manual-name').value.trim();
                     const btn = document.getElementById('budget-manual-save-btn');
 
-                    if (!amtVal || isNaN(amt) || amt <= 0) { showToast('Enter valid amount'); return; }
+                    // (2026-07-13) Allow negative/zero amounts for cash logs; prev: amt <= 0 blocked them
+                    if (!amtVal || isNaN(amt)) { showToast('Enter valid amount'); return; }
                     if (!name) { showToast('Enter merchant/remarks'); return; }
 
                     try {
@@ -8285,6 +8342,8 @@ Be direct, practical, and helpful.`;
                         drawPieChart(segments, remainingTotal > 0 ? remainingTotal : fallbackTotal, true);
                     }, 450);
                 }
+                // (2026-07-13) Expose toggleExpensesChartCategory globally for fix-chart-exclusion; prev: local function
+                window.toggleExpensesChartCategory = toggleExpensesChartCategory;
                 function drawPieChart(segments, total, isUpdate = false) {
                     // (2026-07-13) Reset selection state on first load; prev: retained state
                     if (!isUpdate) {
@@ -8962,9 +9021,16 @@ Be direct, practical, and helpful.`;
                             // Let's ensure 'ATOME PAYMENT' is honored if that was the intent.
                             if (mapped.category === 'Credit Card Payment') displayName = 'ATOME PAYMENT';
                             // else if (isIncome) displayName = 'INCOME'; // REMOVED to allow database overrides
-                            // (2026-07-13) Remove prefix from refund/reimbursed badges; prev: prefixed
+                            // (2026-07-13) Restore refundChip declaration and render red dot on unpaid reimbursement badge on initial load; prev: refundChip missing
                             let refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
-                            let reimbursedChip = isReimbursed ? `<span class="reimbursed-badge">REIMBURSED</span>` : '';
+                            let reimbursedChip = '';
+                            if (isReimbursed) {
+                                const origAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
+                                const paidAmt = t.reimbursementAmount !== undefined ? Number(t.reimbursementAmount) : origAmt;
+                                const showRedDot = (origAmt - paidAmt) > 0.01;
+                                const redDot = showRedDot ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
+                                reimbursedChip = `<span class="reimbursed-badge">${redDot}REIMBURSED</span>`;
+                            }
 
                             // Payment chip for duplicated ATOME PAYMENT from BPI to Atome
                             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
@@ -11042,8 +11108,9 @@ Be direct, practical, and helpful.`;
                                         window.modalOpen = false;
                                     }
                                 }
+                                // (2026-07-13) Set long-press timer to 300ms; prev: 400ms
                                 if (!isSwiping) showIOSMenu(newItem, e);
-                            }, 400);
+                            }, 300);
                         };
 
                         const moveTouch = (e) => {
@@ -11142,8 +11209,9 @@ Be direct, practical, and helpful.`;
                     if (window.modalOpen) return; // Prevent if already open
                     if (event.cancelable) event.preventDefault();
 
-                    // Haptic feedback if available (Mobile feel)
-                    if (navigator.vibrate) navigator.vibrate(50);
+                    // (2026-07-13) Set menu open time & 60ms vibration; prev: 50ms vibration
+                    window.iosMenuOpenTime = Date.now();
+                    if (navigator.vibrate) navigator.vibrate(60);
 
                     const txnId = item.dataset.txnId;
                     const merchant = item.dataset.merchant || '';
@@ -11168,10 +11236,18 @@ Be direct, practical, and helpful.`;
                     clonedItem = item.cloneNode(true);
                     clonedItem.classList.add('elevated-clone');
                     clonedItem.classList.remove('popped'); // Clone doesn't need popped class as it has its own elevated style
+                    // (2026-07-13) Strip reimb/unpaid tint classes from clone; prev: tints copied from original
+                    clonedItem.classList.remove('reimb-highlight-cash', 'reimb-highlight-online', 'reimb-highlight-total', 'reimb-highlight-unpaid', 'reimb-highlight-pending', 'reimb-highlight-paid', 'unpaid-highlight');
 
                     // Strip IDs to prevent duplicate conflicts
                     clonedItem.removeAttribute('id');
                     clonedItem.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+                    // (2026-07-13) Strip badge data attributes from clone; prev: UNPAID/badge labels copied
+                    const cloneTxnRight = clonedItem.querySelector('.txn-right');
+                    if (cloneTxnRight) {
+                        cloneTxnRight.removeAttribute('data-unpaid-badge');
+                        cloneTxnRight.removeAttribute('data-reimb-badge');
+                    }
 
                     // Force exact positioning
                     clonedItem.style.setProperty('position', 'fixed', 'important');
@@ -11271,6 +11347,8 @@ Be direct, practical, and helpful.`;
                 }
 
                 window.closeIOSMenu = (fromPopState = false) => {
+                    // (2026-07-13) Ignore synthetic click right after long-press open; prev: no guard
+                    if (fromPopState !== true && Date.now() - (window.iosMenuOpenTime || 0) < 350) return;
                     const blurOverlay = document.getElementById('blur-overlay');
                     const iosMenu = document.getElementById('ios-menu');
                     const wasMenuOpen = iosMenu && iosMenu.classList.contains('show');
@@ -12218,7 +12296,8 @@ Be direct, practical, and helpful.`;
                     { id: 'Travel', icon: 'flight', label: 'Travel', cls: 'cat-aqua' },
                     { id: 'Education', icon: 'school', label: 'Education', cls: 'cat-education' },
                     { id: 'Sport', icon: 'fitness_center', label: 'Sport', cls: 'cat-life' },
-                    { id: 'Savings', icon: 'account_balance', label: 'Savings', cls: 'cat-investments' },
+                    // (2026-07-13) Set Savings category icon to savings (piggy bank); prev: account_balance
+                    { id: 'Savings', icon: 'savings', label: 'Savings', cls: 'cat-investments' },
                     { id: 'Income', icon: 'savings', label: 'Income', cls: 'cat-income' }
                 ];
 
@@ -13281,6 +13360,7 @@ Be direct, practical, and helpful.`;
                         window.setReimbursementAllocation(allocCat);
 
                         const defaultReimbAmt = Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : (txn.amount || 0)));
+                        window.currentTxnOriginalAmount = defaultReimbAmt;
                         document.getElementById('reimbursement-custom-amount').value = txn.reimbursementAmount !== undefined ? txn.reimbursementAmount : defaultReimbAmt;
                         // (2026-07-22) Set original amount denominator label; prev: no denominator shown
                         const origLbl = document.getElementById('reimb-original-amount-label');
@@ -13290,9 +13370,20 @@ Be direct, practical, and helpful.`;
                         window.setPaymentMethod('cash');
                         window.setReimbursementAllocation('none');
                         document.getElementById('reimbursement-custom-amount').value = '';
+                        window.currentTxnOriginalAmount = 0;
                         const origLblClear = document.getElementById('reimb-original-amount-label');
                         if (origLblClear) origLblClear.textContent = '';
                     }
+
+                    // (2026-07-13) Auto-fill max reimbursement amount when tapping original amount label; prev: none
+                    window.fillMaxReimbursementAmount = function() {
+                        const amtInput = document.getElementById('manual-amt');
+                        const customAmtInput = document.getElementById('reimbursement-custom-amount');
+                        const maxAmt = window.currentTxnOriginalAmount || (amtInput ? parseCurrencyAmount(amtInput.value) : 0);
+                        if (customAmtInput && maxAmt > 0) {
+                            customAmtInput.value = maxAmt;
+                        }
+                    };
 
                     // Enable Button
                     const btn = document.getElementById('done-btn');
@@ -13575,6 +13666,11 @@ Be direct, practical, and helpful.`;
                         manualCategory: selectedManualCatId || '',
                         manualClassification: window.currentManualClassification || '',
                         txnType: manualTxnType || 'expense',
+                        // (2026-07-13) Include special status state in modal baseline check for back button auto-save; prev: excluded
+                        specialStatus: window.currentSpecialStatus || 'normal',
+                        paymentMethod: window.currentPaymentMethod || 'cash',
+                        reimbursementAllocation: window.currentReimbursementAllocation || 'none',
+                        reimbursementAmount: readValue('reimbursement-custom-amount'),
                         splitNeeds: readSplitAmount('split-needs'),
                         splitWants: readSplitAmount('split-wants'),
                         splitSavings: readSplitAmount('split-savings'),
@@ -13679,7 +13775,9 @@ Be direct, practical, and helpful.`;
                         const paymentMethod = window.currentPaymentMethod || 'cash';
                         const allocCategory = window.currentReimbursementAllocation || 'none';
                         const reimbAmtVal = document.getElementById('reimbursement-custom-amount').value;
-                        const reimbursementAmount = isReimbursed ? (parseCurrencyAmount(reimbAmtVal) || amountValue) : null;
+                        // (2026-07-13) Preserve 0 reimbursement amount and set session edit flag; prev: parseCurrencyAmount(reimbAmtVal) || amountValue
+                        window.hasEditedTxnInSession = true;
+                        const reimbursementAmount = isReimbursed ? (reimbAmtVal.trim() !== '' ? parseCurrencyAmount(reimbAmtVal) : amountValue) : null;
                         const hasAlloc = isReimbursed && paymentMethod === 'cash' && allocCategory !== 'none';
 
                         let allocationTxnId = null;
@@ -15859,7 +15957,7 @@ Be direct, practical, and helpful.`;
                                                 style="width: 100%; border: none; outline: none; font-size: 11.5px; font-weight: 700; color: #1e293b; background: transparent; text-align: right; padding: 0;">
                                         </div>
                                         <!-- Original txn amount denominator display -->
-                                        <span id="reimb-original-amount-label" style="font-size: 10.5px; font-weight: 700; color: #94a3b8; white-space: nowrap;"></span>
+                                        <span id="reimb-original-amount-label" onclick="window.fillMaxReimbursementAmount()" style="font-size: 10.5px; font-weight: 700; color: #94a3b8; white-space: nowrap; cursor: pointer;"></span>
                                     </div>
                                 </div>
 

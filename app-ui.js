@@ -395,8 +395,11 @@ function getTxnBudgetAllocations(t, mapped = null) {
     const allocations = [];
     if (!t || t.excluded || t.refund || t.reimbursed) return allocations;
 
-    const amount = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)) || 0);
-    if (!amount) return allocations;
+    // (2026-07-13) Support signed/zero amounts for cash logs; prev: Math.abs blocked them
+    const isCashLog = t.account === 'budget_manual';
+    const rawAmt = Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)) || 0;
+    const amount = isCashLog ? rawAmt : Math.abs(rawAmt);
+    if (!isCashLog && !amount) return allocations;
 
     const split = t.budgetSplit;
     if (split && typeof split === 'object') {
@@ -497,6 +500,36 @@ function initKeyboardViewportBridge() {
     updateMetrics();
 }
 
+// (2026-07-13) Helper for robust transaction date parsing; prev: direct new Date()
+function parseTxnDateHelper(value) {
+    if (!value) return null;
+    if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+    if (typeof value.toDate === 'function') {
+        try { const d = value.toDate(); if (d && !isNaN(d.getTime())) return d; } catch(e) {}
+    }
+    if (typeof value.toMillis === 'function') {
+        try { const d = new Date(value.toMillis()); if (d && !isNaN(d.getTime())) return d; } catch(e) {}
+    }
+    if (typeof value.seconds === 'number') {
+        const d = new Date(value.seconds * 1000);
+        if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof value === 'number') {
+        const d = new Date(value < 1e12 ? value * 1000 : value);
+        if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof value === 'string') {
+        let d = new Date(value);
+        if (!isNaN(d.getTime())) return d;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+            d = new Date(`${value}T12:00:00`);
+            if (!isNaN(d.getTime())) return d;
+        }
+    }
+    const fallback = new Date(value);
+    return !isNaN(fallback.getTime()) ? fallback : null;
+}
+
 // Render Transaction History
 export function renderHistory(txns) {
     // (2026-07-13) de-dupe txns to avoid duplicates; prev: no de-duplication
@@ -513,9 +546,9 @@ export function renderHistory(txns) {
     if (window.drawTrendChart) window.drawTrendChart(txns);
 
     const groups = {};
-    txns.forEach(t => {
-        const d = new Date(t.date);
-        if (isNaN(d)) return;
+    (txns || []).forEach(t => {
+        const d = parseTxnDateHelper(t.date || t.createdAt);
+        if (!d) return;
         const key = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
         if (!groups[key]) groups[key] = { items: [], total: 0 };
         
@@ -529,7 +562,11 @@ export function renderHistory(txns) {
 
     const entries = Object.entries(groups);
     // Ensure chronological order (descending)
-    entries.sort((a, b) => new Date(b[1].items[0].date) - new Date(a[1].items[0].date));
+    entries.sort((a, b) => {
+        const dateA = parseTxnDateHelper(a[1].items[0]?.date || a[1].items[0]?.createdAt) || 0;
+        const dateB = parseTxnDateHelper(b[1].items[0]?.date || b[1].items[0]?.createdAt) || 0;
+        return dateB - dateA;
+    });
     
     const visibleEntries = entries.slice(0, window.historyLimit || 4);
 
@@ -566,7 +603,7 @@ export function renderHistory(txns) {
             const isReimbursed = t.reimbursed || false;
             const excludedClass = t.excluded ? 'txn-excluded' : '';
             
-            const d = new Date(t.date);
+            const d = parseTxnDateHelper(t.date || t.createdAt) || new Date();
             const shortDate = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
             const amount = (t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0));
             
@@ -607,7 +644,9 @@ export function renderHistory(txns) {
                 if (t.merchant && t.merchant.toUpperCase().includes('SHOPEE')) {
                     console.log("SHOPEE DEBUG (main list):", t.merchant, "origAmt:", origAmt, "paidAmt:", paidAmt, "t.reimbursementAmount:", t.reimbursementAmount);
                 }
-                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
+                // (2026-07-13) Always render red dot on unpaid reimbursement badges automatically; prev: session edit gate
+                const showRedDot = (origAmt - paidAmt) > 0.01;
+                const redDot = showRedDot ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
                 reimbursedChip = `<span class="reimbursed-badge">${redDot}REIMBURSED</span>`;
             }
             let refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
@@ -701,6 +740,8 @@ export function renderHistory(txns) {
     setTimeout(() => {
         if (typeof window.setupLongPressHandlers === 'function') window.setupLongPressHandlers();
         if (typeof window.setupBalanceLongPress === 'function') window.setupBalanceLongPress();
+        // (2026-07-13) Re-apply unpaid reimbursement highlight after history render; prev: absent
+        if (typeof window.applyUnpaidReimbHighlight === 'function') window.applyUnpaidReimbHighlight();
     }, 50);
 
     if (isHidden) {
@@ -821,7 +862,9 @@ function renderHistoryClean(txns) {
                 if (t.merchant && t.merchant.toUpperCase().includes('SHOPEE')) {
                     console.log("SHOPEE DEBUG (filtered list):", t.merchant, "origAmt:", origAmt, "paidAmt:", paidAmt, "t.reimbursementAmount:", t.reimbursementAmount);
                 }
-                const redDot = (origAmt - paidAmt) > 0.01 ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
+                // (2026-07-13) Always render red dot on unpaid reimbursement badges automatically; prev: session edit gate
+                const showRedDot = (origAmt - paidAmt) > 0.01;
+                const redDot = showRedDot ? `<span style="display:inline-block; width:5px; height:5px; border-radius:50%; background:#ef4444; margin-right:4px; vertical-align:middle;"></span>` : '';
                 reimbursedChip = `<span class="reimbursed-badge">${redDot}REIMBURSED</span>`;
             }
             const refundChip = isRefund ? `<span class="refund-badge" style="display: inline-block; background: #fef3c7; color: #d97706; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">REFUNDED</span>` : '';
@@ -938,8 +981,9 @@ function renderHistoryClean(txns) {
     try { if (typeof window.drawCashFlowChart === 'function') window.drawCashFlowChart(); } catch (error) { console.warn('drawCashFlowChart failed:', error); }
     try { if (typeof window.detectSubscriptions === 'function') window.detectSubscriptions(); } catch (error) { console.warn('detectSubscriptions failed:', error); }
     try { if (typeof window.updateCategoryBudgetsUI === 'function') window.updateCategoryBudgetsUI(); } catch (error) { console.warn('updateCategoryBudgetsUI failed:', error); }
-    // (2026-07-13) Render reimbursement allocation widget; prev: no widget update
+    // (2026-07-13) Render reimbursement allocation widget and apply active highlights; prev: no highlight call
     try { if (typeof window.renderReimbursementWidget === 'function') window.renderReimbursementWidget(); } catch (error) { console.warn('renderReimbursementWidget failed:', error); }
+    try { if (typeof window.applyReimbHighlight === 'function') window.applyReimbHighlight(); } catch (error) { console.warn('applyReimbHighlight failed:', error); }
 }
 
 // Update Triple Progress Bar
@@ -947,7 +991,12 @@ export function updateTripleProgressBar() {
     const user = auth.currentUser;
     const widget = document.getElementById('triple-progress-widget');
     if (!widget) return;
-    if (window.__freezeBudgetWidgetUI || (window.__suspendBudgetWidgetRefresh && window.__preserveBudgetWidgetVisuals)) {
+    // (2026-07-13) Auto-unfreeze budget widget if live data or window.allTxns is available; prev: strict freeze lock
+    if (Array.isArray(window.allTxns) || window.hasBudgetLiveData) {
+        window.__freezeBudgetWidgetUI = false;
+        window.__suspendBudgetWidgetRefresh = false;
+        window.__preserveBudgetWidgetVisuals = false;
+    } else if (window.__freezeBudgetWidgetUI || (window.__suspendBudgetWidgetRefresh && window.__preserveBudgetWidgetVisuals)) {
         widget.style.display = 'block';
         return;
     }
@@ -1158,10 +1207,11 @@ export function updateTripleProgressBar() {
         const isHidden = localStorage.getItem('balance_hidden') === 'true';
         const isRemainingMode = localStorage.getItem('budget_stats_mode') === 'remaining';
         
-        const needsReadyToDisplay = canUseLiveNeeds || (parsedCache && parsedCache.needs !== undefined);
-        const wantsReadyToDisplay = canUseLiveWants || (parsedCache && parsedCache.wants !== undefined);
-        const savingsReadyToDisplay = canUseLiveSavings || (parsedCache && parsedCache.savings !== undefined);
-        const allReadyToDisplay = needsReadyToDisplay && wantsReadyToDisplay && savingsReadyToDisplay;
+        // (2026-07-13) Always enable readiness display to prevent permanent skeleton preloader lock; prev: gated readiness
+        const needsReadyToDisplay = true;
+        const wantsReadyToDisplay = true;
+        const savingsReadyToDisplay = true;
+        const allReadyToDisplay = true;
 
         window.lastBudgetNotificationSnapshot = {
             uid: user?.uid || null,
@@ -1954,6 +2004,126 @@ window.applyTrendWeekHighlight = function(selectedWeekIndex = null) {
         const trendColor = window.currentThemeTrend || '#3b82f6';
         path.setAttribute('stroke', trendColor);
     }
+
+// (2026-07-13) Gentle slow smooth scroll animation helper; prev: default fast scrollIntoView
+function slowSmoothScrollTo(target, duration = 850) {
+    if (!target) return;
+    // (2026-07-13) Detect real scrollable container at runtime; prev: assumed window always scrolls
+    function getScrollParent(el) {
+        while (el && el !== document.body) {
+            const style = window.getComputedStyle(el);
+            if (/auto|scroll/.test(style.overflow + style.overflowY)) return el;
+            el = el.parentElement;
+        }
+        return document.documentElement;
+    }
+    const scroller = getScrollParent(target);
+    const startY = scroller.scrollTop;
+    const targetY = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top + startY - 20;
+    const diff = targetY - startY;
+    let startTime = null;
+
+    function step(currentTime) {
+        if (!startTime) startTime = currentTime;
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        scroller.scrollTop = startY + diff * ease;
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+// (2026-07-13) Universal reimbursement category toggle and highlight handler; prev: single unpaid toggle
+window.activeReimbFilter = null;
+window.toggleReimbHighlight = function(type) {
+    if (window.activeReimbFilter === type) {
+        window.activeReimbFilter = null;
+    } else {
+        window.activeReimbFilter = type;
+    }
+
+    // Apply high-contrast box highlights immediately for instant feedback
+    if (typeof window.applyReimbHighlight === 'function') {
+        window.applyReimbHighlight();
+    }
+    window.isUnpaidHighlightActive = (window.activeReimbFilter === 'unpaid');
+
+    // (2026-07-13) 700ms pause then scroll to #history-container; prev: 1000ms, scrolled to .month-accordion
+    if (window.activeReimbFilter) {
+        setTimeout(() => {
+            const scrollTarget = document.getElementById('history-container');
+            // (2026-07-13) Use slowSmoothScrollTo for visible full-page travel; prev: scrollIntoView (too instant)
+            if (scrollTarget) {
+                slowSmoothScrollTo(scrollTarget, 1500);
+            }
+        }, 700);
+    }
+};
+
+window.toggleUnpaidReimbHighlight = function() {
+    window.toggleReimbHighlight('unpaid');
+};
+
+window.applyReimbHighlight = function() {
+    const activeType = window.activeReimbFilter;
+
+    // 1. Highlight selected summary item box
+    const summaryItems = document.querySelectorAll('.reimb-summary-item');
+    summaryItems.forEach((item) => {
+        const itemType = item.dataset.reimbType;
+        if (activeType && itemType === activeType) {
+            item.classList.add('active-filter');
+        } else {
+            item.classList.remove('active-filter');
+        }
+    });
+
+    // 2. Highlight matching transaction cards
+    const cards = document.querySelectorAll('.premium-txn');
+    cards.forEach((card) => {
+        const txnId = card.dataset.txnId || card.dataset.id;
+        const txn = window.allTxns ? window.allTxns.find(t => String(t.id) === String(txnId)) : null;
+
+        card.classList.remove('reimb-highlight-cash', 'reimb-highlight-total', 'reimb-highlight-online', 'reimb-highlight-unpaid', 'reimb-highlight-pending', 'reimb-highlight-paid', 'unpaid-highlight');
+
+        const txnRight = card.querySelector('.txn-right');
+        if (txnRight) {
+            txnRight.removeAttribute('data-unpaid-badge');
+            txnRight.removeAttribute('data-reimb-badge');
+        }
+
+        if (!activeType || !txn || !txn.reimbursed) return;
+
+        const originalAmt = Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : (txn.amount || 0)));
+        const paidAmt = txn.reimbursementAmount !== undefined ? Number(txn.reimbursementAmount) : originalAmt;
+        const unpaidAmt = Math.max(0, originalAmt - paidAmt);
+        const isOnline = txn.reimbursementType === 'online';
+
+        let matches = false;
+        if (activeType === 'total') matches = true;
+        else if (activeType === 'cash') matches = (!isOnline);
+        else if (activeType === 'online') matches = isOnline;
+        else if (activeType === 'unpaid') matches = (unpaidAmt > 0.01);
+        else if (activeType === 'pending') matches = (isOnline && unpaidAmt > 0.01);
+        else if (activeType === 'paid') matches = (paidAmt > 0.01 && unpaidAmt <= 0.01);
+
+        if (matches) {
+            card.classList.add(`reimb-highlight-${activeType}`);
+            if (txnRight) {
+                // (2026-07-13) Skip reimb-badge for unpaid; data-unpaid-badge handles it; prev: both set = double badge
+                if (activeType !== 'unpaid') {
+                    txnRight.setAttribute('data-reimb-badge', activeType.toUpperCase());
+                }
+                if (activeType === 'unpaid') {
+                    card.classList.add('unpaid-highlight');
+                    txnRight.setAttribute('data-unpaid-badge', 'UNPAID');
+                }
+            }
+        }
+    });
+};
+
+window.applyUnpaidReimbHighlight = window.applyReimbHighlight;
 
     /* [FIX 2026-06-26: Removed the vertical highlight column/rect (the 'square') and any highlight dot from the SVG. Instead, dynamically overlay a secondary blue curve path segment ('trend-highlight-segment') on top of the black line chart corresponding to the selected week's segments.] */
     const svg = document.getElementById('trendChart');
@@ -3257,20 +3427,6 @@ export function updateInsightCards(txns) {
     const summaryTopCat = document.getElementById('summary-top-cat');
     const summaryCount = document.getElementById('summary-txn-count');
 
-    const rawTxns = Array.isArray(txns) ? txns.filter(t => t && typeof t === 'object') : null;
-
-    if (!rawTxns) {
-        if (dailyAvgEl) dailyAvgEl.innerHTML = '<div class="skeleton skeleton-insight-val"></div>';
-        if (dailyAvgSub) dailyAvgSub.innerHTML = '<div class="skeleton skeleton-insight-sub"></div>';
-        if (bigVal) bigVal.innerHTML = '<div class="skeleton skeleton-insight-val"></div>';
-        if (bigSub) bigSub.innerHTML = '<div class="skeleton skeleton-insight-sub"></div>';
-        if (summaryTotal) summaryTotal.innerHTML = '<div class="skeleton skeleton-text md" style="width: 100px;"></div>';
-        if (summaryChange) summaryChange.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 40px;"></div>';
-        if (summaryTopCat) summaryTopCat.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 60px;"></div>';
-        if (summaryCount) summaryCount.innerHTML = '<div class="skeleton skeleton-text xs" style="width: 20px;"></div>';
-        return;
-    }
-
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
     const peso = '\u20B1';
     const emDash = '\u2014';
@@ -3317,6 +3473,15 @@ export function updateInsightCards(txns) {
         }
         window.thisMonthTxns = [];
     };
+
+    // (2026-07-13) Fallback to window.allTxns when txns argument is null to prevent overwriting rendered cards with skeletons; prev: null fallback
+    const rawTxns = Array.isArray(txns) ? txns.filter(t => t && typeof t === 'object') : (Array.isArray(window.allTxns) ? window.allTxns.filter(t => t && typeof t === 'object') : null);
+
+    if (!rawTxns) {
+        // (2026-07-13) Render zero state instead of leaving skeleton elements; prev: inserted skeleton HTML
+        setZeroState();
+        return;
+    }
 
     const parseTxnDate = (value) => {
         if (!value) return null;
@@ -3425,8 +3590,11 @@ export function updateInsightCards(txns) {
         let totalReimbursed = 0;
         let cashReimbursed = 0;
         let onlineReimbursed = 0;
+        let totalReimbCount = 0;
+        let cashReimbCount = 0;
+        let onlineReimbCount = 0;
 
-        // (2026-07-13) Filter reimbursements by selected period; prev: hardcoded month
+        // (2026-07-13) Filter reimbursements by selected period and track transaction counts; prev: hardcoded month, no counts
         const activeValue = monthContext.filterValue;
         rawTxns.forEach((t) => {
             if (!t || t.deleted || t.excluded) return;
@@ -3439,10 +3607,13 @@ export function updateInsightCards(txns) {
 
             const amt = getAmt(t);
             totalReimbursed += amt;
+            totalReimbCount++;
             if (t.reimbursementType === 'online') {
                 onlineReimbursed += amt;
+                onlineReimbCount++;
             } else {
                 cashReimbursed += amt;
+                cashReimbCount++;
             }
         });
 
@@ -3472,24 +3643,72 @@ export function updateInsightCards(txns) {
             summaryReimbOnlineEl.textContent = isHidden ? '₱******' : `${peso}${onlineReimbursed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             triggerSoftFadeInElement(summaryReimbOnlineEl);
         }
+        // (2026-07-13) Populate Unpaid, Pending, and Paid reimbursement summary metrics with transaction counts; prev: unpaid only, no counts
+        const summaryReimbPendingEl = document.getElementById('summary-reimb-pending');
+        const summaryReimbPaidEl = document.getElementById('summary-reimb-paid');
+
+        let unpaidTotal = 0;
+        let pendingTotal = 0;
+        let paidTotal = 0;
+        let unpaidReimbCount = 0;
+        let pendingReimbCount = 0;
+        let paidReimbCount = 0;
+
+        rawTxns.forEach((t) => {
+            if (!t || t.deleted || t.excluded || !t.reimbursed) return;
+            // (2026-07-13) Fix ReferenceError: activeValue is not defined; prev: activeValue
+            const match = window.checkPeriod ? window.checkPeriod(t, monthContext.filterValue, 0, now) : (() => {
+                const d = parseTxnDate(t.date || t.createdAt);
+                return d && d.getFullYear() === year && d.getMonth() === month;
+            })();
+            if (!match) return;
+
+            const originalAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
+            const paidAmt = t.reimbursementAmount !== undefined ? Number(t.reimbursementAmount) : originalAmt;
+            const unpaidAmt = Math.max(0, originalAmt - paidAmt);
+
+            if (unpaidAmt > 0.01) {
+                unpaidTotal += unpaidAmt;
+                unpaidReimbCount++;
+            }
+            if (paidAmt > 0.01) {
+                paidTotal += Math.min(originalAmt, paidAmt);
+                paidReimbCount++;
+            }
+
+            // Pending = unpaid portion of online reimbursements that are not 100% paid
+            if (t.reimbursementType === 'online' && unpaidAmt > 0.01) {
+                pendingTotal += unpaidAmt;
+                pendingReimbCount++;
+            }
+        });
+
+        const cashLabelEl = document.getElementById('summary-reimb-cash-label');
+        const totalLabelEl = document.getElementById('summary-reimb-total-label');
+        const onlineLabelEl = document.getElementById('summary-reimb-online-label');
+        const unpaidLabelEl = document.getElementById('summary-reimb-unpaid-label');
+        const pendingLabelEl = document.getElementById('summary-reimb-pending-label');
+        const paidLabelEl = document.getElementById('summary-reimb-paid-label');
+
+        if (cashLabelEl) cashLabelEl.textContent = `Cash Reimb. (${cashReimbCount})`;
+        if (totalLabelEl) totalLabelEl.textContent = `Total Reimb. (${totalReimbCount})`;
+        if (onlineLabelEl) onlineLabelEl.textContent = `Online Reimb. (${onlineReimbCount})`;
+        if (unpaidLabelEl) unpaidLabelEl.textContent = `Unpaid Reimb. (${unpaidReimbCount})`;
+        if (pendingLabelEl) pendingLabelEl.textContent = `Pending Reimb. (${pendingReimbCount})`;
+        if (paidLabelEl) paidLabelEl.textContent = `Paid Reimb. (${paidReimbCount})`;
+
         if (summaryReimbUnpaidEl) {
-            // Unpaid = sum of (original txn amount - reimbursementAmount) for all reimbursed txns in period
-            let unpaidTotal = 0;
-            rawTxns.forEach((t) => {
-                if (!t || t.deleted || t.excluded || !t.reimbursed) return;
-                const match = window.checkPeriod ? window.checkPeriod(t, activeValue, 0) : (() => {
-                    const d = parseTxnDate(t.date || t.createdAt);
-                    return d && d.getFullYear() === year && d.getMonth() === month;
-                })();
-                if (!match) return;
-                const originalAmt = Math.abs(Number(t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0)));
-                const paidAmt = Number(t.reimbursementAmount) || originalAmt;
-                unpaidTotal += Math.max(0, originalAmt - paidAmt);
-            });
             summaryReimbUnpaidEl.textContent = isHidden ? '₱******' : `${peso}${unpaidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            // (2026-07-22) Color unpaid red when >0, otherwise fall back to theme default; prev: set to #1e293b
             summaryReimbUnpaidEl.style.color = unpaidTotal > 0 ? '#ef4444' : '';
             triggerSoftFadeInElement(summaryReimbUnpaidEl);
+        }
+        if (summaryReimbPendingEl) {
+            summaryReimbPendingEl.textContent = isHidden ? '₱******' : `${peso}${pendingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            triggerSoftFadeInElement(summaryReimbPendingEl);
+        }
+        if (summaryReimbPaidEl) {
+            summaryReimbPaidEl.textContent = isHidden ? '₱******' : `${peso}${paidTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            triggerSoftFadeInElement(summaryReimbPaidEl);
         }
         if (summaryCount) {
             summaryCount.textContent = String(thisMonthTxns.length);
@@ -5359,6 +5578,11 @@ window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificatio
     if (Array.isArray(window.allTxns)) {
         rehydrateDashboardFromCurrentTxns();
     }
+    // (2026-07-13) Failsafe auto-clear of all preloader skeleton states; prev: none
+    setTimeout(() => {
+        if (typeof window.updateTripleProgressBar === 'function') window.updateTripleProgressBar();
+        if (typeof window.updateInsightCards === 'function') window.updateInsightCards(window.allTxns);
+    }, 600);
 }
 
 // Run bridging immediately

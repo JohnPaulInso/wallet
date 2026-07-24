@@ -677,7 +677,8 @@ const NavState = {
     },
 
     prepareSPATabRefreshState(index) {
-        if (index === 0 || index === 1) {
+        // (2026-07-13) Only trigger skeleton state if window.allTxns is not already loaded; prev: always triggered
+        if ((index === 0 || index === 1) && !Array.isArray(window.allTxns)) {
             const spinner = document.getElementById('loading-spinner');
             if (spinner) spinner.style.display = 'block';
 

@@ -501,7 +501,8 @@ const NavState = {
             this.spaAnimationFrame = window.requestAnimationFrame(animateStep);
         };
 
-        const playDirectionalTabTransition = (targetIndex, directionClass) => {
+        // (2026-07-30) Exposed on window; prev: block-scoped const, inaccessible from sibling method
+        const playDirectionalTabTransition = window.playDirectionalTabTransition = (targetIndex, directionClass) => {
             const views = document.querySelectorAll('.view-section');
             const targetView = views[targetIndex];
             if (!targetView || !directionClass) return;

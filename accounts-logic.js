@@ -452,22 +452,27 @@
 
                 if (historyListEl) {
                     filteredTxns.sort((a, b) => (b.parsedDate ? b.parsedDate.getTime() : 0) - (a.parsedDate ? a.parsedDate.getTime() : 0));
-                    const max10 = filteredTxns.slice(0, 10);
-                    if (historyCountEl) historyCountEl.innerText = `${max10.length} logs`;
+                    
 
-                    if (max10.length === 0) {
+                    const totalCount = filteredTxns.length;
+                    if (historyCountEl) historyCountEl.innerText = `${totalCount} logs`;
+
+                    if (totalCount === 0) {
                         historyListEl.innerHTML = `<div class="fuel-tank-empty-state">No fuel logs recorded for this month</div>`;
                     } else {
-                        historyListEl.innerHTML = max10.map(t => {
+                        // (2026-07-30) Show all items; prev: sliced to currentLimit with load-more
+                        let logsHTML = filteredTxns.map(t => {
                             const nameStr = (t.displayName || t.name || t.merchant || 'Vehicle Fuel').toUpperCase();
                             const noteStr = t.note || (t.computedAmt > 250 ? 'Car Refill' : 'Motor Refill');
                             const dateStr = t.parsedDate ? `${t.parsedDate.toLocaleString('default', { month: 'short' })} ${t.parsedDate.getDate()}` : '';
                             
                             let fuelBadgeHTML = '';
-                            const ppl = parseFloat(t.pricePerLiter);
-                            if (!isNaN(ppl) && ppl > 0) {
-                                const liters = (t.computedAmt / ppl).toFixed(1);
-                                fuelBadgeHTML = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl.toFixed(1)}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                            if (t.pricePerLiter) {
+                                const ppl = parseFloat(t.pricePerLiter);
+                                if (!isNaN(ppl) && ppl > 0 && Math.abs(Number(t.computedAmt)) > 0) {
+                                    const liters = (Math.abs(Number(t.computedAmt)) / ppl).toFixed(1);
+                                    fuelBadgeHTML = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl.toFixed(1)}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                }
                             }
 
                             let logoSrc = t.logoUrl || t.brandLogo || null;
@@ -481,32 +486,35 @@
                             }
 
                             const brandBadgeHTML = logoSrc ? `<div class="brand-badge"><img src="${logoSrc}" alt="brand"></div>` : '';
-
-                            return `
-                                <div class="premium-txn">
-                                    <div class="icon-box cat-vehicle">
+                            // (2026-07-30) Wrap in padded row container for vertical spacing; prev: bare premium-txn, no gap
+                             return `
+                                <div style="padding: 2px 0; border-bottom: 1px solid #f1f5f9;">
+                                <div class="premium-txn" style="display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box;">
+                                    <div class="icon-box cat-vehicle" style="flex-shrink: 0;">
                                         <i class="material-icons">local_gas_station</i>
                                         ${brandBadgeHTML}
                                     </div>
-                                    <div class="txn-details">
-                                        <div class="txn-merch">${nameStr}</div>
-                                        <div class="txn-sub">
+                                    <div class="txn-details" style="flex: 1; min-width: 0; padding-right: 8px;">
+                                        <div class="fuel-txn-merch" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; font-size: 12px; color: #1e293b;">${nameStr}</div>
+                                        <div class="fuel-txn-meta" style="font-size: 8.5px; color: #64748b; font-weight: 700; white-space: nowrap;">
                                             <span>${dateStr}</span> &nbsp;&bull;&nbsp; <span>Vehicle</span>
                                             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3b82f6;margin-left:6px;vertical-align:middle;"></span>
                                         </div>
-                                        <div class="txn-note" style="color: #7c3aed; font-size: 10px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;">
-                                            <span style="${fuelBadgeHTML ? 'max-width: 65px; flex-shrink: 0;' : 'max-width: 175px; flex-shrink: 1;'} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${noteStr}</span>
+                                        <div class="fuel-txn-note" style="color: #7c3aed; font-size: 8.5px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px; overflow: hidden;">
+                                            <span style="${fuelBadgeHTML ? 'max-width: 60px; flex-shrink: 0;' : 'max-width: 140px; flex-shrink: 1;'} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${noteStr}</span>
                                             ${fuelBadgeHTML}
                                         </div>
                                     </div>
-                                    <div class="txn-right">
-                                        <div class="txn-amount privacy-mask" style="color: #ef4444;">
+                                    <div class="txn-right" style="flex-shrink: 0; text-align: right; margin-left: 4px;">
+                                        <div class="fuel-txn-amount privacy-mask" style="color: #1e293b; font-weight: 800; font-size: 11px; white-space: nowrap;">
                                             ₱${t.computedAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </div>
                                     </div>
                                 </div>
+                                </div>
                             `;
                         }).join('');
+                        historyListEl.innerHTML = logsHTML;
                     }
                 }
             } catch (err) {

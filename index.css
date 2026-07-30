@@ -5736,30 +5736,31 @@ body.dark-mode #donut-center-info {
     display: flex;
     flex-direction: column;
     gap: 0;
-    max-height: 480px;
-    overflow-y: auto;
+    /* (2026-07-30) Removed max-height/overflow-y; prev: 480px scroll container */
 }
 .fuel-tank-history-list .premium-txn {
-    padding: 10px 2px;
+    /* (2026-07-30) Reduced padding; prev: 10px 2px */
+    padding: 4px 2px;
     border-bottom: 1px solid #f1f5f9;
 }
 .fuel-tank-history-list .premium-txn:last-child {
     border-bottom: none;
 }
-.fuel-tank-history-list .txn-merch {
-    font-size: 11.5px;
+/* (2026-07-30) Renamed txn-* → fuel-txn-* for fuel card isolation; prev: shared txn-merch/sub/note/amount */
+.fuel-tank-history-list .fuel-txn-merch {
+    font-size: 12px;
     font-weight: 800;
 }
-.fuel-tank-history-list .txn-sub {
-    font-size: 8px;
+.fuel-tank-history-list .fuel-txn-meta {
+    font-size: 8.5px;
     font-weight: 700;
 }
-.fuel-tank-history-list .txn-note {
-    font-size: 10px;
+.fuel-tank-history-list .fuel-txn-note {
+    font-size: 8.5px;
     font-weight: 700;
 }
-.fuel-tank-history-list .txn-amount {
-    font-size: 12.5px;
+.fuel-tank-history-list .fuel-txn-amount {
+    font-size: 11px;
     font-weight: 800;
 }
 .fuel-tank-empty-state {

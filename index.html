@@ -1721,7 +1721,7 @@
                         <!-- Fuel Expense History Section -->
                         <div class="fuel-tank-history-section" style="margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
                             <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                <span>Recent Fuel History (Max 10)</span>
+                                <span>Recent Fuel History</span>
                                 <span id="fuel-tank-history-count" style="font-size: 9px; color: #94a3b8; font-weight: 600;">0 logs</span>
                             </div>
                             <div id="fuel-tank-history-list" class="fuel-tank-history-list"></div>
@@ -5965,13 +5965,13 @@
                                 <div class="line-clamp-3" style="font-size: ${fontSize}; font-weight: 800; color: #1e293b; margin-bottom: 1px; letter-spacing: 0.2px; text-transform: uppercase; line-height: 1.3;">${display.name}</div> <!-- updated 2026-03-31 - enabled 3-line clamping - 2026-03-31 -->
                                 <!-- (2026-07-13) Simplify cash log subtext; prev: full category/account -->
                                 <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${isEditable ? `${dateStr} \u2022 CASH LOG` : `${dateStr} \u2022 ${display.category} \u2022 ${accountLabel}`}</div>
-                                <!-- (2026-07-30) Render compact text-only rectangular fuel chip badge with note truncation; prev: untruncated note -->
+                                <!-- (2026-07-30) Render fuel chip badge ONLY when pricePerLiter is manually inputted; prev: 84.7 fallback -->
                                 ${(() => {
                                     let fuelChip = '';
-                                    if (t.pricePerLiter && displayAmt > 0) {
-                                        const ppl = parseFloat(t.pricePerLiter).toFixed(1);
-                                        const liters = (Math.abs(displayAmt) / t.pricePerLiter).toFixed(1);
-                                        fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                    const ppl = t.pricePerLiter ? parseFloat(t.pricePerLiter) : 0;
+                                    if (ppl > 0 && Math.abs(Number(displayAmt)) > 0) {
+                                        const liters = (Math.abs(Number(displayAmt)) / ppl).toFixed(1);
+                                        fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl.toFixed(1)}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
                                     }
                                     const noteWidthStyle = fuelChip ? 'max-width: 60px; flex-shrink: 0;' : 'max-width: 165px; flex-shrink: 1;';
                                     return (displayNote || fuelChip) ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="${noteWidthStyle} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${displayNote}</span>${fuelChip}</div>` : '';
@@ -9244,13 +9244,13 @@ Be direct, practical, and helpful.`;
                                         <!-- [FIX 2026-06-26: Bullet spacing fix - replaced raw \u2022 text with HTML &nbsp;&bull;&nbsp; for clean visual spacing] -->
                                         <span>${shortDate}</span>  &nbsp;&bull;&nbsp;  <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                                     </div>
-                                    <!-- (2026-07-30) Dynamic max-width: 175px for non-vehicle notes, 65px when fuel chip is present; prev: fixed 65px -->
+                                    <!-- (2026-07-30) Render fuel chip badge ONLY when pricePerLiter is manually inputted; prev: 84.7 fallback -->
                                     ${(() => {
                                         let fuelChip = '';
-                                        if (t.pricePerLiter && amount > 0) {
-                                            const ppl = parseFloat(t.pricePerLiter).toFixed(1);
-                                            const liters = (Math.abs(amount) / t.pricePerLiter).toFixed(1);
-                                            fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                        const ppl = t.pricePerLiter ? parseFloat(t.pricePerLiter) : 0;
+                                        if (ppl > 0 && Math.abs(Number(amount)) > 0) {
+                                            const liters = (Math.abs(Number(amount)) / ppl).toFixed(1);
+                                            fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl.toFixed(1)}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
                                         }
                                         const noteColor = (mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'));
                                         const noteWidthStyle = fuelChip ? 'max-width: 65px; flex-shrink: 0;' : 'max-width: 175px; flex-shrink: 1;';
@@ -13484,10 +13484,10 @@ Be direct, practical, and helpful.`;
                         setManualClassification(loadedBudgetCat);
                     }
 
-                    // (2026-07-30) Pre-populate fuel price field and toggle fuel row for Vehicle category; prev: cat reference error
+                    // (2026-07-30) Populate fuel price field strictly from txn.pricePerLiter without fake fallbacks; prev: 84.7 fallback
                     const fuelRow = document.getElementById('fuel-price-row');
                     const fuelInput = document.getElementById('fuel-price-per-liter');
-                    const isVehicleCategory = (selectedManualCatId === 'Vehicle');
+                    const isVehicleCategory = (selectedManualCatId === 'Vehicle' || selectedManualCatId === 'vehicle' || (txn && (txn.category === 'Vehicle' || txn.category === 'vehicle')));
                     if (fuelRow) fuelRow.style.display = isVehicleCategory ? 'flex' : 'none';
                     if (fuelInput) fuelInput.value = (txn && txn.pricePerLiter) ? txn.pricePerLiter : '';
                     if (window.updateFuelComputed) window.updateFuelComputed();
@@ -14085,7 +14085,8 @@ Be direct, practical, and helpful.`;
                         }
 
                         const fuelPplVal = parseFloat(document.getElementById('fuel-price-per-liter')?.value);
-                        const pricePerLiter = (selectedManualCatId === 'Vehicle' && !isNaN(fuelPplVal) && fuelPplVal > 0) ? fuelPplVal : null;
+                        // (2026-07-30) Save pricePerLiter strictly from user input without fake default fallbacks; prev: 84.7 fallback
+                        const pricePerLiter = (!isNaN(fuelPplVal) && fuelPplVal > 0) ? fuelPplVal : (window.editingTxnId && window.allTxns?.find(x => x.id === window.editingTxnId)?.pricePerLiter || null);
 
                         const updateData = {
                             date: formatLocalDate(dateObj),
@@ -16082,8 +16083,9 @@ Be direct, practical, and helpful.`;
                                 <div style="flex: 1;">
                                     <div
                                         style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Price Per Liter (₱/L)</div>
+                                    <!-- (2026-07-30) Fuel price input placeholder updated to e.g. 85.00; prev: 84.70 -->
                                     <input type="number" id="fuel-price-per-liter" step="0.01" min="0"
-                                        placeholder="e.g. 84.70"
+                                        placeholder="e.g. 85.00"
                                         oninput="window.updateFuelComputed && window.updateFuelComputed()"
                                         style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                                 </div>

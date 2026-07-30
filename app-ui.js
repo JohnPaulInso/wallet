@@ -685,7 +685,19 @@ export function renderHistory(txns) {
                             <div class="txn-sub">
                                 <span>${shortDate}</span> • <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                             </div>
-                            ${displayNote ? `<div class="txn-note" style="color: ${getTxnNoteColor(mapped.category, isRefund, isReimbursed)}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                            <!-- (2026-07-30) Only render fuel chip badge when pricePerLiter is explicitly defined; prev: 84.7 fallback -->
+                            ${(() => {
+                                let fuelChip = '';
+                                const pplVal = parseFloat(t.pricePerLiter);
+                                if (!isNaN(pplVal) && pplVal > 0 && Math.abs(Number(amount)) > 0) {
+                                    const ppl = pplVal.toFixed(1);
+                                    const liters = (Math.abs(Number(amount)) / pplVal).toFixed(1);
+                                    fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                }
+                                const noteColor = getTxnNoteColor(mapped.category, isRefund, isReimbursed);
+                                const noteWidthStyle = fuelChip ? 'max-width: 65px; flex-shrink: 0;' : 'max-width: 175px; flex-shrink: 1;';
+                                return (displayNote || fuelChip) ? `<div class="txn-note" style="color: ${noteColor}; font-size: 11px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="${noteWidthStyle} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${displayNote}</span>${fuelChip}</div>` : '';
+                            })()}
                         </div>
                         <div class="txn-right">
                             <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}₱${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits:2})}">
@@ -906,7 +918,19 @@ function renderHistoryClean(txns) {
                             <div class="txn-sub">
                                 <span>${shortDate}</span> ${bullet} <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                             </div>
-                            ${displayNote ? `<div class="txn-note" style="color: ${getTxnNoteColor(mapped.category, isRefund, isReimbursed)}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                            <!-- (2026-07-30) Render fuel chip badge strictly when pricePerLiter is manually inputted; prev: 84.7 fallback -->
+                            ${(() => {
+                                let fuelChip = '';
+                                const ppl = t.pricePerLiter ? parseFloat(t.pricePerLiter) : 0;
+
+                                if (ppl > 0 && Math.abs(Number(amount)) > 0) {
+                                    const liters = (Math.abs(Number(amount)) / ppl).toFixed(1);
+                                    fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl.toFixed(1)}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                }
+                                const noteColor = getTxnNoteColor(mapped.category, isRefund, isReimbursed);
+                                const noteWidthStyle = fuelChip ? 'max-width: 65px; flex-shrink: 0;' : 'max-width: 175px; flex-shrink: 1;';
+                                return (displayNote || fuelChip) ? `<div class="txn-note" style="color: ${noteColor}; font-size: 11px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="${noteWidthStyle} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${displayNote}</span>${fuelChip}</div>` : '';
+                            })()}
                         </div>
                         <div class="txn-right">
                             <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${amountText}">

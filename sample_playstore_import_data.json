@@ -1,0 +1,911 @@
+[
+  {
+    "merchant": "TECFUEL SAN REMIGIO",
+    "amount": 2378.28,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-02T08:00:00.000Z",
+    "note": "Car Fuel Refill",
+    "account": "atome",
+    "pricePerLiter": 84.7,
+    "reimbursed": true,
+    "reimbursedAmount": 2378.28,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1005.55,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-05T09:17:00.000Z",
+    "note": "Kitchen & Home Items",
+    "account": "atome"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 390.4,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-08T10:34:00.000Z",
+    "note": "Skincare & Clothes",
+    "account": "atome"
+  },
+  {
+    "merchant": "SHELL BOGO CITY",
+    "amount": 1895.5,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-11T11:51:00.000Z",
+    "note": "Full Tank Refill",
+    "account": "atome",
+    "pricePerLiter": 79.5
+  },
+  {
+    "merchant": "LAZADA PHILIPPINES",
+    "amount": 1025.16,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-14T12:08:00.000Z",
+    "note": "Gadget Accessories",
+    "account": "atome"
+  },
+  {
+    "merchant": "UNIQLO SM CEBU",
+    "amount": 2150.46,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-17T13:25:00.000Z",
+    "note": "Work Polo Shirts",
+    "account": "atome"
+  },
+  {
+    "merchant": "JOLLIBEE BOGO",
+    "amount": 512.32,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-20T14:42:00.000Z",
+    "note": "Family Lunch Treat",
+    "account": "atome"
+  },
+  {
+    "merchant": "MCDONALDS",
+    "amount": 342.38,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-23T15:59:00.000Z",
+    "note": "Burgers & Drinks",
+    "account": "atome"
+  },
+  {
+    "merchant": "TECFUEL SAN REMIGIO",
+    "amount": 1889.25,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-02T08:00:00.000Z",
+    "note": "Car Fuel Refill",
+    "account": "atome",
+    "pricePerLiter": 84.7
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1167.67,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-05T09:17:00.000Z",
+    "note": "Kitchen & Home Items",
+    "account": "atome"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 1014.26,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-08T10:34:00.000Z",
+    "note": "Skincare & Clothes",
+    "account": "atome"
+  },
+  {
+    "merchant": "SHELL BOGO CITY",
+    "amount": 1952.98,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-11T11:51:00.000Z",
+    "note": "Full Tank Refill",
+    "account": "atome",
+    "pricePerLiter": 79.5
+  },
+  {
+    "merchant": "LAZADA PHILIPPINES",
+    "amount": 849.46,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-14T12:08:00.000Z",
+    "note": "Gadget Accessories",
+    "account": "atome"
+  },
+  {
+    "merchant": "UNIQLO SM CEBU",
+    "amount": 2422.13,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-17T13:25:00.000Z",
+    "note": "Work Polo Shirts",
+    "account": "atome"
+  },
+  {
+    "merchant": "JOLLIBEE BOGO",
+    "amount": 657.89,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-20T14:42:00.000Z",
+    "note": "Family Lunch Treat",
+    "account": "atome"
+  },
+  {
+    "merchant": "MCDONALDS",
+    "amount": 440.95,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-23T15:59:00.000Z",
+    "note": "Burgers & Drinks",
+    "account": "atome"
+  },
+  {
+    "merchant": "TECFUEL SAN REMIGIO",
+    "amount": 1983.58,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-02T08:00:00.000Z",
+    "note": "Car Fuel Refill",
+    "account": "atome",
+    "pricePerLiter": 84.7,
+    "reimbursed": true,
+    "reimbursedAmount": 1983.58,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1284.14,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-05T09:17:00.000Z",
+    "note": "Kitchen & Home Items",
+    "account": "atome"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 410.43,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-08T10:34:00.000Z",
+    "note": "Skincare & Clothes",
+    "account": "atome"
+  },
+  {
+    "merchant": "SHELL BOGO CITY",
+    "amount": 1592.9,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-11T11:51:00.000Z",
+    "note": "Full Tank Refill",
+    "account": "atome",
+    "pricePerLiter": 79.5
+  },
+  {
+    "merchant": "LAZADA PHILIPPINES",
+    "amount": 1053.04,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-14T12:08:00.000Z",
+    "note": "Gadget Accessories",
+    "account": "atome"
+  },
+  {
+    "merchant": "UNIQLO SM CEBU",
+    "amount": 3299.19,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-17T13:25:00.000Z",
+    "note": "Work Polo Shirts",
+    "account": "atome"
+  },
+  {
+    "merchant": "JOLLIBEE BOGO",
+    "amount": 684.72,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-20T14:42:00.000Z",
+    "note": "Family Lunch Treat",
+    "account": "atome"
+  },
+  {
+    "merchant": "MCDONALDS",
+    "amount": 483.72,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-23T15:59:00.000Z",
+    "note": "Burgers & Drinks",
+    "account": "atome"
+  },
+  {
+    "merchant": "TECFUEL SAN REMIGIO",
+    "amount": 2260.48,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-02T08:00:00.000Z",
+    "note": "Car Fuel Refill",
+    "account": "atome",
+    "pricePerLiter": 84.7
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 747.87,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-05T09:17:00.000Z",
+    "note": "Kitchen & Home Items",
+    "account": "atome"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 837.93,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-08T10:34:00.000Z",
+    "note": "Skincare & Clothes",
+    "account": "atome"
+  },
+  {
+    "merchant": "SHELL BOGO CITY",
+    "amount": 1835.77,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-11T11:51:00.000Z",
+    "note": "Full Tank Refill",
+    "account": "atome",
+    "pricePerLiter": 79.5
+  },
+  {
+    "merchant": "LAZADA PHILIPPINES",
+    "amount": 835.27,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-14T12:08:00.000Z",
+    "note": "Gadget Accessories",
+    "account": "atome"
+  },
+  {
+    "merchant": "UNIQLO SM CEBU",
+    "amount": 2252.66,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-17T13:25:00.000Z",
+    "note": "Work Polo Shirts",
+    "account": "atome"
+  },
+  {
+    "merchant": "JOLLIBEE BOGO",
+    "amount": 711.95,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-20T14:42:00.000Z",
+    "note": "Family Lunch Treat",
+    "account": "atome"
+  },
+  {
+    "merchant": "MCDONALDS",
+    "amount": 418.19,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-23T15:59:00.000Z",
+    "note": "Burgers & Drinks",
+    "account": "atome"
+  },
+  {
+    "merchant": "TECFUEL SAN REMIGIO",
+    "amount": 1828.23,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-02T08:00:00.000Z",
+    "note": "Car Fuel Refill",
+    "account": "atome",
+    "pricePerLiter": 84.7,
+    "reimbursed": true,
+    "reimbursedAmount": 1828.23,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 748.61,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-05T09:17:00.000Z",
+    "note": "Kitchen & Home Items",
+    "account": "atome"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 462.93,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-08T10:34:00.000Z",
+    "note": "Skincare & Clothes",
+    "account": "atome"
+  },
+  {
+    "merchant": "SHELL BOGO CITY",
+    "amount": 2052.69,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-11T11:51:00.000Z",
+    "note": "Full Tank Refill",
+    "account": "atome",
+    "pricePerLiter": 79.5
+  },
+  {
+    "merchant": "LAZADA PHILIPPINES",
+    "amount": 1003.57,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-14T12:08:00.000Z",
+    "note": "Gadget Accessories",
+    "account": "atome"
+  },
+  {
+    "merchant": "UNIQLO SM CEBU",
+    "amount": 2453.57,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-17T13:25:00.000Z",
+    "note": "Work Polo Shirts",
+    "account": "atome"
+  },
+  {
+    "merchant": "JOLLIBEE BOGO",
+    "amount": 472.68,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-20T14:42:00.000Z",
+    "note": "Family Lunch Treat",
+    "account": "atome"
+  },
+  {
+    "merchant": "MCDONALDS",
+    "amount": 466.49,
+    "type": "expense",
+    "category": "Food & Drinks",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-23T15:59:00.000Z",
+    "note": "Burgers & Drinks",
+    "account": "atome"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52831.44,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-03-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3777.85,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 3334.44,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1249.38,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2,
+    "reimbursed": true,
+    "reimbursedAmount": 1249.38,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 691.4,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1828.05,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 6673.76,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 4672,
+      "wants": 2002
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-03-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52925.91,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-04-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3875.14,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 3542.63,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1435.75,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 488.27,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1235.6,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 5945.64,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 4162,
+      "wants": 1784
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-04-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 54727.09,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-05-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3629.9,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 4308.99,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1240.29,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2,
+    "reimbursed": true,
+    "reimbursedAmount": 1240.29,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 472.9,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1113.26,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 6756.36,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 4729,
+      "wants": 2027
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-05-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52881.15,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-06-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 2928.04,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 4505.65,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1395.28,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 586.56,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1355.66,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 4511.79,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 3158,
+      "wants": 1354
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-06-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52966.15,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-07-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3142.7,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 4187.8,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1401.06,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2,
+    "reimbursed": true,
+    "reimbursedAmount": 1401.06,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 790.99,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1779.43,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 5460.02,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 3822,
+      "wants": 1638
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-07-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  }
+]

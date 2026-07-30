@@ -5973,7 +5973,8 @@
                                         const liters = (Math.abs(displayAmt) / t.pricePerLiter).toFixed(1);
                                         fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
                                     }
-                                    return (displayNote || fuelChip) ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; flex-shrink: 0;">${displayNote}</span>${fuelChip}</div>` : '';
+                                    const noteWidthStyle = fuelChip ? 'max-width: 60px; flex-shrink: 0;' : 'max-width: 165px; flex-shrink: 1;';
+                                    return (displayNote || fuelChip) ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="${noteWidthStyle} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${displayNote}</span>${fuelChip}</div>` : '';
                                 })()}
                             </div>
                             <div style="text-align: right; display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0;"> <!-- updated 2026-03-28 - used margin-left, gap and flex-shrink to prevent overlapping - 2026-03-28 -->
@@ -7563,32 +7564,40 @@ Be direct, practical, and helpful.`;
                     showToast('Full JSON + CSV Export Downloaded');
                 };
 
+                // (2026-07-30) Enhanced importData supporting both raw JSON array and backup payload objects; prev: array only
                 window.importData = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = async (e) => {
                         try {
-                            const importedTxns = JSON.parse(e.target.result);
-                            if (!Array.isArray(importedTxns)) throw new Error('Invalid format');
+                            const rawData = JSON.parse(e.target.result);
+                            const importedTxns = Array.isArray(rawData) ? rawData : (rawData.transactions || []);
+                            if (!Array.isArray(importedTxns) || importedTxns.length === 0) {
+                                throw new Error('Invalid format or empty file');
+                            }
                             const confirmed = await showAppDialog({
                                 title: 'Import Data',
-                                message: `Import ${importedTxns.length} transactions? These will be merged with your current history.`,
+                                message: `Import ${importedTxns.length} sample transactions? These will be merged with your account history.`,
                                 confirm: true
                             });
                             if (!confirmed) return;
-                            showToast('Importing...');
-                            const uid = auth.currentUser.uid;
+                            showToast('Importing sample data...');
+                            const uid = auth?.currentUser?.uid || 'local_user';
                             const txnsCol = collection(db, `users/${uid}/transactions`);
+                            const activeAcc = window.currentAccount || 'atome';
                             for (const t of importedTxns) {
                                 const { id, ...cleanT } = t;
+                                cleanT.account = cleanT.account || activeAcc;
+                                cleanT.accId = cleanT.accId || cleanT.account;
                                 if (id) {
                                     await setDoc(doc(db, `users/${uid}/transactions`, id), cleanT, { merge: true });
                                 } else {
                                     await addDoc(txnsCol, { ...cleanT, createdAt: serverTimestamp() });
                                 }
                             }
-                            showToast('Import Complete');
+                            showToast('Import Complete! Refreshing UI...');
+                            if (window.loadData) window.loadData();
                             event.target.value = '';
                         } catch (err) {
                             showToast('Import failed: ' + err.message);
@@ -9235,7 +9244,7 @@ Be direct, practical, and helpful.`;
                                         <!-- [FIX 2026-06-26: Bullet spacing fix - replaced raw \u2022 text with HTML &nbsp;&bull;&nbsp; for clean visual spacing] -->
                                         <span>${shortDate}</span>  &nbsp;&bull;&nbsp;  <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                                     </div>
-                                    <!-- (2026-07-30) Note text max-width reduced to 65px with left fuel chip alignment; prev: calc flex-between -->
+                                    <!-- (2026-07-30) Dynamic max-width: 175px for non-vehicle notes, 65px when fuel chip is present; prev: fixed 65px -->
                                     ${(() => {
                                         let fuelChip = '';
                                         if (t.pricePerLiter && amount > 0) {
@@ -9244,7 +9253,8 @@ Be direct, practical, and helpful.`;
                                             fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
                                         }
                                         const noteColor = (mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'));
-                                        return (displayNote || fuelChip) ? `<div class="txn-note" style="color: ${noteColor}; font-size: 11px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; flex-shrink: 0;">${displayNote}</span>${fuelChip}</div>` : '';
+                                        const noteWidthStyle = fuelChip ? 'max-width: 65px; flex-shrink: 0;' : 'max-width: 175px; flex-shrink: 1;';
+                                        return (displayNote || fuelChip) ? `<div class="txn-note" style="color: ${noteColor}; font-size: 11px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="${noteWidthStyle} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${displayNote}</span>${fuelChip}</div>` : '';
                                     })()}
                                 </div>
                                 <div class="txn-right">
@@ -15600,12 +15610,11 @@ Be direct, practical, and helpful.`;
                 </div>
             </div>
 
-            <!-- (2026-07-13) Added reimbursement/refund type prompt modal; prev: none -->
-            <!-- Modal wrapper for selection -->
+            <!-- (2026-07-30) Flush bottom-sheet modal layout with zero bottom/left/right margins; prev: padded inset -->
             <div id="reimbursement-type-modal" class="modal-overlay"
-                style="align-items: flex-end; justify-content: center; backdrop-filter: blur(8px); background: rgba(15, 23, 42, 0.4); display: none; z-index: 100100;">
+                style="align-items: flex-end; justify-content: center; backdrop-filter: blur(8px); background: rgba(15, 23, 42, 0.4); display: none; z-index: 100100; padding: 0 !important;">
                 <!-- Container for type prompt -->
-                <div class="custom-modal" style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px 24px calc(env(safe-area-inset-bottom, 24px) + 24px); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); background: #ffffff;">
+                <div class="custom-modal" style="width: 100%; max-width: 100%; border-radius: 28px 28px 0 0 !important; padding: 24px 24px calc(env(safe-area-inset-bottom, 24px) + 24px); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); background: #ffffff; margin: 0 !important;">
                     <!-- Title label for prompt -->
                     <div style="font-weight: 800; font-size: 18px; color: #1e293b; margin-bottom: 8px;" id="reimbursement-prompt-title">Reimbursement Type</div>
                     <!-- Description text for prompt -->

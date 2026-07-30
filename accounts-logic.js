@@ -495,7 +495,7 @@
                                             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3b82f6;margin-left:6px;vertical-align:middle;"></span>
                                         </div>
                                         <div class="txn-note" style="color: #7c3aed; font-size: 10px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;">
-                                            <span style="max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; flex-shrink: 0;">${noteStr}</span>
+                                            <span style="${fuelBadgeHTML ? 'max-width: 65px; flex-shrink: 0;' : 'max-width: 175px; flex-shrink: 1;'} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${noteStr}</span>
                                             ${fuelBadgeHTML}
                                         </div>
                                     </div>

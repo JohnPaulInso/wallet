@@ -1,0 +1,489 @@
+[
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52831.44,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-03-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3777.85,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 3334.44,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1249.38,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2,
+    "reimbursed": true,
+    "reimbursedAmount": 1249.38,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 691.4,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1828.05,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-03-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 6673.76,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-03-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 4672,
+      "wants": 2002
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-03-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52925.91,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-04-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3875.14,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 3542.63,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1435.75,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 488.27,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1235.6,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-04-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 5945.64,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-04-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 4162,
+      "wants": 1784
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-04-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 54727.09,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-05-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3629.9,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 4308.99,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1240.29,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2,
+    "reimbursed": true,
+    "reimbursedAmount": 1240.29,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 472.9,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1113.26,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-05-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 6756.36,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-05-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 4729,
+      "wants": 2027
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-05-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52881.15,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-06-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 2928.04,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 4505.65,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1395.28,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 586.56,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1355.66,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-06-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 4511.79,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-06-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 3158,
+      "wants": 1354
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-06-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  },
+  {
+    "merchant": "TECH SALARY DIRECT DEPOSIT",
+    "amount": 52966.15,
+    "type": "income",
+    "category": "Income",
+    "manualBudgetCategory": "income",
+    "date": "2026-07-02T08:00:00.000Z",
+    "note": "Monthly Salary",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SM SUPERMARKET",
+    "amount": 3142.7,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-05T09:17:00.000Z",
+    "note": "Weekly Groceries",
+    "account": "bpi"
+  },
+  {
+    "merchant": "VECO ELECTRIC",
+    "amount": 4187.8,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-08T10:34:00.000Z",
+    "note": "Electricity Utility Bill",
+    "account": "bpi"
+  },
+  {
+    "merchant": "GLOBE TELECOM",
+    "amount": 1499,
+    "type": "expense",
+    "category": "Service",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-11T11:51:00.000Z",
+    "note": "Fiber Wifi Postpaid",
+    "account": "bpi"
+  },
+  {
+    "merchant": "PETRON DANAO",
+    "amount": 1401.06,
+    "type": "expense",
+    "category": "Vehicle",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-14T12:08:00.000Z",
+    "note": "Highway Gas Refill",
+    "account": "bpi",
+    "pricePerLiter": 81.2,
+    "reimbursed": true,
+    "reimbursedAmount": 1401.06,
+    "reimbursementStatus": "Approved",
+    "reimbursementReceiveMethod": "Online"
+  },
+  {
+    "merchant": "TIKTOK SHOP",
+    "amount": 790.99,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-17T13:25:00.000Z",
+    "note": "Trending Fashion Items",
+    "account": "bpi"
+  },
+  {
+    "merchant": "SHOPEE PHILIPPINES",
+    "amount": 1779.43,
+    "type": "expense",
+    "category": "Online shopping",
+    "manualBudgetCategory": "wants",
+    "date": "2026-07-20T14:42:00.000Z",
+    "note": "Daily Essentials & Tech",
+    "account": "bpi"
+  },
+  {
+    "merchant": "LANDERS SUPERSTORE",
+    "amount": 5460.02,
+    "type": "expense",
+    "category": "Shopping",
+    "manualBudgetCategory": "needs",
+    "date": "2026-07-23T15:59:00.000Z",
+    "note": "Bulk Groceries & Supplies",
+    "account": "bpi",
+    "splitDetails": {
+      "needs": 3822,
+      "wants": 1638
+    }
+  },
+  {
+    "merchant": "PAG-IBIG MP2 SAVINGS",
+    "amount": 5000,
+    "type": "expense",
+    "category": "Savings",
+    "manualBudgetCategory": "savings",
+    "date": "2026-07-26T16:16:00.000Z",
+    "note": "Monthly MP2 Savings",
+    "account": "bpi"
+  }
+]

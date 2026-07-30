@@ -1301,7 +1301,8 @@ export function updateTripleProgressBar() {
         const needsEl = document.getElementById('needs-stats');
         const needsPctEl = document.getElementById('needs-pct');
         if (needsEl) {
-            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
+            // (2026-07-30) Wait for atomic readiness (isAggregatedReady) before revealing stats; prev: hasLiveTxnSources
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
             
             if (shouldReveal) {
                 const needsHadSkeleton = needsEl.classList.contains('skeleton');
@@ -1338,10 +1339,12 @@ export function updateTripleProgressBar() {
         const needsBar = document.getElementById('needs-bar');
         if (needsBar) {
             const bg = needsBar.closest('.progress-bar-bg');
-            // Modified 2026-03-27: Bars only reveal when FULLY aggregated OR timeout fallback
-            const shouldReveal = hasLiveTxnSources || isTimeoutFallback;
+            // (2026-07-30) Bars only reveal when FULLY aggregated (isAggregatedReady) OR timeout fallback; prev: hasLiveTxnSources
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
 
             if (bg && shouldReveal && needsReadyToDisplay) {
+                // (2026-07-30) Remove shimmer on reveal; prev: no shimmer class
+                needsBar.classList.remove('progress-bar-fill--loading');
                 if (bg.classList.contains('skeleton')) {
                     bg.classList.remove('skeleton');
                     triggerFadeIn(bg);
@@ -1353,16 +1356,18 @@ export function updateTripleProgressBar() {
                     needsBar.style.width = `${needsPct}%`;
                 }
             } else if (!shouldReveal) {
-                // Keep in skeleton or reset to hidden while waiting
+                // (2026-07-30) Apply shimmer while loading; prev: just width 0%
                 if (bg) bg.classList.add('skeleton');
-                needsBar.style.width = '0%';
+                needsBar.classList.add('progress-bar-fill--loading');
+                needsBar.style.width = '';
             }
         }
 
         const wantsEl = document.getElementById('wants-stats');
         const wantsPctEl = document.getElementById('wants-pct');
         if (wantsEl) {
-            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay;
+            // (2026-07-30) Wait for atomic readiness (isAggregatedReady) before revealing stats; prev: hasLiveTxnSources
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay;
 
             if (shouldReveal) {
                 const wantsHadSkeleton = wantsEl.classList.contains('skeleton');
@@ -1399,9 +1404,12 @@ export function updateTripleProgressBar() {
         const wantsBar = document.getElementById('wants-bar');
         if (wantsBar) {
             const bg = wantsBar.closest('.progress-bar-bg');
-            const shouldReveal = hasLiveTxnSources || isTimeoutFallback;
+            // (2026-07-30) Bars only reveal when FULLY aggregated (isAggregatedReady) OR timeout fallback; prev: hasLiveTxnSources
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
 
             if (bg && shouldReveal && wantsReadyToDisplay) {
+                // (2026-07-30) Remove shimmer on reveal; prev: no shimmer class
+                wantsBar.classList.remove('progress-bar-fill--loading');
                 if (bg.classList.contains('skeleton')) {
                     bg.classList.remove('skeleton');
                     triggerFadeIn(bg);
@@ -1413,8 +1421,10 @@ export function updateTripleProgressBar() {
                     wantsBar.style.width = `${Math.min(wantsPct, 100)}%`;
                 }
             } else if (!shouldReveal) {
+                // (2026-07-30) Apply shimmer while loading; prev: just width 0%
                 if (bg) bg.classList.add('skeleton');
-                wantsBar.style.width = '0%';
+                wantsBar.classList.add('progress-bar-fill--loading');
+                wantsBar.style.width = '';
             }
             
     // Wants uses the updated gold tone as the base color
@@ -1434,7 +1444,8 @@ export function updateTripleProgressBar() {
         const wantsMsg = document.getElementById('wants-depleted-msg');
         if (wantsMsg) {
             // Modified 2026-03-27: Gate message with Unified Reveal (Atomic Readiness)
-            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay;
+            // (2026-07-30) Also gate behind isAggregatedReady to block false early notifications
+            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay && isAggregatedReady;
             if (shouldReveal) {
                 if (wantsPct >= 100) {
                     wantsMsg.style.display = 'flex';
@@ -1466,7 +1477,8 @@ export function updateTripleProgressBar() {
         const savingsEl = document.getElementById('savings-stats');
         const savingsPctEl = document.getElementById('savings-pct');
         if (savingsEl) {
-            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
+            // (2026-07-30) Wait for atomic readiness (isAggregatedReady) before revealing stats; prev: hasLiveTxnSources
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Unified Gate
             if (shouldReveal) {
                 const savingsHadSkeleton = savingsEl.classList.contains('skeleton');
                 savingsEl.classList.remove('skeleton');
@@ -1506,9 +1518,13 @@ export function updateTripleProgressBar() {
         const savingsBarSpent = document.getElementById('savings-bar-spent'); // Olive
         if (savingsBar) {
             const bg = savingsBar.closest('.progress-bar-bg');
-            const shouldReveal = hasLiveTxnSources || isTimeoutFallback;
+            // (2026-07-30) Bars only reveal when FULLY aggregated (isAggregatedReady) OR timeout fallback; prev: hasLiveTxnSources
+            const shouldReveal = isAggregatedReady || isTimeoutFallback;
 
             if (bg && shouldReveal && savingsReadyToDisplay) {
+                // (2026-07-30) Remove shimmer on reveal; prev: no shimmer class
+                savingsBar.classList.remove('progress-bar-fill--loading');
+                if (savingsBarSpent) savingsBarSpent.classList.remove('progress-bar-fill--loading');
                 if (bg.classList.contains('skeleton')) {
                     bg.classList.remove('skeleton');
                     triggerFadeIn(bg);
@@ -1529,8 +1545,10 @@ export function updateTripleProgressBar() {
                     savingsBar.style.width = `${savingsAccumPct}%`;
                 }
             } else if (!shouldReveal) {
+                // (2026-07-30) Apply shimmer while loading; prev: just width 0%
                 if (bg) bg.classList.add('skeleton');
-                savingsBar.style.width = '0%';
+                savingsBar.classList.add('progress-bar-fill--loading');
+                savingsBar.style.width = '';
                 if (savingsBarSpent) {
                     savingsBarSpent.style.width = '0%';
                 }
@@ -1581,7 +1599,8 @@ export function updateTripleProgressBar() {
         }
 
         if (remainingEl) {
-            const shouldReveal = (hasLiveTxnSources || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
+            // (2026-07-30) Wait for atomic readiness (isAggregatedReady) before revealing footer balance; prev: hasLiveTxnSources
+            const shouldReveal = (isAggregatedReady || isTimeoutFallback) && allReadyToDisplay; // Modified 2026-03-27: Combined Reveal Gate
             remainingEl.dataset.raw = remainingRaw;
             remainingEl.className = `triple-summary-value privacy-mask ${statusKey}`;
             remainingEl.style.display = '';
@@ -1594,6 +1613,11 @@ export function updateTripleProgressBar() {
                 remainingEl.classList.add('skeleton');
                 remainingEl.innerText = isHidden ? '******' : remainingRaw;
             }
+        }
+
+        // (2026-07-30) Trigger Fuel Tank card widget update in Accounts tab; prev: none
+        if (window.AccountsView && typeof window.AccountsView.updateFuelTankWidget === 'function') {
+            window.AccountsView.updateFuelTankWidget();
         }
 
         // --- Fix 2026-03-28: Donut Chart View Logic ---

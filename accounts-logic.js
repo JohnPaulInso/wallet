@@ -318,12 +318,199 @@
 
             if (this.initSortable) this.initSortable();
             if (this.renderPlaceholder) this.renderPlaceholder();
+            if (this.updateFuelTankWidget) this.updateFuelTankWidget();
 
             } catch (err) {
                 console.error('CRITICAL: AccountsView.render failed', err);
                 this.completeLoadingState();
                 const title = document.querySelector('#view-accounts h2');
                 if (title) title.innerHTML += ` <span style="color:red; font-size:10px;">(Render Error: ${err.message.substring(0,20)})</span>`;
+            }
+        },
+
+        // (2026-07-30) Populates and initializes month and year dropdowns for Fuel Tank card filter; prev: basic options check
+        setupFuelTankFilterDropdowns: function() {
+            const monthSelect = document.getElementById('fuel-tank-month-select');
+            const yearSelect = document.getElementById('fuel-tank-year-select');
+            if (!monthSelect || !yearSelect) return;
+
+            const now = new Date();
+            const currentMonthIdx = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            if (!monthSelect.dataset.initialized) {
+                monthSelect.value = String(currentMonthIdx);
+                monthSelect.dataset.initialized = 'true';
+            }
+            if (!yearSelect.dataset.initialized) {
+                let hasOpt = Array.from(yearSelect.options).some(o => parseInt(o.value, 10) === currentYear);
+                if (!hasOpt) {
+                    const opt = document.createElement('option');
+                    opt.value = currentYear;
+                    opt.textContent = currentYear;
+                    yearSelect.appendChild(opt);
+                }
+                yearSelect.value = String(currentYear);
+                yearSelect.dataset.initialized = 'true';
+            }
+        },
+
+        // (2026-07-30) Aggregates Vehicle fuel expenses, volume & max 10 history items using getMerchantDisplay and robust date parsing; prev: simple category check
+        updateFuelTankWidget: function() {
+            try {
+                this.setupFuelTankFilterDropdowns();
+
+                const spentEl = document.getElementById('fuel-tank-spent');
+                const volumeEl = document.getElementById('fuel-tank-volume');
+                const rateEl = document.getElementById('fuel-tank-rate');
+                const gaugeFillEl = document.getElementById('fuel-tank-gauge-fill');
+                const historyListEl = document.getElementById('fuel-tank-history-list');
+                const historyCountEl = document.getElementById('fuel-tank-history-count');
+                const monthSelect = document.getElementById('fuel-tank-month-select');
+                const yearSelect = document.getElementById('fuel-tank-year-select');
+                if (!spentEl) return;
+
+                const selMonth = monthSelect ? parseInt(monthSelect.value, 10) : new Date().getMonth();
+                const selYear = yearSelect ? parseInt(yearSelect.value, 10) : new Date().getFullYear();
+
+                let totalSpent = 0;
+                let totalLiters = 0;
+                let weightedPplSum = 0;
+                const filteredTxns = [];
+
+                const allSources = [];
+                if (Array.isArray(window.allTxns)) allSources.push(...window.allTxns);
+                if (window.walletTxns && typeof window.walletTxns === 'object') {
+                    Object.values(window.walletTxns).forEach(arr => {
+                        if (Array.isArray(arr)) allSources.push(...arr);
+                    });
+                }
+                if (Array.isArray(window.budgetManualTxns)) allSources.push(...window.budgetManualTxns);
+                if (Array.isArray(window.allTransactions)) allSources.push(...window.allTransactions);
+
+                const seenKeys = new Set();
+                allSources.forEach(t => {
+                    if (!t || typeof t !== 'object') return;
+                    const key = `${t.id || t._id || t.date || t.merchant || t.name || Math.random()}`;
+                    if (seenKeys.has(key)) return;
+                    seenKeys.add(key);
+
+                    if (t.excluded || t.reimbursed || t.refund) return;
+
+                    let mapped = null;
+                    if (typeof window.getMerchantDisplay === 'function') {
+                        mapped = window.getMerchantDisplay(t.merchant || t.name || '', t);
+                    } else if (typeof getMerchantDisplay === 'function') {
+                        mapped = getMerchantDisplay(t.merchant || t.name || '', t);
+                    }
+
+                    const cat = t.manualCategory || t.manualBudgetCategory || (mapped ? mapped.category : t.category) || t.category || '';
+                    if (cat !== 'Vehicle') return;
+
+                    let tDate = null;
+                    const rawDate = t.date || t.createdAt;
+                    if (rawDate) {
+                        if (typeof rawDate === 'object' && rawDate.seconds) {
+                            tDate = new Date(rawDate.seconds * 1000);
+                        } else {
+                            tDate = new Date(rawDate);
+                        }
+                    }
+
+                    if (tDate && !isNaN(tDate.getTime())) {
+                        if (tDate.getMonth() !== selMonth || tDate.getFullYear() !== selYear) {
+                            return;
+                        }
+                    }
+
+                    const amt = Math.abs(parseFloat(t.amount !== undefined ? t.amount : (t.manualAmount || 0)));
+                    if (isNaN(amt) || amt <= 0) return;
+
+                    totalSpent += amt;
+                    const displayName = (mapped && mapped.name) ? mapped.name : (t.name || t.merchant || 'Vehicle Fuel');
+                    filteredTxns.push({ ...t, computedAmt: amt, parsedDate: tDate, displayName });
+
+                    const ppl = parseFloat(t.pricePerLiter);
+                    if (!isNaN(ppl) && ppl > 0) {
+                        const liters = amt / ppl;
+                        totalLiters += liters;
+                        weightedPplSum += (ppl * liters);
+                    }
+                });
+
+                const avgRate = totalLiters > 0 ? (weightedPplSum / totalLiters) : 0;
+                const isHidden = localStorage.getItem('balance_hidden') === 'true';
+
+                spentEl.innerText = isHidden ? '******' : `₱${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                volumeEl.innerText = `${totalLiters.toFixed(1)} L`;
+                rateEl.innerText = avgRate > 0 ? `₱${avgRate.toFixed(1)}/L` : '—';
+
+                if (gaugeFillEl) {
+                    const pct = Math.min((totalSpent / 5000) * 100, 100);
+                    gaugeFillEl.style.width = `${pct}%`;
+                }
+
+                if (historyListEl) {
+                    filteredTxns.sort((a, b) => (b.parsedDate ? b.parsedDate.getTime() : 0) - (a.parsedDate ? a.parsedDate.getTime() : 0));
+                    const max10 = filteredTxns.slice(0, 10);
+                    if (historyCountEl) historyCountEl.innerText = `${max10.length} logs`;
+
+                    if (max10.length === 0) {
+                        historyListEl.innerHTML = `<div class="fuel-tank-empty-state">No fuel logs recorded for this month</div>`;
+                    } else {
+                        historyListEl.innerHTML = max10.map(t => {
+                            const nameStr = (t.displayName || t.name || t.merchant || 'Vehicle Fuel').toUpperCase();
+                            const noteStr = t.note || (t.computedAmt > 250 ? 'Car Refill' : 'Motor Refill');
+                            const dateStr = t.parsedDate ? `${t.parsedDate.toLocaleString('default', { month: 'short' })} ${t.parsedDate.getDate()}` : '';
+                            
+                            let fuelBadgeHTML = '';
+                            const ppl = parseFloat(t.pricePerLiter);
+                            if (!isNaN(ppl) && ppl > 0) {
+                                const liters = (t.computedAmt / ppl).toFixed(1);
+                                fuelBadgeHTML = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl.toFixed(1)}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                            }
+
+                            let logoSrc = t.logoUrl || t.brandLogo || null;
+                            if (!logoSrc) {
+                                if (nameStr.includes('TECFUEL') || nameStr.includes('TEC FUEL')) logoSrc = 'logos/tecfuel.png';
+                                else if (nameStr.includes('SHELL')) logoSrc = 'logos/shell.png';
+                                else if (nameStr.includes('PETRON')) logoSrc = 'logos/petron.png';
+                                else if (nameStr.includes('CALTEX')) logoSrc = 'logos/caltex.png';
+                                else if (nameStr.includes('SEAOIL')) logoSrc = 'logos/seaoil.png';
+                                else if (nameStr.includes('J AND L') || nameStr.includes('JANL')) logoSrc = 'logos/janl.png';
+                            }
+
+                            const brandBadgeHTML = logoSrc ? `<div class="brand-badge"><img src="${logoSrc}" alt="brand"></div>` : '';
+
+                            return `
+                                <div class="premium-txn">
+                                    <div class="icon-box cat-vehicle">
+                                        <i class="material-icons">local_gas_station</i>
+                                        ${brandBadgeHTML}
+                                    </div>
+                                    <div class="txn-details">
+                                        <div class="txn-merch">${nameStr}</div>
+                                        <div class="txn-sub">
+                                            <span>${dateStr}</span> &nbsp;&bull;&nbsp; <span>Vehicle</span>
+                                            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3b82f6;margin-left:6px;vertical-align:middle;"></span>
+                                        </div>
+                                        <div class="txn-note" style="color: #7c3aed; font-size: 10px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;">
+                                            <span style="max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; flex-shrink: 0;">${noteStr}</span>
+                                            ${fuelBadgeHTML}
+                                        </div>
+                                    </div>
+                                    <div class="txn-right">
+                                        <div class="txn-amount privacy-mask" style="color: #ef4444;">
+                                            ₱${t.computedAmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch (err) {
+                console.error("Error updating fuel tank widget:", err);
             }
         },
 

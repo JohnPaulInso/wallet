@@ -1664,6 +1664,69 @@
                     <div id="accounts-add-account-placeholder" class="accounts-add-account-container">
                         <!-- Redesigned placeholder injected here if accounts < 7 -->
                     </div>
+
+                    <!-- (2026-07-30) Fuel Tank Card placed below Link Account card with Month/Year selectors & History List; prev: above placeholder -->
+                    <div id="accounts-fuel-tank-card" class="accounts-fuel-tank-card">
+                        <div class="accounts-fuel-tank-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                            <div class="accounts-fuel-tank-title-box">
+                                <div class="accounts-fuel-tank-icon">
+                                    <i class="material-icons">local_gas_station</i>
+                                </div>
+                                <div>
+                                    <h3 class="accounts-fuel-tank-title">Fuel Tank &amp; Expenses</h3>
+                                    <div class="accounts-fuel-tank-sub">Vehicle fuel logs &amp; volume tracker</div>
+                                </div>
+                            </div>
+                            <div class="fuel-tank-filter-controls" style="display: flex; align-items: center; gap: 6px;">
+                                <select id="fuel-tank-month-select" class="fuel-tank-select" onchange="AccountsView.updateFuelTankWidget()">
+                                    <option value="0">Jan</option>
+                                    <option value="1">Feb</option>
+                                    <option value="2">Mar</option>
+                                    <option value="3">Apr</option>
+                                    <option value="4">May</option>
+                                    <option value="5">Jun</option>
+                                    <option value="6">Jul</option>
+                                    <option value="7">Aug</option>
+                                    <option value="8">Sep</option>
+                                    <option value="9">Oct</option>
+                                    <option value="10">Nov</option>
+                                    <option value="11">Dec</option>
+                                </select>
+                                <select id="fuel-tank-year-select" class="fuel-tank-select" onchange="AccountsView.updateFuelTankWidget()">
+                                    <option value="2025">2025</option>
+                                    <option value="2026">2026</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="accounts-fuel-tank-grid">
+                            <div class="accounts-fuel-metric">
+                                <span class="accounts-fuel-metric-label">Spent</span>
+                                <span id="fuel-tank-spent" class="accounts-fuel-metric-value privacy-mask">₱0.00</span>
+                            </div>
+                            <div class="accounts-fuel-metric">
+                                <span class="accounts-fuel-metric-label">Volume</span>
+                                <span id="fuel-tank-volume" class="accounts-fuel-metric-value">0.0 L</span>
+                            </div>
+                            <div class="accounts-fuel-metric">
+                                <span class="accounts-fuel-metric-label">Avg Rate</span>
+                                <span id="fuel-tank-rate" class="accounts-fuel-metric-value">₱0.0/L</span>
+                            </div>
+                        </div>
+
+                        <div class="accounts-fuel-gauge-container">
+                            <div id="fuel-tank-gauge-fill" class="accounts-fuel-gauge-fill"></div>
+                        </div>
+
+                        <!-- Fuel Expense History Section -->
+                        <div class="fuel-tank-history-section" style="margin-top: 16px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+                            <div style="font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                <span>Recent Fuel History (Max 10)</span>
+                                <span id="fuel-tank-history-count" style="font-size: 9px; color: #94a3b8; font-weight: 600;">0 logs</span>
+                            </div>
+                            <div id="fuel-tank-history-list" class="fuel-tank-history-list"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -5902,7 +5965,16 @@
                                 <div class="line-clamp-3" style="font-size: ${fontSize}; font-weight: 800; color: #1e293b; margin-bottom: 1px; letter-spacing: 0.2px; text-transform: uppercase; line-height: 1.3;">${display.name}</div> <!-- updated 2026-03-31 - enabled 3-line clamping - 2026-03-31 -->
                                 <!-- (2026-07-13) Simplify cash log subtext; prev: full category/account -->
                                 <div style="font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase;">${isEditable ? `${dateStr} \u2022 CASH LOG` : `${dateStr} \u2022 ${display.category} \u2022 ${accountLabel}`}</div>
-                                ${displayNote ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayNote}</div>` : ''}
+                                <!-- (2026-07-30) Render compact text-only rectangular fuel chip badge with note truncation; prev: untruncated note -->
+                                ${(() => {
+                                    let fuelChip = '';
+                                    if (t.pricePerLiter && displayAmt > 0) {
+                                        const ppl = parseFloat(t.pricePerLiter).toFixed(1);
+                                        const liters = (Math.abs(displayAmt) / t.pricePerLiter).toFixed(1);
+                                        fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                    }
+                                    return (displayNote || fuelChip) ? `<div style="font-size: 8.5px; font-weight: 700; color: ${noteColor}; margin-top: 1px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; flex-shrink: 0;">${displayNote}</span>${fuelChip}</div>` : '';
+                                })()}
                             </div>
                             <div style="text-align: right; display: flex; align-items: center; gap: 8px; margin-left: 12px; flex-shrink: 0;"> <!-- updated 2026-03-28 - used margin-left, gap and flex-shrink to prevent overlapping - 2026-03-28 -->
                                 <div style="text-align: right;">
@@ -7392,6 +7464,7 @@ Be direct, practical, and helpful.`;
                     }
                 };
 
+                // (2026-07-30) Enhanced JSON + CSV data export supporting all new features & fields; prev: basic fields only
                 window.exportData = () => {
                     if (!window.allTxns || window.allTxns.length === 0) {
                         showToast('No data to export');
@@ -7400,30 +7473,80 @@ Be direct, practical, and helpful.`;
 
                     const today = new Date().toISOString().split('T')[0];
 
-                    // 1. JSON Export
-                    const dataStr = JSON.stringify(window.allTxns, null, 2);
+                    // 1. Comprehensive JSON Backup Export
+                    const backupData = {
+                        exportDate: new Date().toISOString(),
+                        version: '2026.07.30',
+                        transactionsCount: window.allTxns.length,
+                        transactions: window.allTxns,
+                        categoryBudgets: JSON.parse(localStorage.getItem('category_budgets') || '{}'),
+                        budgetSettings: {
+                            monthlyIncome: localStorage.getItem('monthly_income') || 0,
+                            needsPercentage: localStorage.getItem('needs_percentage') || 50,
+                            wantsPercentage: localStorage.getItem('wants_percentage') || 30,
+                            savingsPercentage: localStorage.getItem('savings_percentage') || 20
+                        }
+                    };
+
+                    const dataStr = JSON.stringify(backupData, null, 2);
                     const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-                    const jsonName = `wallet_backup_${today}.json`;
+                    const jsonName = `wallet_backup_full_${today}.json`;
                     const jsonLink = document.createElement('a');
                     jsonLink.setAttribute('href', dataUri);
                     jsonLink.setAttribute('download', jsonName);
                     jsonLink.click();
 
-                    // 2. CSV Export
+                    // 2. Comprehensive CSV Export with all new features (Price Per Liter, Liters, Segregated amounts, Classification)
                     setTimeout(() => {
-                        const headers = ['Date', 'Merchant', 'Amount', 'Category', 'Note', 'Excluded', 'Refund'];
+                        const headers = [
+                            'Date',
+                            'Merchant',
+                            'Amount',
+                            'Category',
+                            'Classification',
+                            'Note',
+                            'Price Per Liter (P/L)',
+                            'Fuel Volume (L)',
+                            'Segregated Needs',
+                            'Segregated Wants',
+                            'Segregated Savings',
+                            'Segregated N/A',
+                            'Excluded',
+                            'Refund',
+                            'Reimbursed',
+                            'Account'
+                        ];
                         const csvRows = [headers.join(',')];
 
                         window.allTxns.forEach(t => {
-                            const mapped = getMerchantDisplay(t.merchant, t);
+                            const mapped = getMerchantDisplay(t.merchant || t.name, t);
+                            const amt = Math.abs(t.amount || t.manualAmount || 0);
+                            const ppl = parseFloat(t.pricePerLiter) || 0;
+                            const liters = (ppl > 0 && amt > 0) ? (amt / ppl).toFixed(2) : 0;
+                            
+                            const splits = t.splitDetails || {};
+                            const needs = splits.needs || (t.manualBudgetCategory === 'needs' ? amt : 0);
+                            const wants = splits.wants || (t.manualBudgetCategory === 'wants' ? amt : 0);
+                            const savings = splits.savings || (t.manualBudgetCategory === 'savings' ? amt : 0);
+                            const na = splits['n/a'] || (t.manualBudgetCategory === 'n/a' ? amt : 0);
+
                             const row = [
-                                new Date(t.date).toLocaleDateString(),
-                                `"${(mapped.name || '').replace(/"/g, '""')}"`,
-                                t.amount || (t.manualAmount || 0),
+                                t.date ? new Date(t.date).toLocaleDateString() : '',
+                                `"${(mapped.name || t.merchant || '').replace(/"/g, '""')}"`,
+                                amt,
                                 `"${(mapped.category || '').replace(/"/g, '""')}"`,
+                                `"${(t.manualBudgetCategory || mapped.classification || '').replace(/"/g, '""')}"`,
                                 `"${(t.note || '').replace(/"/g, '""')}"`,
+                                ppl > 0 ? ppl.toFixed(2) : '',
+                                liters > 0 ? liters : '',
+                                needs || 0,
+                                wants || 0,
+                                savings || 0,
+                                na || 0,
                                 t.excluded ? 'Yes' : 'No',
-                                t.refund ? 'Yes' : 'No'
+                                t.refund ? 'Yes' : 'No',
+                                t.reimbursed ? 'Yes' : 'No',
+                                `"${(t.account || t.accId || 'Default').replace(/"/g, '""')}"`
                             ];
                             csvRows.push(row.join(','));
                         });
@@ -7437,7 +7560,7 @@ Be direct, practical, and helpful.`;
                         csvLink.click();
                     }, 300);
 
-                    showToast('JSON + CSV Export Created');
+                    showToast('Full JSON + CSV Export Downloaded');
                 };
 
                 window.importData = (event) => {
@@ -9112,7 +9235,17 @@ Be direct, practical, and helpful.`;
                                         <!-- [FIX 2026-06-26: Bullet spacing fix - replaced raw \u2022 text with HTML &nbsp;&bull;&nbsp; for clean visual spacing] -->
                                         <span>${shortDate}</span>  &nbsp;&bull;&nbsp;  <span>${displayCategoryName(mapped.category)}</span>${budgetDotHTML}
                                     </div>
-                                    ${displayNote ? `<div class="txn-note" style="color: ${(mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'))}; font-size: 11px; margin-top:2px;">${displayNote}</div>` : ''}
+                                    <!-- (2026-07-30) Note text max-width reduced to 65px with left fuel chip alignment; prev: calc flex-between -->
+                                    ${(() => {
+                                        let fuelChip = '';
+                                        if (t.pricePerLiter && amount > 0) {
+                                            const ppl = parseFloat(t.pricePerLiter).toFixed(1);
+                                            const liters = (Math.abs(amount) / t.pricePerLiter).toFixed(1);
+                                            fuelChip = `<span class="vehicle-fuel-chip-badge"><span class="fuel-chip-ppl">₱${ppl}/L</span><span class="fuel-chip-dot">&bull;</span><span class="fuel-chip-liters">${liters}L</span></span>`;
+                                        }
+                                        const noteColor = (mapped.category === 'Savings' || mapped.category === 'Income' || mapped.category === 'Life & Entertainment' || mapped.category === 'Sport') ? '#16a34a' : (isRefund || isReimbursed ? '#f59e0b' : (categoryConfig[mapped.category]?.darkColor || '#475569'));
+                                        return (displayNote || fuelChip) ? `<div class="txn-note" style="color: ${noteColor}; font-size: 11px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px;"><span style="max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle; flex-shrink: 0;">${displayNote}</span>${fuelChip}</div>` : '';
+                                    })()}
                                 </div>
                                 <div class="txn-right">
                                     <div class="txn-amount privacy-mask ${Math.abs(amount) >= 1000 ? 'large' : ''}" style="${displayAmtColor}" data-raw="${(!isIncome && !isRefund && !isReimbursed && window.currentAccount !== 'atome') ? '-' : ''}\u20B1${Math.abs(amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}">
@@ -13266,7 +13399,8 @@ Be direct, practical, and helpful.`;
                                         (!savings || parseCurrencyAmount(savings) === 0) &&
                                         (!na || parseCurrencyAmount(na) === 0);
 
-                                    if (splitWants && amount > 4000 && isWantsEmpty && isOthersEmpty) {
+                                    // (2026-07-30) Auto-segregate at >=1000; prev: > 4000
+                                    if (splitWants && amount >= 1000 && isWantsEmpty && isOthersEmpty) {
                                         splitWants.value = val;
                                         if (window.updateSplitRemaining) window.updateSplitRemaining('manual-amt');
                                     }
@@ -13295,16 +13429,18 @@ Be direct, practical, and helpful.`;
 
                     // Populate split inputs if they exist
                     if (txn && txn.budgetSplit) {
-                        // [FIXED: 2026-04-05] Re-populate persistence fields
+                        window.__manualSegregateActive = true;
                         document.getElementById('split-needs').value = txn.budgetSplit.needs || '';
                         document.getElementById('split-wants').value = txn.budgetSplit.wants || '';
                         document.getElementById('split-savings').value = txn.budgetSplit.savings || '';
                         document.getElementById('split-na').value = txn.budgetSplit.na || '';
                     } else {
+                        window.__manualSegregateActive = false;
                         ['needs', 'wants', 'savings', 'na'].forEach(t => document.getElementById('split-' + t).value = '');
-                        // [FIXED: 2026-04-05] If no split exists, default the entire value to 'Wants' for transactions over 4000
+                        // (2026-07-30) Default auto-segregate only for transactions >= 4000; prev: >= 1000
                         const numAmt = parseFloat(cleanAmt) || 0;
-                        if (numAmt > 4000) {
+                        if (numAmt >= 4000) {
+                            window.__manualSegregateActive = true;
                             document.getElementById('split-wants').value = cleanAmt;
                         }
                     }
@@ -13337,6 +13473,14 @@ Be direct, practical, and helpful.`;
                     } else {
                         setManualClassification(loadedBudgetCat);
                     }
+
+                    // (2026-07-30) Pre-populate fuel price field and toggle fuel row for Vehicle category; prev: cat reference error
+                    const fuelRow = document.getElementById('fuel-price-row');
+                    const fuelInput = document.getElementById('fuel-price-per-liter');
+                    const isVehicleCategory = (selectedManualCatId === 'Vehicle');
+                    if (fuelRow) fuelRow.style.display = isVehicleCategory ? 'flex' : 'none';
+                    if (fuelInput) fuelInput.value = (txn && txn.pricePerLiter) ? txn.pricePerLiter : '';
+                    if (window.updateFuelComputed) window.updateFuelComputed();
 
                     // Determine type based on category
                     if (selectedManualCatId === 'Income' || category === 'Income') {
@@ -13451,7 +13595,8 @@ Be direct, practical, and helpful.`;
                                         (!savings || parseCurrencyAmount(savings) === 0) &&
                                         (!na || parseCurrencyAmount(na) === 0);
 
-                                    if (splitWants && amount > 4000 && isWantsEmpty && isOthersEmpty) {
+                                    // (2026-07-30) Auto-segregate at >=1000; prev: > 4000
+                                    if (splitWants && amount >= 1000 && isWantsEmpty && isOthersEmpty) {
                                         splitWants.value = val;
                                         if (window.updateSplitRemaining) window.updateSplitRemaining('manual-amt');
                                     }
@@ -13501,6 +13646,36 @@ Be direct, practical, and helpful.`;
                 window.selectManualCategory = (id) => {
                     selectedManualCatId = id;
                     renderManualCategories();
+                    // (2026-07-30) Adjust note maxlength to 18 for Vehicle, 32 for others; prev: 24/32
+                    const noteInput = document.getElementById('manual-note');
+                    if (noteInput) {
+                        noteInput.maxLength = (id === 'Vehicle') ? 18 : 32;
+                        if (id === 'Vehicle' && noteInput.value.length > 18) {
+                            noteInput.value = noteInput.value.substring(0, 18);
+                        }
+                    }
+                    const fuelRow = document.getElementById('fuel-price-row');
+                    const fuelInput = document.getElementById('fuel-price-per-liter');
+                    if (fuelRow) fuelRow.style.display = (id === 'Vehicle') ? 'flex' : 'none';
+                    if (id !== 'Vehicle' && fuelInput) {
+                        fuelInput.value = '';
+                        const preview = document.getElementById('fuel-computed-preview');
+                        if (preview) preview.textContent = '';
+                    }
+                    if (id === 'Vehicle' && window.updateFuelComputed) window.updateFuelComputed();
+                };
+
+                // (2026-07-30) Live liter computation for fuel price field; prev: none
+                window.updateFuelComputed = () => {
+                    const ppl = parseFloat(document.getElementById('fuel-price-per-liter')?.value) || 0;
+                    const amt = parseCurrencyAmount(document.getElementById('manual-amt')?.value) || 0;
+                    const preview = document.getElementById('fuel-computed-preview');
+                    if (preview && ppl > 0 && amt > 0) {
+                        const liters = (amt / ppl).toFixed(1);
+                        preview.textContent = `≈ ${liters}L`;
+                    } else if (preview) {
+                        preview.textContent = '';
+                    }
                 };
 
                 // FIX 2026-03-27: Replaced Auto with N/A — 'n/a' value = not included in budget
@@ -13538,8 +13713,11 @@ Be direct, practical, and helpful.`;
                         }
                     }
 
+                    // (2026-07-30) Update active split input when split container is active/open; prev: forced >= 1000
                     const total = parseCurrencyAmount(document.getElementById('manual-amt')?.value);
-                    if (total > 4000) {
+                    const splitContainer = document.getElementById('split-inputs-container');
+                    const isSplitOpen = splitContainer && splitContainer.style.display !== 'none';
+                    if (isSplitOpen) {
                         const splitMap = {
                             'needs': 'split-needs',
                             'wants': 'split-wants',
@@ -13562,22 +13740,77 @@ Be direct, practical, and helpful.`;
                     const amt = parseCurrencyAmount(document.getElementById('manual-amt').value);
                     const container = document.getElementById('split-inputs-container');
                     const splitIds = ['split-needs', 'split-wants', 'split-savings', 'split-na'];
-                    if (amt > 4000) {
-                        container.style.display = 'flex';
+
+                    // (2026-07-30) Auto-segregate by default only for >= 4000; sub-4000 remains off by default unless manually toggled ON
+                    const isAutoOn = amt >= 4000;
+                    const isManualOn = window.__manualSegregateActive === true && amt > 0;
+
+                    if (isAutoOn || isManualOn) {
+                        if (container) container.classList.add('show-split');
                         const splitWants = document.getElementById('split-wants');
                         const allocated = splitIds.reduce((sum, id) => sum + parseCurrencyAmount(document.getElementById(id)?.value), 0);
                         if (splitWants && allocated <= 0) {
                             splitWants.value = amt.toFixed(2);
                         }
                         updateSplitRemaining('manual-amt');
+                        if (window.updateSegregateBtnUI) window.updateSegregateBtnUI(true);
                     } else {
-                        container.style.display = 'none';
+                        if (container) container.classList.remove('show-split');
                         splitIds.forEach(id => {
                             const input = document.getElementById(id);
                             if (input) input.value = '';
                         });
+                        if (window.updateSegregateBtnUI) window.updateSegregateBtnUI(false);
                     }
                 };
+
+                // (2026-07-30) Manual segregate toggle function for transactions with slide animation; prev: instant display toggle
+                window.manualTriggerSegregate = () => {
+                    const amt = parseCurrencyAmount(document.getElementById('manual-amt').value);
+                    const container = document.getElementById('split-inputs-container');
+                    const splitIds = ['split-needs', 'split-wants', 'split-savings', 'split-na'];
+                    const isCurrentlyOpen = container && container.classList.contains('show-split');
+
+                    if (isCurrentlyOpen) {
+                        // Toggle OFF
+                        window.__manualSegregateActive = false;
+                        if (container) container.classList.remove('show-split');
+                        splitIds.forEach(id => {
+                            const input = document.getElementById(id);
+                            if (input) input.value = '';
+                        });
+                        if (window.updateSegregateBtnUI) window.updateSegregateBtnUI(false);
+                    } else {
+                        // Toggle ON
+                        window.__manualSegregateActive = true;
+                        if (container) container.classList.add('show-split');
+                        const splitWants = document.getElementById('split-wants');
+                        const allocated = splitIds.reduce((sum, id) => sum + parseCurrencyAmount(document.getElementById(id)?.value), 0);
+                        if (splitWants && (allocated <= 0 || amt > 0)) {
+                            splitWants.value = amt.toFixed(2);
+                        }
+                        if (window.updateSplitRemaining) window.updateSplitRemaining('manual-amt');
+                        if (window.updateSegregateBtnUI) window.updateSegregateBtnUI(true);
+                    }
+                };
+
+                // (2026-07-30) Compact top-right Segregate toggle UI updater with blue ON theme; prev: purple
+                window.updateSegregateBtnUI = (isOn) => {
+                    const btn = document.getElementById('btn-manual-segregate');
+                    if (!btn) return;
+                    if (isOn) {
+                        btn.innerHTML = `<i class="material-icons" style="font-size: 13px;">call_split</i> Segregate <span style="background: #dbeafe; color: #1d4ed8; padding: 1px 5px; border-radius: 9999px; font-size: 8.5px; font-weight: 800; margin-left: 2px;">ON</span>`;
+                        btn.style.borderColor = '#bfdbfe';
+                        btn.style.background = '#eff6ff';
+                        btn.style.color = '#2563eb';
+                    } else {
+                        btn.innerHTML = `<i class="material-icons" style="font-size: 13px;">call_split</i> Segregate <span style="background: #e2e8f0; color: #64748b; padding: 1px 5px; border-radius: 9999px; font-size: 8.5px; font-weight: 800; margin-left: 2px;">OFF</span>`;
+                        btn.style.borderColor = '#e2e8f0';
+                        btn.style.background = '#f8fafc';
+                        btn.style.color = '#64748b';
+                    }
+                };
+
 
                 window.updateSplitRemaining = (triggeredBy) => {
                     const totalInput = document.getElementById('manual-amt');
@@ -13742,14 +13975,16 @@ Be direct, practical, and helpful.`;
 
                     const merchantName = document.getElementById('manual-merchant').value.trim();
 
-                    // [FIXED: 2026-04-05] Robust Split Persistence: Collect if fields are populated OR amount > 4000
                     let budgetSplit = null;
                     const needsS = parseCurrencyAmount(document.getElementById('split-needs').value);
                     const wantsS = parseCurrencyAmount(document.getElementById('split-wants').value);
                     const savingsS = parseCurrencyAmount(document.getElementById('split-savings').value);
                     const naS = parseCurrencyAmount(document.getElementById('split-na').value);
 
-                    if (amountValue > 4000) {
+                    const splitContainerEl = document.getElementById('split-inputs-container');
+                    const isSplitActive = splitContainerEl && splitContainerEl.style.display !== 'none';
+                    // (2026-07-30) Save budgetSplit ONLY if segregation toggle is active/open; prev: saved for all >=1000
+                    if (isSplitActive) {
                         budgetSplit = { needs: needsS, wants: wantsS, savings: savingsS, na: naS };
                         const totalSplit = Math.round((budgetSplit.needs + budgetSplit.wants + budgetSplit.savings + budgetSplit.na) * 100) / 100;
                         const normalizedAmount = Math.round(amountValue * 100) / 100;
@@ -13839,12 +14074,17 @@ Be direct, practical, and helpful.`;
                             }
                         }
 
+                        const fuelPplVal = parseFloat(document.getElementById('fuel-price-per-liter')?.value);
+                        const pricePerLiter = (selectedManualCatId === 'Vehicle' && !isNaN(fuelPplVal) && fuelPplVal > 0) ? fuelPplVal : null;
+
                         const updateData = {
                             date: formatLocalDate(dateObj),
                             amount: amountValue,
                             manualAmount: amountValue,
                             merchant: merchantName || (cat ? cat.label : 'Transaction'),
                             note: note || '',
+                            // (2026-07-30) Persist pricePerLiter for fuel tracking; prev: none
+                            pricePerLiter: pricePerLiter,
                             manualCategory: selectedManualCatId,
                             category: selectedManualCatId,
                             type: manualTxnType,
@@ -15817,9 +16057,29 @@ Be direct, practical, and helpful.`;
                                     <div
                                         style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
                                         Notes</div>
-                                    <input type="text" id="manual-note" maxlength="30" placeholder="Add notes..."
+                                    <!-- (2026-07-30) Note input maxlength set to 32 by default (24 for Vehicle); prev: 20 -->
+                                    <input type="text" id="manual-note" maxlength="32" placeholder="Add notes..."
                                         style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
                                 </div>
+                            </div>
+
+                            <!-- (2026-07-30) Fuel price per liter row — purple theme; prev: yellow/amber -->
+                            <div id="fuel-price-row"
+                                style="display: none; align-items: center; background: #fff; border: 1px solid #e9d5ff; padding: 12px 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); gap: 0;">
+                                <div
+                                    style="width: 40px; height: 40px; border-radius: 12px; background: #f3e8ff; display: flex; align-items: center; justify-content: center; margin-right: 14px; color: #7c3aed; flex-shrink: 0;">
+                                    <i class="material-icons" style="font-size: 20px;">local_gas_station</i>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div
+                                        style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">Price Per Liter (₱/L)</div>
+                                    <input type="number" id="fuel-price-per-liter" step="0.01" min="0"
+                                        placeholder="e.g. 84.70"
+                                        oninput="window.updateFuelComputed && window.updateFuelComputed()"
+                                        style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                                </div>
+                                <div id="fuel-computed-preview"
+                                    style="font-size: 9.5px; font-weight: 700; color: #64748b; text-align: right; min-width: 52px; flex-shrink: 0;"></div>
                             </div>
 
                              <!-- Empty block to delete upper Special Status row -->
@@ -15849,9 +16109,18 @@ Be direct, practical, and helpful.`;
                             <!-- Classification Card -->
                             <div id="classification-card"
                                 style="background: #fff; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 4px;">
-                                <div
-                                    style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px;">
-                                    Budget Classification</div>
+                                <!-- (2026-07-30) Header with compact top-right Segregate toggle button; prev: simple title -->
+                                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                                    <div
+                                        style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        Budget Classification</div>
+                                    <button id="btn-manual-segregate" onclick="window.manualTriggerSegregate()"
+                                        style="border: 1px solid #e2e8f0; border-radius: 20px; background: #f8fafc; padding: 2px 8px; color: #64748b; font-size: 9.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s;">
+                                        <i class="material-icons" style="font-size: 13px;">call_split</i>
+                                        <span>Segregate</span>
+                                        <span style="font-size: 8.5px; font-weight: 800; padding: 1px 5px; border-radius: 9999px; background: #e2e8f0; color: #64748b; margin-left: 2px;">OFF</span>
+                                    </button>
+                                </div>
                                 <div style="display: flex; gap: 8px;">
                                     <button class="mini-classify-btn" id="classify-needs"
                                         onclick="setManualClassification('needs')">Needs</button>

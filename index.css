@@ -3302,7 +3302,24 @@
 .fill-wants-orange { background: #ED9326; }
         .fill-wants-red { background: #ef4444; } /* Red */
         /* [FIXED: 2026-04-05] Color Correction: Set Accumulated Savings to Vibrant Green (#00B014) */
-        .fill-savings { background: #00B014 !important; } 
+        .fill-savings { background: #00B014 !important; }
+
+        /* (2026-07-30) Budget bar shimmer preloader; prev: no loading state */
+        @keyframes barShimmer {
+            0%   { background-position: 200% center; }
+            100% { background-position: -200% center; }
+        }
+        .progress-bar-fill--loading {
+            width: 55% !important;
+            border-radius: 4px !important;
+            background: linear-gradient(90deg,
+                rgba(203, 213, 225, 0.5) 0%,
+                rgba(241, 245, 249, 0.85) 45%,
+                rgba(203, 213, 225, 0.5) 100%) !important;
+            background-size: 200% 100% !important;
+            animation: barShimmer 1.5s ease-in-out infinite !important;
+        }
+
 
         .overspending-msg {
             margin-top: 12px;
@@ -5561,6 +5578,181 @@ body.dark-mode #donut-center-info {
 .accounts-skeleton-actions { display: flex; align-items: center; gap: 12px; }
 .accounts-skeleton-button { width: 65px; height: 24px; border-radius: 8px; }
 
+/* (2026-07-30) Monthly Fuel Tank Summary Card styling with 120px bottom margin; prev: margin 16px 0 */
+.accounts-fuel-tank-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 16px 18px;
+    margin: 16px 0 120px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.accounts-fuel-tank-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+.accounts-fuel-tank-title-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.accounts-fuel-tank-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #f3e8ff;
+    color: #7c3aed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.accounts-fuel-tank-icon i {
+    font-size: 20px;
+}
+.accounts-fuel-tank-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0;
+}
+.accounts-fuel-tank-sub {
+    font-size: 9px;
+    font-weight: 600;
+    color: #94a3b8;
+    margin-top: 1px;
+}
+.accounts-fuel-tank-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    padding: 12px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+}
+.accounts-fuel-metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.accounts-fuel-metric-label {
+    font-size: 8.5px;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+.accounts-fuel-metric-value {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.accounts-fuel-gauge-container {
+    background: #f1f5f9;
+    height: 6px;
+    border-radius: 9999px;
+    overflow: hidden;
+    position: relative;
+}
+.accounts-fuel-gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #a855f7 0%, #7c3aed 100%);
+    border-radius: 9999px;
+    width: 0%;
+    transition: width 0.4s ease;
+}
+
+/* (2026-07-30) Fuel chip badge styling with flex-shrink 0 protection; prev: shrinkable */
+.vehicle-fuel-chip-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 8.5px;
+    font-weight: 700;
+    background: #f5f3ff;
+    border: 1px solid #ede9fe;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-left: 5px;
+    vertical-align: middle;
+    letter-spacing: 0.1px;
+    line-height: 1.2;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.vehicle-fuel-chip-badge .fuel-chip-ppl {
+    color: #6d28d9;
+    font-weight: 600;
+}
+.vehicle-fuel-chip-badge .fuel-chip-dot {
+    color: #c084fc;
+    font-size: 6px;
+    margin: 0 1px;
+}
+.vehicle-fuel-chip-badge .fuel-chip-liters {
+    color: #4c1d95;
+    font-weight: 800;
+}
+
+/* (2026-07-30) Fuel Tank card filter dropdowns & compact premium-txn history list styling; prev: larger font list */
+.fuel-tank-select {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1e293b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 3px 8px;
+    outline: none;
+    cursor: pointer;
+}
+.fuel-tank-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-height: 480px;
+    overflow-y: auto;
+}
+.fuel-tank-history-list .premium-txn {
+    padding: 10px 2px;
+    border-bottom: 1px solid #f1f5f9;
+}
+.fuel-tank-history-list .premium-txn:last-child {
+    border-bottom: none;
+}
+.fuel-tank-history-list .txn-merch {
+    font-size: 11.5px;
+    font-weight: 800;
+}
+.fuel-tank-history-list .txn-sub {
+    font-size: 8px;
+    font-weight: 700;
+}
+.fuel-tank-history-list .txn-note {
+    font-size: 10px;
+    font-weight: 700;
+}
+.fuel-tank-history-list .txn-amount {
+    font-size: 12.5px;
+    font-weight: 800;
+}
+.fuel-tank-empty-state {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
+    padding: 20px 0;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #e2e8f0;
+    margin-top: 6px;
+}
+
 .accounts-loading-only { display: block; }
 .accounts-loaded-only { display: none; }
 .accounts-loaded .accounts-loading-only { display: none; }
@@ -6605,14 +6797,25 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
 /* [FIXED: 2026-04-05] Color Refresh: Updated Savings classification button color to match new Spent Savings shade */
 .mini-classify-btn.active.savings { background: rgba(0, 176, 20, 0.1) !important; color: #00B014 !important; border-color: #00B014 !important; }
 
-/* [NEW: 2026-04-03] SPLIT TRANSACTION STYLES */
+/* (2026-07-30) Smooth slide-down & fade-in animation for split-inputs-container; prev: display none/block */
 #split-inputs-container {
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px dashed #e2e8f0;
-    display: none; /* Hidden by default */
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 1px dashed transparent;
+    display: flex;
     flex-direction: column;
     gap: 12px;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin-top 0.3s ease, padding-top 0.3s ease, border-color 0.3s ease;
+}
+#split-inputs-container.show-split {
+    max-height: 320px;
+    opacity: 1;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top-color: #e2e8f0;
 }
 .split-input-row {
     display: flex;

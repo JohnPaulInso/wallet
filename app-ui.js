@@ -394,6 +394,10 @@ function getTxnBudgetAllocations(t, mapped = null) {
     window.getTxnBudgetAllocations = getTxnBudgetAllocations;
     const allocations = [];
     if (!t || t.excluded || t.refund || t.reimbursed) return allocations;
+    // (2026-08-01) N/A and income bail out before split check; prev: stale budgetSplit caused phantom bar totals
+    const manualBucket = String(t.manualBudgetCategory || '').trim().toLowerCase();
+    if (manualBucket === 'n/a') return allocations;
+    if (t.type === 'income' || t.isIncome) return allocations;
 
     // (2026-07-13) Support signed/zero amounts for cash logs; prev: Math.abs blocked them
     const isCashLog = t.account === 'budget_manual';
@@ -416,8 +420,6 @@ function getTxnBudgetAllocations(t, mapped = null) {
         }
     }
 
-    const manualBucket = String(t.manualBudgetCategory || '').trim().toLowerCase();
-    if (manualBucket === 'n/a') return allocations;
     if (['needs', 'wants', 'savings'].includes(manualBucket)) {
         allocations.push({ bucket: manualBucket, amount });
         return allocations;
@@ -1196,25 +1198,51 @@ export function updateTripleProgressBar() {
 
     const now = monthContext.referenceDate;
     
-    // Monthly Budget Label Update (Modified 2026-03-27)
+    // (2026-07-13) Update triple-month-display subtitle for all filters; prev: month/year only
     const monthDisplay = document.getElementById('triple-month-display');
     if (monthDisplay) {
-        const monthNames = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
-        const currentMonthName = monthNames[now.getMonth()];
-        const currentYear = now.getFullYear();
+        const shortMonths = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        const fullMonths = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+        const curMonthName = fullMonths[now.getMonth()];
+        const curYear = now.getFullYear();
 
-        monthDisplay.innerText = isExplicitYearMonthFilter(monthContext.filterValue)
-            ? monthContext.labelUpper
-            : `${currentMonthName} ${currentYear}`;
+        let labelText = `${curMonthName} ${curYear}`;
+
+        if (monthContext.filterValue === 'last_3_months') {
+            const startM = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+            labelText = `${shortMonths[startM.getMonth()]} - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
+        } else if (monthContext.filterValue === 'last_6_months') {
+            const startM = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+            labelText = `${shortMonths[startM.getMonth()]} - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
+        } else if (monthContext.filterValue === 'this_year') {
+            labelText = `JAN - ${shortMonths[now.getMonth()]} ${now.getFullYear()}`;
+        } else if (monthContext.filterValue === 'all_time') {
+            labelText = `ALL TIME`;
+        } else if (monthContext.filterValue === 'last_7_days') {
+            labelText = `LAST 7 DAYS`;
+        } else if (monthContext.filterValue === 'today') {
+            labelText = `TODAY`;
+        } else if (monthContext.filterValue === 'this_week' || monthContext.filterValue === 'last_week') {
+            labelText = monthContext.filterValue === 'this_week' ? `THIS WEEK` : `LAST WEEK`;
+        } else if (monthContext.filterValue === 'first_15') {
+            labelText = `${curMonthName} 1-15`;
+        } else if (monthContext.filterValue === 'last_15') {
+            labelText = `${curMonthName} 16-END`;
+        } else if (isExplicitYearMonthFilter(monthContext.filterValue)) {
+            labelText = monthContext.labelUpper;
+        }
+
+        monthDisplay.innerText = labelText;
     }
 
-    // SCALING LOGIC (Modified 2026-03-27)
+    // (2026-07-13) Add scalingFactor 3 for last_3_months filter; prev: defaulted to 1.0
     let scalingFactor = 1.0;
     if (monthContext.filterValue === 'today') scalingFactor = 1 / 31;
     else if (monthContext.filterValue === 'this_week' || monthContext.filterValue === 'last_week' || monthContext.filterValue === 'last_7_days') scalingFactor = 7 / 31;
     else if (monthContext.filterValue === 'first_15' || monthContext.filterValue === 'last_15') scalingFactor = 15 / 31;
-    else if (monthContext.filterValue === 'last_6_months') scalingFactor = 6;
-    else if (monthContext.filterValue === 'this_year') scalingFactor = 12;
+    else if (monthContext.filterValue === 'last_3_months') scalingFactor = 3.0;
+    else if (monthContext.filterValue === 'last_6_months') scalingFactor = 6.0;
+    else if (monthContext.filterValue === 'this_year' || monthContext.filterValue === 'all_time') scalingFactor = 12.0;
 
     const needsLimit = salaryTarget * weights.needs * scalingFactor;
     const wantsLimit = salaryTarget * weights.wants * scalingFactor;
@@ -1579,6 +1607,39 @@ export function updateTripleProgressBar() {
             }
         }
 
+        // (2026-07-13) Single tick overlay on progress-bar-bg; prev: dual overlays causing double lines
+        const renderBarTicks = (barBgEl, limit) => {
+            if (!barBgEl || !limit || limit <= 0) return;
+            if (barBgEl.classList.contains('skeleton')) {
+                const oldBg = barBgEl.querySelector('.bar-ticks-overlay');
+                if (oldBg) oldBg.style.display = 'none';
+                return;
+            }
+            const oldFills = barBgEl.querySelectorAll('.bar-ticks-overlay-fill');
+            oldFills.forEach(el => el.remove());
+
+            let overlay = barBgEl.querySelector('.bar-ticks-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'bar-ticks-overlay';
+                barBgEl.appendChild(overlay);
+            }
+            overlay.style.display = '';
+            const tickSpacingPct = (1000 / limit) * 100;
+            overlay.style.backgroundSize = `${tickSpacingPct}% 100%`;
+        };
+
+        // Apply persisted state on every render
+        const ticksHidden = localStorage.getItem('budget_bar_ticks_hidden') === '1';
+        document.body.classList.toggle('bar-ticks-hidden', ticksHidden);
+
+        // Render ticks on each bar track
+        const needsBarEl = document.getElementById('needs-bar');
+        const wantsBarEl = document.getElementById('wants-bar');
+        const savingsBarEl = document.getElementById('savings-bar');
+        if (needsBarEl) renderBarTicks(needsBarEl.closest('.progress-bar-bg'), needsLimit);
+        if (wantsBarEl) renderBarTicks(wantsBarEl.closest('.progress-bar-bg'), wantsLimit);
+        if (savingsBarEl) renderBarTicks(savingsBarEl.closest('.progress-bar-bg'), savingsLimit);
 
         const stats = [needsEl, wantsEl, savingsEl];
         stats.forEach((el, idx) => {
@@ -5621,16 +5682,185 @@ window.forceBudgetNotificationCheck = forceBudgetNotificationCheck;
 window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificationTrigger;
  
     window.animateNumber = animateNumber;
+
+    // (2026-07-13) Custom floating dropdown system for mobile APK & web; prev: native select
+    function upgradeSelectToCustomDropdown(selectEl) {
+        if (!selectEl || selectEl.dataset.customDropdownUpgraded === 'true') {
+            if (selectEl && selectEl.__syncCustomDropdown) {
+                selectEl.__syncCustomDropdown();
+            }
+            return;
+        }
+
+        selectEl.dataset.customDropdownUpgraded = 'true';
+        const initialStyle = selectEl.style.cssText || '';
+        selectEl.classList.add('custom-select-hidden');
+        selectEl.style.cssText = 'display: none !important; visibility: hidden !important; position: absolute !important; opacity: 0 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important;';
+
+        // (2026-07-13) Assign unique per-select classes to wrapper, trigger, menu; prev: generic classes
+        const selectId = selectEl.id || '';
+        const wrapperIdClass = selectId ? `custom-dropdown-${selectId}` : '';
+        const triggerIdClass = selectId ? `custom-dropdown-trigger-${selectId}` : '';
+        const menuIdClass = selectId ? `custom-dropdown-menu-${selectId}` : '';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `custom-dropdown-wrapper ${wrapperIdClass}`.trim();
+        if (selectEl.id) wrapper.dataset.forSelect = selectEl.id;
+
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = `custom-dropdown-trigger ${triggerIdClass} ${selectEl.className || ''}`.replace('custom-select-hidden', '').trim();
+        if (initialStyle) trigger.style.cssText = initialStyle.replace(/display\s*:\s*none/gi, '');
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'custom-dropdown-label';
+
+        const arrowIcon = document.createElement('i');
+        arrowIcon.className = 'material-icons custom-dropdown-arrow';
+        arrowIcon.innerText = 'expand_more';
+
+        trigger.appendChild(labelSpan);
+        trigger.appendChild(arrowIcon);
+
+        const menu = document.createElement('div');
+        menu.className = `custom-dropdown-menu ${menuIdClass}`.trim();
+
+        wrapper.appendChild(trigger);
+        wrapper.appendChild(menu);
+
+        if (selectEl.parentNode) {
+            selectEl.parentNode.insertBefore(wrapper, selectEl);
+        }
+
+        // (2026-07-13) Move select inside wrapper and hide; prev: select remained outside sibling
+        wrapper.appendChild(selectEl);
+        selectEl.style.cssText = 'display: none !important; visibility: hidden !important; position: absolute !important; top: -9999px !important; left: -9999px !important; width: 0 !important; height: 0 !important; opacity: 0 !important; pointer-events: none !important;';
+
+        const syncMenuOptions = () => {
+            menu.innerHTML = '';
+            const options = Array.from(selectEl.options || []);
+            const selectedOpt = (selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null) || options[0];
+            labelSpan.innerText = selectedOpt ? selectedOpt.text : '';
+
+            options.forEach((opt) => {
+                const optDiv = document.createElement('div');
+                optDiv.className = `custom-dropdown-option ${opt.value === selectEl.value ? 'selected' : ''}`;
+                optDiv.innerText = opt.text;
+                optDiv.dataset.value = opt.value;
+
+                optDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (selectEl.value !== opt.value) {
+                        selectEl.value = opt.value;
+                        labelSpan.innerText = opt.text;
+                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                        selectEl.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    wrapper.classList.remove('open');
+                });
+
+                menu.appendChild(optDiv);
+            });
+        };
+
+        selectEl.__syncCustomDropdown = syncMenuOptions;
+        syncMenuOptions();
+
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = wrapper.classList.contains('open');
+            document.querySelectorAll('.custom-dropdown-wrapper.open').forEach(w => {
+                if (w !== wrapper) w.classList.remove('open');
+            });
+
+            if (!isOpen) {
+                syncMenuOptions();
+                // (2026-07-13) Reset scroll to top on open; prev: retained previous scroll position
+                menu.scrollTop = 0;
+                wrapper.classList.add('open');
+
+                const rect = trigger.getBoundingClientRect();
+                const spaceBelow = window.innerHeight - rect.bottom;
+                if (spaceBelow < 220 && rect.top > 220) {
+                    wrapper.classList.add('open-upwards');
+                } else {
+                    wrapper.classList.remove('open-upwards');
+                }
+            } else {
+                wrapper.classList.remove('open');
+            }
+        });
+
+        try {
+            const observer = new MutationObserver(() => {
+                syncMenuOptions();
+            });
+            observer.observe(selectEl, { childList: true, subtree: true, attributes: true });
+        } catch (e) {}
+
+        selectEl.addEventListener('change', () => {
+            syncMenuOptions();
+        });
+    }
+
+    function initCustomDropdowns(root = document) {
+        if (!root || typeof root.querySelectorAll !== 'function') return;
+        const selects = root.querySelectorAll('select');
+        selects.forEach((sel) => upgradeSelectToCustomDropdown(sel));
+    }
+
+    // (2026-07-13) Auto-upgrade all current and future select elements dynamically; prev: static DOMContentLoaded only
+    try {
+        const bodyObserver = new MutationObserver((mutations) => {
+            let shouldInit = false;
+            mutations.forEach((m) => {
+                m.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) {
+                        if (node.tagName === 'SELECT' || (node.querySelectorAll && node.querySelectorAll('select').length > 0)) {
+                            shouldInit = true;
+                        }
+                    }
+                });
+            });
+            if (shouldInit) initCustomDropdowns();
+        });
+        if (document.body) {
+            bodyObserver.observe(document.body, { childList: true, subtree: true });
+        } else {
+            document.addEventListener('DOMContentLoaded', () => {
+                if (document.body) bodyObserver.observe(document.body, { childList: true, subtree: true });
+            });
+        }
+    } catch (e) {}
+
+    document.addEventListener('click', (e) => {
+        if (!e.target || !e.target.closest || !e.target.closest('.custom-dropdown-wrapper')) {
+            document.querySelectorAll('.custom-dropdown-wrapper.open').forEach(w => {
+                w.classList.remove('open');
+            });
+        }
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => initCustomDropdowns());
+    } else {
+        initCustomDropdowns();
+    }
+
+    window.initCustomDropdowns = initCustomDropdowns;
+    window.upgradeSelectToCustomDropdown = upgradeSelectToCustomDropdown;
+
     console.log('✅ Global bridge complete.');
     // If cached/live txns landed before app-ui finished wiring globals, paint the dashboard now.
     if (Array.isArray(window.allTxns)) {
         rehydrateDashboardFromCurrentTxns();
     }
-    // (2026-07-13) Failsafe auto-clear of all preloader skeleton states; prev: none
+    // (2026-07-13) Clean up setTimeout block for custom dropdowns and progress bar update; prev: stray closing bracket syntax error
     setTimeout(() => {
+        initCustomDropdowns();
         if (typeof window.updateTripleProgressBar === 'function') window.updateTripleProgressBar();
         if (typeof window.updateInsightCards === 'function') window.updateInsightCards(window.allTxns);
-    }, 600);
+    }, 500);
 }
 
 // Run bridging immediately

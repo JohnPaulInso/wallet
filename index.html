@@ -1060,6 +1060,9 @@
                                         <span class="ai-insight-title">AI Analysis</span>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div class="ai-loading-dots" id="ai-loading" style="display: none;">
+                                            <span></span><span></span><span></span>
+                                        </div>
                                         <div class="ai-model-selector"
                                             style="display: flex; align-items: center; gap: 8px;">
                                             <select id="dashboard-ai-model">
@@ -1069,9 +1072,6 @@
                                                 <option value="Gemini">Gemini</option>
                                                 <option value="Edge AI">Edge AI</option>
                                             </select>
-                                        </div>
-                                        <div class="ai-loading-dots" id="ai-loading" style="display: none;">
-                                            <span></span><span></span><span></span>
                                         </div>
                                     </div>
                                 </div>
@@ -3238,8 +3238,8 @@
                             loadData();
                         }
 
-                        // Update Profile UI
-                        updateProfileUI(user);
+                        // (2026-07-13) Safeguard updateProfileUI call with typeof check; prev: direct call
+                        if (typeof updateProfileUI === 'function') updateProfileUI(user); else if (window.updateProfileUI) window.updateProfileUI(user);
 
                         // Local Mode Nudge
                         handleLocalModeNudge(user);
@@ -5546,6 +5546,14 @@
                     if (e) e.stopPropagation();
                     const current = localStorage.getItem('budget_stats_mode') || 'ratio';
                     localStorage.setItem('budget_stats_mode', current === 'ratio' ? 'remaining' : 'ratio');
+
+                    // (2026-07-13) Toggle ticks for needs, wants, and savings stats; prev: wants only
+                    const targetId = e?.currentTarget?.id || e?.target?.id;
+                    if (!e || ['needs-stats', 'wants-stats', 'savings-stats'].includes(targetId)) {
+                        const ticksHidden = localStorage.getItem('budget_bar_ticks_hidden') === '1';
+                        localStorage.setItem('budget_bar_ticks_hidden', ticksHidden ? '0' : '1');
+                        document.body.classList.toggle('bar-ticks-hidden', !ticksHidden);
+                    }
 
                     if (typeof window.updateTripleProgressBar === 'function') window.updateTripleProgressBar();
                 };
@@ -13446,14 +13454,22 @@ Be direct, practical, and helpful.`;
                         document.getElementById('split-na').value = txn.budgetSplit.na || '';
                     } else {
                         window.__manualSegregateActive = false;
-                        ['needs', 'wants', 'savings', 'na'].forEach(t => document.getElementById('split-' + t).value = '');
+                        // (2026-08-01) Disable inputs immediately; prev: always enabled, could type while hidden
+                        ['needs', 'wants', 'savings', 'na'].forEach(t => {
+                            const el = document.getElementById('split-' + t);
+                            if (el) { el.value = ''; el.disabled = true; }
+                        });
                         // (2026-07-30) Default auto-segregate only for transactions >= 4000; prev: >= 1000
+                        // (2026-08-01) Skip auto-enable if user explicitly turned segregation OFF; prev: always re-enabled
                         const numAmt = parseFloat(cleanAmt) || 0;
-                        if (numAmt >= 4000) {
+                        if (numAmt >= 4000 && !txn?.segregateOff) {
                             window.__manualSegregateActive = true;
                             document.getElementById('split-wants').value = cleanAmt;
                         }
                     }
+
+                    // (2026-08-01) Set override flag before checkSplitTrigger so it respects segregateOff
+                    window.__segregateOffOverride = txn?.segregateOff === true;
                     if (window.checkSplitTrigger) window.checkSplitTrigger();
 
                     // Dynamic Account Population
@@ -13754,9 +13770,13 @@ Be direct, practical, and helpful.`;
                     // (2026-07-30) Auto-segregate by default only for >= 4000; sub-4000 remains off by default unless manually toggled ON
                     const isAutoOn = amt >= 4000;
                     const isManualOn = window.__manualSegregateActive === true && amt > 0;
+                    // (2026-08-01) Respect explicit OFF override; prev: isAutoOn always won for >=4000
+                    const isOverriddenOff = window.__segregateOffOverride === true;
 
-                    if (isAutoOn || isManualOn) {
+                    if ((isAutoOn || isManualOn) && !isOverriddenOff) {
                         if (container) container.classList.add('show-split');
+                        // (2026-08-01) Enable inputs when visible; prev: always enabled regardless of visibility
+                        splitIds.forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
                         const splitWants = document.getElementById('split-wants');
                         const allocated = splitIds.reduce((sum, id) => sum + parseCurrencyAmount(document.getElementById(id)?.value), 0);
                         if (splitWants && allocated <= 0) {
@@ -13768,7 +13788,7 @@ Be direct, practical, and helpful.`;
                         if (container) container.classList.remove('show-split');
                         splitIds.forEach(id => {
                             const input = document.getElementById(id);
-                            if (input) input.value = '';
+                            if (input) { input.value = ''; input.disabled = true; }
                         });
                         if (window.updateSegregateBtnUI) window.updateSegregateBtnUI(false);
                     }
@@ -13781,19 +13801,26 @@ Be direct, practical, and helpful.`;
                     const splitIds = ['split-needs', 'split-wants', 'split-savings', 'split-na'];
                     const isCurrentlyOpen = container && container.classList.contains('show-split');
 
+                    // (2026-08-01) Clear override when user explicitly acts on toggle; prev: override persisted
+                    window.__segregateOffOverride = false;
                     if (isCurrentlyOpen) {
                         // Toggle OFF
                         window.__manualSegregateActive = false;
                         if (container) container.classList.remove('show-split');
                         splitIds.forEach(id => {
                             const input = document.getElementById(id);
-                            if (input) input.value = '';
+                            if (input) { input.value = ''; input.disabled = true; }
                         });
                         if (window.updateSegregateBtnUI) window.updateSegregateBtnUI(false);
                     } else {
                         // Toggle ON
                         window.__manualSegregateActive = true;
                         if (container) container.classList.add('show-split');
+                        // (2026-08-01) Re-enable inputs when toggled ON; prev: always enabled so could type while hidden
+                        splitIds.forEach(id => {
+                            const input = document.getElementById(id);
+                            if (input) input.disabled = false;
+                        });
                         const splitWants = document.getElementById('split-wants');
                         const allocated = splitIds.reduce((sum, id) => sum + parseCurrencyAmount(document.getElementById(id)?.value), 0);
                         if (splitWants && (allocated <= 0 || amt > 0)) {
@@ -13992,7 +14019,8 @@ Be direct, practical, and helpful.`;
                     const naS = parseCurrencyAmount(document.getElementById('split-na').value);
 
                     const splitContainerEl = document.getElementById('split-inputs-container');
-                    const isSplitActive = splitContainerEl && splitContainerEl.style.display !== 'none';
+                    // (2026-08-01) Fixed: was checking style.display (never set); now checks class; prev: always true
+                    const isSplitActive = splitContainerEl && splitContainerEl.classList.contains('show-split');
                     // (2026-07-30) Save budgetSplit ONLY if segregation toggle is active/open; prev: saved for all >=1000
                     if (isSplitActive) {
                         budgetSplit = { needs: needsS, wants: wantsS, savings: savingsS, na: naS };
@@ -14102,6 +14130,8 @@ Be direct, practical, and helpful.`;
                             excluded: document.getElementById('manual-exclude-toggle').checked,
                             manualBudgetCategory: selectedAccount === 'bpi' && !window.editingTxnId ? 'n/a' : (window.currentManualClassification || 'n/a'),
                             budgetSplit: budgetSplit,
+                            // (2026-08-01) Persist explicit OFF; prev: re-opening re-enabled auto-split for >=4000
+                            segregateOff: !isSplitActive,
                             refund: isRefund,
                             // (2026-07-13) Save refundType as online always; prev: paymentMethod
                             refundType: isRefund ? 'online' : null,
@@ -15262,9 +15292,10 @@ Be direct, practical, and helpful.`;
                     drawTrendChart(window.allTxns);
                 };
 
-                // Override injectBrandLogos to respect visibility
-                const originalInject = injectBrandLogos;
-                injectBrandLogos = () => {
+                // (2026-07-13) Safe lookup of injectBrandLogos; prev: bare identifier ReferenceError
+                const originalInject = typeof injectBrandLogos === 'function' ? injectBrandLogos : (window.injectBrandLogos || null);
+                window.injectBrandLogos = () => {
+                    if (typeof originalInject === 'function') originalInject();
                     const txns = document.querySelectorAll('.premium-txn');
                     txns.forEach(txn => {
                         const merchantEl = txn.querySelector('.txn-merch');
@@ -15811,8 +15842,8 @@ Be direct, practical, and helpful.`;
                                 </div>
                                 <!-- SVG Plot -->
                                 <div style="flex: 1; position: relative;">
-                                    <!-- [FIX: 2026-07-04 - Added touch-action: none to block default page scrolling on chart dragging - Antigravity] -->
-                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow: visible; touch-action: none;" id="budget-analysis-line-svg">
+                                    <!-- (2026-07-13) Set touch-action: pan-y for smooth vertical scroll; prev: touch-action: none -->
+                                    <svg viewBox="0 0 320 160" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="overflow: visible; touch-action: pan-y;" id="budget-analysis-line-svg">
                                         <!-- Definitions for gradients -->
                                         <defs>
                                             <linearGradient id="trend-grad-all" x1="0" y1="0" x2="0" y2="1">

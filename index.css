@@ -2597,6 +2597,262 @@
             .budget-month-select { min-width: 122px; max-width: 148px; }
         }
         
+        /* (2026-07-13) Completely hide upgraded native selects; prev: position absolute only */
+        select.custom-select-hidden,
+        select[data-custom-dropdown-upgraded="true"] {
+            display: none !important;
+            visibility: hidden !important;
+            position: absolute !important;
+            top: -9999px !important;
+            left: -9999px !important;
+            width: 0 !important;
+            height: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            clip: rect(0, 0, 0, 0) !important;
+            z-index: -999999 !important;
+            overflow: hidden !important;
+        }
+
+        /* (2026-07-13) Elevate open dropdown wrapper stacking context; prev: z-index on menu only */
+        .custom-dropdown-wrapper {
+            position: relative;
+            display: inline-block;
+            vertical-align: middle;
+            z-index: 1;
+        }
+
+        .custom-dropdown-wrapper.open {
+            z-index: 999999 !important;
+        }
+
+        /* (2026-07-13) Allow overflow on AI insight card so open menu is never clipped; prev: clipped by card overflow */
+        .ai-insight-section,
+        #ai-insight-box,
+        .monthly-summary-card,
+        .monthly-summary-body {
+            position: relative;
+            z-index: 1;
+            overflow: visible !important;
+        }
+
+        .ai-insight-header {
+            position: relative;
+            z-index: 99999 !important;
+            overflow: visible !important;
+        }
+
+        .ai-summary-text {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* (2026-07-13) Lower reimbursements card below AI model dropdown menu; prev: default stacking order */
+        #reimbursements-widget-card {
+            position: relative;
+            z-index: 0;
+        }
+
+        /* (2026-07-13) Default styling for custom-dropdown-trigger; prev: unstyled trigger button */
+        .custom-dropdown-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            box-sizing: border-box;
+            font-size: 11px;
+            font-weight: 600;
+            color: #1e293b;
+            background: #f8fafc;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        body.dark-mode .custom-dropdown-trigger {
+            background: #1e293b;
+            color: #f8fafc;
+            border-color: #334155;
+        }
+
+        .custom-dropdown-trigger .custom-dropdown-arrow {
+            font-size: 14px;
+            transition: transform 0.2s ease;
+            opacity: 0.7;
+            margin-left: auto;
+        }
+
+        .custom-dropdown-wrapper.open .custom-dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        /* (2026-07-13) Set max z-index 2147483647 for dropdown menus; prev: z-index 999999 */
+        .custom-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            z-index: 2147483647 !important;
+            min-width: 150px;
+            max-width: 240px;
+            max-height: 240px;
+            overflow-y: scroll !important;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22), 0 4px 10px rgba(15, 23, 42, 0.12);
+            padding: 5px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px) scale(0.98);
+            transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        body.dark-mode .custom-dropdown-menu {
+            background: #1e293b !important;
+            scrollbar-color: #475569 transparent;
+            border-color: #334155;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        /* (2026-07-13) Compact pink theme & single border for dashboard-ai-model; prev: white double border */
+        .ai-model-selector {
+            border: none !important;
+            padding: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+        .custom-dropdown-trigger-dashboard-ai-model {
+            background: #fce7f3 !important;
+            border: 1px solid #fbcfe8 !important;
+            color: #be185d !important;
+            font-size: 10px !important;
+            font-weight: 700 !important;
+            height: 24px !important;
+            padding: 2px 10px !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
+        }
+        .custom-dropdown-trigger-dashboard-ai-model .custom-dropdown-arrow {
+            color: #db2777 !important;
+            opacity: 1 !important;
+        }
+        body.dark-mode .custom-dropdown-trigger-dashboard-ai-model {
+            background: #831843 !important;
+            border-color: #9d174d !important;
+            color: #fbcfe8 !important;
+        }
+        .custom-dropdown-menu-dashboard-ai-model .custom-dropdown-option.selected {
+            background: rgba(219, 39, 119, 0.15) !important;
+            color: #be185d !important;
+        }
+
+        /* (2026-07-13) Max z-index for AI model selector only; prev: shared base z-index from .custom-dropdown-menu */
+        .custom-dropdown-menu-dashboard-ai-model {
+            z-index: 2147483647 !important;
+            isolation: isolate;
+        }
+
+        /* (2026-07-13) Offset manual account dropdown menu to the right; prev: aligned left edge */
+        .custom-dropdown-menu-manual-account {
+            left: 42px !important;
+            right: auto !important;
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar {
+            width: 4px !important;
+            display: block !important;
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar-track {
+            background: transparent !important;
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar-thumb {
+            background: #cbd5e1 !important;
+            border-radius: 4px !important;
+        }
+
+        .custom-dropdown-menu::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8 !important;
+        }
+
+        body.dark-mode .custom-dropdown-menu::-webkit-scrollbar-thumb {
+            background: #475569 !important;
+        }
+
+        .custom-dropdown-wrapper.open .custom-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        .custom-dropdown-wrapper.open-upwards .custom-dropdown-menu {
+            top: auto;
+            bottom: calc(100% + 4px);
+            transform: translateY(6px) scale(0.98);
+        }
+
+        .custom-dropdown-wrapper.open-upwards.open .custom-dropdown-menu {
+            transform: translateY(0) scale(1);
+        }
+
+        .custom-dropdown-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+            background: #ffffff !important;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .custom-dropdown-option:hover,
+        .custom-dropdown-option:active {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+
+        .custom-dropdown-option.selected {
+            background: rgba(59, 130, 246, 0.1) !important;
+            color: #2563eb !important;
+            font-weight: 700;
+        }
+
+        /* Dark mode support for custom dropdowns */
+        body.dark-mode .custom-dropdown-menu {
+            background: #1e293b;
+            border-color: #334155;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        body.dark-mode .custom-dropdown-option {
+            color: #cbd5e1;
+            background: #1e293b !important;
+        }
+
+        body.dark-mode .custom-dropdown-option:hover,
+        body.dark-mode .custom-dropdown-option:active {
+            background: #334155 !important;
+            color: #f8fafc !important;
+        }
+
+        body.dark-mode .custom-dropdown-option.selected {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
         .dash-total-val { color: #0f172a; }
         body.dark-mode .dash-total-val { color: var(--text-primary); }
 
@@ -2801,11 +3057,31 @@
         .budget-status { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* EXCLUDED STATE FOR PREMIUM TRANSACTIONS */
-        .premium-txn.txn-excluded { opacity: 0.4; }
+        /* (2026-08-01) Opacity moved to inner children only; prev: card opacity:0.4 made bg transparent on swipe */
+        .premium-txn.txn-excluded { background: #fff; }
+        body.dark-mode .premium-txn.txn-excluded { background: var(--card-bg); }
+        .premium-txn.txn-excluded .txn-details,
+        .premium-txn.txn-excluded .txn-right { opacity: 0.4; }
         .premium-txn.txn-excluded .txn-merch,
         .premium-txn.txn-excluded .txn-sub,
         .premium-txn.txn-excluded .txn-amount,
         .premium-txn.txn-excluded .txn-note { text-decoration: line-through; }
+
+        /* Tints remain visible on excluded+tinted cards (bg is now opaque so tint shows at normal alpha) */
+        .premium-txn.txn-excluded.week-highlight {
+            background: rgba(59, 130, 246, 0.06) !important;
+        }
+        .dark-mode .premium-txn.txn-excluded.week-highlight {
+            background: rgba(59, 130, 246, 0.08) !important;
+        }
+        .premium-txn.txn-excluded.unpaid-highlight {
+            background: rgba(239, 68, 68, 0.08) !important;
+        }
+        .dark-mode .premium-txn.txn-excluded.unpaid-highlight {
+            background: rgba(239, 68, 68, 0.12) !important;
+        }
+
+        .premium-txn.txn-excluded .icon-box { filter: grayscale(1); opacity: 0.5; }
 
         .reimbursed-badge {
             display: inline-block;
@@ -2820,9 +3096,9 @@
             vertical-align: middle;
             text-transform: uppercase;
         }
-        .premium-txn.txn-excluded .icon-box { filter: grayscale(1); opacity: 0.5; }
 
         /* SEARCH STYLING */
+
         .search-container {
             margin: -4px 0px 20px;
             position: relative;
@@ -3286,10 +3562,47 @@
             width: 100%;
             min-width: 100%;
             min-height: 8px;
+            position: relative; /* (2026-08-01) For .bar-ticks-overlay absolute positioning */
         }
+        /* (2026-07-13) Increased tick line contrast to 0.18 for blue bar; prev: 0.1 */
+        .bar-ticks-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            background: repeating-linear-gradient(
+                to right,
+                transparent 0px,
+                transparent calc(100% - 1.5px),
+                rgba(0, 0, 0, 0.18) calc(100% - 1.5px),
+                rgba(0, 0, 0, 0.18) 100%
+            );
+            background-size: 20% 100%;
+            opacity: 1;
+            transition: opacity 0.25s ease;
+        }
+        body.dark-mode .bar-ticks-overlay {
+            background: repeating-linear-gradient(
+                to right,
+                transparent 0px,
+                transparent calc(100% - 1.5px),
+                rgba(255, 255, 255, 0.22) calc(100% - 1.5px),
+                rgba(255, 255, 255, 0.22) 100%
+            );
+            background-size: inherit;
+        }
+        body.bar-ticks-hidden .bar-ticks-overlay,
+        .progress-bar-bg.skeleton .bar-ticks-overlay {
+            opacity: 0 !important;
+            display: none !important;
+            pointer-events: none !important;
+        }
+
         .progress-bar-fill {
             height: 100%;
             border-radius: 4px;
+            position: relative;
+            overflow: hidden;
             transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s;
         }
         .triple-summary-sub.skeleton {
@@ -4040,6 +4353,20 @@
             /* [FIX 2026-06-27: Added touch-action: pan-y to prevent horizontal swipe right from triggering global tab switch - Antigravity] */
             touch-action: pan-y;
         }
+        /* (2026-08-01) Opaque tint bg inside swipe wrapper; prev: rgba() bg let orange/red swipe-bg bleed through */
+        .txn-swipe-wrapper .premium-txn.week-highlight {
+            background: linear-gradient(rgba(59,130,246,0.06), rgba(59,130,246,0.06)), #fff !important;
+        }
+        body.dark-mode .txn-swipe-wrapper .premium-txn.week-highlight {
+            background: linear-gradient(rgba(59,130,246,0.08), rgba(59,130,246,0.08)), var(--card-bg) !important;
+        }
+        .txn-swipe-wrapper .premium-txn.unpaid-highlight {
+            background: linear-gradient(rgba(239,68,68,0.08), rgba(239,68,68,0.08)), #fff !important;
+        }
+        body.dark-mode .txn-swipe-wrapper .premium-txn.unpaid-highlight {
+            background: linear-gradient(rgba(239,68,68,0.12), rgba(239,68,68,0.12)), var(--card-bg) !important;
+        }
+
 
         /* UNDO SNACKBAR STACK */
         .undo-stack {

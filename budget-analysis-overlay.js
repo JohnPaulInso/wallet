@@ -26,6 +26,36 @@
         savings: '#10b981'
     };
 
+    // (2026-07-13) Calculate exact calendar weeks (4, 5, or 6 weeks) for target month; prev: static 5 weeks
+    function getMonthCalendarWeeks(year, month) {
+        const firstDay = new Date(year, month, 1);
+        const lastDayNum = new Date(year, month + 1, 0).getDate();
+
+        const weeks = [];
+        let currentStart = 1;
+        let weekIndex = 1;
+
+        const firstDayOfWeek = firstDay.getDay(); // 0=Sun, 6=Sat
+        const daysInFirstWeek = 7 - firstDayOfWeek;
+        let currentEnd = Math.min(daysInFirstWeek, lastDayNum);
+
+        while (currentStart <= lastDayNum) {
+            const startTime = new Date(year, month, currentStart, 0, 0, 0, 0).getTime();
+            const endTime = new Date(year, month, currentEnd, 23, 59, 59, 999).getTime();
+
+            weeks.push({
+                label: `W${weekIndex}`,
+                startTime,
+                endTime
+            });
+
+            weekIndex++;
+            currentStart = currentEnd + 1;
+            currentEnd = Math.min(currentStart + 6, lastDayNum);
+        }
+        return weeks;
+    }
+
     /**
      * Format number as Peso currency without decimal points
      */
@@ -321,7 +351,8 @@
             // Store labels for the x-axis
             const trendLabels = [];
 
-            if (budgetData.transactions.all.length > 0) {
+            // (2026-07-13) Always compute trend segments regardless of txn count; prev: skipped if length === 0
+            if (true) {
                 // Determine segmentation based on filter type
                 if (filterVal === 'last_7_days') {
                     // Last 7 days: show day names starting from Sunday
@@ -606,52 +637,41 @@
                         }
                     }
                 } else {
-                    // Default: This Month and specific months - show weeks (W1-W5)
-                    const sortedTxns = [...budgetData.transactions.all].sort((a, b) => a.timestamp - b.timestamp);
-                    
-                    if (sortedTxns.length > 0) {
-                        const minTime = sortedTxns[0].timestamp;
-                        const maxTime = sortedTxns[sortedTxns.length - 1].timestamp;
-                        const timeRange = maxTime - minTime;
-                        const segmentDuration = timeRange / 5;
+                    // (2026-07-13) Dynamic calendar week breakdown (4, 5, or 6 weeks); prev: hardcoded 5 segments
+                    let targetYear, targetMonth;
+                    if (filterVal && /^\d{4}-\d{2}$/.test(filterVal)) {
+                        const parts = filterVal.split('-');
+                        targetYear = parseInt(parts[0], 10);
+                        targetMonth = parseInt(parts[1], 10) - 1;
+                    } else {
+                        const refDate = referenceDate || new Date();
+                        targetYear = refDate.getFullYear();
+                        targetMonth = refDate.getMonth();
+                    }
 
-                        // Store period segments for click filtering
-                        const weekSegments = [];
-                        
-                        for (let i = 0; i < 5; i++) {
-                            trendLabels.push(`W${i + 1}`);
-                            
-                            // Calculate time range for this week segment
-                            const segmentStart = minTime + (segmentDuration * i);
-                            const segmentEnd = (i === 4) ? maxTime : (minTime + (segmentDuration * (i + 1)) - 1);
-                            
-                            weekSegments.push({
-                                label: `W${i + 1}`,
-                                startTime: segmentStart,
-                                endTime: segmentEnd
-                            });
-                        }
-                        
-                        // Store period info for click filtering
-                        budgetData.periodSegments = weekSegments;
+                    const monthWeeks = getMonthCalendarWeeks(targetYear, targetMonth);
+                    numPoints = monthWeeks.length;
+                    trends.all = new Array(numPoints).fill(0);
+                    trends.needs = new Array(numPoints).fill(0);
+                    trends.wants = new Array(numPoints).fill(0);
+                    trends.savings = new Array(numPoints).fill(0);
+
+                    const weekSegments = [];
+                    monthWeeks.forEach((wk, wIdx) => {
+                        trendLabels.push(wk.label);
+                        weekSegments.push(wk);
 
                         budgetData.transactions.all.forEach(t => {
-                            const segmentIdx = Math.min(4, Math.floor((t.timestamp - minTime) / segmentDuration));
-                            
-                            if (segmentIdx >= 0 && segmentIdx < 5) {
-                                trends.all[segmentIdx] += t.amount;
-                                if (t.bucket === 'needs') trends.needs[segmentIdx] += t.amount;
-                                if (t.bucket === 'wants') trends.wants[segmentIdx] += t.amount;
-                                if (t.bucket === 'savings') trends.savings[segmentIdx] += t.amount;
+                            if (t.timestamp >= wk.startTime && t.timestamp <= wk.endTime) {
+                                trends.all[wIdx] += t.amount;
+                                if (t.bucket === 'needs') trends.needs[wIdx] += t.amount;
+                                if (t.bucket === 'wants') trends.wants[wIdx] += t.amount;
+                                if (t.bucket === 'savings') trends.savings[wIdx] += t.amount;
                             }
                         });
-                    } else {
-                        // No transactions, just set default labels
-                        for (let i = 0; i < 5; i++) {
-                            trendLabels.push(`W${i + 1}`);
-                        }
-                        budgetData.periodSegments = [];
-                    }
+                    });
+
+                    budgetData.periodSegments = weekSegments;
                 }
             }
             
@@ -1224,6 +1244,11 @@
             return;
         }
 
+        // (2026-07-13) Dynamic X-axis label rendering for 4, 5, or 6 weeks; prev: static 5 spans HTML
+        if (xAxisLabels && budgetData.trendLabels && budgetData.trendLabels.length > 0) {
+            xAxisLabels.innerHTML = budgetData.trendLabels.map(lbl => `<span>${lbl}</span>`).join('');
+        }
+
         const TREND_COLORS = {
             all: '#0f172a',
             needs: '#3b82f6',
@@ -1472,37 +1497,29 @@
                     activeDragWeekIdx = idx;
                     wasAlreadySelected = (selectedPeriodIndex === idx);
 
+                    // (2026-07-13) Capture pointer only after 300ms long press; prev: immediate capture
                     const isMultiLine = (filter === 'all' && !showAllAsTotal);
                     if (isMultiLine) {
-                        hitArea.setPointerCapture(e.pointerId);
-
                         longPressTimer = setTimeout(() => {
                             isDragging = true;
+                            try { hitArea.setPointerCapture(e.pointerId); } catch (err) {}
                             if (window.triggerHaptic) window.triggerHaptic('medium');
                             
-                            // Highlight the week immediately when the long press activates
                             selectedPeriodIndex = idx;
                             updateDragSelection(e.clientX, e.clientY);
-                        }, 250); // 250ms long press delay
+                        }, 300);
                     }
                 };
 
                 const pointerMoveHandler = (e) => {
                     if (filter !== 'all' || showAllAsTotal) return;
-                    if (!hitArea.hasPointerCapture(e.pointerId)) return;
 
                     if (!isDragging) {
-                        // [FIX: 2026-07-04] - Antigravity
-                        // Only cancel long-press if the user's initial motion is MOSTLY VERTICAL
-                        // (i.e. a page scroll intent). Horizontal movement should NOT cancel the gesture
-                        // so the user can press and immediately slide across weeks before 250ms fires.
                         const dx = Math.abs(e.clientX - startX);
                         const dy = Math.abs(e.clientY - startY);
                         const moveDist = Math.hypot(dx, dy);
-                        if (moveDist > 10 && dy > dx) {
-                            // Dominant vertical movement → cancel long press, let page scroll
+                        if (moveDist > 8) {
                             if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-                            hitArea.releasePointerCapture(e.pointerId);
                         }
                         return;
                     }

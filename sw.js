@@ -81,7 +81,10 @@ self.addEventListener('fetch', (e) => {
             fetch(e.request)
                 .then((response) => {
                     const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+                    // (2026-07-13) Filter http/https scheme for cache.put; prev: unchecked put
+                    if (e.request.url.startsWith('http://') || e.request.url.startsWith('https://')) {
+                        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+                    }
                     return response;
                 })
                 .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
@@ -95,7 +98,10 @@ self.addEventListener('fetch', (e) => {
             const fetchPromise = fetch(e.request).then((response) => {
                 if (response && response.status === 200) {
                     const clone = response.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+                    // (2026-07-13) Filter http/https scheme for cache.put; prev: unchecked put
+                    if (e.request.url.startsWith('http://') || e.request.url.startsWith('https://')) {
+                        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+                    }
                 }
                 return response;
             }).catch(() => cached);

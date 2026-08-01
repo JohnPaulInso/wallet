@@ -83,14 +83,21 @@ export const NotificationsEngine = {
         return `${uid || "guest"}:${this.getStableNotificationKey(type, meta, fallbackId)}`;
     },
 
+    // (2026-07-13) Check meta key, fallbackId key, and type key; prev: single meta key check
     wasDeliveredLocally(uid, type, fallbackId = "", meta = null) {
         const cache = this.getLocalCache();
-        return Boolean(cache[this.getLocalNotifKey(uid, type, fallbackId, meta)]);
+        const userPrefix = `${uid || "guest"}:`;
+        const keyWithMeta = this.getLocalNotifKey(uid, type, fallbackId, meta);
+        const keyWithId = fallbackId ? `${userPrefix}${fallbackId}` : "";
+        return Boolean(cache[keyWithMeta] || (keyWithId && cache[keyWithId]));
     },
 
     markDeliveredLocally(uid, type, fallbackId = "", createdAtMs = Date.now(), meta = null) {
         const cache = this.getLocalCache();
-        cache[this.getLocalNotifKey(uid, type, fallbackId, meta)] = createdAtMs;
+        const userPrefix = `${uid || "guest"}:`;
+        const keyWithMeta = this.getLocalNotifKey(uid, type, fallbackId, meta);
+        cache[keyWithMeta] = createdAtMs;
+        if (fallbackId) cache[`${userPrefix}${fallbackId}`] = createdAtMs;
         this.setLocalCache(cache);
 
         if (uid) {
@@ -660,10 +667,11 @@ export const NotificationsEngine = {
                 const data = docSnap.data() || {};
                 const createdAtMs = this.getCreatedAtMillis(data);
                 if (!createdAtMs) return;
-                if (!this.isNotificationVisibleForCurrentInstall(uid, createdAtMs)) return;
+                // (2026-07-13) Ignore notifications >24h old and pass meta to wasDeliveredLocally; prev: replayed all past
+                if (Date.now() - createdAtMs > 86400000) return;
                 newestSeen = Math.max(newestSeen, createdAtMs);
                 if (lastSync && createdAtMs <= lastSync) return;
-                if (this.wasDeliveredLocally(uid, data.type, docSnap.id)) return;
+                if (this.wasDeliveredLocally(uid, data.type, docSnap.id, data.meta || null)) return;
                 pending.push({
                     id: docSnap.id,
                     title: data.title,
@@ -694,8 +702,9 @@ export const NotificationsEngine = {
             for (const change of snapshot.docChanges()) {
                 if (change.type !== "added") continue;
                 const data = change.doc.data() || {};
-                const createdAtMs = this.getCreatedAtMillis(data) || Date.now();
-                if (!this.isNotificationVisibleForCurrentInstall(uid, createdAtMs)) continue;
+                // (2026-07-13) Ignore docs >10m old and check wasDeliveredLocally; prev: delivered all snapshot additions
+                if (Date.now() - createdAtMs > 600000) continue;
+                if (this.wasDeliveredLocally(uid, data.type, change.doc.id, data.meta || null)) continue;
                 await this.deliverLocalNotification(
                     uid,
                     change.doc.id,

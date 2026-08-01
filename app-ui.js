@@ -4359,6 +4359,16 @@ function writeLocalFallbackNotifications(items) {
 function ensureBudgetThresholdLocalFallback(category, current, limitAmount) {
     if (!Number.isFinite(current) || !Number.isFinite(limitAmount) || limitAmount <= 0) return false;
 
+    // (2026-07-13) Block notifications for non-current months; prev: fired for any filter including old months
+    const _rn = new Date();
+    const _realMonthKey = `${_rn.getFullYear()}-${String(_rn.getMonth()+1).padStart(2,'0')}`;
+    const _snap = window.lastBudgetNotificationSnapshot || {};
+    const _activeMonthKey = _snap.monthKey || _realMonthKey;
+    const _filterVal = _snap.filterVal || 'this_month';
+    const _isCurrentMonth = _activeMonthKey === _realMonthKey && (_filterVal === 'this_month' || _filterVal === _realMonthKey || ['today','this_week','last_week','last_7_days','first_15','last_15'].includes(_filterVal));
+    if (!_isCurrentMonth) return false;
+
+
     const pct = (current / limitAmount) * 100;
     const monthKey = window.NotificationsEngine?.getCurrentMonthKey
         ? window.NotificationsEngine.getCurrentMonthKey()
@@ -5750,13 +5760,23 @@ window.queueBudgetThresholdNotificationTrigger = queueBudgetThresholdNotificatio
 
                 optDiv.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    if (selectEl.value !== opt.value) {
-                        selectEl.value = opt.value;
-                        labelSpan.innerText = opt.text;
-                        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-                        selectEl.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
+                    const newValue = opt.value;
+                    const newText = opt.text;
+
+                    // (2026-07-13) Step 1 instant: visual select + close; prev: fired change immediately causing lag
+                    menu.querySelectorAll('.custom-dropdown-option').forEach(d => d.classList.remove('selected'));
+                    optDiv.classList.add('selected');
+                    labelSpan.innerText = newText;
                     wrapper.classList.remove('open');
+
+                    // (2026-07-13) Step 2 deferred: dispatch change after browser paints; prev: fired inline
+                    if (selectEl.value !== newValue) {
+                        selectEl.value = newValue;
+                        requestAnimationFrame(() => requestAnimationFrame(() => {
+                            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+                            selectEl.dispatchEvent(new Event('input', { bubbles: true }));
+                        }));
+                    }
                 });
 
                 menu.appendChild(optDiv);

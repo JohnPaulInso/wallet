@@ -1560,20 +1560,42 @@
                             </div>
                         </div>
                     </div>
+                    <!-- (2026-07-13) Add squared icon badges to summary cards; prev: text labels only -->
                     <div class="summary-pills">
-                        <div class="summary-pill income-pill">
-                            <span class="pill-label">Income</span>
-                            <!-- [NEW: SUMMARY PILL SKELETON - 2026-04-02: Reduced size per feedback] -->
-                            <span class="pill-value privacy-mask skeleton" id="calendar-income-total"
-                                style="min-width: 45px; min-height: 14px; display: inline-block;">₱0</span>
+                        <div class="summary-pill income-pill" style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:#dcfce7; color:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="material-icons" style="font-size:20px;">south_west</i>
+                            </div>
+                            <div>
+                                <span class="pill-label">Income</span>
+                                <span class="pill-value privacy-mask skeleton" id="calendar-income-total" style="min-width: 45px; min-height: 14px; display: block;">₱0</span>
+                            </div>
                         </div>
-                        <div class="summary-pill expense-pill">
-                            <span class="pill-label">Expenses</span>
-                            <!-- [NEW: SUMMARY PILL SKELETON - 2026-04-02: Reduced size per feedback] -->
-                            <span class="pill-value privacy-mask skeleton" id="calendar-expense-total"
-                                style="min-width: 45px; min-height: 14px; display: inline-block;">₱0</span>
+                        <div class="summary-pill expense-pill" style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:36px; height:36px; border-radius:10px; background:#fee2e2; color:#ef4444; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="material-icons" style="font-size:20px;">north_east</i>
+                            </div>
+                            <div>
+                                <span class="pill-label">Expenses</span>
+                                <span class="pill-value privacy-mask skeleton" id="calendar-expense-total" style="min-width: 45px; min-height: 14px; display: block;">₱0</span>
+                            </div>
                         </div>
                     </div>
+                    <!-- (2026-07-13) Interactive Bills & Reminders Overview Card; prev: header button included -->
+                    <div id="calendar-upcoming-bills-card" class="custom-section" style="margin-top: 24px; padding: 24px; border-radius: 24px; background: #ffffff; border: 1px solid #e2e8f0; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+                        <div style="margin-bottom: 16px;">
+                            <div style="font-size: 16px; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                                <i class="material-icons" style="color: #3b82f6; font-size: 20px;">event_note</i>
+                                <span>Bills & Reminders</span>
+                            </div>
+                            <div style="font-size: 11px; color: #64748b; font-weight: 600; margin-top: 2px;">Track upcoming due dates, recurring utilities, and bill status.</div>
+                        </div>
+                        <!-- (2026-07-13) Auto-hiding Due Today, This Week, and Upcoming sections; prev: tab filter buttons -->
+                        <div id="calendar-bills-card-list" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px; font-weight: 700;">No bills scheduled.</div>
+                        </div>
+                    </div>
+
                     <!-- [REFINED 2026-04-03] Financial Insights Card - Further reduced bottom margin per USER request -->
                     <div class="custom-section"
                         style="margin-top: 24px; padding: 24px; border-radius: 24px; background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 12px;">
@@ -1667,34 +1689,37 @@
 
                     <!-- (2026-07-30) Fuel Tank Card placed below Link Account card with Month/Year selectors & History List; prev: above placeholder -->
                     <div id="accounts-fuel-tank-card" class="accounts-fuel-tank-card">
-                        <div class="accounts-fuel-tank-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                            <div class="accounts-fuel-tank-title-box">
+                        <!-- (2026-07-13) Flex nowrap for header controls, reverse month option order, purple Car / blue Motor colors; prev: flex wrap with ascending months -->
+                        <div class="accounts-fuel-tank-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px;">
+                            <!-- (2026-07-13) Flex alignment to center title & subtitle vertically with icon; prev: baseline block layout -->
+                            <div class="accounts-fuel-tank-title-box" style="display: flex; align-items: center; gap: 10px;">
                                 <div class="accounts-fuel-tank-icon">
                                     <i class="material-icons">local_gas_station</i>
                                 </div>
-                                <div>
-                                    <h3 class="accounts-fuel-tank-title">Fuel Tank &amp; Expenses</h3>
-                                    <div class="accounts-fuel-tank-sub">Vehicle fuel logs &amp; volume tracker</div>
+                                <div style="display: flex; flex-direction: column; justify-content: center;">
+                                    <h3 class="accounts-fuel-tank-title" style="margin: 0; line-height: 1.2;">Fuel Tank &amp; Expenses</h3>
+                                    <!-- (2026-07-13) Added nowrap and ellipsis to prevent subtitle text wrapping; prev: wrapped tracker to line 2 -->
+                                    <div class="accounts-fuel-tank-sub" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 175px; margin-top: 2px;">Vehicle fuel logs &amp; volume tracker</div>
                                 </div>
                             </div>
-                            <div class="fuel-tank-filter-controls" style="display: flex; align-items: center; gap: 6px;">
+                            <div class="fuel-tank-filter-controls" style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                                 <select id="fuel-tank-month-select" class="fuel-tank-select" onchange="AccountsView.updateFuelTankWidget()">
-                                    <option value="0">Jan</option>
-                                    <option value="1">Feb</option>
-                                    <option value="2">Mar</option>
-                                    <option value="3">Apr</option>
-                                    <option value="4">May</option>
-                                    <option value="5">Jun</option>
-                                    <option value="6">Jul</option>
-                                    <option value="7">Aug</option>
-                                    <option value="8">Sep</option>
-                                    <option value="9">Oct</option>
-                                    <option value="10">Nov</option>
                                     <option value="11">Dec</option>
+                                    <option value="10">Nov</option>
+                                    <option value="9">Oct</option>
+                                    <option value="8">Sep</option>
+                                    <option value="7">Aug</option>
+                                    <option value="6">Jul</option>
+                                    <option value="5">Jun</option>
+                                    <option value="4">May</option>
+                                    <option value="3">Apr</option>
+                                    <option value="2">Mar</option>
+                                    <option value="1">Feb</option>
+                                    <option value="0">Jan</option>
                                 </select>
                                 <select id="fuel-tank-year-select" class="fuel-tank-select" onchange="AccountsView.updateFuelTankWidget()">
-                                    <option value="2025">2025</option>
                                     <option value="2026">2026</option>
+                                    <option value="2025">2025</option>
                                 </select>
                             </div>
                         </div>
@@ -1711,6 +1736,20 @@
                             <div class="accounts-fuel-metric">
                                 <span class="accounts-fuel-metric-label">Avg Rate</span>
                                 <span id="fuel-tank-rate" class="accounts-fuel-metric-value">₱0.0/L</span>
+                            </div>
+                        </div>
+
+                        <!-- (2026-07-13) Motor (Blue #2563eb) vs Car (Purple #7c3aed) refill split breakdown; prev: Car blue, Motor purple -->
+                        <div class="fuel-tank-category-split" style="display: flex; gap: 8px; margin-top: 10px; padding: 8px 12px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0;">
+                            <div style="flex: 1; text-align: center; border-right: 1px solid #cbd5e1; padding-right: 6px;">
+                                <div style="font-size: 9px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.3px;">Car Refill</div>
+                                <div id="fuel-tank-car-spent" class="privacy-mask" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 2px;">₱0.00</div>
+                                <div id="fuel-tank-car-volume" style="font-size: 9.5px; font-weight: 700; color: #64748b;">0.0 L</div>
+                            </div>
+                            <div style="flex: 1; text-align: center; padding-left: 6px;">
+                                <div style="font-size: 9px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.3px;">Motor Refill</div>
+                                <div id="fuel-tank-motor-spent" class="privacy-mask" style="font-size: 11px; font-weight: 800; color: #1e293b; margin-top: 2px;">₱0.00</div>
+                                <div id="fuel-tank-motor-volume" style="font-size: 9.5px; font-weight: 700; color: #64748b;">0.0 L</div>
                             </div>
                         </div>
 
@@ -4296,6 +4335,8 @@
                                     prevTxns[i].excluded === t.excluded &&
                                     prevTxns[i].refund === t.refund &&
                                     prevTxns[i].reimbursed === t.reimbursed &&
+                                    // (2026-07-13) Include flagColor check to trigger re-render on flag change; prev: skipped
+                                    prevTxns[i].flagColor === t.flagColor &&
                                     prevTxns[i].reimbursementAmount === t.reimbursementAmount &&
                                     prevTxns[i].reimbursementType === t.reimbursementType &&
                                     prevTxns[i].reimbursementAllocationCategory === t.reimbursementAllocationCategory
@@ -7870,14 +7911,18 @@ Be direct, practical, and helpful.`;
                         const filter = filterEl.value;
                         if (window.persistDashboardMonthSelection) window.persistDashboardMonthSelection(filter);
                         
-                        // [FIXED: 2026-07-03 - Sync chart-filter changes to budget-month-filter to ensure active month selection updates the budget widget - Antigravity]
-                        const isExplicitMonth = /^\d{4}-\d{2}$/.test(String(filter || '').trim());
-                        if (isExplicitMonth || filter === 'this_month') {
-                            localStorage.setItem('smartwallet_budget_widget_month_filter', filter);
-                            const budgetSelect = document.getElementById('budget-month-filter');
-                            if (budgetSelect) {
-                                budgetSelect.value = filter;
+                        // (2026-07-13) Sync all period filters (3m, 6m, year, all) to budget widget; prev: synced explicit month only
+                        localStorage.setItem('smartwallet_budget_widget_month_filter', filter);
+                        const budgetSelect = document.getElementById('budget-month-filter');
+                        if (budgetSelect) {
+                            let optExists = Array.from(budgetSelect.options).some(o => o.value === filter);
+                            if (!optExists) {
+                                const newOpt = document.createElement('option');
+                                newOpt.value = filter;
+                                newOpt.textContent = filter.replace(/_/g, ' ').toUpperCase();
+                                budgetSelect.appendChild(newOpt);
                             }
+                            budgetSelect.value = filter;
                         }
 
                         if (!window.allTxns) return;
@@ -9241,7 +9286,10 @@ Be direct, practical, and helpful.`;
                                  data-excluded="${t.excluded || false}"
                                  data-refund="${t.refund || false}"
                                  data-reimbursed="${t.reimbursed || false}"
-                                 data-type="${t.type || 'debit'}"> <!-- [ADDED: 2026-07-01] Type attribute for balance comparison checks -->
+                                 data-flag-color="${t.flagColor || ''}"
+                                 data-type="${t.type || 'debit'}" style="position: relative;">
+                                <!-- (2026-07-13) Slightly slimmer, taller SVG bookmark ribbon badge (12px x 19px); prev: 13px x 17px -->
+                                ${t.flagColor ? `<div class="bookmark-flag-badge" style="position: absolute; top: 0px; left: 13px; z-index: 10; line-height: 0; pointer-events: none;"><svg width="12" height="19" viewBox="0 0 12 19" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18)); display: block;"><path d="M0 0 H12 V19 L6 15 L0 19 Z" fill="${t.flagColor}"/></svg></div>` : ''}
                                 <div class="icon-box ${mapped.catClass}">
                                     <i class="material-icons">${mapped.icon}</i>
                                     ${logoHTML}
@@ -9314,6 +9362,11 @@ Be direct, practical, and helpful.`;
 
                         loadMoreWrap.appendChild(btn);
                         container.appendChild(loadMoreWrap);
+                    }
+
+                    // (2026-07-13) Refresh dynamic filter options for flag colors; prev: static options only
+                    if (typeof window.populateTxnFilter === 'function') {
+                        window.populateTxnFilter();
                     }
 
                     // Re-apply search if it was active
@@ -11358,13 +11411,22 @@ Be direct, practical, and helpful.`;
 
                 function showIOSMenu(item, event) {
                     if (window.modalOpen) return; // Prevent if already open
-                    if (event.cancelable) event.preventDefault();
+                    if (event && event.cancelable) event.preventDefault();
+
+                    // (2026-07-13) Normalize target to root .premium-txn container; prev: un-normalized item
+                    item = (item && item.closest) ? (item.closest('.premium-txn') || item) : item;
 
                     // (2026-07-13) Set menu open time & 60ms vibration; prev: 50ms vibration
                     window.iosMenuOpenTime = Date.now();
                     if (navigator.vibrate) navigator.vibrate(60);
 
-                    const txnId = item.dataset.txnId;
+                    const txnId = item ? item.dataset.txnId : null;
+                    // (2026-07-13) Re-query live DOM node by txnId to avoid detached zero-bounds element; prev: stale item reference
+                    if (txnId) {
+                        const liveNode = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
+                        if (liveNode) item = liveNode;
+                    }
+
                     const merchant = item.dataset.merchant || '';
                     const amount = parseFloat(item.dataset.amount) || 0;
                     const isExcluded = item.dataset.excluded === 'true';
@@ -11372,21 +11434,40 @@ Be direct, practical, and helpful.`;
                     const note = item.dataset.note || '';
                     const isRefund = item.dataset.refund === 'true';
                     const isReimbursed = item.dataset.reimbursed === 'true';
+                    // (2026-07-13) Lookup flagColor from window.allTxns object fallback; prev: item.dataset.flagColor only
+                    const txnObj = (window.allTxns || []).find(t => String(t.id) === String(txnId));
+                    const flagColor = (txnObj && txnObj.flagColor) ? txnObj.flagColor : (item.dataset.flagColor || '');
                     const date = item.dataset.date || '';
                     const manualAmount = item.dataset.manualAmount || '';
 
-                    // 1. Get exact position
-                    const rect = item.getBoundingClientRect();
+                    // Clean up existing clones & restore item state before measuring
+                    if (clonedItem) {
+                        try { clonedItem.remove(); } catch (e) {}
+                        clonedItem = null;
+                    }
+                    document.querySelectorAll('.elevated-clone').forEach(el => el.remove());
 
-                    // 2. Hide original item visually but keep space
-                    currentElevatedItem = item;
-                    item.classList.add('popped'); // Scale up the original item too for the "pop" feel
-                    item.style.visibility = 'hidden';
+                    if (currentElevatedItem) {
+                        currentElevatedItem.style.visibility = 'visible';
+                        currentElevatedItem.classList.remove('popped');
+                    }
 
-                    // 3. Create and position clone
+                    // Ensure live item is visible before measuring bounds
+                    item.style.visibility = 'visible';
+                    item.classList.remove('popped');
+
+                    // 1. Get exact position while un-popped and 100% visible
+                    let rect = item.getBoundingClientRect();
+
+                    // 2. Create clone FIRST before hiding original
                     clonedItem = item.cloneNode(true);
                     clonedItem.classList.add('elevated-clone');
-                    clonedItem.classList.remove('popped'); // Clone doesn't need popped class as it has its own elevated style
+                    clonedItem.classList.remove('popped');
+
+                    // 3. Hide original item visually but keep space
+                    currentElevatedItem = item;
+                    item.classList.add('popped');
+                    item.style.visibility = 'hidden';
                     // (2026-07-13) Strip reimb/unpaid tint classes from clone; prev: tints copied from original
                     clonedItem.classList.remove('reimb-highlight-cash', 'reimb-highlight-online', 'reimb-highlight-total', 'reimb-highlight-unpaid', 'reimb-highlight-pending', 'reimb-highlight-paid', 'unpaid-highlight');
 
@@ -11430,6 +11511,7 @@ Be direct, practical, and helpful.`;
                     const noteSafe = note.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/`/g, '\\`');
                     const categorySafe = category.replace(/'/g, "\\'");
 
+                    /* (2026-07-13) Move Flag/Unflag Transaction below Exclude, remove X button, label Unflag when flagged; prev: above Exclude with X button */
                     menu.innerHTML = `
                 <div class="ios-action-item" onclick="handleIOSAction('edit', '${txnId}', '${merchantSafe}', ${amount}, '${categorySafe}', '${noteSafe}')">
                     <i class="material-icons" style="color:#2563eb;">edit</i>
@@ -11442,6 +11524,22 @@ Be direct, practical, and helpful.`;
                 <div class="ios-action-item ${isExcluded ? '' : 'danger'}" onclick="handleIOSAction('exclude', '${txnId}', ${isExcluded}, '${merchantSafe}')">
                     <i class="material-icons">${isExcluded ? 'add_circle' : 'block'}</i>
                     <span>${isExcluded ? 'Include' : 'Exclude'}</span>
+                </div>
+                <div class="ios-action-item" onclick="${flagColor ? `setTransactionFlag('${txnId}', ''); closeIOSMenu(true);` : 'toggleInlineFlagColors(event)'}">
+                    <!-- (2026-07-13) Use turned_in ribbon icon for context menu item; prev: flag icon -->
+                    <i class="material-icons" style="color:${flagColor || '#ef4444'};">turned_in</i>
+                    <span>${flagColor ? 'Unflag Transaction' : 'Flag Transaction'}</span>
+                </div>
+                <!-- (2026-07-13) 20px dots with 6px gap to fit inside fixed 185px menu; prev: 22px dots with 8px gap -->
+                <div id="inline-flag-colors" class="inline-flag-colors-container" style="display: none; max-height: 0; opacity: 0; overflow: hidden; transition: all 0.25s ease; width: 100%; box-sizing: border-box;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 4px 10px; width: 100%; box-sizing: border-box;">
+                        <span onclick="setTransactionFlag('${txnId}', '#ef4444'); closeIOSMenu(true);" title="Red" style="width:20px; height:20px; min-width:20px; min-height:20px; border-radius:50%; aspect-ratio: 1 / 1; flex-shrink: 0; background:#ef4444; display:inline-block; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"></span>
+                        <span onclick="setTransactionFlag('${txnId}', '#3b82f6'); closeIOSMenu(true);" title="Blue" style="width:20px; height:20px; min-width:20px; min-height:20px; border-radius:50%; aspect-ratio: 1 / 1; flex-shrink: 0; background:#3b82f6; display:inline-block; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"></span>
+                        <span onclick="setTransactionFlag('${txnId}', '#10b981'); closeIOSMenu(true);" title="Green" style="width:20px; height:20px; min-width:20px; min-height:20px; border-radius:50%; aspect-ratio: 1 / 1; flex-shrink: 0; background:#10b981; display:inline-block; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"></span>
+                        <span onclick="setTransactionFlag('${txnId}', '#f59e0b'); closeIOSMenu(true);" title="Yellow" style="width:20px; height:20px; min-width:20px; min-height:20px; border-radius:50%; aspect-ratio: 1 / 1; flex-shrink: 0; background:#f59e0b; display:inline-block; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"></span>
+                        <span onclick="setTransactionFlag('${txnId}', '#8b5cf6'); closeIOSMenu(true);" title="Purple" style="width:20px; height:20px; min-width:20px; min-height:20px; border-radius:50%; aspect-ratio: 1 / 1; flex-shrink: 0; background:#8b5cf6; display:inline-block; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"></span>
+                        <span onclick="setTransactionFlag('${txnId}', '#06b6d4'); closeIOSMenu(true);" title="Cyan" style="width:20px; height:20px; min-width:20px; min-height:20px; border-radius:50%; aspect-ratio: 1 / 1; flex-shrink: 0; background:#06b6d4; display:inline-block; cursor:pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.15);"></span>
+                    </div>
                 </div>
                 <div class="ios-action-item warning" onclick="handleIOSAction('refund', '${txnId}', ${isRefund})">
                     <i class="material-icons">${isRefund ? 'undo' : 'sync_alt'}</i>
@@ -11526,39 +11624,35 @@ Be direct, practical, and helpful.`;
                     document.body.style.overflow = '';
                     if (mobileWrapper) mobileWrapper.style.overflow = 'auto';
 
-                    // Animate cloned item back to normal scale before removing
+                    // (2026-07-13) Unlink references immediately so subsequent long-press is never blocked; prev: delayed reference unlinking
                     if (clonedItem) {
-                        clonedItem.style.transition = 'transform 0.3s ease-out, box-shadow 0.3s ease-out, opacity 0.3s ease-out';
-                        clonedItem.style.transform = 'scale(1)';
-                        clonedItem.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
-                        clonedItem.style.opacity = '0';
+                        const targetClone = clonedItem;
+                        clonedItem = null;
+                        targetClone.style.transition = 'transform 0.3s ease-out, box-shadow 0.3s ease-out, opacity 0.3s ease-out';
+                        targetClone.style.transform = 'scale(1)';
+                        targetClone.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                        targetClone.style.opacity = '0';
                         setTimeout(() => {
-                            if (clonedItem) {
-                                clonedItem.remove();
-                                clonedItem = null;
-                            }
+                            try { targetClone.remove(); } catch (e) {}
                         }, 300);
                     }
 
                     // Restore original item visibility immediately
                     if (currentElevatedItem) {
-                        currentElevatedItem.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-                        currentElevatedItem.style.visibility = 'visible';
-                        currentElevatedItem.style.filter = 'none';
-                        currentElevatedItem.style.transform = 'scale(1)';
-                        currentElevatedItem.style.background = '';
-                        currentElevatedItem.classList.remove('popped');
-
-                        // Final cleanup after transition
-                        const target = currentElevatedItem;
-                        setTimeout(() => {
-                            if (target) {
-                                target.style.filter = '';
-                                target.style.transform = '';
-                            }
-                        }, 300);
-
+                        const targetItem = currentElevatedItem;
                         currentElevatedItem = null;
+                        targetItem.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                        targetItem.style.visibility = 'visible';
+                        targetItem.style.filter = 'none';
+                        targetItem.style.transform = 'scale(1)';
+                        targetItem.style.background = '';
+                        targetItem.classList.remove('popped');
+                        setTimeout(() => {
+                            try {
+                                targetItem.style.filter = '';
+                                targetItem.style.transform = '';
+                            } catch (e) {}
+                        }, 300);
                     }
 
                     window.modalOpen = false;
@@ -11587,6 +11681,9 @@ Be direct, practical, and helpful.`;
                     };
 
                     switch (action) {
+                        case 'flag-picker':
+                            promptFlagColor(txnId, args[0]);
+                            break;
                         case 'edit':
                             openWithReplace('edit-txn');
                             openEditModal(txnId, args[0], args[1], args[2], args[3]);
@@ -11620,6 +11717,70 @@ Be direct, practical, and helpful.`;
                         case 'classify':
                             updateTransactionBudgetCategory(txnId, args[0]);
                             break;
+                    }
+                };
+
+                // (2026-07-13) Toggles inline sliding flag color container inside dropdown; prev: modal popup
+                window.toggleInlineFlagColors = (e) => {
+                    if (e) e.stopPropagation();
+                    const container = document.getElementById('inline-flag-colors');
+                    if (!container) return;
+                    const isHidden = container.style.display === 'none' || container.style.maxHeight === '0px';
+                    if (isHidden) {
+                        container.style.display = 'block';
+                        requestAnimationFrame(() => {
+                            container.style.maxHeight = '60px';
+                            container.style.opacity = '1';
+                        });
+                    } else {
+                        container.style.maxHeight = '0px';
+                        container.style.opacity = '0';
+                        setTimeout(() => { container.style.display = 'none'; }, 250);
+                    }
+                };
+
+                // (2026-07-13) Updates transaction flag color and syncs to Firebase; prev: no flag field in Firestore
+                window.setTransactionFlag = async (id, flagColor) => {
+                    const user = auth.currentUser;
+                    const cleanColor = flagColor || '';
+
+                    if (window.syncTxnStateEverywhere) {
+                        window.syncTxnStateEverywhere(id, (txn) => { txn.flagColor = cleanColor; });
+                    } else if (Array.isArray(window.allTxns)) {
+                        const idx = window.allTxns.findIndex(t => t.id === id);
+                        if (idx > -1) window.allTxns[idx].flagColor = cleanColor;
+                    }
+
+                    if (window.renderHistory) renderHistory(window.allTxns);
+
+                    if (!user) return;
+                    try {
+                        // (2026-07-13) Target correct collection and use setDoc merge to persist flag; prev: updateDoc with missing deleteField
+                        const txnRecord = (window.allTxns || []).find(t => String(t.id) === String(id));
+                        const targetAccount = txnRecord?.account || window.currentAccount || 'wallet';
+                        const colName = typeof getCollectionName === 'function' ? getCollectionName(targetAccount) : 'transactions';
+                        const docRef = doc(db, 'users', user.uid, colName, id);
+
+                        await setDoc(docRef, { flagColor: cleanColor }, { merge: true });
+
+                        const cacheKey = `wallet_cache_${user.uid}_${targetAccount}`;
+                        const cachedData = localStorage.getItem(cacheKey);
+                        if (cachedData) {
+                            try {
+                                const parsed = JSON.parse(cachedData);
+                                if (Array.isArray(parsed.txns)) {
+                                    const cIdx = parsed.txns.findIndex(t => String(t.id) === String(id));
+                                    if (cIdx > -1) {
+                                        parsed.txns[cIdx].flagColor = cleanColor;
+                                        localStorage.setItem(cacheKey, JSON.stringify(parsed));
+                                    }
+                                }
+                            } catch (e) {}
+                        }
+
+                        if (typeof showToast === 'function') showToast(cleanColor ? 'Transaction flagged' : 'Flag removed');
+                    } catch (e) {
+                        console.warn('Failed to sync flag to Firebase:', e);
                     }
                 };
 
@@ -12482,10 +12643,10 @@ Be direct, practical, and helpful.`;
                     const filter = document.getElementById('txn-cat-filter');
                     if (!filter) return;
 
+                    const currentVal = filter.value;
+
                     // Keep "All Items"
-                    const allOption = filter.options[0];
-                    filter.innerHTML = '';
-                    filter.appendChild(allOption);
+                    filter.innerHTML = '<option value="all">All Items</option>';
 
                     CATEGORIES.forEach(cat => {
                         const opt = document.createElement('option');
@@ -12504,7 +12665,46 @@ Be direct, practical, and helpful.`;
                         opt.innerText = bucket.label;
                         filter.appendChild(opt);
                     });
+
+                    // (2026-07-13) Add dynamic options for present flag colors; prev: no flag filter options
+                    const COLOR_NAMES = {
+                        '#ef4444': 'Flagged Red',
+                        '#3b82f6': 'Flagged Blue',
+                        '#10b981': 'Flagged Green',
+                        '#f59e0b': 'Flagged Yellow',
+                        '#8b5cf6': 'Flagged Purple',
+                        '#06b6d4': 'Flagged Cyan'
+                    };
+
+                    const presentFlags = new Set();
+                    (window.allTxns || []).forEach(t => {
+                        if (t.flagColor) presentFlags.add(t.flagColor.toLowerCase());
+                    });
+                    document.querySelectorAll('.premium-txn[data-flag-color]').forEach(el => {
+                        const fc = el.dataset.flagColor;
+                        if (fc) presentFlags.add(fc.toLowerCase());
+                    });
+
+                    Object.keys(COLOR_NAMES).forEach(hex => {
+                        if (presentFlags.has(hex.toLowerCase())) {
+                            const opt = document.createElement('option');
+                            opt.value = `flag-${hex.toLowerCase()}`;
+                            opt.innerText = COLOR_NAMES[hex];
+                            filter.appendChild(opt);
+                        }
+                    });
+
+                    if (Array.from(filter.options).some(o => o.value === currentVal)) {
+                        filter.value = currentVal;
+                    } else {
+                        filter.value = 'all';
+                    }
+
+                    if (typeof filter.__syncCustomDropdown === 'function') {
+                        filter.__syncCustomDropdown();
+                    }
                 };
+                window.populateTxnFilter = populateTxnFilter;
                 populateTxnFilter();
 
                 const getTxnBudgetBuckets = (txn, txnEl) => {
@@ -13428,6 +13628,27 @@ Be direct, practical, and helpful.`;
                     });
                 };
 
+                // (2026-07-13) Classifies Car Refill vs Motor Refill vs Motor Refill Full Tank based on keywords and non-hundreds amounts; prev: >250 check
+                window.classifyVehicleFuel = (amt, text = '') => {
+                    const numAmt = Math.abs(parseFloat(amt) || 0);
+                    const lowerText = String(text || '').toLowerCase();
+                    const isHundreds = numAmt > 0 && Math.abs(numAmt % 100) < 0.01;
+
+                    if (lowerText.includes('car')) return 'Car Refill';
+                    if (lowerText.includes('motor')) {
+                        if (!isHundreds && numAmt >= 150 && numAmt <= 600) return 'Motor Refill Full Tank';
+                        return 'Motor Refill';
+                    }
+
+                    if (numAmt > 600) return 'Car Refill';
+                    if (numAmt > 250 && numAmt <= 600) {
+                        if (isHundreds) return 'Car Refill';
+                        return 'Motor Refill Full Tank';
+                    }
+                    if (!isHundreds && numAmt >= 150 && numAmt <= 250) return 'Motor Refill Full Tank';
+                    return 'Motor Refill';
+                };
+
                 window.openEditModal = (txnId, merchant, amount, category, note) => {
                     window.editingTxnId = txnId; // Set edit mode
                     window.originalAccount = window.currentAccount || (txnId.startsWith('bpi_') ? 'bpi' : 'atome');
@@ -13442,7 +13663,9 @@ Be direct, practical, and helpful.`;
                     const cleanAmt = typeof amount === 'string' ? amount.replace(/[^0-9.-]/g, '') : amount;
                     document.getElementById('manual-amt').value = cleanAmt;
                     document.getElementById('manual-merchant').value = merchant;
-                    document.getElementById('manual-note').value = note || '';
+                    // (2026-07-13) Populate vehicle fallback note using classifyVehicleFuel if note is empty; prev: simple >250 check
+                    const effectiveNote = note || (txn?.note) || ((category === 'Vehicle' || txn?.category === 'Vehicle') ? window.classifyVehicleFuel(cleanAmt, merchant) : '');
+                    document.getElementById('manual-note').value = effectiveNote;
                     window.updateManualExcludeUI(txn ? txn.excluded === true : false);
 
                     // Populate split inputs if they exist
@@ -14663,6 +14886,10 @@ Be direct, practical, and helpful.`;
                     const budgetSelection = catSelection.toLowerCase().startsWith('budget-')
                         ? catSelection.toLowerCase().replace('budget-', '')
                         : '';
+                    // (2026-07-13) Support filtering by flagColor hex value; prev: no flag color filter logic
+                    const flagSelection = catSelection.toLowerCase().startsWith('flag-')
+                        ? catSelection.toLowerCase().replace('flag-', '')
+                        : '';
 
                     const accordions = document.querySelectorAll('.month-accordion');
 
@@ -14681,11 +14908,13 @@ Be direct, practical, and helpful.`;
                             const amount = (t.dataset.amount || '').toString();
                             const cleanAmount = amount.replace(/,/g, '');
                             const txnBudgetBuckets = getTxnBudgetBuckets(txn, t);
+                            const txnFlagColor = (txn?.flagColor || t.dataset.flagColor || '').toLowerCase();
 
                             const matchCat = (catSelection === 'all') ||
-                                (budgetSelection ? txnBudgetBuckets.includes(budgetSelection) :
-                                    (itemCatId.toLowerCase() === catSelection.toLowerCase()) ||
-                                    (itemCatLabel.toLowerCase() === catSelection.toLowerCase()));
+                                (flagSelection ? (txnFlagColor === flagSelection) :
+                                    (budgetSelection ? txnBudgetBuckets.includes(budgetSelection) :
+                                        (itemCatId.toLowerCase() === catSelection.toLowerCase()) ||
+                                        (itemCatLabel.toLowerCase() === catSelection.toLowerCase())));
 
                             const amountSearch = parseAdvancedTxnSearch(keyword);
                             const matchKeyword = amountSearch
@@ -14758,6 +14987,13 @@ Be direct, practical, and helpful.`;
                         // Hide the whole accordion if no visible items
                         acc.style.display = visibleCount > 0 ? 'block' : 'none';
                     });
+
+                    // (2026-07-13) Hide load-more button when search/filter active; prev: load-more stayed visible
+                    const loadMoreBtn = document.querySelector('.load-more-btn');
+                    if (loadMoreBtn && loadMoreBtn.parentElement) {
+                        const isFiltering = keyword.length > 0 || catSelection !== 'all';
+                        loadMoreBtn.parentElement.style.display = isFiltering ? 'none' : 'block';
+                    }
 
                     // Update Trends Chart to reflect category filter selection
                     if (typeof window.refreshTrendChart === 'function') window.refreshTrendChart();
@@ -17402,16 +17638,51 @@ Be direct, practical, and helpful.`;
 
                     const dateStr = window.getLocalISO(date);
                     const dayTxns = (window.allTxns || []).filter(t => window.getLocalISO(t.date) === dateStr && !t.refund);
+                    const bills = (window.CalendarView && window.CalendarView.getBillsForDate) ? window.CalendarView.getBillsForDate(dateStr) : [];
+                    const dayBills = bills;
+
+                    // (2026-07-13) Recurring bill form with repeat dropdown & high z-index icon menu; prev: basic form
+                    let billsHeaderHtml = `
+                        <!-- (2026-07-13) Modal trigger for Add Bill or Reminder without arrow icon; prev: arrow icon included -->
+                        <div class="calendar-top-add-bill-row" onclick="window.CalendarView && window.CalendarView.openAddBillModal('${dateStr}')" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:16px; margin-bottom:14px; cursor:pointer; user-select:none; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.02); position:relative; z-index:5;">
+                            <div style="display:flex; align-items:center; gap:10px; pointer-events:none;">
+                                <div style="width:32px; height:32px; border-radius:10px; background:#ebf5ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
+                                    <i class="material-icons" style="font-size:18px;">add</i>
+                                </div>
+                                <div>
+                                    <div style="font-size:11.8px; font-weight:800; color:#1e293b; text-transform:uppercase; letter-spacing:-0.2px;">Add Bill or Reminder</div>
+                                    <div style="font-size:8.6px; font-weight:700; color:#64748b;">Set electricity, water, rent, or recurring billers</div>
+                                </div>
+                            </div>
+                        </div>
+                        ${dayBills.length > 0 ? `<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">` + dayBills.map(b => `
+                            <div style="display:flex; align-items:center; justify-content:space-between; background:#ffffff; border-radius:14px; padding:12px 14px; border:1px solid #ebf2fa; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
+                                <div style="display:flex; align-items:center; gap:12px;">
+                                    <div style="width:36px; height:36px; border-radius:12px; background:${b.color || '#3b82f6'}; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
+                                        <i class="material-icons" style="font-size:18px;">${b.icon || 'receipt_long'}</i>
+                                    </div>
+                                    <div>
+                                        <div style="font-size:12.5px; font-weight:800; color:#1e293b; text-transform:capitalize;">${b.title}</div>
+                                        <div style="font-size:10px; font-weight:700; color:#64748b; margin-top:1px;">${b.amount ? '₱' + b.amount.toLocaleString() : 'No amount'}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <button onclick="window.CalendarView && window.CalendarView.toggleBillPaid('${b.id}'); window.openCalendarModal(new Date('${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:8px; padding:5px 10px; font-size:10px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
+                                    <button onclick="window.CalendarView && window.CalendarView.deleteBill('${b.id}', '${dateStr}'); window.openCalendarModal(new Date('${dateStr}'));" title="Delete Bill" style="background:transparent; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center;"><i class="material-icons" style="font-size:18px; color:#ef4444;">delete</i></button>
+                                </div>
+                            </div>
+                        `).join('') + `</div>` : ''}
+                    `;
 
                     if (dayTxns.length === 0) {
-                        bodyEl.innerHTML = useDesktopSidebar
+                        bodyEl.innerHTML = billsHeaderHtml + (useDesktopSidebar
                             ? `<div class="no-txns calendar-desktop-empty"><span class="calendar-desktop-empty-icon"><i class="material-icons">event_note</i></span><span>No transactions for this day.</span></div>`
-                            : `<div class="no-txns" style="text-align:center; padding:40px; color:#94a3b8; font-weight:600;">No transactions for this day.</div>`;
+                            : `<div class="no-txns" style="text-align:center; padding:20px; color:#94a3b8; font-weight:600;">No transactions for this day.</div>`);
                         footerEl.innerHTML = '';
                         return;
                     }
 
-                    bodyEl.innerHTML = '';
+                    bodyEl.innerHTML = billsHeaderHtml;
                     const fragment = document.createDocumentFragment();
                     let totalIn = 0;
                     let totalOut = 0;
@@ -17796,6 +18067,91 @@ Be direct, practical, and helpful.`;
             <script src="budget-analysis-overlay.js"></script>
             <!-- [ADD: 2026-07-04] SmartWallet AI chatbot engine (Gemini 2.5 Flash, Firebase history) - Antigravity -->
             <script src="wallet-ai.js"></script>
+
+    <!-- (2026-07-13) Dedicated Modal for Add Bill or Reminder; prev: inline sliding form -->
+    <div id="add-bill-modal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); z-index:100000; align-items:center; justify-content:center; padding:16px;">
+        <div class="modal-content" style="background:#ffffff; border-radius:24px; padding:20px; width:100%; max-width:400px; box-shadow:0 20px 40px rgba(0,0,0,0.2); border:1px solid #e2e8f0;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:34px; height:34px; border-radius:10px; background:#ebf5ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
+                        <i class="material-icons" style="font-size:20px;">event_note</i>
+                    </div>
+                    <div>
+                        <div style="font-size:14px; font-weight:800; color:#1e293b;">New Bill / Reminder</div>
+                        <div style="font-size:10px; font-weight:600; color:#64748b;" id="add-bill-modal-date-subtitle">Set recurring or one-time biller</div>
+                    </div>
+                </div>
+                <i class="material-icons" onclick="window.CalendarView && window.CalendarView.closeAddBillModal()" style="font-size:20px; color:#94a3b8; cursor:pointer; padding:4px;">close</i>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Biller Name</label>
+                <input type="text" id="bill-modal-input-title" placeholder="e.g. Meralco, Maynilad, Netflix, Atome" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #cbd5e1; font-size:12px; font-weight:700; outline:none; background:#f8fafc;" />
+            </div>
+            <div style="display:flex; gap:10px; margin-bottom:12px;">
+                <div style="flex:1;">
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Amount (₱)</label>
+                    <input type="number" id="bill-modal-input-amount" placeholder="0.00" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #cbd5e1; font-size:12px; font-weight:700; outline:none; background:#f8fafc;" />
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Category Icon</label>
+                    <div class="custom-bill-icon-dropdown" style="position:relative;">
+                        <div id="bill-modal-icon-trigger" onclick="window.CalendarView && window.CalendarView.toggleBillIconDropdownModal()" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:12px; border:1px solid #cbd5e1; font-size:11px; font-weight:700; background:#f8fafc; cursor:pointer;">
+                            <div style="display:flex; align-items:center; gap:6px; overflow:hidden;" id="selected-bill-modal-icon-display">
+                                <i class="material-icons" style="font-size:16px; color:#2563eb; flex-shrink:0;">bolt</i>
+                                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Electricity</span>
+                            </div>
+                            <i class="material-icons" style="font-size:16px; color:#94a3b8;">unfold_more</i>
+                        </div>
+                        <div id="bill-modal-icon-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:180px; overflow-y:auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18); z-index:999999 !important; padding:4px;">
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('bolt', 'Electricity')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">bolt</i><span>Electricity</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('water_drop', 'Water')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#06b6d4;">water_drop</i><span>Water</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('wifi', 'Internet / Wifi')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">wifi</i><span>Internet / Wifi</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('house', 'Rent / Housing')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#f59e0b;">house</i><span>Rent / Housing</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('credit_card', 'Credit Card')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#ef4444;">credit_card</i><span>Credit Card</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('subscriptions', 'Streaming Services')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">subscriptions</i><span>Streaming Services</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('smartphone', 'Phone / Mobile')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#10b981;">smartphone</i><span>Phone / Mobile</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('security', 'Insurance')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">security</i><span>Insurance</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('local_hospital', 'Medical / Health')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#ef4444;">local_hospital</i><span>Medical / Health</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('fitness_center', 'Gym / Fitness')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#f59e0b;">fitness_center</i><span>Gym / Fitness</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('school', 'Tuition / Education')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">school</i><span>Tuition / Education</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('account_balance', 'Loan / Mortgage')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#10b981;">account_balance</i><span>Loan / Mortgage</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('directions_car', 'Vehicle / Auto')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#06b6d4;">directions_car</i><span>Vehicle / Auto</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('card_membership', 'Subscription')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">card_membership</i><span>Subscription</span></div>
+                            <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('receipt_long', 'Generic Bill')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#64748b;">receipt_long</i><span>Generic Bill</span></div>
+                        </div>
+                        <input type="hidden" id="bill-modal-input-icon" value="bolt" />
+                    </div>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Repeat Frequency</label>
+                <div class="custom-bill-repeat-dropdown" style="position:relative;">
+                    <div id="bill-modal-repeat-trigger" onclick="window.CalendarView && window.CalendarView.toggleBillRepeatDropdownModal()" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:12px; border:1px solid #cbd5e1; font-size:11px; font-weight:700; background:#f8fafc; cursor:pointer;">
+                        <span id="selected-bill-modal-repeat-display">Every Month</span>
+                        <i class="material-icons" style="font-size:16px; color:#94a3b8;">keyboard_arrow_down</i>
+                    </div>
+                    <div id="bill-modal-repeat-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18); z-index:999999 !important; padding:4px;">
+                        <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('monthly', 'Every Month')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">Every Month</div>
+                        <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('this_month', 'This Month Only')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">This Month Only</div>
+                        <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('yearly', 'Every Year')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">Every Year</div>
+                    </div>
+                    <input type="hidden" id="bill-modal-input-repeat" value="monthly" />
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; background:#f8fafc; padding:10px 12px; border-radius:12px; border:1px solid #e2e8f0;">
+                <span style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase;">Color Tag:</span>
+                <div style="display:flex; gap:8px;">
+                    <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#3b82f6')" class="bill-modal-color-swatch active" data-color="#3b82f6" style="width:24px; height:24px; border-radius:50%; background:#3b82f6; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#ef4444')" class="bill-modal-color-swatch" data-color="#ef4444" style="width:24px; height:24px; border-radius:50%; background:#ef4444; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#10b981')" class="bill-modal-color-swatch" data-color="#10b981" style="width:24px; height:24px; border-radius:50%; background:#10b981; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#f59e0b')" class="bill-modal-color-swatch" data-color="#f59e0b" style="width:24px; height:24px; border-radius:50%; background:#f59e0b; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#8b5cf6')" class="bill-modal-color-swatch" data-color="#8b5cf6" style="width:24px; height:24px; border-radius:50%; background:#8b5cf6; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                    <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#06b6d4')" class="bill-modal-color-swatch" data-color="#06b6d4" style="width:24px; height:24px; border-radius:50%; background:#06b6d4; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
+                </div>
+            </div>
+            <button id="btn-submit-modal-bill" onclick="window.CalendarView && window.CalendarView.submitModalBill()" style="width:100%; background:#2563eb; color:#fff; border:none; border-radius:12px; padding:12px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:all 0.2s;">Save Bill Reminder</button>
+        </div>
+    </div>
 </body>
 
 </html>

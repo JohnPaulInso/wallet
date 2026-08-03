@@ -1495,10 +1495,14 @@
         /* ACCORDION */
         /* (2026-07-13) Use border only to fix scroll lag; prev: border and box-shadow */
         .month-accordion { margin-bottom: 16px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; transition: border-color 0.2s; position: relative; overflow: hidden; }
-        /* (2026-07-13) Remove hover shadow to fix scroll lag; prev: box-shadow on hover */
-        .month-accordion:hover { border-color: #cbd5e1; }
+        /* (2026-07-13) Wrap hover rules in media (hover: hover); prev: direct :hover */
+        @media (hover: hover) {
+            .month-accordion:hover { border-color: #cbd5e1; }
+            .month-header:hover { background: #f8fafc; }
+            .txn-item:hover { background-color: #f8fafc; }
+        }
         .month-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
-        .month-header:hover { background: #f8fafc; }
+        .month-header:active { background: #f1f5f9; }
         .month-header .month-title { font-weight: 700; font-size: 0.738rem; color: #1e293b; }
         .month-header .month-total { font-weight: 800; color: #2563eb; font-size: 0.738rem; }
         .month-header .expand-icon { transition: transform 0.3s; color: #64748b; }
@@ -2567,12 +2571,12 @@
         
         /* DARK MODE CONTRAST FIXES */
         body.dark-mode .month-accordion { background: #1a1a1a; border-color: #262626; box-shadow: none; }
-        body.dark-mode .month-header:hover { background: #262626; }
-        body.dark-mode .month-header .month-title { color: #f8fafc; }
-        body.dark-mode .month-header .month-total { color: #60a5fa; }
-        body.dark-mode .month-content { border-top-color: #262626; }
-        body.dark-mode .txn-item { background: #1a1a1a; border-bottom-color: #262626; }
-        body.dark-mode .txn-item:hover { background-color: #262626; }
+        /* (2026-07-13) Wrap dark mode hover in media (hover: hover); prev: direct body.dark-mode :hover */
+        @media (hover: hover) {
+            body.dark-mode .month-header:hover { background: #262626; }
+            body.dark-mode .txn-item:hover { background-color: #262626; }
+        }
+        body.dark-mode .month-header:active { background: #262626; }
         body.dark-mode .txn-merchant { color: #f8fafc; }
         body.dark-mode .txn-subtitle { color: #94a3b8; }
         body.dark-mode .txn-amount { color: #f8fafc; }
@@ -3186,8 +3190,10 @@
             padding: 4px; 
             box-shadow: 0 10px 40px rgba(0,0,0,0.22); 
             z-index: 100000; 
-            min-width: 180px; 
-            max-width: 200px; 
+            /* (2026-07-13) Fixed 185px width to prevent menu expansion on toggle; prev: min 180px max 200px */
+            width: 185px; 
+            min-width: 185px; 
+            max-width: 185px; 
             overflow: hidden; 
             transform: scale(0.9); 
             opacity: 0; 
@@ -6048,6 +6054,10 @@ body.dark-mode #donut-center-info {
 }
 
 /* (2026-07-30) Fuel Tank card filter dropdowns & compact premium-txn history list styling; prev: larger font list */
+.fuel-tank-filter-controls { position: relative; display: flex; align-items: center; gap: 6px; }
+/* (2026-07-13) Align fuel tank dropdown menus to right edge; prev: shifted off-screen left */
+.custom-dropdown-menu-fuel-tank-month-select,
+.custom-dropdown-menu-fuel-tank-year-select { right: 0 !important; left: auto !important; max-width: 140px !important; min-width: 100px !important; }
 .fuel-tank-select {
     font-size: 10px;
     font-weight: 700;
@@ -7593,11 +7603,61 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
         }
         .amount-chip i { display: none; }
 
-        /* CALENDAR SUMMARY PILLS */
-        .summary-pills { display: flex; gap: 12px; margin-bottom: 20px; margin-top: 16px; }
-        .summary-pill { flex: 1; padding: 14px; border-radius: 18px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #f1f5f9; box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fff; }
+        /* (2026-07-13) Set flex row layout for income/expense cards side by side; prev: column wrap on mobile */
+        .summary-pills { display: flex !important; flex-direction: row !important; gap: 12px !important; margin-bottom: 20px; margin-top: 16px; width: 100% !important; }
+        .summary-pill { flex: 1 !important; min-width: 0 !important; padding: 14px; border-radius: 18px; display: flex; flex-direction: row; align-items: center; gap: 12px; border: 1px solid #f1f5f9; box-shadow: 0 2px 8px rgba(0,0,0,0.04); background: #fff; }
         .pill-label { font-size: 9.3px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; }
         .pill-value { font-size: 15.81px; font-weight: 800; }
+
+        /* (2026-07-13) Allow dropdown menus to overflow without being cut off; prev: overflow hidden clipped dropdowns */
+        #day-modal-bill-form {
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, transform 0.25s ease, padding 0.3s ease, margin-bottom 0.3s ease;
+            margin-bottom: 0;
+            padding: 0 14px;
+            display: block !important;
+        }
+        #day-modal-bill-form.open {
+            max-height: 800px;
+            opacity: 1;
+            transform: translateY(0);
+            margin-bottom: 16px;
+            padding: 14px;
+            overflow: visible !important;
+        }
+        .calendar-modal-content, #modal-body {
+            overflow: visible !important;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        i.spin { animation: spin 0.8s linear infinite; display: inline-block; }
+
+        /* (2026-07-13) High z-index popup styling for add-bill-modal; prev: un-styled overlay */
+        #add-bill-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.65) !important;
+            backdrop-filter: blur(6px);
+            z-index: 999999 !important;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        #add-bill-modal.show {
+            display: flex !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
         #view-calendar .custom-section .custom-title { font-size: 14.88px !important; }
         #view-calendar .custom-section .custom-desc { font-size: 11.16px !important; }
         #view-calendar .custom-section .mui-btn { font-size: 11.16px !important; }

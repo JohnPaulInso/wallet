@@ -328,7 +328,7 @@
             }
         },
 
-        // (2026-07-30) Populates and initializes month and year dropdowns for Fuel Tank card filter; prev: basic options check
+        // (2026-07-13) Dynamic 12 month options starting from most recent month; prev: static option list
         setupFuelTankFilterDropdowns: function() {
             const monthSelect = document.getElementById('fuel-tank-month-select');
             const yearSelect = document.getElementById('fuel-tank-year-select');
@@ -339,6 +339,15 @@
             const currentYear = now.getFullYear();
 
             if (!monthSelect.dataset.initialized) {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                monthSelect.innerHTML = '';
+                for (let i = 0; i < 12; i++) {
+                    const idx = (currentMonthIdx - i + 12) % 12;
+                    const opt = document.createElement('option');
+                    opt.value = String(idx);
+                    opt.textContent = monthNames[idx];
+                    monthSelect.appendChild(opt);
+                }
                 monthSelect.value = String(currentMonthIdx);
                 monthSelect.dataset.initialized = 'true';
             }
@@ -376,6 +385,10 @@
                 let totalSpent = 0;
                 let totalLiters = 0;
                 let weightedPplSum = 0;
+                let carSpent = 0;
+                let carLiters = 0;
+                let motorSpent = 0;
+                let motorLiters = 0;
                 const filteredTxns = [];
 
                 const allSources = [];
@@ -431,10 +444,22 @@
                     filteredTxns.push({ ...t, computedAmt: amt, parsedDate: tDate, displayName });
 
                     const ppl = parseFloat(t.pricePerLiter);
+                    let liters = 0;
                     if (!isNaN(ppl) && ppl > 0) {
-                        const liters = amt / ppl;
+                        liters = amt / ppl;
                         totalLiters += liters;
                         weightedPplSum += (ppl * liters);
+                    }
+
+                    // (2026-07-13) Classifies Car Refill vs Motor Refill vs Motor Refill Full Tank; prev: simple >250 check
+                    const textContent = `${t.note || ''} ${t.merchant || ''} ${t.name || ''}`;
+                    const refillType = (typeof window.classifyVehicleFuel === 'function') ? window.classifyVehicleFuel(amt, textContent) : (amt > 250 ? 'Car Refill' : 'Motor Refill');
+                    if (refillType === 'Car Refill') {
+                        carSpent += amt;
+                        carLiters += liters;
+                    } else {
+                        motorSpent += amt;
+                        motorLiters += liters;
                     }
                 });
 
@@ -444,6 +469,17 @@
                 spentEl.innerText = isHidden ? '******' : `₱${totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 volumeEl.innerText = `${totalLiters.toFixed(1)} L`;
                 rateEl.innerText = avgRate > 0 ? `₱${avgRate.toFixed(1)}/L` : '—';
+
+                // Update Car vs Motor Refill breakdown elements
+                const carSpentEl = document.getElementById('fuel-tank-car-spent');
+                const carVolEl = document.getElementById('fuel-tank-car-volume');
+                const motorSpentEl = document.getElementById('fuel-tank-motor-spent');
+                const motorVolEl = document.getElementById('fuel-tank-motor-volume');
+
+                if (carSpentEl) carSpentEl.innerText = isHidden ? '******' : `₱${carSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                if (carVolEl) carVolEl.innerText = `${carLiters.toFixed(1)} L`;
+                if (motorSpentEl) motorSpentEl.innerText = isHidden ? '******' : `₱${motorSpent.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                if (motorVolEl) motorVolEl.innerText = `${motorLiters.toFixed(1)} L`;
 
                 if (gaugeFillEl) {
                     const pct = Math.min((totalSpent / 5000) * 100, 100);
@@ -463,7 +499,11 @@
                         // (2026-07-30) Show all items; prev: sliced to currentLimit with load-more
                         let logsHTML = filteredTxns.map(t => {
                             const nameStr = (t.displayName || t.name || t.merchant || 'Vehicle Fuel').toUpperCase();
-                            const noteStr = t.note || (t.computedAmt > 250 ? 'Car Refill' : 'Motor Refill');
+                            // (2026-07-13) Use classifyVehicleFuel for default note string; prev: >250 check
+                            const defaultNote = (typeof window.classifyVehicleFuel === 'function') ? window.classifyVehicleFuel(t.computedAmt, `${t.merchant || ''} ${t.name || ''}`) : (t.computedAmt > 250 ? 'Car Refill' : 'Motor Refill');
+                            const noteStr = t.note || defaultNote;
+                            // (2026-07-13) Set purple color (#7c3aed) for Car Refill and blue (#2563eb) for Motor Refill; prev: hardcoded purple
+                            const noteColor = noteStr.toLowerCase().includes('motor') ? '#2563eb' : '#7c3aed';
                             const dateStr = t.parsedDate ? `${t.parsedDate.toLocaleString('default', { month: 'short' })} ${t.parsedDate.getDate()}` : '';
                             
                             let fuelBadgeHTML = '';
@@ -486,6 +526,7 @@
                             }
 
                             const brandBadgeHTML = logoSrc ? `<div class="brand-badge"><img src="${logoSrc}" alt="brand"></div>` : '';
+
                             // (2026-07-30) Wrap in padded row container for vertical spacing; prev: bare premium-txn, no gap
                              return `
                                 <div style="padding: 2px 0; border-bottom: 1px solid #f1f5f9;">
@@ -500,7 +541,7 @@
                                             <span>${dateStr}</span> &nbsp;&bull;&nbsp; <span>Vehicle</span>
                                             <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#3b82f6;margin-left:6px;vertical-align:middle;"></span>
                                         </div>
-                                        <div class="fuel-txn-note" style="color: #7c3aed; font-size: 8.5px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px; overflow: hidden;">
+                                        <div class="fuel-txn-note" style="color: ${noteColor}; font-size: 8.5px; margin-top:2px; display: flex; align-items: center; justify-content: flex-start; flex-wrap: nowrap; gap: 3px; overflow: hidden;">
                                             <span style="${fuelBadgeHTML ? 'max-width: 60px; flex-shrink: 0;' : 'max-width: 140px; flex-shrink: 1;'} overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: middle;">${noteStr}</span>
                                             ${fuelBadgeHTML}
                                         </div>

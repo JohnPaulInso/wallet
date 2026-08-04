@@ -106,7 +106,7 @@
 
         init: function() {
             if (this.initialized) return;
-            console.log("📅 [v5.6] CALENDAR: Initializing CalendarView with Bills & Reminders");
+            console.log("📅 [v5.9-MOBILE] CALENDAR: Initializing CalendarView with Mobile Real-Time Sync");
             this.initialized = true;
             
             // Wait for Firebase auth before loading bills
@@ -114,7 +114,7 @@
                 this.loadBills();
             } else {
                 console.log('⏳ Waiting for Firebase auth...');
-                // Retry when auth is ready
+                // Retry when auth is ready (MOBILE FIX: increased timeout to 15 seconds)
                 const checkAuth = setInterval(() => {
                     if (window.auth && window.auth.currentUser) {
                         clearInterval(checkAuth);
@@ -123,8 +123,13 @@
                     }
                 }, 100);
                 
-                // Timeout after 5 seconds
-                setTimeout(() => clearInterval(checkAuth), 5000);
+                // MOBILE FIX: Timeout after 15 seconds (was 5s, too short for mobile)
+                setTimeout(() => {
+                    clearInterval(checkAuth);
+                    if (!window.auth?.currentUser) {
+                        console.warn('⚠️ Auth timeout - bills will load when user signs in');
+                    }
+                }, 15000);
             }
             
             // CRITICAL FIX: Create Bills & Reminders card HTML FIRST (before any rendering)
@@ -135,6 +140,7 @@
         },
 
         // Ensure Bills & Reminders card HTML exists in the DOM
+        // (2026-08-04) Added sync status indicator and manual refresh button
         ensureBillsCardExists: function() {
             // Check if element already exists
             if (document.getElementById('calendar-bills-card-list')) {
@@ -165,9 +171,19 @@
                     <div style="width: 44px; height: 44px; border-radius: 12px; background: #dbeafe; display: flex; align-items: center; justify-content: center;">
                         <i class="material-icons" style="font-size: 24px; color: #2563eb;">event_note</i>
                     </div>
-                    <div>
+                    <div style="flex: 1;">
                         <div style="font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">Bills & Reminders</div>
                         <div style="font-size: 13px; color: #64748b; font-weight: 600;">Track upcoming due dates, recurring utilities, and bill status.</div>
+                    </div>
+                    <!-- Sync Status and Manual Refresh Button -->
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div id="bills-sync-status" style="display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; color: #64748b;">
+                            <span id="bills-sync-icon" style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+                            <span id="bills-sync-text">Local</span>
+                        </div>
+                        <button onclick="window.CalendarView && window.CalendarView.forceSyncToFirestore()" title="Refresh bills from cloud" style="background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; transition: all 0.2s;">
+                            <i class="material-icons" style="font-size: 16px;">sync</i>
+                        </button>
                     </div>
                 </div>
                 <div id="calendar-bills-card-list"></div>
@@ -177,6 +193,46 @@
             container.insertBefore(billsCard, container.firstChild);
             
             console.log('Bills card created successfully');
+            
+            // Update sync status indicator
+            this.updateSyncStatusIndicator();
+        },
+        
+        // Update the sync status indicator badge
+        updateSyncStatusIndicator: function() {
+            const iconEl = document.getElementById('bills-sync-icon');
+            const textEl = document.getElementById('bills-sync-text');
+            
+            if (!iconEl || !textEl) return;
+            
+            const status = this.getSyncStatus();
+            
+            if (!status.authenticated) {
+                // Not signed in
+                iconEl.style.background = '#94a3b8';
+                textEl.textContent = 'Local';
+                textEl.style.color = '#64748b';
+            } else if (status.pendingSaves > 0 || status.retryQueue > 0) {
+                // Syncing
+                iconEl.style.background = '#fbbf24';
+                textEl.textContent = 'Syncing';
+                textEl.style.color = '#d97706';
+            } else if (!status.online) {
+                // Offline
+                iconEl.style.background = '#f87171';
+                textEl.textContent = 'Offline';
+                textEl.style.color = '#dc2626';
+            } else if (this._firestoreUnsubscribe) {
+                // Synced
+                iconEl.style.background = '#10b981';
+                textEl.textContent = 'Synced';
+                textEl.style.color = '#059669';
+            } else {
+                // Unknown
+                iconEl.style.background = '#94a3b8';
+                textEl.textContent = 'Local';
+                textEl.style.color = '#64748b';
+            }
         },
 
         // (2026-07-13) Firestore real-time persistence & local storage sync; prev: localStorage only
@@ -403,6 +459,9 @@
             // STEP 4: Update UI immediately (optimistic update)
             if (typeof this.render === 'function') this.render();
             if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+            
+            // Update sync status indicator
+            this.updateSyncStatusIndicator();
         },
 
         _executePendingSaves: async function() {
@@ -425,6 +484,11 @@
                     // Remove from queue on success
                     this._pendingSaves.shift();
                     console.log(`✅ [${operation.id}] Successfully synced to Firestore`);
+                    
+                    // Update sync status indicator after successful sync
+                    if (typeof this.updateSyncStatusIndicator === 'function') {
+                        this.updateSyncStatusIndicator();
+                    }
                 } else {
                     operation.attempts++;
                     
@@ -685,10 +749,107 @@
         },
 
         // (2026-07-13) Re-sync loadBills when Firebase auth initializes; prev: single init load only
+        // (2026-08-04) MOBILE FIX: Added app resume handler and polling fallback
         setupListeners: function() {
             document.addEventListener('walletDataUpdated', (e) => {
                 this.txns = e.detail.txns || [];
                 this.render();
+            });
+            
+            // MOBILE FIX: Listen for Capacitor app resume event (when returning from background)
+            document.addEventListener('resume', () => {
+                console.log('📱 Mobile app resumed - refreshing bills...');
+                
+                if (window.auth?.currentUser) {
+                    // IMMEDIATE check - don't wait for polling interval
+                    if (window.db && window.getDoc && window.doc) {
+                        const uid = window.auth.currentUser.uid;
+                        const docRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
+                        
+                        console.log('📡 Fetching latest bills from Firestore...');
+                        
+                        window.getDoc(docRef).then(snap => {
+                            if (snap.exists()) {
+                                const data = snap.data();
+                                if (data && Array.isArray(data.bills)) {
+                                    const firestoreTimestamp = data.updatedAt || 0;
+                                    const localTimestamp = parseInt(localStorage.getItem('wallet_calendar_bills_timestamp') || '0');
+                                    
+                                    if (firestoreTimestamp > localTimestamp) {
+                                        console.log('📥 Found newer bills on resume!');
+                                        this.bills = data.bills;
+                                        
+                                        try {
+                                            localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills));
+                                            localStorage.setItem('wallet_calendar_bills_timestamp', firestoreTimestamp.toString());
+                                            localStorage.setItem('wallet_calendar_bills_lastSaveId', data.saveId || '');
+                                        } catch (e) {}
+                                        
+                                        if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                                        if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+                                        
+                                        if (window.showToast) {
+                                            window.showToast('✅ Bills updated!');
+                                        }
+                                    } else {
+                                        console.log('✓ Bills already up to date');
+                                    }
+                                }
+                            }
+                        }).catch(err => {
+                            console.error('Resume fetch failed:', err);
+                        });
+                    }
+                    
+                    // Also process pending saves
+                    if (this._pendingSaves.length > 0) {
+                        console.log('📱 Processing pending saves on resume...');
+                        this._executePendingSaves();
+                    }
+                } else {
+                    console.warn('⚠️ App resumed but user not authenticated');
+                }
+            }, false);
+            
+            // MOBILE FIX: Also listen for visibilitychange (works on both web and mobile)
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    console.log('👁️ App became visible - checking for updates...');
+                    
+                    if (window.auth?.currentUser) {
+                        // IMMEDIATE check when app becomes visible
+                        if (window.db && window.getDoc && window.doc) {
+                            const uid = window.auth.currentUser.uid;
+                            const docRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
+                            
+                            window.getDoc(docRef).then(snap => {
+                                if (snap.exists()) {
+                                    const data = snap.data();
+                                    if (data && Array.isArray(data.bills)) {
+                                        const firestoreTimestamp = data.updatedAt || 0;
+                                        const localTimestamp = parseInt(localStorage.getItem('wallet_calendar_bills_timestamp') || '0');
+                                        
+                                        if (firestoreTimestamp > localTimestamp) {
+                                            console.log('📥 Found newer bills on visibility change!');
+                                            this.bills = data.bills;
+                                            
+                                            try {
+                                                localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills));
+                                                localStorage.setItem('wallet_calendar_bills_timestamp', firestoreTimestamp.toString());
+                                                localStorage.setItem('wallet_calendar_bills_lastSaveId', data.saveId || '');
+                                            } catch (e) {}
+                                            
+                                            if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                                            if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+                                        }
+                                    }
+                                }
+                            }).catch(err => {
+                                console.error('Visibility check failed:', err);
+                            });
+                        }
+                    }
+                }
             });
             
             // Monitor online/offline status for reliable sync
@@ -797,6 +958,60 @@
                     this._executePendingSaves();
                 }
             }, 30000);
+            
+            // MOBILE FIX: Aggressive polling fallback - check for updates every 3 seconds
+            // This ensures bills appear quickly even if Firestore listener has delays
+            this._pollingInterval = setInterval(() => {
+                if (this._isOnline && window.auth?.currentUser) {
+                    // Always check for stale data, even if listener is active
+                    const lastUpdate = parseInt(localStorage.getItem('wallet_calendar_bills_timestamp') || '0');
+                    const now = Date.now();
+                    
+                    // If data is older than 3 seconds, force refresh
+                    if (now - lastUpdate > 3000) {
+                        console.log('📡 Aggressive polling: Checking for updates (data age:', Math.round((now - lastUpdate) / 1000), 'seconds)');
+                        
+                        // Force check Firestore for updates
+                        if (window.db && window.getDoc && window.doc) {
+                            const uid = window.auth.currentUser.uid;
+                            const docRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
+                            
+                            window.getDoc(docRef).then(snap => {
+                                if (snap.exists()) {
+                                    const data = snap.data();
+                                    if (data && Array.isArray(data.bills)) {
+                                        const firestoreTimestamp = data.updatedAt || 0;
+                                        
+                                        // Only update if Firestore has newer data
+                                        if (firestoreTimestamp > lastUpdate) {
+                                            console.log('📥 Polling found newer data! Updating...');
+                                            this.bills = data.bills;
+                                            
+                                            try {
+                                                localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills));
+                                                localStorage.setItem('wallet_calendar_bills_timestamp', firestoreTimestamp.toString());
+                                                localStorage.setItem('wallet_calendar_bills_lastSaveId', data.saveId || '');
+                                            } catch (e) {
+                                                console.error('Failed to update localStorage:', e);
+                                            }
+                                            
+                                            // Update UI
+                                            if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                                            if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+                                            
+                                            if (window.showToast) {
+                                                window.showToast('📱 Bills updated!');
+                                            }
+                                        }
+                                    }
+                                }
+                            }).catch(err => {
+                                console.error('Polling check failed:', err);
+                            });
+                        }
+                    }
+                }
+            }, 3000); // Check every 3 seconds
         },
 
         // (2026-07-13) Unified render calling native window.renderCalendar; prev: custom second grid creation
@@ -978,6 +1193,9 @@
             console.log('? Rendering card HTML');
             
             listEl.innerHTML = cardHtml;
+            
+            // Update sync status indicator after rendering
+            this.updateSyncStatusIndicator();
         },
 
         // (2026-07-13) Inline row popover editor used instead of openAddBillPrompt; prev: JS prompt popups

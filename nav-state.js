@@ -752,6 +752,11 @@ const NavState = {
             } else if (index === 1 && typeof window.renderCalendar === 'function') {
                 window.renderCalendar();
             }
+            // MOBILE FIX: Refresh bills when pulling to refresh on Calendar tab
+            if (index === 1 && window.CalendarView && typeof window.CalendarView.loadBills === 'function') {
+                console.log('📱 Pull-to-refresh: Reloading bills...');
+                window.CalendarView.loadBills();
+            }
             if (index === 0 && typeof window.triggerActiveAccountSync === 'function') {
                 await Promise.resolve(window.triggerActiveAccountSync(25, true));
             }

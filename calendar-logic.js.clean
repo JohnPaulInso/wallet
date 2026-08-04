@@ -127,56 +127,8 @@
                 setTimeout(() => clearInterval(checkAuth), 5000);
             }
             
-            // CRITICAL FIX: Create Bills & Reminders card HTML FIRST (before any rendering)
-            this.ensureBillsCardExists();
-            
             this.setupListeners();
             this.render();
-        },
-
-        // Ensure Bills & Reminders card HTML exists in the DOM
-        ensureBillsCardExists: function() {
-            // Check if element already exists
-            if (document.getElementById('calendar-bills-card-list')) {
-                console.log('Bills card element already exists');
-                return;
-            }
-            
-            console.log('Creating Bills & Reminders card HTML...');
-            
-            // Find a suitable container
-            let container = document.querySelector('.dashboard-content') || 
-                          document.querySelector('.page-content') || 
-                          document.querySelector('main') || 
-                          document.querySelector('#app') ||
-                          document.body;
-            
-            if (!container) {
-                console.warn('Could not find container for Bills card');
-                return;
-            }
-            
-            // Create the Bills & Reminders card
-            const billsCard = document.createElement('div');
-            billsCard.id = 'calendar-bills-card';
-            billsCard.style.cssText = 'margin: 20px; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.08);';
-            billsCard.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #dbeafe; display: flex; align-items: center; justify-content: center;">
-                        <i class="material-icons" style="font-size: 24px; color: #2563eb;">event_note</i>
-                    </div>
-                    <div>
-                        <div style="font-size: 18px; font-weight: 900; color: #1e293b; letter-spacing: -0.5px;">Bills & Reminders</div>
-                        <div style="font-size: 13px; color: #64748b; font-weight: 600;">Track upcoming due dates, recurring utilities, and bill status.</div>
-                    </div>
-                </div>
-                <div id="calendar-bills-card-list"></div>
-            `;
-            
-            // Insert at the beginning of container
-            container.insertBefore(billsCard, container.firstChild);
-            
-            console.log('Bills card created successfully');
         },
 
         // (2026-07-13) Firestore real-time persistence & local storage sync; prev: localStorage only
@@ -194,8 +146,6 @@
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         this.bills = parsed;
                         console.log('âœ“ Loaded', this.bills.length, 'bills from localStorage');
-                        // CRITICAL: Render immediately after loading
-                        this.renderUpcomingBillsCard();
                     }
                 }
                 if (!this.bills) this.bills = [];
@@ -790,32 +740,17 @@
         },
 
         renderUpcomingBillsCard: function() {
-            console.log('?? renderUpcomingBillsCard called');
-            console.log('?? Bills array:', this.bills);
-            
-            // CRITICAL: Ensure the card element exists before rendering
-            this.ensureBillsCardExists();
-            
             const listEl = document.getElementById('calendar-bills-card-list');
-            console.log('?? Target element:', listEl);
-            
-            if (!listEl) {
-                console.error('?? calendar-bills-card-list element STILL not found after ensureBillsCardExists!');
-                return;
-            }
+            if (!listEl) return;
 
             const todayObj = new Date();
             const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
-            
-            console.log('?? Today:', todayStr);
             
             const in7DaysObj = new Date(todayObj.getTime() + 7 * 86400000);
             const in7DaysStr = `${in7DaysObj.getFullYear()}-${String(in7DaysObj.getMonth() + 1).padStart(2, '0')}-${String(in7DaysObj.getDate()).padStart(2, '0')}`;
 
             // Get bills due TODAY (unpaid only)
             const todayBills = (this.getBillsForDate ? this.getBillsForDate(todayStr) : this.bills.filter(b => b.date === todayStr)).filter(b => !b.paid);
-            
-            console.log('?? Today bills:', todayBills);
             
             const weekBills = [];
             const upcomingBills = [];
@@ -956,9 +891,6 @@
                 cardHtml = `<div style="text-align: center; padding: 24px 0; color: #94a3b8; font-size: 12px; font-weight: 700;">No upcoming bills to pay.</div>`;
             }
 
-            console.log('?? Final counts - Today:', todayBills.length, 'Week:', weekBills.length, 'Upcoming:', upcomingBills.length, 'Paid:', paidBills.length);
-            console.log('? Rendering card HTML');
-            
             listEl.innerHTML = cardHtml;
         },
 
@@ -1706,129 +1638,3 @@
                 date: dateStr,
                 icon: iconInput?.value || this.selectedBillIcon || 'receipt_long',
                 color: this.selectedBillColor || '#3b82f6',
-                repeat: repeatInput?.value || this.selectedBillRepeat || 'monthly'
-            });
-
-            if (window.showToast) window.showToast('Bill reminder saved successfully!');
-
-            setTimeout(() => {
-                if (typeof window.openCalendarModal === 'function') {
-                    window.openCalendarModal(new Date(dateStr));
-                } else {
-                    const dayTxns = this.txns.filter(t => t.date && t.date.split('T')[0] === dateStr);
-                    this.openDayModal(new Date(dateStr), dayTxns);
-                }
-            }, 250);
-        },
-
-        closeModal: function() {
-            const modal = document.getElementById('calendar-txn-modal');
-            if (modal) modal.classList.remove('show');
-            if (window.NavState) window.NavState.popModalState('calendar-modal');
-        },
-
-        createTxnChip: function(t) {
-            const amt = t.manualAmount ?? t.amount ?? 0;
-            const mapped = t.mapped || getCalendarMerchantDisplay(t);
-            const merchantUpper = String(t.merchant || t.name || mapped.name || '').toUpperCase();
-            const isInc = mapped.category === 'Income';
-            const isAtomePayment = merchantUpper.includes('ATOME PAYMENT');
-            const iconName = isAtomePayment ? 'savings' : (mapped.icon || 'receipt_long');
-            const iconClass = isAtomePayment ? 'cat-income' : (mapped.catClass || '');
-            
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '';
-                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                const dateOnly = String(dateStr).split('T')[0].trim();
-                const parts = dateOnly.split('-');
-                if (parts.length === 3) {
-                    const monthNum = parseInt(parts[1], 10) - 1;
-                    const day = parseInt(parts[2], 10);
-                    if (monthNum >= 0 && monthNum < 12 && day > 0 && day <= 31) {
-                        return `${months[monthNum]} ${day}`;
-                    }
-                }
-                return dateStr;
-            };
-            
-            const account = t.account || window.currentAccount || 'atome';
-            const accountBadge = account === 'bpi' 
-                ? '<div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 2px solid #fff; overflow: hidden; padding: 1.5px; z-index: 2;"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/BPI_logo.svg/320px-BPI_logo.svg.png" alt="BPI" style="width: 100%; height: 100%; object-fit: contain;"></div>'
-                : '<div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 2px solid #fff; overflow: hidden; padding: 1.5px; z-index: 2;"><img src="https://asset.brandfetch.io/idv-ndb21F/id65dSTrJP.png" alt="Atome" style="width: 100%; height: 100%; object-fit: contain;"></div>';
-            
-            const dateFormatted = formatDate(t.date);
-            const metaText = `${dateFormatted} • ${mapped.category || ''}`;
-            
-            const noteHtml = (t.note && t.note.trim()) 
-                ? `<div style="font-size: 9.03px; font-weight: 700; color: #7c3aed; margin-top: 1px; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${t.note}</div>` 
-                : '';
-            
-            return `
-                <div class="calendar-txn-chip ${isInc ? 'income' : 'expense'}" style="display:flex; align-items:center; gap:14px; padding:12px 16px; background:#fff; border:1px solid #f1f5f9; border-radius:16px; margin-bottom:12px; ${t.excluded ? 'opacity:0.5' : ''}; font-family: 'Plus Jakarta Sans', sans-serif !important;">
-                    <div class="history-icon ${iconClass}" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; position:relative;">
-                        <i class="material-icons" style="font-size:20px;">${iconName}</i>
-                        ${accountBadge}
-                    </div>
-                    <div style="flex:1; min-width:0;">
-                        <div style="font-size: 10.91px; font-weight: 800; color: #1e293b; text-transform: uppercase; margin-bottom: 1px; letter-spacing: -0.3px; line-height: 1.3; white-space: nowrap; overflow: hidden; position: relative; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${mapped.name || 'UNKNOWN'}</div>
-                        <div style="font-size: 8.64px; font-weight: 700; color: #475569; text-transform: uppercase; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${metaText}</div>
-                        ${noteHtml}
-                    </div>
-                    <div style="font-size: 11.8px; font-weight: 800; text-align: right; white-space: nowrap; color: ${isInc ? '#10b981' : '#f43f5e'}; font-family: 'Plus Jakarta Sans', sans-serif !important;">${isInc ? '+' : '-'}?${Math.abs(amt).toLocaleString()}</div>
-                </div>
-            `;
-        }
-    };
-
-    // Expose global helper functions
-    window.openAddBillModal = function(dateStr) {
-        if (window.CalendarView && typeof window.CalendarView.openAddBillModal === 'function') {
-            window.CalendarView.openAddBillModal(dateStr);
-        }
-    };
-
-    // Expose force sync function for manual triggering
-    window.forceSyncBillsToFirestore = function() {
-        if (window.CalendarView && typeof window.CalendarView.forceSyncToFirestore === 'function') {
-            window.CalendarView.forceSyncToFirestore();
-        } else {
-            console.warn('CalendarView not initialized');
-        }
-    };
-    
-    // Expose sync status for debugging
-    window.getBillsSyncStatus = function() {
-        if (window.CalendarView && typeof window.CalendarView.getSyncStatus === 'function') {
-            const status = window.CalendarView.getSyncStatus();
-            console.table(status);
-            return status;
-        } else {
-            console.warn('CalendarView not initialized');
-            return null;
-        }
-    };
-
-    // Auto-initialize CalendarView on script execution
-    if (window.CalendarView && typeof window.CalendarView.init === 'function') {
-        window.CalendarView.init();
-    }
-    
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.CalendarView && typeof window.CalendarView.init === 'function') {
-                window.CalendarView.init();
-            }
-        });
-    }
-
-    // Event delegation for add bill button clicks
-    document.addEventListener('click', function(e) {
-        const btn = e.target && e.target.closest && e.target.closest('.calendar-top-add-bill-row');
-        if (btn) {
-            e.preventDefault();
-            e.stopPropagation();
-            const dateStr = btn.getAttribute('data-date') || window.CalendarView?.currentBillModalDate || new Date().toISOString().split('T')[0];
-            window.openAddBillModal(dateStr);
-        }
-    }, true);
-})(window);

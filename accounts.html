@@ -468,6 +468,46 @@
         .ptr-spinner.refreshing .ptr-circle { stroke-dashoffset: 15; animation: ptrDash 1.2s ease-in-out infinite; }
         @keyframes ptrDash { 0% { stroke-dashoffset: 55; transform: rotate(0deg); } 50% { stroke-dashoffset: 15; } 100% { stroke-dashoffset: 55; transform: rotate(360deg); } }
 
+        /* FIX: Month/Year Dropdown Spacing - v5.8 */
+        select, .filter-dropdown, [role="combobox"] {
+            margin-right: 12px !important;
+            min-width: 80px;
+        }
+        
+        /* Filter row with dropdowns */
+        .filter-row, .filters-container, [class*="filter"] {
+            display: flex !important;
+            align-items: center;
+            gap: 12px !important;
+            flex-wrap: nowrap;
+        }
+        
+        /* Dropdown button styling */
+        button[aria-haspopup="listbox"],
+        .dropdown-toggle,
+        select {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #1e293b;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        
+        button[aria-haspopup="listbox"]:hover,
+        .dropdown-toggle:hover,
+        select:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
     </style>
 </head>
 <body>

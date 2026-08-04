@@ -5,8 +5,6 @@
  * (2026-08-04) Added bill reminder push notifications at 9 AM
  */
 
-import { BillReminders } from "./bill-reminders.js";
-
 (function(window) {
     const CATEGORIES = [
         { id: 'Online shopping', icon: 'shopping_bag', label: 'Online Shopping', cls: 'cat-online' },
@@ -112,34 +110,175 @@ import { BillReminders } from "./bill-reminders.js";
             console.log("📅 [v5.9-MOBILE] CALENDAR: Initializing CalendarView with Mobile Real-Time Sync");
             this.initialized = true;
             
-            // Wait for Firebase auth before loading bills
-            if (window.auth && window.auth.currentUser) {
-                this.loadBills();
-            } else {
-                console.log('⏳ Waiting for Firebase auth...');
-                // Retry when auth is ready (MOBILE FIX: increased timeout to 15 seconds)
-                const checkAuth = setInterval(() => {
-                    if (window.auth && window.auth.currentUser) {
-                        clearInterval(checkAuth);
-                        console.log('✓ Auth ready, loading bills');
-                        this.loadBills();
-                    }
-                }, 100);
-                
-                // MOBILE FIX: Timeout after 15 seconds (was 5s, too short for mobile)
-                setTimeout(() => {
-                    clearInterval(checkAuth);
-                    if (!window.auth?.currentUser) {
-                        console.warn('⚠️ Auth timeout - bills will load when user signs in');
-                    }
-                }, 15000);
-            }
-            
             // CRITICAL FIX: Create Bills & Reminders card HTML FIRST (before any rendering)
             this.ensureBillsCardExists();
             
+            // PERFORMANCE FIX: Load bills immediately from localStorage (don't wait for auth)
+            // This makes bills appear instantly like transactions do
+            this.loadBillsFromLocalStorage();
+            
+            // Setup Firestore listener in background (async, doesn't block UI)
+            this.setupFirestoreSync();
+            
             this.setupListeners();
             this.render();
+        },
+        
+        // Load bills immediately from localStorage (instant display)
+        loadBillsFromLocalStorage: function() {
+            try {
+                const stored = localStorage.getItem('wallet_calendar_bills');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        this.bills = parsed;
+                        console.log('✅ Loaded', this.bills.length, 'bills from localStorage (instant)');
+                        this.renderUpcomingBillsCard();
+                        return true;
+                    }
+                }
+            } catch (e) {
+                console.error('❌ localStorage load failed:', e);
+            }
+            
+            if (!this.bills) this.bills = [];
+            return false;
+        },
+        
+        // Setup Firestore real-time sync (async, doesn't block UI)
+        setupFirestoreSync: function() {
+            const attemptSetup = () => {
+                const uid = window.auth?.currentUser?.uid;
+                
+                if (!uid) {
+                    console.log('⏳ No auth yet, will retry Firestore sync...');
+                    return false;
+                }
+                
+                if (!window.db || !window.doc || !window.onSnapshot) {
+                    console.warn('⚠️ Firestore SDK not loaded - retrying...');
+                    return false;
+                }
+                
+                console.log('📡 Setting up Firestore real-time sync for user:', uid);
+                const billDocRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
+                
+                // Detach previous listener if exists
+                if (this._firestoreUnsubscribe) {
+                    this._firestoreUnsubscribe();
+                }
+                
+                // Setup real-time listener with enhanced conflict resolution
+                this._firestoreUnsubscribe = window.onSnapshot(
+                    billDocRef, 
+                    (snap) => {
+                        console.log('🔄 Firestore snapshot received');
+                        
+                        if (snap.exists()) {
+                            const data = snap.data();
+                            if (data && Array.isArray(data.bills)) {
+                                const firestoreBills = data.bills;
+                                const firestoreTimestamp = data.updatedAt || 0;
+                                const firestoreSaveId = data.saveId || '';
+                                const localTimestamp = parseInt(localStorage.getItem('wallet_calendar_bills_timestamp') || '0');
+                                const localSaveId = localStorage.getItem('wallet_calendar_bills_lastSaveId') || '';
+                                
+                                console.log('📊 Firestore:', firestoreBills.length, 'bills, timestamp:', firestoreTimestamp, 'saveId:', firestoreSaveId);
+                                console.log('📊 Local:', this.bills.length, 'bills, timestamp:', localTimestamp, 'saveId:', localSaveId);
+                                
+                                // Skip if this is our own save (echo prevention)
+                                if (firestoreSaveId === localSaveId && firestoreTimestamp === localTimestamp) {
+                                    console.log('↩️ Echo detected, skipping update (this is our own save)');
+                                    return;
+                                }
+                                
+                                // Use Firestore data if newer
+                                const shouldUpdate = firestoreTimestamp > localTimestamp || 
+                                                   (firestoreTimestamp === localTimestamp && 
+                                                    JSON.stringify(firestoreBills) !== JSON.stringify(this.bills));
+                                
+                                if (shouldUpdate) {
+                                    console.log('⬇️ Applying Firestore update (remote changes detected)');
+                                    
+                                    this.bills = firestoreBills;
+                                    
+                                    // Update localStorage to match Firestore
+                                    try { 
+                                        localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills));
+                                        localStorage.setItem('wallet_calendar_bills_timestamp', firestoreTimestamp.toString());
+                                        localStorage.setItem('wallet_calendar_bills_lastSaveId', firestoreSaveId);
+                                        console.log('✓ Synced to localStorage');
+                                    } catch(e){
+                                        console.error('❌ Failed to sync to localStorage:', e);
+                                    }
+                                    
+                                    // Update UI with remote changes
+                                    if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                                    if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+                                    
+                                    // Show notification for remote updates
+                                    if (window.showToast && firestoreTimestamp > localTimestamp + 5000) {
+                                        window.showToast('📱 Bills updated from another device');
+                                    }
+                                    
+                                    // BILL REMINDERS: Schedule notifications after remote update
+                                    this.scheduleReminders();
+                                    
+                                } else if (localTimestamp > firestoreTimestamp && this.bills.length > 0) {
+                                    console.log('⬆️ Local data is newer - will push to Firestore');
+                                    if (this._pendingSaves.length === 0) {
+                                        this.saveBills();
+                                    }
+                                } else {
+                                    console.log('✓ Data already in sync');
+                                }
+                            } else if (this.bills.length > 0) {
+                                console.log('⬆️ Firestore has no bills array but local has data - pushing to Firestore');
+                                this.saveBills();
+                            }
+                        } else {
+                            // Document doesn't exist
+                            if (this.bills.length > 0) {
+                                console.log('⬆️ Firestore document missing - creating with local bills');
+                                this.saveBills();
+                            } else {
+                                console.log('ℹ️ No bills in Firestore or localStorage');
+                            }
+                        }
+                    },
+                    (error) => {
+                        console.error('❌ Firestore snapshot error:', error);
+                        
+                        if (error.code === 'permission-denied') {
+                            if (window.showToast) {
+                                window.showToast('⚠️ Permission denied. Please sign in again.');
+                            }
+                        }
+                    }
+                );
+                
+                console.log('✓ Firestore real-time sync active');
+                return true;
+            };
+            
+            // Try to setup immediately if auth is ready
+            if (!attemptSetup()) {
+                // Retry with delay if initial setup fails
+                let retryCount = 0;
+                const maxRetries = 10;
+                
+                const retrySync = setInterval(() => {
+                    retryCount++;
+                    console.log(`🔄 Retrying Firestore sync (${retryCount}/${maxRetries})...`);
+                    
+                    if (attemptSetup() || retryCount >= maxRetries) {
+                        clearInterval(retrySync);
+                        if (retryCount >= maxRetries) {
+                            console.warn('⚠️ Max retries reached. Bills will only save locally.');
+                        }
+                    }
+                }, 1000);
+            }
         },
 
         // Ensure Bills & Reminders card HTML exists in the DOM
@@ -235,181 +374,6 @@ import { BillReminders } from "./bill-reminders.js";
                 iconEl.style.background = '#94a3b8';
                 textEl.textContent = 'Local';
                 textEl.style.color = '#64748b';
-            }
-        },
-
-        // (2026-07-13) Firestore real-time persistence & local storage sync; prev: localStorage only
-        // (2026-07-13) Robust reload persistence & auto-sync local bills to Firestore; prev: empty snap reset
-        // (2026-07-13) Dual-tier persistence (instant localStorage + Firestore config sync); prev: empty snap reset
-        // ENHANCED: Real-time cross-device sync with automatic retry and conflict resolution
-        loadBills: function() {
-            console.log('📥 Loading bills...');
-            
-            // Load from localStorage first (instant display)
-            try {
-                const stored = localStorage.getItem('wallet_calendar_bills');
-                if (stored) {
-                    const parsed = JSON.parse(stored);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        this.bills = parsed;
-                        console.log('✓ Loaded', this.bills.length, 'bills from localStorage');
-                        // CRITICAL: Render immediately after loading
-                        this.renderUpcomingBillsCard();
-                    }
-                }
-                if (!this.bills) this.bills = [];
-            } catch (e) {
-                console.error('❌ localStorage load failed:', e);
-                if (!this.bills) this.bills = [];
-            }
-
-            // Setup Firestore real-time sync with retry mechanism
-            const setupFirestoreSync = () => {
-                try {
-                    const uid = window.auth?.currentUser?.uid;
-                    
-                    if (!uid) {
-                        console.warn('⚠️ No authenticated user - bills will only save locally');
-                        return false;
-                    }
-                    
-                    if (!window.db || !window.doc || !window.onSnapshot) {
-                        console.warn('⚠️ Firestore SDK not loaded - retrying...');
-                        return false;
-                    }
-                    
-                    console.log('📡 Setting up Firestore real-time sync for user:', uid);
-                    const billDocRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
-                    
-                    // Detach previous listener if exists
-                    if (this._firestoreUnsubscribe) {
-                        this._firestoreUnsubscribe();
-                    }
-                    
-                    // Setup real-time listener with enhanced conflict resolution
-                    this._firestoreUnsubscribe = window.onSnapshot(
-                        billDocRef, 
-                        (snap) => {
-                            console.log('🔄 Firestore snapshot received');
-                            
-                            if (snap.exists()) {
-                                const data = snap.data();
-                                if (data && Array.isArray(data.bills)) {
-                                    const firestoreBills = data.bills;
-                                    const firestoreTimestamp = data.updatedAt || 0;
-                                    const firestoreSaveId = data.saveId || '';
-                                    const localTimestamp = parseInt(localStorage.getItem('wallet_calendar_bills_timestamp') || '0');
-                                    const localSaveId = localStorage.getItem('wallet_calendar_bills_lastSaveId') || '';
-                                    
-                                    console.log('📊 Firestore:', firestoreBills.length, 'bills, timestamp:', firestoreTimestamp, 'saveId:', firestoreSaveId);
-                                    console.log('📊 Local:', this.bills.length, 'bills, timestamp:', localTimestamp, 'saveId:', localSaveId);
-                                    
-                                    // Skip if this is our own save (echo prevention)
-                                    if (firestoreSaveId === localSaveId && firestoreTimestamp === localTimestamp) {
-                                        console.log('↩️ Echo detected, skipping update (this is our own save)');
-                                        return;
-                                    }
-                                    
-                                    // Use Firestore data if:
-                                    // 1. Firestore timestamp is newer
-                                    // 2. OR timestamps match but Firestore has different data (concurrent edit)
-                                    const shouldUpdate = firestoreTimestamp > localTimestamp || 
-                                                       (firestoreTimestamp === localTimestamp && 
-                                                        JSON.stringify(firestoreBills) !== JSON.stringify(this.bills));
-                                    
-                                    if (shouldUpdate) {
-                                        console.log('⬇️ Applying Firestore update (remote changes detected)');
-                                        
-                                        // Check if there are pending local changes
-                                        if (this._pendingSaves.length > 0) {
-                                            console.warn('⚠️ Pending saves exist, may need merge');
-                                        }
-                                        
-                                        this.bills = firestoreBills;
-                                        
-                                        // Update localStorage to match Firestore
-                                        try { 
-                                            localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills));
-                                            localStorage.setItem('wallet_calendar_bills_timestamp', firestoreTimestamp.toString());
-                                            localStorage.setItem('wallet_calendar_bills_lastSaveId', firestoreSaveId);
-                                            console.log('✓ Synced to localStorage');
-                                        } catch(e){
-                                            console.error('❌ Failed to sync to localStorage:', e);
-                                        }
-                                        
-                                        // Update UI with remote changes
-                                        if (typeof window.renderCalendar === 'function') window.renderCalendar();
-                                        if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
-                                        
-                                        // Show notification for remote updates
-                                        if (window.showToast && firestoreTimestamp > localTimestamp + 5000) {
-                                            window.showToast('📱 Bills updated from another device');
-                                        }
-                                        
-                                        // BILL REMINDERS: Schedule notifications after remote update
-                                        this.scheduleReminders();
-                                        
-                                    } else if (localTimestamp > firestoreTimestamp && this.bills.length > 0) {
-                                        console.log('⬆️ Local data is newer - will push to Firestore');
-                                        // Don't push immediately, let pending saves handle it
-                                        if (this._pendingSaves.length === 0) {
-                                            this.saveBills();
-                                        }
-                                    } else {
-                                        console.log('✓ Data already in sync');
-                                    }
-                                } else if (this.bills.length > 0) {
-                                    console.log('⬆️ Firestore has no bills array but local has data - pushing to Firestore');
-                                    this.saveBills();
-                                }
-                            } else {
-                                // Document doesn't exist
-                                if (this.bills.length > 0) {
-                                    console.log('⬆️ Firestore document missing - creating with local bills');
-                                    this.saveBills();
-                                } else {
-                                    console.log('ℹ️ No bills in Firestore or localStorage');
-                                }
-                            }
-                        },
-                        (error) => {
-                            console.error('❌ Firestore snapshot error:', error);
-                            
-                            // Don't show toast for every error, only critical ones
-                            if (error.code === 'permission-denied') {
-                                if (window.showToast) {
-                                    window.showToast('⚠️ Permission denied. Please sign in again.');
-                                }
-                            }
-                        }
-                    );
-                    
-                    console.log('✓ Firestore real-time sync active');
-                    return true;
-                    
-                } catch (e) { 
-                    console.error('❌ Firestore setup error:', e);
-                    return false;
-                }
-            };
-            
-            // Try to setup Firestore immediately
-            if (!setupFirestoreSync()) {
-                // Retry after a delay if initial setup fails
-                let retryCount = 0;
-                const maxRetries = 10;
-                
-                const retrySync = setInterval(() => {
-                    retryCount++;
-                    console.log(`🔄 Retrying Firestore sync (${retryCount}/${maxRetries})...`);
-                    
-                    if (setupFirestoreSync() || retryCount >= maxRetries) {
-                        clearInterval(retrySync);
-                        if (retryCount >= maxRetries) {
-                            console.warn('⚠️ Max retries reached. Bills will only save locally.');
-                        }
-                    }
-                }, 1000);
             }
         },
 
@@ -661,11 +625,11 @@ import { BillReminders } from "./bill-reminders.js";
             }
             
             try {
-                if (typeof BillReminders !== 'undefined' && BillReminders.init) {
+                if (typeof window.BillReminders !== 'undefined' && window.BillReminders.init) {
                     console.log('⏰ Scheduling bill reminders...');
-                    await BillReminders.init(this.bills, uid);
+                    await window.BillReminders.init(this.bills, uid);
                 } else {
-                    console.warn('⚠️ BillReminders module not loaded');
+                    console.warn('⚠️ BillReminders module not loaded yet');
                 }
             } catch (e) {
                 console.error('❌ Failed to schedule bill reminders:', e);
@@ -2101,4 +2065,19 @@ import { BillReminders } from "./bill-reminders.js";
             window.openAddBillModal(dateStr);
         }
     }, true);
+    
+    // AUTO-INITIALIZE: Load bills immediately on page load (like transactions do)
+    // This ensures bills appear instantly without waiting for user navigation
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📅 Auto-initializing CalendarView on DOMContentLoaded');
+            window.CalendarView.init();
+        });
+    } else {
+        // DOM already loaded
+        console.log('📅 Auto-initializing CalendarView (DOM ready)');
+        setTimeout(function() {
+            window.CalendarView.init();
+        }, 100);
+    }
 })(window);

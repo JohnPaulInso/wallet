@@ -2,7 +2,10 @@
  * Calendar Logic for Smart Wallet (Unified SPA)
  * Fix: Ported 1:1 from calendar.html including grouped transaction modal (2026-04-02)
  * Summarized: Added namespacing and responsive grid rendering.
+ * (2026-08-04) Added bill reminder push notifications at 9 AM
  */
+
+import { BillReminders } from "./bill-reminders.js";
 
 (function(window) {
     const CATEGORIES = [
@@ -343,6 +346,9 @@
                                             window.showToast('📱 Bills updated from another device');
                                         }
                                         
+                                        // BILL REMINDERS: Schedule notifications after remote update
+                                        this.scheduleReminders();
+                                        
                                     } else if (localTimestamp > firestoreTimestamp && this.bills.length > 0) {
                                         console.log('⬆️ Local data is newer - will push to Firestore');
                                         // Don't push immediately, let pending saves handle it
@@ -462,6 +468,9 @@
             
             // Update sync status indicator
             this.updateSyncStatusIndicator();
+            
+            // BILL REMINDERS: Schedule push notifications for bills
+            this.scheduleReminders();
         },
 
         _executePendingSaves: async function() {
@@ -636,6 +645,31 @@
                 lastSaveId: localStorage.getItem('wallet_calendar_bills_lastSaveId'),
                 timestamp: localStorage.getItem('wallet_calendar_bills_timestamp')
             };
+        },
+        
+        // (2026-08-04) Schedule push notification reminders for bills at 9 AM
+        scheduleReminders: async function() {
+            const uid = window.auth?.currentUser?.uid;
+            if (!uid) {
+                console.log('⏰ Skipping bill reminders: user not authenticated');
+                return;
+            }
+            
+            if (!this.bills || this.bills.length === 0) {
+                console.log('⏰ No bills to schedule reminders for');
+                return;
+            }
+            
+            try {
+                if (typeof BillReminders !== 'undefined' && BillReminders.init) {
+                    console.log('⏰ Scheduling bill reminders...');
+                    await BillReminders.init(this.bills, uid);
+                } else {
+                    console.warn('⚠️ BillReminders module not loaded');
+                }
+            } catch (e) {
+                console.error('❌ Failed to schedule bill reminders:', e);
+            }
         },
 
         // (2026-07-13) Auto-initialize CalendarView on access; prev: uninitialized bills array on load

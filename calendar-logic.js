@@ -368,6 +368,23 @@
                 console.error(`❌ [${saveId}] localStorage failed:`, e);
             }
 
+            // CRITICAL FIX: Check if user is authenticated before queuing Firestore save
+            const uid = window.auth?.currentUser?.uid;
+            if (!uid) {
+                console.warn(`⚠️ [${saveId}] No authenticated user - bills saved locally only`);
+                console.warn('💡 Bills will sync to Firestore after sign-in');
+                
+                // Show toast to user if available
+                if (window.showToast) {
+                    window.showToast('⚠️ Saved locally - sign in to sync across devices');
+                }
+                
+                // Still render UI
+                if (typeof this.render === 'function') this.render();
+                if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+                return;
+            }
+
             // STEP 2: Queue for Firestore save with guaranteed delivery
             const saveOperation = {
                 id: saveId,
@@ -378,6 +395,7 @@
             };
             
             this._pendingSaves.push(saveOperation);
+            console.log(`📋 [${saveId}] Queued for Firestore sync (authenticated as: ${uid.substring(0, 8)}...)`);
             
             // STEP 3: Execute Firestore save with aggressive retry
             await this._executePendingSaves();
@@ -1757,7 +1775,7 @@
                 : '<div style="position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); border: 2px solid #fff; overflow: hidden; padding: 1.5px; z-index: 2;"><img src="https://asset.brandfetch.io/idv-ndb21F/id65dSTrJP.png" alt="Atome" style="width: 100%; height: 100%; object-fit: contain;"></div>';
             
             const dateFormatted = formatDate(t.date);
-            const metaText = `${dateFormatted} � ${mapped.category || ''}`;
+            const metaText = `${dateFormatted} � ${mapped.category || ''}`;
             
             const noteHtml = (t.note && t.note.trim()) 
                 ? `<div style="font-size: 9.03px; font-weight: 700; color: #7c3aed; margin-top: 1px; white-space: nowrap; overflow: hidden; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); font-family: 'Plus Jakarta Sans', sans-serif !important;">${t.note}</div>` 

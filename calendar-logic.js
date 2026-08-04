@@ -108,27 +108,66 @@
             this.render();
         },
 
+        // (2026-07-13) Firestore real-time persistence & local storage sync; prev: localStorage only
+        // (2026-07-13) Robust reload persistence & auto-sync local bills to Firestore; prev: empty snap reset
+        // (2026-07-13) Dual-tier persistence (instant localStorage + Firestore config sync); prev: empty snap reset
         loadBills: function() {
             try {
                 const stored = localStorage.getItem('wallet_calendar_bills');
                 if (stored) {
-                    this.bills = JSON.parse(stored);
-                } else {
-                    this.bills = [];
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        this.bills = parsed;
+                    }
+                }
+                if (!this.bills) this.bills = [];
             } catch (e) {
-                this.bills = [];
+                if (!this.bills) this.bills = [];
             }
+
+            try {
+                const uid = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
+                if (uid && window.db && typeof window.doc === 'function' && typeof window.onSnapshot === 'function') {
+                    const billDocRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
+                    window.onSnapshot(billDocRef, (snap) => {
+                        if (snap.exists() && Array.isArray(snap.data()?.bills)) {
+                            const firestoreBills = snap.data().bills;
+                            if (firestoreBills.length > 0) {
+                                this.bills = firestoreBills;
+                                try { localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills)); } catch(e){}
+                                if (typeof window.renderCalendar === 'function') window.renderCalendar();
+                                if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
+                            } else if (this.bills.length > 0) {
+                                this.saveBills();
+                            }
+                        } else if (!snap.exists() && this.bills.length > 0) {
+                            this.saveBills();
+                        }
+                    });
+                }
+            } catch (e) { console.error('Firestore load error', e); }
         },
 
         saveBills: function() {
             try {
                 localStorage.setItem('wallet_calendar_bills', JSON.stringify(this.bills || []));
             } catch (e) {}
+
+            try {
+                const uid = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
+                if (uid && window.db && typeof window.doc === 'function' && typeof window.setDoc === 'function') {
+                    const billDocRef = window.doc(window.db, 'users', uid, 'config', 'calendar_bills');
+                    window.setDoc(billDocRef, { bills: this.bills || [], updatedAt: Date.now() }, { merge: true }).catch(err => console.error('Firestore save error', err));
+                }
+            } catch (e) { console.error('Firestore save error', e); }
+
             if (typeof this.render === 'function') this.render();
             if (typeof this.renderUpcomingBillsCard === 'function') this.renderUpcomingBillsCard();
         },
 
+        // (2026-07-13) Auto-initialize CalendarView on access; prev: uninitialized bills array on load
         getBillsForDate: function(dateStr) {
+            if (!this.initialized) this.init();
             if (!this.bills || !Array.isArray(this.bills)) return [];
             const targetDate = new Date(dateStr + 'T00:00:00');
             const targetDay = targetDate.getDate();
@@ -137,7 +176,6 @@
             return this.bills.filter(b => {
                 if (!b.date) return false;
                 if (dateStr < b.date) return false; // Bill hasn't started yet
-                if (b.endDate && dateStr >= b.endDate) return false; // Deleted for target date and future
 
                 const repeat = b.repeat || 'monthly';
                 if (repeat === 'this_month' || repeat === 'none') {
@@ -172,13 +210,8 @@
         deleteBill: function(id, targetDateStr) {
             const idx = this.bills.findIndex(b => b.id === id);
             if (idx > -1) {
-                const bill = this.bills[idx];
-                const repeat = bill.repeat || 'monthly';
-                if ((repeat === 'monthly' || repeat === 'yearly') && targetDateStr) {
-                    bill.endDate = targetDateStr; // Only future instances are affected!
-                } else {
-                    this.bills.splice(idx, 1);
-                }
+                // Always completely remove the bill when user clicks delete
+                this.bills.splice(idx, 1);
                 this.saveBills();
             }
         },
@@ -186,7 +219,46 @@
         toggleBillPaid: function(id) {
             const idx = this.bills.findIndex(b => b.id === id);
             if (idx > -1) {
+                const wasPaid = this.bills[idx].paid;
                 this.bills[idx].paid = !this.bills[idx].paid;
+                
+                // Add celebration animation when marking as paid
+                if (!wasPaid && this.bills[idx].paid) {
+                    // Find the bill card element
+                    const billCards = document.querySelectorAll('.bill-card-item');
+                    billCards.forEach(card => {
+                        const cardHtml = card.innerHTML;
+                        if (cardHtml.includes(id)) {
+                            // Trigger haptic feedback if available
+                            if (window.triggerHaptic) window.triggerHaptic('impactMedium');
+                            
+                            // Add bounce and fade animation
+                            card.style.transition = 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)';
+                            card.style.transform = 'scale(1.05)';
+                            
+                            setTimeout(() => {
+                                card.style.transform = 'scale(1)';
+                            }, 200);
+                            
+                            // Create confetti-like checkmark effect
+                            const icon = card.querySelector('.material-icons');
+                            if (icon && icon.textContent === 'radio_button_unchecked') {
+                                // Animate the icon change
+                                icon.style.transition = 'all 0.3s ease';
+                                icon.style.transform = 'rotate(360deg) scale(1.3)';
+                                setTimeout(() => {
+                                    icon.style.transform = 'rotate(0deg) scale(1)';
+                                }, 300);
+                            }
+                        }
+                    });
+                    
+                    // Show toast message
+                    if (window.showToast) {
+                        window.showToast('✓ Bill marked as paid!');
+                    }
+                }
+                
                 this.saveBills();
             }
         },
@@ -203,79 +275,32 @@
             this.renderUpcomingBillsCard();
         },
 
+        // (2026-07-13) Re-sync loadBills when Firebase auth initializes; prev: single init load only
         setupListeners: function() {
             document.addEventListener('walletDataUpdated', (e) => {
                 this.txns = e.detail.txns || [];
                 this.render();
             });
+            if (window.onAuthStateChanged && window.auth) {
+                window.onAuthStateChanged(window.auth, (user) => {
+                    if (user) this.loadBills();
+                });
+            } else {
+                window.addEventListener('load', () => {
+                    setTimeout(() => this.loadBills(), 600);
+                });
+            }
             if (window.allTxns) {
                 this.txns = window.allTxns;
                 this.render();
             }
         },
 
+        // (2026-07-13) Unified render calling native window.renderCalendar; prev: custom second grid creation
         render: function() {
-            const grid = document.getElementById('calendar-page-grid');
-            const title = document.getElementById('calendar-page-title');
-            if (!grid || !title) return;
-
-            const dayCells = grid.querySelectorAll('.calendar-day-cell');
-            dayCells.forEach(d => d.remove());
-
-            const year = this.currentViewDate.getFullYear();
-            const month = this.currentViewDate.getMonth();
-            title.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(this.currentViewDate);
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const daysInPrevMonth = new Date(year, month, 0).getDate();
-
-            for (let i = firstDay - 1; i >= 0; i--) {
-                const cell = document.createElement('div');
-                cell.className = 'calendar-day-cell other-month';
-                cell.innerHTML = `<span class="calendar-day-num">${daysInPrevMonth - i}</span>`;
-                grid.appendChild(cell);
+            if (typeof window.renderCalendar === 'function') {
+                window.renderCalendar();
             }
-
-            const today = new Date();
-            for (let d = 1; d <= daysInMonth; d++) {
-                const cellDate = new Date(year, month, d);
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                
-                const cell = document.createElement('div');
-                cell.className = 'calendar-day-cell';
-                if (today.toDateString() === cellDate.toDateString()) cell.classList.add('today');
-                
-                const dayTxns = this.txns.filter(t => (t.date && t.date.split('T')[0] === dateStr) && !t.refund);
-                const dayBills = this.getBillsForDate(dateStr);
-                
-                let totalExp = 0, totalInc = 0;
-                dayTxns.forEach(t => {
-                    const amt = t.manualAmount ?? t.amount ?? 0;
-                    if (t.category === 'Income' || t.manualCategory === 'Income') totalInc += amt;
-                    else if (!t.excluded) totalExp += amt;
-                });
-
-                // (2026-07-13) Render compact dot indicators to prevent grid expansion; prev: full text chip
-                let billChipsHtml = '';
-                if (dayBills.length > 0) {
-                    billChipsHtml = `<div class="calendar-day-bills" style="display:flex; gap:3px; margin-bottom:2px; justify-content:center; align-items:center;">` +
-                        dayBills.map(b => `
-                            <span class="calendar-bill-dot ${b.paid ? 'paid' : ''}" style="width:6px; height:6px; border-radius:50%; background:${b.color || '#3b82f6'}; display:inline-block; ${b.paid ? 'opacity:0.4;' : ''}" title="${b.title}${b.amount ? ': ₱' + b.amount.toLocaleString() : ''}"></span>
-                        `).join('') +
-                        `</div>`;
-                }
-
-                let chips = '<div class="calendar-day-amounts">';
-                if (totalExp > 0) chips += `<div class="calendar-amount-chip expense">-${Math.round(totalExp).toLocaleString()}</div>`;
-                if (totalInc > 0) chips += `<div class="calendar-amount-chip income">+${Math.round(totalInc).toLocaleString()}</div>`;
-                chips += '</div>';
-
-                cell.innerHTML = `<span class="calendar-day-num">${d}</span>${billChipsHtml}${chips}`;
-                cell.onclick = () => this.openDayModal(cellDate, dayTxns);
-                grid.appendChild(cell);
-            }
-
             this.renderUpcomingBillsCard();
         },
 
@@ -294,42 +319,92 @@
             const weekBills = [];
             const upcomingBills = [];
 
+            // Generate dates for the next 7 days and upcoming period
+            const nextDates = [];
+            for (let i = 1; i <= 7; i++) {
+                const d = new Date(todayObj.getTime() + i * 86400000);
+                nextDates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+            }
+
+            // Check each date in the next 7 days for bills
+            nextDates.forEach(dateStr => {
+                const dateBills = this.getBillsForDate(dateStr).filter(b => !b.paid);
+                dateBills.forEach(b => {
+                    if (!weekBills.some(x => x.id === b.id)) {
+                        weekBills.push(b);
+                    }
+                });
+            });
+            
+            // Sort weekBills by date (earliest first)
+            weekBills.sort((a, b) => {
+                const dateA = new Date(a.date + 'T00:00:00');
+                const dateB = new Date(b.date + 'T00:00:00');
+                return dateA - dateB;
+            });
+
+            // For upcoming bills (beyond 7 days), check bills with future dates
             (this.bills || []).forEach(b => {
                 const bDateStr = b.date;
-                if (bDateStr > todayStr && bDateStr <= in7DaysStr && !b.paid) {
-                    if (!weekBills.some(x => x.id === b.id)) weekBills.push(b);
-                } else if (bDateStr > in7DaysStr && !b.paid) {
-                    if (!upcomingBills.some(x => x.id === b.id)) upcomingBills.push(b);
+                const repeat = b.repeat || 'monthly';
+                
+                // For non-recurring bills, just check the date
+                if (repeat === 'none' || repeat === 'this_month') {
+                    if (bDateStr > in7DaysStr && !b.paid) {
+                        if (!upcomingBills.some(x => x.id === b.id)) upcomingBills.push(b);
+                    }
+                } else {
+                    // For recurring bills, they're always "upcoming" unless paid or already in week bills
+                    if (!b.paid && !weekBills.some(x => x.id === b.id)) {
+                        if (!upcomingBills.some(x => x.id === b.id)) upcomingBills.push(b);
+                    }
                 }
+            });
+            
+            // Sort upcomingBills by date (earliest first)
+            upcomingBills.sort((a, b) => {
+                const dateA = new Date(a.date + 'T00:00:00');
+                const dateB = new Date(b.date + 'T00:00:00');
+                return dateA - dateB;
+            });
+
+            const paidBills = (this.bills || []).filter(b => b.paid);
+            
+            // Sort paidBills by date (most recent first)
+            paidBills.sort((a, b) => {
+                const dateA = new Date(a.date + 'T00:00:00');
+                const dateB = new Date(b.date + 'T00:00:00');
+                return dateB - dateA;
             });
 
             const renderBillItem = (b) => `
-                <div class="bill-card-item" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 16px; transition: all 0.2s; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 38px; height: 38px; border-radius: 12px; background: ${b.color || '#3b82f6'}; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.12); flex-shrink: 0;">
-                            <i class="material-icons" style="font-size: 18px;">${b.icon || 'receipt_long'}</i>
+                <!-- (2026-07-13) Compact padding (8px 10px) & reduced gap (8px); prev: padding 12px 14px, gap 12px -->
+                <div class="bill-card-item" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: ${b.paid ? '#f1f5f9' : '#f8fafc'}; border: 1px solid ${b.paid ? '#e2e8f0' : '#f1f5f9'}; border-radius: 14px; transition: all 0.2s; margin-bottom: 6px; cursor: pointer; ${b.paid ? 'opacity: 0.75;' : ''}" oncontextmenu="event.preventDefault(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}');" onclick="if(!event.target.closest('button')) { event.stopPropagation(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}'); }">
+                    <div style="display: flex; align-items: center; gap: 8px; pointer-events: none;">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: ${b.color || '#3b82f6'}; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; ${b.paid ? 'filter: grayscale(40%);' : ''}">
+                            <i class="material-icons" style="font-size: 16px;">${b.icon || 'receipt_long'}</i>
                         </div>
                         <div>
-                            <div style="font-size: 13px; font-weight: 800; color: #1e293b; text-transform: capitalize;">${b.title}</div>
-                            <div style="font-size: 10px; font-weight: 700; color: #64748b; margin-top: 2px;">
-                                Due: ${b.date} ${b.repeat && b.repeat !== 'none' ? '• Repeat ' + b.repeat : ''}
+                            <div style="font-size: 12.5px; font-weight: 800; color: ${b.paid ? '#64748b' : '#1e293b'}; text-transform: capitalize; line-height: 1.2; ${b.paid ? 'text-decoration: line-through;' : ''}">${b.title}</div>
+                            <!-- (2026-07-13) Darker due date (#334155) & lighter repeat (#94a3b8); prev: inverted contrast -->
+                            <div style="font-size: 9.5px; font-weight: 700; margin-top: 1px; line-height: 1.25;">
+                                <span style="color: #334155; font-weight: 800;">Due: ${new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>${b.repeat && b.repeat !== 'none' ? `<br><span style="color: #94a3b8; font-weight: 600;">Repeat ${b.repeat}</span>` : ''}
                             </div>
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto;">
                         <div style="text-align: right;">
-                            <div style="font-size: 13px; font-weight: 900; color: #1e293b;">${b.amount ? '₱' + b.amount.toLocaleString() : 'No amount'}</div>
-                            <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 6px; display: inline-block; margin-top: 2px; ${b.paid ? 'background: #dcfce7; color: #15803d;' : 'background: #fee2e2; color: #b91c1c;'}">${b.paid ? 'Paid' : 'Pending'}</span>
+                            <div style="font-size: 12.5px; font-weight: 900; color: ${b.paid ? '#64748b' : '#1e293b'};">${b.amount ? '₱' + b.amount.toLocaleString() : 'No amount'}</div>
+                            <span style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; padding: 1.5px 5px; border-radius: 5px; display: inline-block; margin-top: 1px; ${b.paid ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #d97706;'}">${b.paid ? 'Paid' : 'Pending'}</span>
                         </div>
-                        <button onclick="window.CalendarView.toggleBillPaid('${b.id}')" title="Toggle Paid Status" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${b.paid ? '#10b981' : '#64748b'}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <i class="material-icons" style="font-size: 18px;">${b.paid ? 'check_circle' : 'radio_button_unchecked'}</i>
+                        <button onclick="event.stopPropagation(); window.CalendarView.toggleBillPaid('${b.id}')" title="Toggle Paid Status" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${b.paid ? '#10b981' : '#64748b'}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <i class="material-icons" style="font-size: 16px;">${b.paid ? 'check_circle' : 'radio_button_unchecked'}</i>
                         </button>
                     </div>
                 </div>
             `;
 
             let cardHtml = '';
-            // (2026-07-13) Auto-hide empty sections; prev: fixed tab filter list
             if (todayBills.length > 0) {
                 cardHtml += `<div class="bill-section" style="margin-bottom: 12px;">
                     <div style="font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
@@ -351,12 +426,23 @@
             }
 
             if (upcomingBills.length > 0) {
-                cardHtml += `<div class="bill-section">
+                cardHtml += `<div class="bill-section" style="margin-bottom: 12px;">
                     <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                         <i class="material-icons" style="font-size: 14px;">upcoming</i>
                         <span>Upcoming (${upcomingBills.length})</span>
                     </div>
                     ${upcomingBills.map(renderBillItem).join('')}
+                </div>`;
+            }
+
+            // (2026-07-13) Grayed-out PAID section at bottom; prev: hidden paid bills
+            if (paidBills.length > 0) {
+                cardHtml += `<div class="bill-section" style="margin-top: 14px; opacity: 0.65;">
+                    <div style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                        <i class="material-icons" style="font-size: 14px; color: #10b981;">check_circle</i>
+                        <span>Paid (${paidBills.length})</span>
+                    </div>
+                    ${paidBills.map(renderBillItem).join('')}
                 </div>`;
             }
 
@@ -380,10 +466,10 @@
             
             const dayBills = this.getBillsForDate ? this.getBillsForDate(dateStr) : this.bills.filter(b => b.date === dateStr);
 
-            // (2026-07-13) Modal trigger for Add Bill or Reminder without arrow icon; prev: arrow icon included
+            // (2026-07-13) Semantic button element for add bill row in openDayModal; prev: div element
             let billsSectionHtml = `
-                <div class="calendar-top-add-bill-row" onclick="window.CalendarView.openAddBillModal('${dateStr}')" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:16px; margin-bottom:16px; cursor:pointer; user-select:none; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
-                    <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" class="calendar-top-add-bill-row" data-date="${dateStr}" onclick="window.openAddBillModal('${dateStr}')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:16px; margin-bottom:16px; cursor:pointer; user-select:none; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.02); text-align:left; font-family:inherit;">
+                    <div style="display:flex; align-items:center; gap:10px; pointer-events:none;">
                         <div style="width:32px; height:32px; border-radius:10px; background:#ebf5ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
                             <i class="material-icons" style="font-size:18px;">add</i>
                         </div>
@@ -392,7 +478,7 @@
                             <div style="font-size:8.6px; font-weight:700; color:#64748b;">Set electricity, water, rent, or recurring billers</div>
                         </div>
                     </div>
-                </div>
+                </button>
                 ${dayBills.length > 0 ? `<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:16px;">` + dayBills.map(b => `
                     <div style="display:flex; align-items:center; justify-content:space-between; background:#ffffff; border-radius:12px; padding:10px 12px; border:1px solid #dbeafe; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
                         <div style="display:flex; align-items:center; gap:10px;">
@@ -482,119 +568,461 @@
         selectedModalBillIcon: 'bolt',
         selectedModalBillRepeat: 'monthly',
 
-        // (2026-07-13) Dynamic body injection & top z-index 2147483647; prev: query existing
+        // (2026-07-13) Centered bill modal layout & premium input styling; prev: uncentered card
         ensureAddBillModalExists: function() {
-            let modal = document.getElementById('add-bill-modal');
-            if (modal) modal.remove();
+            let existingModal = document.getElementById('add-bill-modal');
+            if (existingModal) existingModal.remove();
 
-            modal = document.createElement('div');
+            const modal = document.createElement('div');
             modal.id = 'add-bill-modal';
             modal.className = 'modal-overlay';
             modal.innerHTML = `
-                    <div style="background:#ffffff; border-radius:24px; padding:20px; width:100%; max-width:400px; box-shadow:0 20px 40px rgba(0,0,0,0.3); border:1px solid #cbd5e1; position:relative; z-index:2147483647;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <div style="width:34px; height:34px; border-radius:10px; background:#ebf5ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
-                                    <i class="material-icons" style="font-size:20px;">event_note</i>
-                                </div>
-                                <div>
-                                    <div style="font-size:14px; font-weight:800; color:#1e293b;">New Bill / Reminder</div>
-                                    <div style="font-size:10px; font-weight:600; color:#64748b;" id="add-bill-modal-date-subtitle">Set recurring or one-time biller</div>
-                                </div>
+                <div style="background:#ffffff; border-radius:24px; padding:22px; width:calc(100% - 32px); max-width:380px; box-shadow:0 25px 50px -12px rgba(15,23,42,0.35), 0 0 0 1px rgba(0,0,0,0.05); margin:auto !important; position:relative; z-index:2147483647; font-family:'Plus Jakarta Sans', system-ui, sans-serif;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; border-bottom:1px solid #f1f5f9; padding-bottom:14px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(37,99,235,0.3);">
+                                <i class="material-icons" style="font-size:20px;">event_note</i>
                             </div>
-                            <i class="material-icons" onclick="window.CalendarView && window.CalendarView.closeAddBillModal()" style="font-size:20px; color:#94a3b8; cursor:pointer; padding:4px;">close</i>
-                        </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Biller Name</label>
-                            <input type="text" id="bill-modal-input-title" placeholder="e.g. Meralco, Maynilad, Netflix, Atome" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #cbd5e1; font-size:12px; font-weight:700; outline:none; background:#f8fafc;" />
-                        </div>
-                        <div style="display:flex; gap:10px; margin-bottom:12px;">
-                            <div style="flex:1;">
-                                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Amount (₱)</label>
-                                <input type="number" id="bill-modal-input-amount" placeholder="0.00" style="width:100%; padding:10px 12px; border-radius:12px; border:1px solid #cbd5e1; font-size:12px; font-weight:700; outline:none; background:#f8fafc;" />
-                            </div>
-                            <div style="flex:1;">
-                                <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Category Icon</label>
-                                <div class="custom-bill-icon-dropdown" style="position:relative;">
-                                    <div id="bill-modal-icon-trigger" onclick="window.CalendarView && window.CalendarView.toggleBillIconDropdownModal()" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:12px; border:1px solid #cbd5e1; font-size:11px; font-weight:700; background:#f8fafc; cursor:pointer;">
-                                        <div style="display:flex; align-items:center; gap:6px; overflow:hidden;" id="selected-bill-modal-icon-display">
-                                            <i class="material-icons" style="font-size:16px; color:#2563eb; flex-shrink:0;">bolt</i>
-                                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Electricity</span>
-                                        </div>
-                                        <i class="material-icons" style="font-size:16px; color:#94a3b8;">unfold_more</i>
-                                    </div>
-                                    <div id="bill-modal-icon-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:180px; overflow-y:auto; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18); z-index:2147483647 !important; padding:4px;">
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('bolt', 'Electricity')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">bolt</i><span>Electricity</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('water_drop', 'Water')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#06b6d4;">water_drop</i><span>Water</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('wifi', 'Internet / Wifi')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">wifi</i><span>Internet / Wifi</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('house', 'Rent / Housing')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#f59e0b;">house</i><span>Rent / Housing</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('credit_card', 'Credit Card')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#ef4444;">credit_card</i><span>Credit Card</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('subscriptions', 'Streaming Services')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">subscriptions</i><span>Streaming Services</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('smartphone', 'Phone / Mobile')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#10b981;">smartphone</i><span>Phone / Mobile</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('security', 'Insurance')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">security</i><span>Insurance</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('local_hospital', 'Medical / Health')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#ef4444;">local_hospital</i><span>Medical / Health</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('fitness_center', 'Gym / Fitness')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#f59e0b;">fitness_center</i><span>Gym / Fitness</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('school', 'Tuition / Education')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">school</i><span>Tuition / Education</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('account_balance', 'Loan / Mortgage')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#10b981;">account_balance</i><span>Loan / Mortgage</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('directions_car', 'Vehicle / Auto')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#06b6d4;">directions_car</i><span>Vehicle / Auto</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('card_membership', 'Subscription')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">card_membership</i><span>Subscription</span></div>
-                                        <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('receipt_long', 'Generic Bill')" style="display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#64748b;">receipt_long</i><span>Generic Bill</span></div>
-                                    </div>
-                                    <input type="hidden" id="bill-modal-input-icon" value="bolt" />
-                                </div>
+                            <div>
+                                <div style="font-size:15px; font-weight:800; color:#0f172a; letter-spacing:-0.3px;">New Bill / Reminder</div>
+                                <div style="font-size:10.5px; font-weight:600; color:#64748b; margin-top:1px;" id="add-bill-modal-date-subtitle">Set recurring or one-time biller</div>
                             </div>
                         </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; display:block; margin-bottom:4px;">Repeat Frequency</label>
-                            <div class="custom-bill-repeat-dropdown" style="position:relative;">
-                                <div id="bill-modal-repeat-trigger" onclick="window.CalendarView && window.CalendarView.toggleBillRepeatDropdownModal()" style="display:flex; align-items:center; justify-content:space-between; padding:9px 10px; border-radius:12px; border:1px solid #cbd5e1; font-size:11px; font-weight:700; background:#f8fafc; cursor:pointer;">
-                                    <span id="selected-bill-modal-repeat-display">Every Month</span>
-                                    <i class="material-icons" style="font-size:16px; color:#94a3b8;">keyboard_arrow_down</i>
-                                </div>
-                                <div id="bill-modal-repeat-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.18); z-index:2147483647 !important; padding:4px;">
-                                    <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('monthly', 'Every Month')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">Every Month</div>
-                                    <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('this_month', 'This Month Only')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">This Month Only</div>
-                                    <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('yearly', 'Every Year')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">Every Year</div>
-                                </div>
-                                <input type="hidden" id="bill-modal-input-repeat" value="monthly" />
-                            </div>
-                        </div>
-                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; background:#f8fafc; padding:10px 12px; border-radius:12px; border:1px solid #e2e8f0;">
-                            <span style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase;">Color Tag:</span>
-                            <div style="display:flex; gap:8px;">
-                                <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#3b82f6')" class="bill-modal-color-swatch active" data-color="#3b82f6" style="width:24px; height:24px; border-radius:50%; background:#3b82f6; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                                <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#ef4444')" class="bill-modal-color-swatch" data-color="#ef4444" style="width:24px; height:24px; border-radius:50%; background:#ef4444; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                                <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#10b981')" class="bill-modal-color-swatch" data-color="#10b981" style="width:24px; height:24px; border-radius:50%; background:#10b981; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                                <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#f59e0b')" class="bill-modal-color-swatch" data-color="#f59e0b" style="width:24px; height:24px; border-radius:50%; background:#f59e0b; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                                <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#8b5cf6')" class="bill-modal-color-swatch" data-color="#8b5cf6" style="width:24px; height:24px; border-radius:50%; background:#8b5cf6; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                                <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#06b6d4')" class="bill-modal-color-swatch" data-color="#06b6d4" style="width:24px; height:24px; border-radius:50%; background:#06b6d4; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.2);"></span>
-                            </div>
-                        </div>
-                        <button id="btn-submit-modal-bill" onclick="window.CalendarView && window.CalendarView.submitModalBill()" style="width:100%; background:#2563eb; color:#fff; border:none; border-radius:12px; padding:12px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:all 0.2s;">Save Bill Reminder</button>
+                        <button type="button" onclick="window.CalendarView && window.CalendarView.closeAddBillModal()" style="background:#f1f5f9; border:none; border-radius:50%; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#64748b; transition:all 0.2s;">
+                            <i class="material-icons" style="font-size:18px;">close</i>
+                        </button>
                     </div>
-                `;
-                document.body.appendChild(modal);
-            }
+
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Biller Name</label>
+                        <div style="position:relative; display:flex; align-items:center;">
+                            <i class="material-icons" style="position:absolute; left:12px; font-size:18px; color:#94a3b8; pointer-events:none;">edit_note</i>
+                            <!-- (2026-07-13) Uppercase biller title input; prev: standard mixed case -->
+                            <input type="text" id="bill-modal-input-title" placeholder="E.G. MERALCO, MAYNILAD, NETFLIX, ATOME" style="width:100%; padding:11px 14px 11px 38px; border-radius:12px; border:1.5px solid #cbd5e1; font-size:12px; font-weight:700; color:#0f172a; outline:none; background:#f8fafc; text-transform:uppercase; transition:all 0.2s;" oninput="this.value = this.value.toUpperCase()" onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff';" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-bottom:14px;">
+                        <div style="flex:1; min-width:0;">
+                            <label style="font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Amount</label>
+                            <div style="position:relative; display:flex; align-items:center;">
+                                <span style="position:absolute; left:12px; font-size:13px; font-weight:800; color:#94a3b8; pointer-events:none;">₱</span>
+                                <input type="number" id="bill-modal-input-amount" placeholder="0.00" style="width:100%; padding:11px 14px 11px 30px; border-radius:12px; border:1.5px solid #cbd5e1; font-size:12px; font-weight:700; color:#0f172a; outline:none; background:#f8fafc; transition:all 0.2s;" onfocus="this.style.borderColor='#2563eb'; this.style.background='#fff';" onblur="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';" />
+                            </div>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <label style="font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Category Icon</label>
+                            <div class="custom-bill-icon-dropdown" style="position:relative;">
+                                <div id="bill-modal-icon-trigger" onclick="window.CalendarView && window.CalendarView.toggleBillIconDropdownModal()" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:12px; border:1.5px solid #cbd5e1; font-size:11.5px; font-weight:700; background:#f8fafc; cursor:pointer; transition:all 0.2s;">
+                                    <div style="display:flex; align-items:center; gap:6px; overflow:hidden;" id="selected-bill-modal-icon-display">
+                                        <i class="material-icons" style="font-size:16px; color:#2563eb; flex-shrink:0;">bolt</i>
+                                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#0f172a;">Electricity</span>
+                                    </div>
+                                    <i class="material-icons" style="font-size:16px; color:#94a3b8;">unfold_more</i>
+                                </div>
+                                <!-- (2026-07-13) Vertical scrollbar for icon dropdown menu; prev: default overflow -->
+                                <div id="bill-modal-icon-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; max-height:180px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#cbd5e1 #f1f5f9; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,0.18); z-index:2147483647 !important; padding:6px;">
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('bolt', 'Electricity')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">bolt</i><span>Electricity</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('water_drop', 'Water')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#06b6d4;">water_drop</i><span>Water</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('wifi', 'Internet / Wifi')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">wifi</i><span>Internet / Wifi</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('house', 'Rent / Housing')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#f59e0b;">house</i><span>Rent / Housing</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('credit_card', 'Credit Card')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#ef4444;">credit_card</i><span>Credit Card</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('subscriptions', 'Streaming Services')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">subscriptions</i><span>Streaming Services</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('smartphone', 'Phone / Mobile')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#10b981;">smartphone</i><span>Phone / Mobile</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('security', 'Insurance')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#3b82f6;">security</i><span>Insurance</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('local_hospital', 'Medical / Health')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#ef4444;">local_hospital</i><span>Medical / Health</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('fitness_center', 'Gym / Fitness')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#f59e0b;">fitness_center</i><span>Gym / Fitness</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('school', 'Tuition / Education')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">school</i><span>Tuition / Education</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('account_balance', 'Loan / Mortgage')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#10b981;">account_balance</i><span>Loan / Mortgage</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('directions_car', 'Vehicle / Auto')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#06b6d4;">directions_car</i><span>Vehicle / Auto</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('card_membership', 'Subscription')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#8b5cf6;">card_membership</i><span>Subscription</span></div>
+                                    <div class="bill-icon-option" onclick="window.CalendarView.selectBillIconModal('receipt_long', 'Generic Bill')" style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;"><i class="material-icons" style="font-size:16px; color:#64748b;">receipt_long</i><span>Generic Bill</span></div>
+                                </div>
+                                <input type="hidden" id="bill-modal-input-icon" value="bolt" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Repeat Frequency</label>
+                        <div class="custom-bill-repeat-dropdown" style="position:relative;">
+                            <div id="bill-modal-repeat-trigger" onclick="window.CalendarView && window.CalendarView.toggleBillRepeatDropdownModal()" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:12px; border:1.5px solid #cbd5e1; font-size:11.5px; font-weight:700; background:#f8fafc; cursor:pointer; transition:all 0.2s;">
+                                <span id="selected-bill-modal-repeat-display" style="color:#0f172a;">Every Month</span>
+                                <i class="material-icons" style="font-size:16px; color:#94a3b8;">keyboard_arrow_down</i>
+                            </div>
+                            <div id="bill-modal-repeat-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 12px 28px rgba(0,0,0,0.18); z-index:2147483647 !important; padding:6px;">
+                                <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('monthly', 'Every Month')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">Every Month</div>
+                                <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('this_month', 'This Month Only')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">This Month Only</div>
+                                <div class="bill-repeat-option" onclick="window.CalendarView.selectBillRepeatModal('yearly', 'Every Year')" style="padding:8px 10px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:700; color:#1e293b;">Every Year</div>
+                            </div>
+                            <input type="hidden" id="bill-modal-input-repeat" value="monthly" />
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; background:#f8fafc; padding:10px 14px; border-radius:14px; border:1px solid #e2e8f0;">
+                        <span style="font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px;">Color Tag:</span>
+                        <div style="display:flex; gap:8px;">
+                            <!-- (2026-07-13) Swatches style managed dynamically by selectBillColorModal; prev: hardcoded blue ring -->
+                            <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#3b82f6')" class="bill-modal-color-swatch active" data-color="#3b82f6" style="width:24px; height:24px; border-radius:50%; background:#3b82f6; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 0 0 2px #2563eb;"></span>
+                            <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#ef4444')" class="bill-modal-color-swatch" data-color="#ef4444" style="width:24px; height:24px; border-radius:50%; background:#ef4444; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                            <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#10b981')" class="bill-modal-color-swatch" data-color="#10b981" style="width:24px; height:24px; border-radius:50%; background:#10b981; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                            <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#f59e0b')" class="bill-modal-color-swatch" data-color="#f59e0b" style="width:24px; height:24px; border-radius:50%; background:#f59e0b; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                            <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#8b5cf6')" class="bill-modal-color-swatch" data-color="#8b5cf6" style="width:24px; height:24px; border-radius:50%; background:#8b5cf6; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                            <span onclick="window.CalendarView && window.CalendarView.selectBillColorModal('#06b6d4')" class="bill-modal-color-swatch" data-color="#06b6d4" style="width:24px; height:24px; border-radius:50%; background:#06b6d4; cursor:pointer; display:inline-block; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span>
+                        </div>
+                    </div>
+
+                    <button id="btn-submit-modal-bill" onclick="window.CalendarView && window.CalendarView.submitModalBill()" style="width:100%; background:linear-gradient(135deg, #2563eb, #1d4ed8); color:#ffffff; border:none; border-radius:14px; padding:13px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 8px 20px -4px rgba(37,99,235,0.4); transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 12px 24px -4px rgba(37,99,235,0.5)'" onmouseout="this.style.transform=''; this.style.boxShadow='0 8px 20px -4px rgba(37,99,235,0.4)'">Save Bill Reminder</button>
+                    <!-- Component for bill modal delete action -->
+                    <button id="btn-delete-modal-bill" onclick="window.CalendarView && window.CalendarView.deleteCurrentModalBill()" style="display:none; width:100%; background:#fef2f2; color:#ef4444; border:1px solid #fee2e2; border-radius:14px; padding:11px; font-size:12.5px; font-weight:800; cursor:pointer; margin-top:10px; transition:all 0.2s; align-items:center; justify-content:center; gap:6px;" onmouseover="this.style.background='#fee2e2'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#fef2f2'; this.style.transform=''">
+                        <i class="material-icons" style="font-size:16px;">delete</i> Delete Bill Reminder
+                    </button>
+                    <!-- Component for adding bill to budget calculation -->
+                    <button id="btn-add-to-calc-modal-bill" onclick="window.CalendarView && window.CalendarView.addBillToCalculation()" style="width:100%; background:#f0f9ff; color:#0369a1; border:1.5px solid #bae6fd; border-radius:14px; padding:11px; font-size:12.5px; font-weight:800; cursor:pointer; margin-top:10px; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:6px;" onmouseover="this.style.background='#e0f2fe'; this.style.transform='translateY(-1px)'" onmouseout="this.style.background='#f0f9ff'; this.style.transform=''">
+                        <i class="material-icons" style="font-size:16px;">calculate</i> Add to Calculation
+                    </button>
+                </div>
+            `;
+            // (2026-07-13) Backdrop click listener to close add/edit bill modal; prev: no click outside
+            modal.onclick = function(e) {
+                if (e.target === modal) window.CalendarView && window.CalendarView.closeAddBillModal();
+            };
+            document.body.appendChild(modal);
             return modal;
         },
 
+        // Auto-save draft data when user types
+        saveBillDraft: function() {
+            const titleInput = document.getElementById('bill-modal-input-title');
+            const amtInput = document.getElementById('bill-modal-input-amount');
+            const iconInput = document.getElementById('bill-modal-input-icon');
+            const repeatInput = document.getElementById('bill-modal-input-repeat');
+            
+            if (!titleInput) return;
+            
+            const draft = {
+                title: titleInput.value || '',
+                amount: amtInput ? amtInput.value : '',
+                icon: iconInput ? iconInput.value : 'bolt',
+                repeat: repeatInput ? repeatInput.value : 'monthly',
+                color: this.selectedModalBillColor || '#3b82f6',
+                date: this.currentBillModalDate,
+                timestamp: Date.now()
+            };
+            
+            try {
+                localStorage.setItem('wallet_bill_draft', JSON.stringify(draft));
+            } catch (e) {
+                console.error('Failed to save bill draft', e);
+            }
+        },
+
+        loadBillDraft: function() {
+            try {
+                const stored = localStorage.getItem('wallet_bill_draft');
+                if (!stored) return null;
+                
+                const draft = JSON.parse(stored);
+                // Only load draft if it's less than 24 hours old
+                if (draft.timestamp && (Date.now() - draft.timestamp) < 86400000) {
+                    return draft;
+                }
+            } catch (e) {
+                console.error('Failed to load bill draft', e);
+            }
+            return null;
+        },
+
+        clearBillDraft: function() {
+            try {
+                localStorage.removeItem('wallet_bill_draft');
+            } catch (e) {
+                console.error('Failed to clear bill draft', e);
+            }
+        },
+
+        setupBillDraftAutoSave: function() {
+            const titleInput = document.getElementById('bill-modal-input-title');
+            const amtInput = document.getElementById('bill-modal-input-amount');
+            
+            if (titleInput) {
+                titleInput.addEventListener('input', () => this.saveBillDraft());
+            }
+            if (amtInput) {
+                amtInput.addEventListener('input', () => this.saveBillDraft());
+            }
+        },
+
+        // (2026-07-13) Smooth fade in/out animation & click outside close; prev: direct display toggle
         openAddBillModal: function(dateStr) {
+            this.editingBillId = null;
             this.currentBillModalDate = dateStr || new Date().toISOString().split('T')[0];
             const modal = this.ensureAddBillModalExists();
             const subtitle = document.getElementById('add-bill-modal-date-subtitle');
-            if (subtitle) subtitle.innerText = `Due Date: ${this.currentBillModalDate}`;
+            if (subtitle) subtitle.innerText = `Due Date: ${new Date(this.currentBillModalDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+            const delBtn = document.getElementById('btn-delete-modal-bill');
+            if (delBtn) delBtn.style.display = 'none';
+            
+            // Hide "Add to Calculation" button for new bills
+            const addToCalcBtn = document.getElementById('btn-add-to-calc-modal-bill');
+            if (addToCalcBtn) addToCalcBtn.style.display = 'none';
+
+            // Try to restore draft
+            const draft = this.loadBillDraft();
+            const titleInput = document.getElementById('bill-modal-input-title');
+            const amtInput = document.getElementById('bill-modal-input-amount');
+            
+            if (draft && titleInput && amtInput) {
+                titleInput.value = draft.title || '';
+                amtInput.value = draft.amount || '';
+                
+                if (draft.icon) {
+                    this.selectBillIconModal(draft.icon, draft.icon.toUpperCase());
+                }
+                if (draft.repeat) {
+                    const repeatLabel = draft.repeat === 'monthly' ? 'Every Month' : (draft.repeat === 'yearly' ? 'Every Year' : 'This Month Only');
+                    this.selectBillRepeatModal(draft.repeat, repeatLabel);
+                }
+                if (draft.color) {
+                    this.selectBillColorModal(draft.color);
+                }
+            }
+            
+            // Setup auto-save listeners
+            setTimeout(() => this.setupBillDraftAutoSave(), 100);
+
             if (modal) {
-                modal.style.cssText = "display: flex !important; position: fixed !important; inset: 0 !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(15,23,42,0.75) !important; backdrop-filter: blur(6px) !important; z-index: 2147483647 !important; align-items: center !important; justify-content: center !important; padding: 16px !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important;";
-                modal.classList.add('show');
+                modal.style.cssText = "display: flex !important; position: fixed !important; top: 0 !important; left: 50% !important; transform: translateX(-50%) !important; width: 100% !important; max-width: 430px !important; height: 100% !important; background: rgba(15,23,42,0.75) !important; backdrop-filter: blur(8px) !important; z-index: 2147483647 !important; align-items: center !important; justify-content: center !important; padding: 16px !important; opacity: 0 !important; visibility: visible !important; pointer-events: auto !important; box-sizing: border-box !important; transition: opacity 0.25s ease;";
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                    modal.classList.add('show');
+                }, 10);
             }
             if (window.NavState) window.NavState.pushModalState('add-bill-modal', () => this.closeAddBillModal());
+        },
+
+        // Map icon names to display labels
+        getIconLabel: function(iconName) {
+            const iconMap = {
+                'bolt': 'Electricity',
+                'water_drop': 'Water',
+                'wifi': 'Internet / Wifi',
+                'house': 'Rent / Housing',
+                'credit_card': 'Credit Card',
+                'subscriptions': 'Streaming Services',
+                'smartphone': 'Phone / Mobile',
+                'security': 'Insurance',
+                'local_hospital': 'Medical / Health',
+                'fitness_center': 'Gym / Fitness',
+                'school': 'Tuition / Education',
+                'account_balance': 'Loan / Mortgage',
+                'directions_car': 'Vehicle / Auto',
+                'card_membership': 'Subscription',
+                'receipt_long': 'Generic Bill'
+            };
+            return iconMap[iconName] || iconName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        },
+
+        openEditBillModal: function(billId) {
+            const bill = (this.bills || []).find(b => b.id === billId);
+            if (!bill) return;
+
+            this.editingBillId = billId;
+            this.currentBillModalDate = bill.date;
+            this.selectedModalBillIcon = bill.icon || 'receipt_long';
+            this.selectedModalBillColor = bill.color || '#3b82f6';
+            this.selectedModalBillRepeat = bill.repeat || 'monthly';
+
+            const modal = this.ensureAddBillModalExists();
+            
+            // Change title to "Edit Bill"
+            const titleHeader = modal ? modal.querySelector('div[style*="font-size:15px"]') : null;
+            if (titleHeader && titleHeader.textContent.includes('Bill')) {
+                titleHeader.innerText = 'Edit Bill';
+            }
+
+            const subtitle = document.getElementById('add-bill-modal-date-subtitle');
+            if (subtitle) subtitle.innerText = `Due Date: ${new Date(bill.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+
+            const titleInput = document.getElementById('bill-modal-input-title');
+            const amtInput = document.getElementById('bill-modal-input-amount');
+            const submitBtn = document.getElementById('btn-submit-modal-bill');
+            const delBtn = document.getElementById('btn-delete-modal-bill');
+
+            if (titleInput) titleInput.value = (bill.title || '').toUpperCase();
+            if (amtInput) amtInput.value = bill.amount || '';
+            if (submitBtn) submitBtn.innerText = 'Update Bill Reminder';
+            if (delBtn) delBtn.style.display = 'flex';
+            
+            // Show "Add to Calculation" button when editing
+            const addToCalcBtn = document.getElementById('btn-add-to-calc-modal-bill');
+            if (addToCalcBtn) addToCalcBtn.style.display = 'flex';
+
+            this.selectBillIconModal(this.selectedModalBillIcon, this.getIconLabel(this.selectedModalBillIcon));
+            this.selectBillRepeatModal(this.selectedModalBillRepeat, this.selectedModalBillRepeat === 'none' ? 'One-time (This date only)' : (this.selectedModalBillRepeat === 'monthly' ? 'Every Month' : 'Every Year'));
+            this.selectBillColorModal(this.selectedModalBillColor);
+
+            if (modal) {
+                modal.style.cssText = "display: flex !important; position: fixed !important; top: 0 !important; left: 50% !important; transform: translateX(-50%) !important; width: 100% !important; max-width: 430px !important; height: 100% !important; background: rgba(15,23,42,0.75) !important; backdrop-filter: blur(8px) !important; z-index: 2147483647 !important; align-items: center !important; justify-content: center !important; padding: 16px !important; opacity: 0 !important; visibility: visible !important; pointer-events: auto !important; box-sizing: border-box !important; transition: opacity 0.25s ease;";
+                setTimeout(() => {
+                    modal.style.opacity = '1';
+                    modal.classList.add('show');
+                }, 10);
+            }
+            if (window.NavState) window.NavState.pushModalState('add-bill-modal', () => this.closeAddBillModal());
+        },
+
+        deleteCurrentModalBill: function() {
+            if (!this.editingBillId) return;
+            const targetId = this.editingBillId;
+            const targetDateStr = this.currentBillModalDate;
+
+            this.deleteBill(targetId, targetDateStr);
+            if (window.showToast) window.showToast('Bill reminder deleted successfully!');
+
+            this.editingBillId = null;
+            this.closeAddBillModal();
+            
+            // Don't reopen calendar modal, just refresh the bills list
+            this.renderUpcomingBillsCard();
+        },
+
+        addBillToCalculation: async function() {
+            console.log('Add to Calculation clicked');
+            
+            // Disable button immediately to prevent double-click
+            const addToCalcBtn = document.getElementById('btn-add-to-calc-modal-bill');
+            if (addToCalcBtn) {
+                addToCalcBtn.disabled = true;
+                addToCalcBtn.style.opacity = '0.5';
+                addToCalcBtn.style.cursor = 'not-allowed';
+                addToCalcBtn.innerHTML = '<i class="material-icons spin" style="font-size:16px; animation: spin 0.8s linear infinite;">sync</i> Adding...';
+            }
+            
+            const titleInput = document.getElementById('bill-modal-input-title');
+            const amtInput = document.getElementById('bill-modal-input-amount');
+            
+            const billTitle = titleInput ? titleInput.value.trim().toUpperCase() : '';
+            const billAmount = amtInput ? parseFloat(amtInput.value) || 0 : 0;
+            
+            console.log('Bill data:', billTitle, billAmount);
+            
+            if (!billTitle) {
+                if (window.showToast) window.showToast('Please enter a biller name first');
+                // Re-enable button
+                if (addToCalcBtn) {
+                    addToCalcBtn.disabled = false;
+                    addToCalcBtn.style.opacity = '1';
+                    addToCalcBtn.style.cursor = 'pointer';
+                    addToCalcBtn.innerHTML = '<i class="material-icons" style="font-size:16px;">calculate</i> Add to Calculation';
+                }
+                return;
+            }
+            
+            if (!billAmount || billAmount <= 0) {
+                if (window.showToast) window.showToast('Please enter a bill amount to add to calculation');
+                // Re-enable button
+                if (addToCalcBtn) {
+                    addToCalcBtn.disabled = false;
+                    addToCalcBtn.style.opacity = '1';
+                    addToCalcBtn.style.cursor = 'pointer';
+                    addToCalcBtn.innerHTML = '<i class="material-icons" style="font-size:16px;">calculate</i> Add to Calculation';
+                }
+                return;
+            }
+            
+            try {
+                // Get auth and config from window
+                const auth = window.auth;
+                const config = window.safeToSpendConfig || {};
+                const db = window.db;
+                const doc = window.doc;
+                const setDoc = window.setDoc;
+                
+                console.log('Auth check:', !!auth, !!auth?.currentUser);
+                
+                if (!auth || !auth.currentUser) {
+                    if (window.showToast) window.showToast('Please sign in to add obligations');
+                    // Re-enable button
+                    if (addToCalcBtn) {
+                        addToCalcBtn.disabled = false;
+                        addToCalcBtn.style.opacity = '1';
+                        addToCalcBtn.style.cursor = 'pointer';
+                        addToCalcBtn.innerHTML = '<i class="material-icons" style="font-size:16px;">calculate</i> Add to Calculation';
+                    }
+                    return;
+                }
+                
+                const uid = auth.currentUser.uid;
+                const newObligation = {
+                    id: Date.now().toString(),
+                    title: billTitle,
+                    amount: billAmount
+                };
+                
+                console.log('New obligation:', newObligation);
+                
+                const updatedObligations = [...(config.obligations || []), newObligation];
+                
+                console.log('Saving to Firestore...');
+                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                    ...config,
+                    obligations: updatedObligations
+                }, { merge: true });
+                
+                console.log('Saved successfully!');
+                
+                // Synchronize local state
+                window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+                
+                // Update UI
+                if (typeof window.updateSafeSpendUI === 'function') {
+                    window.updateSafeSpendUI();
+                }
+                
+                // Show success feedback
+                if (window.triggerHaptic) window.triggerHaptic('impactMedium');
+                
+                // Show toast notification with high z-index to appear above modals
+                console.log('Showing toast...');
+                
+                // Set z-index on toast element BEFORE showing
+                const toastEl = document.getElementById('toast-box');
+                if (toastEl) {
+                    toastEl.style.zIndex = '2147483648'; // Higher than modal z-index (2147483647)
+                    console.log('Toast z-index set to:', toastEl.style.zIndex);
+                }
+                
+                if (window.showToast) {
+                    window.showToast(`${billTitle} added to budget calculation!`);
+                }
+                
+                // Close the bill modal
+                this.closeAddBillModal();
+                
+            } catch (error) {
+                console.error('Error adding bill to calculation:', error);
+                if (window.showToast) {
+                    window.showToast('Failed to add to calculation. Please try again.');
+                }
+                // Re-enable button on error
+                if (addToCalcBtn) {
+                    addToCalcBtn.disabled = false;
+                    addToCalcBtn.style.opacity = '1';
+                    addToCalcBtn.style.cursor = 'pointer';
+                    addToCalcBtn.innerHTML = '<i class="material-icons" style="font-size:16px;">calculate</i> Add to Calculation';
+                }
+            }
         },
 
         closeAddBillModal: function() {
             const modal = document.getElementById('add-bill-modal');
             if (modal) {
+                modal.style.opacity = '0';
                 modal.classList.remove('show');
-                modal.style.cssText = "display: none !important;";
+                setTimeout(() => {
+                    modal.style.cssText = "display: none !important;";
+                }, 250);
             }
             if (window.NavState) window.NavState.popModalState('add-bill-modal');
         },
@@ -618,6 +1046,9 @@
             }
             const menu = document.getElementById('bill-modal-icon-dropdown-menu');
             if (menu) menu.style.display = 'none';
+            
+            // Auto-save draft when icon changes
+            this.saveBillDraft();
         },
 
         toggleBillRepeatDropdownModal: function() {
@@ -638,17 +1069,26 @@
 
             const menu = document.getElementById('bill-modal-repeat-dropdown-menu');
             if (menu) menu.style.display = 'none';
+            
+            // Auto-save draft when repeat changes
+            this.saveBillDraft();
         },
 
+        // (2026-07-13) Dynamic box-shadow ring for selected color swatch; prev: hardcoded blue ring
         selectBillColorModal: function(hex) {
-            this.selectedModalBillColor = hex;
+            this.selectedModalBillColor = hex || '#3b82f6';
             document.querySelectorAll('.bill-modal-color-swatch').forEach(sw => {
-                const isMatch = sw.dataset.color === hex;
-                sw.style.border = isMatch ? '2px solid #1e293b' : '2px solid #fff';
+                const isMatch = sw.dataset.color === this.selectedModalBillColor;
+                sw.style.border = isMatch ? '2px solid #ffffff' : '2px solid #ffffff';
+                sw.style.boxShadow = isMatch ? '0 0 0 2px ' + this.selectedModalBillColor : '0 1px 3px rgba(0,0,0,0.15)';
                 sw.classList.toggle('active', isMatch);
             });
+            
+            // Auto-save draft when color changes
+            this.saveBillDraft();
         },
 
+        // (2026-07-13) Enhanced submitModalBill with input validation & loading spinner; prev: title check only
         submitModalBill: function() {
             const titleInput = document.getElementById('bill-modal-input-title');
             const amtInput = document.getElementById('bill-modal-input-amount');
@@ -656,36 +1096,69 @@
             const repeatInput = document.getElementById('bill-modal-input-repeat');
             const submitBtn = document.getElementById('btn-submit-modal-bill');
 
-            if (!titleInput || !titleInput.value.trim()) {
+            // Reset error states
+            if (titleInput) { titleInput.style.borderColor = '#cbd5e1'; titleInput.style.background = '#f8fafc'; }
+            if (amtInput) { amtInput.style.borderColor = '#cbd5e1'; amtInput.style.background = '#f8fafc'; }
+
+            const rawTitle = titleInput ? titleInput.value.trim() : '';
+            const rawAmt = amtInput ? parseFloat(amtInput.value) : 0;
+
+            if (!rawTitle) {
+                if (titleInput) {
+                    titleInput.style.borderColor = '#ef4444';
+                    titleInput.style.background = '#fef2f2';
+                    titleInput.focus();
+                }
                 if (window.showToast) window.showToast('Please enter a biller name');
                 return;
             }
 
+            // Allow amount to be 0 or empty (optional field)
+            const finalAmount = (rawAmt && !isNaN(rawAmt) && rawAmt > 0) ? rawAmt : 0;
+
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = `<i class="material-icons spin" style="font-size:14px; animation: spin 0.8s linear infinite; vertical-align:middle; margin-right:4px;">sync</i> Saving...`;
+                submitBtn.innerHTML = `<i class="material-icons spin" style="font-size:16px; animation: spin 0.8s linear infinite; vertical-align:middle; margin-right:6px;">sync</i> Saving...`;
             }
 
             const targetDateStr = this.currentBillModalDate || new Date().toISOString().split('T')[0];
 
-            this.addBill({
-                title: titleInput.value.trim(),
-                amount: parseFloat(amtInput?.value) || 0,
-                date: targetDateStr,
-                icon: iconInput?.value || this.selectedModalBillIcon || 'receipt_long',
-                color: this.selectedModalBillColor || '#3b82f6',
-                repeat: repeatInput?.value || this.selectedModalBillRepeat || 'monthly'
-            });
+            if (this.editingBillId) {
+                const idx = (this.bills || []).findIndex(b => b.id === this.editingBillId);
+                if (idx > -1) {
+                    this.bills[idx].title = rawTitle.toUpperCase();
+                    this.bills[idx].amount = finalAmount;
+                    this.bills[idx].date = targetDateStr;
+                    this.bills[idx].icon = iconInput?.value || this.selectedModalBillIcon || 'receipt_long';
+                    this.bills[idx].color = this.selectedModalBillColor || '#3b82f6';
+                    this.bills[idx].repeat = repeatInput?.value || this.selectedModalBillRepeat || 'monthly';
+                }
+                this.editingBillId = null;
+                this.saveBills();
+            } else {
+                this.addBill({
+                    title: rawTitle.toUpperCase(),
+                    amount: finalAmount,
+                    date: targetDateStr,
+                    icon: iconInput?.value || this.selectedModalBillIcon || 'receipt_long',
+                    color: this.selectedModalBillColor || '#3b82f6',
+                    repeat: repeatInput?.value || this.selectedModalBillRepeat || 'monthly'
+                });
+            }
 
             if (window.showToast) window.showToast('Bill reminder saved successfully!');
+            
+            // Clear the draft after successful save
+            this.clearBillDraft();
 
             setTimeout(() => {
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = `Save Bill Reminder`;
                 }
-                titleInput.value = '';
+                if (titleInput) titleInput.value = '';
                 if (amtInput) amtInput.value = '';
+                this.editingBillId = null;
                 this.closeAddBillModal();
 
                 if (typeof window.openCalendarModal === 'function') {
@@ -694,7 +1167,7 @@
                     const dayTxns = (this.txns || []).filter(t => t.date && t.date.split('T')[0] === targetDateStr);
                     this.openDayModal(new Date(targetDateStr), dayTxns);
                 }
-            }, 300);
+            }, 400);
         },
 
         // (2026-07-13) Redirect toggleInlineBillForm to openAddBillModal; prev: inline sliding form toggle
@@ -810,10 +1283,32 @@
         }
     };
 
-    // (2026-07-13) Expose window.openAddBillModal directly for inline handlers; prev: window.CalendarView only
+    // (2026-07-13) Expose window.openAddBillModal directly for inline handlers & capture delegation; prev: window.CalendarView only
     window.openAddBillModal = function(dateStr) {
         if (window.CalendarView && typeof window.CalendarView.openAddBillModal === 'function') {
             window.CalendarView.openAddBillModal(dateStr);
         }
     };
+
+    // (2026-07-13) Auto-initialize CalendarView on script execution & DOM ready; prev: uncalled init
+    if (window.CalendarView && typeof window.CalendarView.init === 'function') {
+        window.CalendarView.init();
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.CalendarView && typeof window.CalendarView.init === 'function') {
+                window.CalendarView.init();
+            }
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target && e.target.closest && e.target.closest('.calendar-top-add-bill-row');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const dateStr = btn.getAttribute('data-date') || window.CalendarView?.currentBillModalDate || new Date().toISOString().split('T')[0];
+            window.openAddBillModal(dateStr);
+        }
+    }, true);
 })(window);

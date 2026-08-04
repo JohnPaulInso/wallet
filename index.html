@@ -17374,9 +17374,8 @@ Be direct, practical, and helpful.`;
                             }
                         }
 
-                        // Clear existing day cells (keep weekdays)
-                        const dayCells = grid.querySelectorAll('.day-cell');
-                        dayCells.forEach(d => d.remove());
+                        // (2026-07-13) Remove day cells while preserving .weekday headers; prev: innerHTML clear
+                        grid.querySelectorAll('.day-cell, .calendar-day-cell, .other-month, .skeleton').forEach(c => c.remove());
 
                         const year = window.currentViewDate.getFullYear();
                         const month = window.currentViewDate.getMonth();
@@ -17451,10 +17450,34 @@ Be direct, practical, and helpful.`;
                             // O(1) Lookup instead of Filter [2026-04-03]
                             const dayData = txnByDay[dateStr] || { income: 0, expense: 0 };
 
-                            // Build amount chips only when values exist to avoid empty placeholders.
+                            // (2026-07-13) Render stacked bill circles (up to 3) sorted by amount; prev: single bill badge
+                            const dayBills = (window.CalendarView && typeof window.CalendarView.getBillsForDate === 'function') ? window.CalendarView.getBillsForDate(dateStr) : [];
+                            let billBadgeHtml = '';
+                            if (dayBills && dayBills.length > 0) {
+                                // Sort bills: highest amount first, bills with 0 or no amount go to bottom
+                                const sortedBills = [...dayBills].sort((a, b) => {
+                                    const amtA = a.amount || 0;
+                                    const amtB = b.amount || 0;
+                                    // If one has amount and other doesn't, prioritize the one with amount
+                                    if (amtA > 0 && amtB === 0) return -1;
+                                    if (amtA === 0 && amtB > 0) return 1;
+                                    // Both have amounts or both have no amount, sort by value
+                                    return amtB - amtA;
+                                });
+                                const visibleBills = sortedBills.slice(0, 3); // Show max 3 bills
+                                const stackHtml = visibleBills.map((b, idx) => {
+                                    // Reverse z-index so first bill (most expensive) is on top
+                                    const zIndex = 20 - idx; // First bill gets z-index 20, second 19, third 18
+                                    const leftOffset = idx * 6; // Stagger 6px per bill
+                                    return `<span class="calendar-bill-circle" style="position:absolute; top:3px; right:${4 + leftOffset}px; width:12px; height:12px; border-radius:50%; background:${b.color || '#2563eb'}; color:#ffffff; display:flex; align-items:center; justify-content:center; border:1.5px solid #ffffff; z-index:${zIndex}; box-shadow:0 1px 3px rgba(0,0,0,0.15);" title="${b.title}${b.amount ? ' - ₱' + b.amount.toLocaleString() : ''}"><i class="material-icons" style="font-size:7px; line-height:7px; color:#ffffff; display:flex !important; align-items:center; justify-content:center; margin:0; padding:0;">${b.icon || 'receipt_long'}</i></span>`;
+                                }).join('');
+                                billBadgeHtml = stackHtml;
+                            }
+
                             let chipsHTML = '';
                             let hasChips = false;
                             let chipRows = [];
+
                             if (dayData.expense > 0) {
                                 const fmt = dayData.expense >= 1000 ? `-${(dayData.expense / 1000).toFixed(1)}k` : `-${Math.round(dayData.expense)}`;
                                 chipRows.push(`<div class="amount-chip expense">${fmt}</div>`);
@@ -17469,7 +17492,7 @@ Be direct, practical, and helpful.`;
                                 chipsHTML = `<div class="day-amounts">${chipRows.join('')}</div>`;
                             }
 
-                            cell.innerHTML = `<span class="day-num">${d}</span>${chipsHTML}`;
+                            cell.innerHTML = `${billBadgeHtml}<span class="day-num">${d}</span>${chipsHTML}`;
                             cell.onclick = () => {
                                 if (window.triggerHaptic) window.triggerHaptic('impactLight');
                                 grid.querySelectorAll('.day-cell.selected').forEach(c => c.classList.remove('selected'));
@@ -17643,8 +17666,8 @@ Be direct, practical, and helpful.`;
 
                     // (2026-07-13) Recurring bill form with repeat dropdown & high z-index icon menu; prev: basic form
                     let billsHeaderHtml = `
-                        <!-- (2026-07-13) Modal trigger for Add Bill or Reminder without arrow icon; prev: arrow icon included -->
-                        <div class="calendar-top-add-bill-row" onclick="window.CalendarView && window.CalendarView.openAddBillModal('${dateStr}')" style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:16px; margin-bottom:14px; cursor:pointer; user-select:none; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.02); position:relative; z-index:5;">
+                        <!-- (2026-07-13) Semantic button element for add bill row; prev: div element -->
+                        <button type="button" class="calendar-top-add-bill-row" data-date="${dateStr}" onclick="window.openAddBillModal('${dateStr}')" style="width:100%; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:16px; margin-bottom:14px; cursor:pointer; user-select:none; transition:all 0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.02); position:relative; z-index:5; text-align:left; font-family:inherit;">
                             <div style="display:flex; align-items:center; gap:10px; pointer-events:none;">
                                 <div style="width:32px; height:32px; border-radius:10px; background:#ebf5ff; color:#2563eb; display:flex; align-items:center; justify-content:center;">
                                     <i class="material-icons" style="font-size:18px;">add</i>
@@ -17654,10 +17677,11 @@ Be direct, practical, and helpful.`;
                                     <div style="font-size:8.6px; font-weight:700; color:#64748b;">Set electricity, water, rent, or recurring billers</div>
                                 </div>
                             </div>
-                        </div>
+                        </button>
                         ${dayBills.length > 0 ? `<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">` + dayBills.map(b => `
-                            <div style="display:flex; align-items:center; justify-content:space-between; background:#ffffff; border-radius:14px; padding:12px 14px; border:1px solid #ebf2fa; box-shadow:0 2px 8px rgba(0,0,0,0.02);">
-                                <div style="display:flex; align-items:center; gap:12px;">
+                            <!-- Component for day modal bill row -->
+                            <div class="calendar-day-modal-bill-item" style="display:flex; align-items:center; justify-content:space-between; background:#ffffff; border-radius:14px; padding:12px 14px; border:1px solid #ebf2fa; box-shadow:0 2px 8px rgba(0,0,0,0.02); cursor:pointer;" oncontextmenu="event.preventDefault(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}');" onclick="if(!event.target.closest('button')) window.CalendarView && window.CalendarView.openEditBillModal('${b.id}');">
+                                <div style="display:flex; align-items:center; gap:12px; pointer-events:none;">
                                     <div style="width:36px; height:36px; border-radius:12px; background:${b.color || '#3b82f6'}; color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,0,0,0.12);">
                                         <i class="material-icons" style="font-size:18px;">${b.icon || 'receipt_long'}</i>
                                     </div>
@@ -17667,8 +17691,8 @@ Be direct, practical, and helpful.`;
                                     </div>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:8px;">
-                                    <button onclick="window.CalendarView && window.CalendarView.toggleBillPaid('${b.id}'); window.openCalendarModal(new Date('${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:8px; padding:5px 10px; font-size:10px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
-                                    <button onclick="window.CalendarView && window.CalendarView.deleteBill('${b.id}', '${dateStr}'); window.openCalendarModal(new Date('${dateStr}'));" title="Delete Bill" style="background:transparent; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center;"><i class="material-icons" style="font-size:18px; color:#ef4444;">delete</i></button>
+                                    <button onclick="event.stopPropagation(); window.CalendarView && window.CalendarView.toggleBillPaid('${b.id}'); window.openCalendarModal(new Date('${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:8px; padding:5px 10px; font-size:10px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
+                                    <button onclick="event.stopPropagation(); window.CalendarView && window.CalendarView.deleteBill('${b.id}', '${dateStr}'); window.openCalendarModal(new Date('${dateStr}'));" title="Delete Bill" style="background:transparent; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center;"><i class="material-icons" style="font-size:18px; color:#ef4444;">delete</i></button>
                                 </div>
                             </div>
                         `).join('') + `</div>` : ''}
@@ -17887,6 +17911,9 @@ Be direct, practical, and helpful.`;
                     if (window.isCalendarDesktopSidebar()) {
                         const sidebar = document.getElementById('calendar-desktop-sidebar');
                         if (sidebar) sidebar.classList.remove('active');
+                        // Remove selected highlight from calendar cells
+                        const grid = document.getElementById('calendar-page-grid');
+                        if (grid) grid.querySelectorAll('.day-cell.selected').forEach(c => c.classList.remove('selected'));
                         return;
                     }
                     const modal = document.getElementById('calendar-txn-modal');
@@ -17895,6 +17922,11 @@ Be direct, practical, and helpful.`;
                     const content = modal.querySelector('.calendar-modal-content'); // [REFINED 2026-04-03] Selector fixed
                     if (content) content.style.transform = ''; // Ensure clear for next open
                     setTimeout(() => { modal.style.display = 'none'; }, 450);
+                    
+                    // Remove selected highlight from calendar cells when modal closes
+                    const grid = document.getElementById('calendar-page-grid');
+                    if (grid) grid.querySelectorAll('.day-cell.selected').forEach(c => c.classList.remove('selected'));
+                    
                     if (window.NavState) window.NavState.popModalState('calendar-txn-modal');
                 };
 

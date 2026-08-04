@@ -152,6 +152,12 @@ export function showToast(msg, duration = 3000) {
         console.log('Toast:', safeMessage);
         return;
     }
+    
+    // Ensure toast has a high z-index to appear above modals
+    if (!toast.style.zIndex || parseInt(toast.style.zIndex) < 2147483640) {
+        toast.style.zIndex = '2147483648';
+    }
+    
     msgEl.innerText = safeMessage;
     toast.classList.add('show');
     clearTimeout(window._toastTimer);

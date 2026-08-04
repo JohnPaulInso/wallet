@@ -7492,12 +7492,12 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
             color: #f87171;
         }
 
-        /* [NEW] CALENDAR VIEW COMPONENTS - Integrated 2026-04-02 from calendar.html */
+        /* [NEW] CALENDAR         /* (2026-07-13) Compact calendar card height & cell grid rows; prev: 78px rows & 20px padding */
         .calendar-card { 
             background: #fff; 
-            border-radius: 28px; 
-            padding: 20px 16px; 
-            margin-top: 16px; 
+            border-radius: 24px; 
+            padding: 12px 12px 14px 12px; 
+            margin-top: 12px; 
             box-shadow: 0 8px 24px rgba(0,0,0,0.06); 
             border: 1px solid #f1f5f9; 
             width: 100%; 
@@ -7513,6 +7513,7 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
         .calendar-desktop-empty { padding: 24px 16px !important; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 16px; display: flex; align-items: center; gap: 10px; color: #64748b !important; font-size: 13px; line-height: 1.4; }
         .calendar-desktop-empty-icon { width: 34px; height: 34px; border-radius: 10px; background: #eef2ff; color: #6366f1; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 34px; }
         .calendar-desktop-empty-icon i { font-size: 18px; }
+
         #view-calendar .main-content > h2 {
             font-family: 'Plus Jakarta Sans', sans-serif !important;
             font-size: 24px !important;
@@ -7527,17 +7528,17 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
             display: inline-flex;
             align-items: center;
         }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 8px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
         .current-month { font-size: 16.74px; font-weight: 800; color: #1e293b; letter-spacing: -0.3px; }
         .nav-btns { display: flex; gap: 8px; }
-        .nav-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); color: #64748b; }
+        .nav-btn { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); color: #64748b; }
         .nav-btn:hover { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; transform: scale(1.05); }
         .nav-btn:active { transform: scale(0.95); }
 
         .calendar-grid { 
             display: grid; 
             grid-template-columns: repeat(7, 1fr); 
-            grid-template-rows: auto repeat(6, minmax(78px, 1fr));
+            grid-template-rows: auto repeat(6, minmax(44px, 1fr));         grid-template-rows: auto repeat(6, minmax(78px, 1fr));
             grid-auto-rows: minmax(78px, 1fr);
             gap: 0; /* [FIX: Removed gap to eliminate dead zones between dates - 2026-04-03] */
             width: 100%; 
@@ -7596,12 +7597,14 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
         }
         .amount-chip.income { background: #dcfce7; color: #16a34a; }
         .amount-chip.expense { background: #fee2e2; color: #ef4444; }
+        /* (2026-07-13) Blue bill pill badge styling; prev: dots only */
+        .amount-chip.bill { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .amount-chip.bill i { display: inline-block !important; font-size: 8px; margin-right: 2px; }
         
         .day-cell.selected .amount-chip { 
             background: rgba(255,255,255,0.2); color: #fff;
             border-color: rgba(255,255,255,0.3); backdrop-filter: blur(4px);
         }
-        .amount-chip i { display: none; }
 
         /* (2026-07-13) Set flex row layout for income/expense cards side by side; prev: column wrap on mobile */
         .summary-pills { display: flex !important; flex-direction: row !important; gap: 12px !important; margin-bottom: 20px; margin-top: 16px; width: 100% !important; }
@@ -7634,20 +7637,24 @@ body.dark-mode .goals-edit-timeline .t-check { background: #1a1a1a; border-color
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         i.spin { animation: spin 0.8s linear infinite; display: inline-block; }
 
-        /* (2026-07-13) High z-index popup styling for add-bill-modal; prev: un-styled overlay */
+        /* (2026-07-13) Centered app frame popup styling for add-bill-modal; prev: 100vw uncentered overlay */
         #add-bill-modal {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.65) !important;
-            backdrop-filter: blur(6px);
-            z-index: 999999 !important;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
+            position: fixed !important;
+            top: 0 !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            width: 100% !important;
+            max-width: 430px !important;
+            height: 100% !important;
+            background: rgba(15, 23, 42, 0.75) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            z-index: 2147483647 !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 16px !important;
+            box-sizing: border-box !important;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.25s ease;

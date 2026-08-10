@@ -1766,6 +1766,74 @@
                             <div id="fuel-tank-history-list" class="fuel-tank-history-list"></div>
                         </div>
                     </div>
+
+                    <!-- (2026-07-13) Added conditional Add New Card button in header; prev: none -->
+                    <div id="my-cards-section" class="my-cards-section">
+                        <div class="my-cards-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">My Cards</h3>
+                                <span style="font-size: 11px; color: #64748b; font-weight: 500;">Tap card to flip for details</span>
+                            </div>
+                            <button type="button" id="my-cards-header-add-btn" class="my-cards-add-btn" onclick="AccountsView.openAddCardModal()" style="display: none; align-items: center; gap: 4px; background: #2563eb; color: #ffffff; border: none; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; transition: transform 0.15s ease;">
+                                <i class="material-icons" style="font-size: 16px;">add</i> Add New Card
+                            </button>
+                        </div>
+                        <div id="my-cards-carousel" class="my-cards-carousel">
+                            <!-- Dynamically populated by AccountsView.renderMyCards() -->
+                        </div>
+                    </div>
+
+                    <!-- (2026-07-13) Added edit card support & delete button to modal; prev: add only -->
+                    <div id="add-card-modal" class="my-card-modal-backdrop" style="display: none;">
+                        <div class="my-card-modal-container">
+                            <div class="my-card-modal-header">
+                                <h3 id="my-card-modal-title" style="margin: 0; font-size: 17px; font-weight: 800; color: #0f172a;">Add New Card</h3>
+                                <button type="button" class="my-card-modal-close" onclick="AccountsView.closeAddCardModal()">
+                                    <i class="material-icons">close</i>
+                                </button>
+                            </div>
+                            <!-- (2026-07-13) Replaced form tag & labels to bypass Chromium payment prompt -->
+                            <div id="add-card-form" autocomplete="off">
+                                <input type="hidden" id="my-card-edit-id" value="" />
+                                <div class="my-card-form-group">
+                                    <label class="my-card-label">Bank / Issuer</label>
+                                    <select id="my-card-input-issuer" class="my-card-input" required autocomplete="off">
+                                        <option value="bpi">BPI (Bank of the Philippine Islands)</option>
+                                        <option value="gcash">GCash Card</option>
+                                        <option value="gotyme">GoTyme Bank</option>
+                                        <option value="maribank">MariBank</option>
+                                        <option value="maya">Maya Card</option>
+                                        <option value="wise">Wise Card</option>
+                                        <option value="atome">Atome Card</option>
+                                    </select>
+                                </div>
+                                <div class="my-card-form-group">
+                                    <label class="my-card-label">Card Title / Name</label>
+                                    <!-- (2026-07-13) Forced uppercase on input for cardholder name; prev: standard text -->
+                                    <input type="text" id="my-card-input-name" name="off_title_val" class="my-card-input" placeholder="e.g. JUAN DELA CRUZ" required autocomplete="off" data-lpignore="true" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()" />
+                                </div>
+                                <div class="my-card-form-group">
+                                    <label class="my-card-label">Account No. / Digits</label>
+                                    <input type="text" id="my-card-input-number" name="off_num_val" class="my-card-input" placeholder="0000 0000 0000 0000" maxlength="19" required oninput="AccountsView.formatCardNumberInput(this)" autocomplete="off" inputmode="numeric" data-lpignore="true" />
+                                </div>
+                                <div class="my-card-form-row" style="display: flex; gap: 10px;">
+                                    <div class="my-card-form-group" style="flex: 1;">
+                                        <label class="my-card-label">Val. Date (MM/YY)</label>
+                                        <input type="text" id="my-card-input-expiry" name="off_exp_val" class="my-card-input" placeholder="00/00" maxlength="5" required oninput="AccountsView.formatExpiryInput(this)" autocomplete="off" inputmode="numeric" data-lpignore="true" />
+                                    </div>
+                                    <div class="my-card-form-group" style="flex: 1;">
+                                        <label class="my-card-label">Security PIN</label>
+                                        <input type="text" id="my-card-input-cvv" name="off_pin_val" class="my-card-input" placeholder="•••" maxlength="4" required autocomplete="off" inputmode="numeric" data-lpignore="true" style="-webkit-text-security: disc;" />
+                                    </div>
+                                </div>
+                                <div class="my-card-modal-actions">
+                                    <button type="button" id="my-card-btn-delete" class="my-card-btn-delete" onclick="AccountsView.deleteCurrentCard()" style="display: none; padding: 10px; border: none; background: #ef4444; color: #ffffff; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; flex: 1;">Delete</button>
+                                    <button type="button" class="my-card-btn-cancel" onclick="AccountsView.closeAddCardModal()">Cancel</button>
+                                    <button type="button" id="my-card-btn-submit" class="my-card-btn-submit" onclick="AccountsView.saveMyCard(event)">Save Card</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

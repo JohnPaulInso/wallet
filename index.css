@@ -5932,14 +5932,412 @@ body.dark-mode #donut-center-info {
 .accounts-skeleton-actions { display: flex; align-items: center; gap: 12px; }
 .accounts-skeleton-button { width: 65px; height: 24px; border-radius: 8px; }
 
-/* (2026-07-30) Monthly Fuel Tank Summary Card styling with 120px bottom margin; prev: margin 16px 0 */
+/* (2026-07-13) Further increased fuel tank margin; prev: margin 28px 0 32px 0 */
 .accounts-fuel-tank-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 20px;
     padding: 16px 18px;
-    margin: 16px 0 120px 0;
+    margin: 48px 0 52px 0;
     box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+/* (2026-07-13) Added My Cards carousel & 3D flip card styles; prev: none */
+/* (2026-07-13) Further increased bottom margin for my-cards-section; prev: 72px */
+.my-cards-section {
+    margin: 16px 0 110px 0;
+}
+/* (2026-07-13) Softened shadows, dimmed unselected cards & centered padding; prev: harsh shadow */
+.my-cards-carousel {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding: 14px calc(50% - 137px) 24px calc(50% - 137px);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    perspective: 1200px;
+}
+.my-cards-carousel::-webkit-scrollbar {
+    display: none;
+}
+/* (2026-07-13) Reduced peeking cards scale & darkened brightness; prev: 0.68 */
+.my-card-item {
+    width: 275px;
+    height: 172px;
+    flex-shrink: 0;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    perspective: 1000px;
+    cursor: pointer;
+    position: relative;
+    transform: scale(0.88);
+    filter: brightness(0.48);
+    opacity: 0.75;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease, opacity 0.25s ease, z-index 0.2s ease;
+}
+.my-card-item:not(:first-child) {
+    margin-left: -65px;
+}
+.my-card-item.is-active-card {
+    z-index: 100 !important;
+    transform: scale(1.04) translateZ(0);
+    filter: brightness(1);
+    opacity: 1;
+}
+/* (2026-07-13) Softened subtle active card shadow; prev: heavy 0 12px 28px */
+.my-card-item.is-active-card .my-card-inner {
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+}
+.my-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-radius: 18px;
+    box-shadow: none;
+}
+.my-card-item.is-flipped .my-card-inner {
+    transform: rotateY(180deg);
+}
+.my-card-front, .my-card-back {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 16px;
+    overflow: hidden;
+}
+.my-card-front {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 14px 18px;
+    color: #ffffff;
+    box-sizing: border-box;
+}
+/* (2026-07-13) Moved front digits left, left-aligned number & exp, right CVV */
+.my-card-front-digits {
+    position: absolute;
+    bottom: 14px;
+    left: 18px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    font-family: 'Montserrat', sans-serif;
+}
+.my-card-back {
+    transform: rotateY(180deg);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0 0 14px 0;
+    box-sizing: border-box;
+    color: #ffffff;
+    font-family: 'Montserrat', sans-serif;
+}
+.my-card-back.theme-bpi { background: linear-gradient(135deg, #d32f2f, #8e0000); }
+.my-card-back.theme-gcash { background: linear-gradient(135deg, #005ce6, #002b80); }
+.my-card-back.theme-gotyme { background: linear-gradient(135deg, #1f2937, #111827); }
+.my-card-back.theme-maribank { background: linear-gradient(135deg, #ff5722, #b22a00); }
+.my-card-back.theme-maya { background: linear-gradient(135deg, #0f172a, #020617); }
+/* (2026-07-13) Darkened CVV strip text for Wise card back; prev: white text */
+.my-card-back.theme-wise {
+    background: linear-gradient(135deg, #9fe870, #82d94c);
+    color: #0f172a;
+}
+.my-card-back.theme-wise .my-card-back-number,
+.my-card-back.theme-wise .my-card-back-expiry,
+.my-card-back.theme-wise .my-card-back-name,
+.my-card-back.theme-wise .my-card-cvv-strip {
+    color: #0f172a;
+    text-shadow: none;
+}
+.my-card-back.theme-wise .my-card-cvv-strip {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(15, 23, 42, 0.2);
+}
+.my-card-back.theme-atome { background: linear-gradient(135deg, #18181b, #09090b); }
+
+.my-card-magnetic-strip {
+    width: 100%;
+    height: 34px;
+    background: #111111;
+    margin-top: 18px;
+}
+/* (2026-07-13) Set dark gray magnetic strip on Atome & Maya cards; prev: #111111 */
+.my-card-back.theme-atome .my-card-magnetic-strip,
+.my-card-back.theme-maya .my-card-magnetic-strip {
+    background: #334155;
+}
+/* (2026-07-13) Render small white CVV strip on right of expiry; prev: big panel */
+.my-card-back-center-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    margin: auto 0;
+    text-align: left;
+    padding: 0 18px;
+    box-sizing: border-box;
+}
+.my-card-back-number {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1.8px;
+    font-family: 'Montserrat', sans-serif;
+    color: #ffffff;
+    text-align: left;
+    width: 100%;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.my-card-back-subrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 8px;
+}
+.my-card-back-expiry {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.95);
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    text-align: left;
+}
+/* (2026-07-13) Enhanced CVV text contrast and readability; prev: faint white */
+.my-card-cvv-strip {
+    background: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    margin-left: auto;
+}
+.my-card-back-footer {
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-end;
+    padding: 0 16px 12px 16px;
+}
+/* (2026-07-13) Increased font size and letter spacing for my-card-back-name; prev: 10px */
+.my-card-back-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #ffffff;
+    font-family: 'Montserrat', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+    text-align: left;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Big Dotted Card for Add Card */
+.my-card-add-placeholder {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    background: rgba(248, 250, 252, 0.85);
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.my-card-add-placeholder:hover, .my-card-add-placeholder:active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    transform: translateY(-2px);
+}
+.my-card-add-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.my-card-add-icon-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563eb;
+}
+/* (2026-07-13) Set my-card-add-title color to black; prev: #475569 */
+.my-card-add-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* (2026-07-13) Absolute modal backdrop relative to mobile-wrapper; prev: 100vw */
+.my-card-modal-backdrop {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    inset: 0 !important;
+    background: rgba(15, 23, 42, 0.75) !important;
+    backdrop-filter: blur(10px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(10px) saturate(180%) !important;
+    z-index: 99999 !important;
+    display: none;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+.my-card-modal-backdrop.active,
+.my-card-modal-backdrop[style*="display: flex"] {
+    display: flex !important;
+    animation: myCardFadeIn 0.2s ease-out;
+}
+
+@keyframes myCardFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes myCardFloatUp {
+    from { transform: translateY(24px) scale(0.95); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.my-card-modal-container {
+    background: #ffffff !important;
+    width: 100% !important;
+    max-width: 380px !important;
+    border-radius: 24px !important;
+    padding: 24px !important;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+    animation: myCardFloatUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    position: relative !important;
+    margin: auto !important;
+    z-index: 1000000 !important;
+}
+.my-card-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+.my-card-modal-close {
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+}
+.my-card-form-group {
+    margin-bottom: 14px;
+}
+.my-card-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.my-card-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    box-sizing: border-box;
+    outline: none;
+}
+/* (2026-07-13) Set 100% width on custom-dropdown-wrapper-my-card-input-issuer; prev: auto */
+.custom-dropdown-wrapper.custom-dropdown-my-card-input-issuer,
+.custom-dropdown-container.custom-dropdown-container-my-card-input-issuer,
+.custom-dropdown-trigger.custom-dropdown-trigger-my-card-input-issuer,
+[class*="custom-dropdown-"][class*="my-card-input-issuer"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+.custom-dropdown-trigger.custom-dropdown-trigger-my-card-input-issuer {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+}
+.my-card-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.my-card-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.my-card-btn-cancel {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #475569;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.my-card-btn-submit {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: #2563eb;
+    color: #ffffff;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
 }
 .accounts-fuel-tank-header {
     display: flex;

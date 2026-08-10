@@ -319,6 +319,8 @@
             if (this.initSortable) this.initSortable();
             if (this.renderPlaceholder) this.renderPlaceholder();
             if (this.updateFuelTankWidget) this.updateFuelTankWidget();
+            // (2026-07-13) Added My Cards render invocation in AccountsView.render; prev: none
+            if (this.renderMyCards) this.renderMyCards();
 
             } catch (err) {
                 console.error('CRITICAL: AccountsView.render failed', err);
@@ -797,6 +799,465 @@
                     placeholder.innerHTML = '';
                 }
             }
+        },
+
+        // (2026-07-13) Added My Cards carousel, 3D flip & modal handlers; prev: none
+        myCards: null,
+
+        // (2026-07-13) User-scoped storage & cyclic deck cloning for 360 peeking; prev: linear
+        getStorageKey: function() {
+            try {
+                if (window.firebase && firebase.auth && firebase.auth().currentUser) {
+                    return 'wallet_my_cards_' + firebase.auth().currentUser.uid;
+                }
+            } catch (e) {}
+            return 'wallet_my_cards_data';
+        },
+
+        initMyCards: function() {
+            const key = this.getStorageKey();
+            const saved = localStorage.getItem(key);
+            if (saved) {
+                try {
+                    this.myCards = JSON.parse(saved);
+                } catch (e) {
+                    this.myCards = [];
+                }
+            } else {
+                this.myCards = [];
+            }
+        },
+
+        saveMyCardsToStorage: function() {
+            try {
+                const key = this.getStorageKey();
+                localStorage.setItem(key, JSON.stringify(this.myCards || []));
+            } catch (e) {
+                console.error('Error saving my cards to storage:', e);
+            }
+        },
+
+        // (2026-07-13) Cancel long press timer on touch movement; prev: static timer
+        touchStartX: 0,
+        touchStartY: 0,
+        longPressTimer: null,
+        isLongPress: false,
+
+        handleCardTouchStart: function(cardId, el, e) {
+            this.isLongPress = false;
+            if (e && (e.touches || e.clientX !== undefined)) {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                this.touchStartX = clientX;
+                this.touchStartY = clientY;
+            }
+            if (this.longPressTimer) clearTimeout(this.longPressTimer);
+            this.longPressTimer = setTimeout(() => {
+                this.isLongPress = true;
+                if (navigator.vibrate) navigator.vibrate(50);
+                this.openEditCardModal(cardId);
+            }, 500);
+        },
+
+        handleCardTouchMove: function(e) {
+            if (!this.longPressTimer) return;
+            if (e && (e.touches || e.clientX !== undefined)) {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const dist = Math.hypot(clientX - this.touchStartX, clientY - this.touchStartY);
+                if (dist > 8) {
+                    clearTimeout(this.longPressTimer);
+                    this.longPressTimer = null;
+                }
+            }
+        },
+
+        handleCardTouchEnd: function(cardId, el) {
+            if (this.longPressTimer) {
+                clearTimeout(this.longPressTimer);
+                this.longPressTimer = null;
+            }
+        },
+
+        handleCardClick: function(cardId, el) {
+            if (this.isLongPress) {
+                this.isLongPress = false;
+                return;
+            }
+            this.toggleCardFlip(el);
+        },
+
+        // (2026-07-13) Settle-only 360 clone alignment avoids scroll snap fights; prev: none
+        renderMyCards: function() {
+            this.initMyCards();
+            const carousel = document.getElementById('my-cards-carousel');
+            if (!carousel) return;
+
+            const baseCards = this.myCards || [];
+            let displayCards = [...baseCards];
+            const isCyclic = baseCards.length > 1;
+
+            if (isCyclic) {
+                const lastClone = { ...baseCards[baseCards.length - 1], id: baseCards[baseCards.length - 1].id + '_clone_prev', _isClonePrev: true };
+                const firstClone = { ...baseCards[0], id: baseCards[0].id + '_clone_next', _isCloneNext: true };
+                displayCards = [lastClone, ...baseCards, firstClone];
+            }
+
+            const cardsHtml = displayCards.map(card => {
+                const cleanNum = (card.number || '').replace(/\D/g, '');
+                const last4 = cleanNum.length >= 4 ? cleanNum.slice(-4) : '1234';
+                const formattedNum = (card.number || '•••• •••• •••• ' + last4);
+
+                return `
+                    <div class="my-card-item ${card._isClonePrev ? 'clone-prev' : ''} ${card._isCloneNext ? 'clone-next' : ''}"
+                         onmousedown="AccountsView.handleCardTouchStart('${card.id}', this, event)"
+                         onmousemove="AccountsView.handleCardTouchMove(event)"
+                         onmouseup="AccountsView.handleCardTouchEnd('${card.id}', this)"
+                         onmouseleave="AccountsView.handleCardTouchEnd('${card.id}', this)"
+                         ontouchstart="AccountsView.handleCardTouchStart('${card.id}', this, event)"
+                         ontouchmove="AccountsView.handleCardTouchMove(event)"
+                         ontouchend="AccountsView.handleCardTouchEnd('${card.id}', this)"
+                         onclick="AccountsView.handleCardClick('${card.id}', this)">
+                        <div class="my-card-inner">
+                            <div class="my-card-front" style="background-image: url('${card.image}');">
+                                <div class="my-card-front-digits">•&bull;${last4}</div>
+                            </div>
+                            <div class="my-card-back ${card.theme}">
+                                <div class="my-card-magnetic-strip"></div>
+                                <div class="my-card-back-center-group">
+                                    <div class="my-card-back-number">${formattedNum}</div>
+                                    <div class="my-card-back-subrow">
+                                        <span class="my-card-back-expiry">EXP ${card.expiry || 'MM/YY'}</span>
+                                        <div class="my-card-cvv-strip">CVV ${card.cvv || '***'}</div>
+                                    </div>
+                                </div>
+                                <div class="my-card-back-footer">
+                                    <div class="my-card-back-name" title="${card.name || ''}">${card.name || ''}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const addCardPlaceholderHtml = `
+                <div class="my-card-item my-card-add-placeholder" onclick="AccountsView.openAddCardModal()">
+                    <div class="my-card-add-inner">
+                        <div class="my-card-add-icon-circle">
+                            <i class="material-icons" style="font-size: 22px;">add</i>
+                        </div>
+                        <span class="my-card-add-title">Add Card</span>
+                    </div>
+                </div>
+            `;
+
+            const hasCards = baseCards.length > 0;
+            carousel.innerHTML = (hasCards ? cardsHtml : addCardPlaceholderHtml);
+            carousel.style.justifyContent = baseCards.length <= 1 ? 'center' : 'flex-start';
+
+            const headerAddBtn = document.getElementById('my-cards-header-add-btn');
+            if (headerAddBtn) {
+                headerAddBtn.style.display = hasCards ? 'flex' : 'none';
+            }
+
+            this.bindCarouselEndLoop();
+            if (isCyclic) {
+                setTimeout(() => {
+                    const realFirst = carousel.querySelectorAll('.my-card-item')[1];
+                    if (realFirst) {
+                        realFirst.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+                    }
+                    this.updateCardStackZIndex();
+                }, 50);
+            } else {
+                setTimeout(() => this.updateCardStackZIndex(), 50);
+            }
+        },
+
+        updateCardStackZIndex: function() {
+            const carousel = document.getElementById('my-cards-carousel');
+            if (!carousel) return;
+            const items = carousel.querySelectorAll('.my-card-item');
+            if (!items.length) return;
+
+            const containerRect = carousel.getBoundingClientRect();
+            const centerPoint = containerRect.left + containerRect.width / 2;
+
+            let activeIndex = 0;
+            let minDistance = Infinity;
+
+            items.forEach((item, index) => {
+                const rect = item.getBoundingClientRect();
+                const itemCenter = rect.left + rect.width / 2;
+                const dist = Math.abs(centerPoint - itemCenter);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    activeIndex = index;
+                }
+            });
+
+            items.forEach((item, index) => {
+                const zIndex = 100 - Math.abs(index - activeIndex);
+                item.style.zIndex = zIndex;
+                if (index === activeIndex) {
+                    item.classList.add('is-active-card');
+                } else {
+                    item.classList.remove('is-active-card');
+                    item.classList.remove('is-flipped');
+                }
+            });
+        },
+
+        bindCarouselEndLoop: function() {
+            const carousel = document.getElementById('my-cards-carousel');
+            if (!carousel || carousel.dataset.loopBound) return;
+            carousel.dataset.loopBound = "true";
+
+            const checkSettleLoop = () => {
+                const baseCards = this.myCards || [];
+                if (baseCards.length <= 1) return;
+                const items = carousel.querySelectorAll('.my-card-item');
+                if (!items.length) return;
+
+                const maxScroll = carousel.scrollWidth - carousel.clientWidth;
+                if (maxScroll <= 10) return;
+
+                if (carousel.scrollLeft >= maxScroll - 6) {
+                    const firstReal = items[1];
+                    if (firstReal) {
+                        firstReal.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+                        this.updateCardStackZIndex();
+                    }
+                } else if (carousel.scrollLeft <= 6) {
+                    const lastReal = items[items.length - 2];
+                    if (lastReal) {
+                        lastReal.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+                        this.updateCardStackZIndex();
+                    }
+                }
+            };
+
+            let settleTimer = null;
+            carousel.addEventListener('scroll', () => {
+                this.updateCardStackZIndex();
+                if (settleTimer) clearTimeout(settleTimer);
+                settleTimer = setTimeout(checkSettleLoop, 150);
+            }, { passive: true });
+
+            if ('onscrollend' in window) {
+                carousel.addEventListener('scrollend', checkSettleLoop, { passive: true });
+            }
+
+            this.updateCardStackZIndex();
+        },
+
+        // (2026-07-13) Only flip active card; scroll unselected card into focus on tap; prev: flip any
+        toggleCardFlip: function(cardItemEl) {
+            if (!cardItemEl) return;
+            if (cardItemEl.classList.contains('is-active-card')) {
+                cardItemEl.classList.toggle('is-flipped');
+            } else {
+                cardItemEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        },
+
+        // (2026-07-13) Universal back button history pop state for card modal; prev: none
+        _isModalHistoryPushed: false,
+        _onPopState: null,
+
+        pushModalHistoryState: function() {
+            if (!this._isModalHistoryPushed) {
+                this._isModalHistoryPushed = true;
+                try { window.history.pushState({ cardModalOpen: true }, ''); } catch (e) {}
+                this._onPopState = () => {
+                    const modal = document.getElementById('add-card-modal');
+                    if (modal && modal.style.display !== 'none') {
+                        modal.classList.remove('active');
+                        modal.style.display = 'none';
+                    }
+                    this._isModalHistoryPushed = false;
+                };
+                window.addEventListener('popstate', this._onPopState, { once: true });
+            }
+        },
+
+        openAddCardModal: function() {
+            const modal = document.getElementById('add-card-modal');
+            const wrapper = document.querySelector('.mobile-wrapper') || document.body;
+            if (modal) {
+                if (modal.parentElement !== wrapper) {
+                    wrapper.appendChild(modal);
+                }
+                if (!modal.dataset.outsideBound) {
+                    modal.dataset.outsideBound = "true";
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            AccountsView.closeAddCardModal();
+                        }
+                    });
+                }
+                modal.classList.add('active');
+                modal.style.display = 'flex';
+                this.pushModalHistoryState();
+            }
+            const title = document.getElementById('my-card-modal-title');
+            const editIdInput = document.getElementById('my-card-edit-id');
+            const delBtn = document.getElementById('my-card-btn-delete');
+
+            const nameInput = document.getElementById('my-card-input-name');
+            const numberInput = document.getElementById('my-card-input-number');
+            const expiryInput = document.getElementById('my-card-input-expiry');
+            const cvvInput = document.getElementById('my-card-input-cvv');
+            if (nameInput) nameInput.value = '';
+            if (numberInput) numberInput.value = '';
+            if (expiryInput) expiryInput.value = '';
+            if (cvvInput) cvvInput.value = '';
+
+            if (editIdInput) editIdInput.value = '';
+            if (title) title.innerText = 'Add New Card';
+            if (delBtn) delBtn.style.display = 'none';
+        },
+
+        openEditCardModal: function(cardId) {
+            this.initMyCards();
+            const card = (this.myCards || []).find(c => c.id === cardId);
+            if (!card) return;
+
+            this.openAddCardModal();
+            this.pushModalHistoryState();
+
+            const title = document.getElementById('my-card-modal-title');
+            const editIdInput = document.getElementById('my-card-edit-id');
+            const issuerInput = document.getElementById('my-card-input-issuer');
+            const nameInput = document.getElementById('my-card-input-name');
+            const numberInput = document.getElementById('my-card-input-number');
+            const expiryInput = document.getElementById('my-card-input-expiry');
+            const cvvInput = document.getElementById('my-card-input-cvv');
+            const delBtn = document.getElementById('my-card-btn-delete');
+
+            if (editIdInput) editIdInput.value = card.id;
+            if (issuerInput) issuerInput.value = card.issuer || 'bpi';
+            if (nameInput) nameInput.value = card.name || '';
+            if (numberInput) numberInput.value = card.number || '';
+            if (expiryInput) expiryInput.value = card.expiry || '';
+            if (cvvInput) cvvInput.value = card.cvv || '';
+
+            if (title) title.innerText = 'Edit Card';
+            if (delBtn) delBtn.style.display = 'block';
+        },
+
+        closeAddCardModal: function() {
+            const modal = document.getElementById('add-card-modal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
+            if (this._isModalHistoryPushed) {
+                this._isModalHistoryPushed = false;
+                if (this._onPopState) window.removeEventListener('popstate', this._onPopState);
+                if (window.history.state && window.history.state.cardModalOpen) {
+                    window.history.back();
+                }
+            }
+            const nameInput = document.getElementById('my-card-input-name');
+            const numberInput = document.getElementById('my-card-input-number');
+            const expiryInput = document.getElementById('my-card-input-expiry');
+            const cvvInput = document.getElementById('my-card-input-cvv');
+            if (nameInput) nameInput.value = '';
+            if (numberInput) numberInput.value = '';
+            if (expiryInput) expiryInput.value = '';
+            if (cvvInput) cvvInput.value = '';
+        },
+
+        deleteCurrentCard: function() {
+            const editId = document.getElementById('my-card-edit-id')?.value;
+            if (!editId) return;
+
+            this.initMyCards();
+            this.myCards = this.myCards.filter(c => c.id !== editId);
+            this.saveMyCardsToStorage();
+            this.renderMyCards();
+            this.closeAddCardModal();
+            if (window.showToast) window.showToast('Card deleted');
+        },
+
+        // (2026-07-13) Auto jump to next input on card number & exp completion; prev: manual
+        formatCardNumberInput: function(input) {
+            let val = input.value.replace(/\D/g, '').substring(0, 16);
+            let formatted = val.replace(/(.{4})/g, '$1 ').trim();
+            input.value = formatted;
+            if (val.length === 16) {
+                const nextInput = document.getElementById('my-card-input-expiry');
+                if (nextInput) nextInput.focus();
+            }
+        },
+
+        formatExpiryInput: function(input) {
+            let val = input.value.replace(/\D/g, '').substring(0, 4);
+            if (val.length >= 3) {
+                input.value = val.substring(0, 2) + '/' + val.substring(2);
+            } else {
+                input.value = val;
+            }
+            if (val.length === 4) {
+                const nextInput = document.getElementById('my-card-input-cvv');
+                if (nextInput) nextInput.focus();
+            }
+        },
+
+        saveMyCard: function(e) {
+            if (e) e.preventDefault();
+            const editId = document.getElementById('my-card-edit-id')?.value;
+            const issuer = document.getElementById('my-card-input-issuer')?.value || 'bpi';
+            const name = (document.getElementById('my-card-input-name')?.value || '').trim().toUpperCase();
+            const number = (document.getElementById('my-card-input-number')?.value || '').trim();
+            const expiry = (document.getElementById('my-card-input-expiry')?.value || '').trim();
+            const cvv = (document.getElementById('my-card-input-cvv')?.value || '').trim();
+
+            if (!name || !number || !expiry || !cvv) return;
+
+            const map = {
+                bpi: { image: 'bank_cards/bpi.png', theme: 'theme-bpi' },
+                gcash: { image: 'bank_cards/gcash.png', theme: 'theme-gcash' },
+                gotyme: { image: 'bank_cards/gotyme.jpg', theme: 'theme-gotyme' },
+                maribank: { image: 'bank_cards/maribank.png', theme: 'theme-maribank' },
+                maya: { image: 'bank_cards/maya.png', theme: 'theme-maya' },
+                wise: { image: 'bank_cards/wise.png', theme: 'theme-wise' },
+                atome: { image: 'bank_cards/atome.png', theme: 'theme-atome' }
+            };
+
+            const config = map[issuer] || map.bpi;
+            this.initMyCards();
+
+            if (editId) {
+                const existing = this.myCards.find(c => c.id === editId);
+                if (existing) {
+                    existing.issuer = issuer;
+                    existing.name = name;
+                    existing.number = number;
+                    existing.expiry = expiry;
+                    existing.cvv = cvv;
+                    existing.image = config.image;
+                    existing.theme = config.theme;
+                }
+            } else {
+                const newCard = {
+                    id: 'mc_' + issuer + '_' + Date.now(),
+                    issuer: issuer,
+                    name: name,
+                    number: number,
+                    expiry: expiry,
+                    cvv: cvv,
+                    image: config.image,
+                    theme: config.theme
+                };
+                this.myCards.push(newCard);
+            }
+
+            this.saveMyCardsToStorage();
+            this.renderMyCards();
+            this.closeAddCardModal();
+            if (window.showToast) window.showToast(editId ? 'Card updated!' : 'Card added successfully!');
         }
     };
 })(window);

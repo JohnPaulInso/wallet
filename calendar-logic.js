@@ -124,6 +124,14 @@
             this.render();
         },
         
+        // (2026-07-13) Added loadBills method alias for sync calls; prev: missing
+        loadBills: function() {
+            this.loadBillsFromLocalStorage();
+            if (typeof this.setupFirestoreSync === 'function') {
+                this.setupFirestoreSync();
+            }
+        },
+        
         // Load bills immediately from localStorage (instant display)
         loadBillsFromLocalStorage: function() {
             try {

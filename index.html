@@ -1781,7 +1781,17 @@
                         <div id="my-cards-carousel" class="my-cards-carousel">
                             <!-- Dynamically populated by AccountsView.renderMyCards() -->
                         </div>
+                        <!-- (2026-07-13) Clean onclick handler for Card QR button; prev: nested ternary -->
+                        <div id="my-cards-qr-bar" class="my-cards-qr-bar" style="display: flex; justify-content: center; margin-top: 24px;">
+                            <button type="button" id="my-cards-qr-btn" class="my-cards-qr-btn" onclick="AccountsView.handleQrButtonClick()" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); padding: 8px 18px; border-radius: 20px; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+                                <i class="material-icons" style="font-size: 16px;">qr_code_scanner</i> <span id="my-cards-qr-btn-label">Add QR</span>
+                            </button>
+                        </div>
                     </div>
+
+                    <input type="file" id="card-qr-file-input" accept="image/*" style="display: none;" onchange="AccountsView.handleQrFileSelect(event)" />
+
+                    <!-- (2026-07-13) Moved QR modals to body root; prev: inside accounts container -->
 
                     <!-- (2026-07-13) Added edit card support & delete button to modal; prev: add only -->
                     <div id="add-card-modal" class="my-card-modal-backdrop" style="display: none;">
@@ -2503,6 +2513,20 @@
                 let accessToken = localStorage.getItem('g_access_token');
                 let expiry = localStorage.getItem('g_token_expiry');
 
+                // (2026-07-13) Omitted clientId for Android native GoogleAuth init; prev: clientId & serverClientId
+                if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                    try {
+                        const GoogleAuth = window.Capacitor.Plugins.GoogleAuth;
+                        if (GoogleAuth) {
+                            GoogleAuth.initialize({
+                                serverClientId: CLIENT_ID,
+                                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
+                                grantOfflineAccess: true
+                            }).catch(e => console.warn('Native GoogleAuth Early Init:', e));
+                        }
+                    } catch (e) {}
+                }
+
                 // TOKEN REFRESH LOCK: Prevent multiple simultaneous popup/refresh attempts
                 let tokenRefreshInProgress = false;
                 let lastTokenRefreshAttempt = 0;
@@ -2696,38 +2720,48 @@
                             }
 
                             try {
-                                // Force initialize for Capacitor GoogleAuth 3.x+
-                                log('Initializing GoogleAuth plugin...');
-                                await GoogleAuth.initialize({
-                                    clientId: CLIENT_ID,
-                                    scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
-                                    grantOfflineAccess: true
-                                }).catch(err => log('Auth Init Warning: ' + err.message));
-
+                                // (2026-07-13) Enhanced native token extraction & full error detail; prev: simple try-catch
                                 log('Calling GoogleAuth.signIn()...');
-                                const user = await GoogleAuth.signIn();
-                                log('Native sign-in success!');
+                                let user;
+                                try {
+                                    user = await GoogleAuth.signIn();
+                                } catch (signInErr) {
+                                    log('Initial GoogleAuth.signIn failed: ' + (signInErr.message || JSON.stringify(signInErr)), 'warn');
+                                    await GoogleAuth.initialize({
+                                        serverClientId: CLIENT_ID,
+                                        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
+                                        grantOfflineAccess: true
+                                    }).catch(e => console.warn('Re-init warning', e));
+                                    user = await GoogleAuth.signIn();
+                                }
+
+                                log('Native sign-in response received');
+                                const idToken = user?.authentication?.idToken || user?.idToken || user?.serverAuthCode;
+
+                                if (!idToken) {
+                                    log('User object received but missing idToken: ' + JSON.stringify(user), 'error');
+                                    throw new Error('No idToken received from native GoogleAuth');
+                                }
 
                                 const { signInWithCredential, GoogleAuthProvider: FirebaseProvider } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                                const credential = FirebaseProvider.credential(user.authentication.idToken);
+                                const credential = FirebaseProvider.credential(idToken);
                                 const result = await signInWithCredential(auth, credential);
                                 handleAuthResult(result);
 
-                                if (user.authentication.accessToken) {
-                                    localStorage.setItem('g_access_token', user.authentication.accessToken);
+                                const accessTokenVal = user?.authentication?.accessToken || user?.accessToken;
+                                if (accessTokenVal) {
+                                    localStorage.setItem('g_access_token', accessTokenVal);
                                 }
                             } catch (nativeError) {
-                                const errMsg = nativeError.message || JSON.stringify(nativeError);
-                                log('Native Auth Error: ' + errMsg, 'error');
+                                const errMsg = nativeError.message || nativeError.error || (typeof nativeError === 'string' ? nativeError : JSON.stringify(nativeError));
+                                log('Native Auth Error Details: ' + errMsg, 'error');
 
-                                // If it's a cancellation, don't show scary error
-                                if (errMsg.includes('cancel') || errMsg.includes('user') || nativeError.name === 'AbortError') {
+                                if (errMsg.includes('cancel') || errMsg.includes('canceled') || errMsg.includes('12501') || errMsg.includes('user') || nativeError.name === 'AbortError') {
                                     showToast('Sign-in cancelled.');
                                 } else {
-                                    showToast('Native sign-in error. Check connection.');
+                                    const shortErr = (typeof errMsg === 'string') ? (errMsg.length > 60 ? errMsg.substring(0, 60) + '...' : errMsg) : 'Check configuration';
+                                    showToast('Google Auth error: ' + shortErr);
                                 }
-                                // STRICT: No fallback to browser redirects on APK.
-                                // This keeps the user inside the app even if login fails.
                             }
                         } else {
                             try {
@@ -3228,8 +3262,8 @@
                                     if (isAdmin) {
                                         log('Provisioning Admin Scenario (Atome + BPI + Wallet)...');
                                         list = [
-                                            { id: 'atome', name: 'Atome Card', balance: 0, last4: '7312', color: '#121212', type: 'credit', isDefault: true, isBuiltIn: true, createdAt: 1700000000000 },
-                                            { id: 'bpi', name: 'BPI Card', balance: 0, last4: '6727', color: '#931B1B', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000100 },
+                                            { id: 'atome', name: 'Atome Card', balance: 0, last4: '1556', color: '#121212', type: 'credit', isDefault: true, isBuiltIn: true, createdAt: 1700000000000 },
+                                            { id: 'bpi', name: 'BPI Card', balance: 0, last4: '7287', color: '#931B1B', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000100 },
                                             { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: false, isBuiltIn: true, createdAt: 1700000000200 }
                                         ];
                                     } else {
@@ -3534,8 +3568,22 @@
                         console.log('🔄 Updating existing cards');
                     }
 
-                    // [FIX 2026-07-01] Clear ALL content first to remove skeleton
-                    container.innerHTML = '';
+                    // (2026-07-13) Fetch real card last4 for balance card; prev: static last4
+                    let savedMyCardsIndex = [];
+                    try {
+                        const uid = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+                        const raw = localStorage.getItem(`my_cards_${uid}`) || localStorage.getItem('my_cards_guest');
+                        if (raw) savedMyCardsIndex = JSON.parse(raw);
+                    } catch (e) {}
+
+                    const getRealLast4ForAccIndex = (acc) => {
+                        const match = savedMyCardsIndex.find(c => c.issuer && c.issuer.toLowerCase() === acc.id.toLowerCase());
+                        if (match && match.number) {
+                            const clean = match.number.replace(/\D/g, '');
+                            if (clean.length >= 4) return clean.slice(-4);
+                        }
+                        return acc.last4 || '0000';
+                    };
 
                     container.innerHTML = accounts.map(acc => {
                         const isAtome = acc.id === 'atome';
@@ -3576,7 +3624,7 @@
                     <div class="card-footer">
                         <div class="card-number-box">
                             <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                            <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
+                            <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? ('0099 ' + getRealLast4ForAccIndex(acc)) : ('•••• •••• •••• ' + getRealLast4ForAccIndex(acc))}</div>
                         </div>
                         <!-- card-footer-actions: Wrapper for card sync action and mastercard logo (Labeled: 2026-07-03) -->
                         <div class="card-footer-actions" style="display: flex; align-items: center; gap: 12px;">
@@ -18251,6 +18299,65 @@ Be direct, practical, and helpful.`;
                 </div>
             </div>
             <button id="btn-submit-modal-bill" onclick="window.CalendarView && window.CalendarView.submitModalBill()" style="width:100%; background:#2563eb; color:#fff; border:none; border-radius:12px; padding:12px; font-size:12px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,0.3); transition:all 0.2s;">Save Bill Reminder</button>
+        </div>
+    </div>
+    <!-- (2026-07-13) Full 9:16 view with black gradients; prev: contain image -->
+    <div id="card-qr-gallery-modal" class="qr-modal-backdrop" style="display: none;">
+        <div class="qr-modal-container">
+            <!-- Top gradient overlay for action icons -->
+            <div class="qr-modal-gradient-top"></div>
+            <!-- Bottom gradient overlay for action buttons -->
+            <div class="qr-modal-gradient-bottom"></div>
+            <div class="qr-modal-header-actions">
+                <button type="button" class="qr-icon-btn" onclick="AccountsView.triggerEditQr()" title="Edit QR">
+                    <i class="material-icons">edit</i>
+                </button>
+                <button type="button" class="qr-icon-btn delete" onclick="AccountsView.deleteCurrentCardQr()" title="Delete QR">
+                    <i class="material-icons">delete_outline</i>
+                </button>
+                <button type="button" class="qr-icon-btn" onclick="AccountsView.closeViewQrModal()" title="Close">
+                    <i class="material-icons">close</i>
+                </button>
+            </div>
+            <div class="qr-modal-content">
+                <div class="qr-modal-image-wrapper">
+                    <img id="qr-gallery-image" src="" alt="Card QR Code" />
+                </div>
+            </div>
+            <div class="qr-modal-bottom-bar">
+                <button type="button" class="qr-modal-bottom-btn download" onclick="AccountsView.downloadCurrentQr()">
+                    <i class="material-icons">file_download</i> Save to Gallery
+                </button>
+                <button type="button" class="qr-modal-bottom-btn share" onclick="AccountsView.shareCurrentQr()">
+                    <i class="material-icons">share</i> Share
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="card-qr-confirm-modal" class="qr-confirm-backdrop" style="display: none;">
+        <div class="qr-confirm-container">
+            <h4 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 800; color: #ffffff;">Confirm QR Code</h4>
+            <div class="qr-confirm-thumb-wrapper">
+                <img id="card-qr-confirm-thumb" src="" alt="QR Preview" />
+            </div>
+            <div class="qr-confirm-actions">
+                <button type="button" class="qr-confirm-btn cancel" onclick="AccountsView.cancelQrConfirm()">Cancel</button>
+                <button type="button" class="qr-confirm-btn save" onclick="AccountsView.confirmSaveQr()">Save QR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- (2026-07-13) Added custom QR delete modal; prev: native alert dialog -->
+    <div id="card-qr-delete-modal" class="qr-confirm-backdrop" style="display: none;">
+        <div class="qr-confirm-container" style="text-align: center;">
+            <i class="material-icons" style="font-size: 42px; color: #f87171; margin-bottom: 12px;">delete_outline</i>
+            <h4 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 800; color: #ffffff;">Delete QR Code?</h4>
+            <p style="margin: 0 0 20px 0; font-size: 12.5px; color: #94a3b8; line-height: 1.4;">Are you sure you want to delete this QR code? This action cannot be undone.</p>
+            <div class="qr-confirm-actions">
+                <button type="button" class="qr-confirm-btn cancel" onclick="AccountsView.cancelDeleteQrModal()">Cancel</button>
+                <button type="button" class="qr-confirm-btn save" style="background: #ef4444;" onclick="AccountsView.confirmDeleteQrModal()">Delete</button>
+            </div>
         </div>
     </div>
 </body>

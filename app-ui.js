@@ -3000,6 +3000,23 @@ export function updateBalanceCardsUI(accounts) {
 
     const isHidden = localStorage.getItem('balance_hidden') === 'true';
 
+    // (2026-07-13) Fetch real card last4 from myCards storage; prev: static last4
+    let savedMyCards = [];
+    try {
+        const uid = window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+        const raw = localStorage.getItem(`my_cards_${uid}`) || localStorage.getItem('my_cards_guest');
+        if (raw) savedMyCards = JSON.parse(raw);
+    } catch (e) {}
+
+    const getRealLast4ForAcc = (acc) => {
+        const match = savedMyCards.find(c => c.issuer && c.issuer.toLowerCase() === acc.id.toLowerCase());
+        if (match && match.number) {
+            const clean = match.number.replace(/\D/g, '');
+            if (clean.length >= 4) return clean.slice(-4);
+        }
+        return acc.last4 || '0000';
+    };
+
     container.innerHTML = accounts.map((acc, index) => {
         const isAtome = acc.id === 'atome';
         const isBPI = acc.id === 'bpi';
@@ -3039,7 +3056,7 @@ export function updateBalanceCardsUI(accounts) {
             <div class="card-footer">
                 <div class="card-number-box">
                     <div class="card-number-label" style="text-transform: uppercase;">Account Number</div>
-                    <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? '0099 096727' : '•••• •••• •••• ' + acc.last4}</div>
+                    <div class="card-number" style="letter-spacing: ${isBPI ? '4px' : '2px'}; font-size: ${isBPI ? '14.5px' : '13.5px'};">${isBPI ? ('0099 ' + getRealLast4ForAcc(acc)) : ('•••• •••• •••• ' + getRealLast4ForAcc(acc))}</div>
                 </div>
                 <!-- card-footer-actions: Wrapper for card sync action and mastercard logo (Labeled: 2026-07-03) -->
                 <div class="card-footer-actions" style="display: flex; align-items: center; gap: 12px;">
@@ -3064,11 +3081,11 @@ export function updateBalanceCardsUI(accounts) {
     const renderedCards = container.querySelectorAll('.balance-card');
     renderedCards.forEach((card) => {
         const accountId = card.dataset.account;
-        if (accountId === 'bpi') return;
         const account = accounts.find((item) => item.id === accountId);
         const numberEl = card.querySelector('.card-number');
         if (account && numberEl) {
-            numberEl.textContent = `${maskedAccountNumber}${account.last4 || '0000'}`;
+            const realL4 = getRealLast4ForAcc(account);
+            numberEl.textContent = account.id === 'bpi' ? `0099 ${realL4}` : `${maskedAccountNumber}${realL4}`;
         }
     });
     updateBalanceViewportMode(accounts.length);

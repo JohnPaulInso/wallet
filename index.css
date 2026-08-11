@@ -5947,12 +5947,24 @@ body.dark-mode #donut-center-info {
 .my-cards-section {
     margin: 16px 0 110px 0;
 }
-/* (2026-07-13) Softened shadows, dimmed unselected cards & centered padding; prev: harsh shadow */
+/* (2026-07-13) Mobile full bleed for cards peek; prev: padded */
+@media (max-width: 767px) {
+    .my-cards-section {
+        margin-left: -24px;
+        margin-right: -24px;
+    }
+    .my-cards-header {
+        padding-left: 28px !important;
+        padding-right: 28px !important;
+    }
+}
+/* (2026-07-13) Added top margin to My Cards carousel; prev: zero top margin */
 .my-cards-carousel {
     display: flex;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
+    margin-top: 16px;
     padding: 14px calc(50% - 137px) 24px calc(50% - 137px);
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -5979,15 +5991,326 @@ body.dark-mode #donut-center-info {
 .my-card-item:not(:first-child) {
     margin-left: -65px;
 }
+/* (2026-07-13) Increased scale for active selected card; prev: scale(1.04) */
 .my-card-item.is-active-card {
     z-index: 100 !important;
-    transform: scale(1.04) translateZ(0);
+    transform: scale(1.14) translateZ(0);
     filter: brightness(1);
     opacity: 1;
 }
-/* (2026-07-13) Softened subtle active card shadow; prev: heavy 0 12px 28px */
+/* (2026-07-13) Dim unselected cards in desktop view; prev: brightness(1) */
+@media (min-width: 768px) {
+    .my-cards-carousel {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        gap: 20px;
+        padding: 24px;
+        scroll-snap-type: x mandatory;
+    }
+    .my-card-item {
+        margin-left: 0 !important;
+        transform: scale(0.92);
+        filter: brightness(0.55);
+        opacity: 0.8;
+        scroll-snap-align: start;
+    }
+    .my-card-item.is-active-card {
+        transform: scale(1.1) translateZ(0) !important;
+        filter: brightness(1) !important;
+        opacity: 1 !important;
+    }
+    .my-card-item:hover:not(.is-active-card) {
+        transform: translateY(-2px) scale(0.95);
+        filter: brightness(0.85);
+        opacity: 0.95;
+    }
+}
+/* (2026-07-13) Added Card QR button & full-screen gallery modal; prev: none */
+.my-cards-qr-btn:hover {
+    background: rgba(37, 99, 235, 0.18) !important;
+    transform: translateY(-1px);
+}
+.my-cards-qr-btn:active {
+    transform: scale(0.96);
+}
+/* (2026-07-13) Direct display toggle for QR modal; prev: opacity 0 default */
+.qr-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 2147483647 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+}
+.qr-modal-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    transform: none;
+    touch-action: pan-y;
+}
+.qr-modal-backdrop.is-closing .qr-modal-container {
+    transform: translateY(100vh) !important;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.qr-modal-close-btn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10002;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+}
+.qr-modal-close-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+/* (2026-07-13) Removed unclosed selector; prev: unclosed .qr-modal-content */
+.qr-modal-header-actions {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 10002;
+}
+.qr-icon-btn {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+    box-shadow: none !important;
+}
+.qr-icon-btn i {
+    font-size: 24px;
+}
+.qr-icon-btn.delete {
+    color: #f87171;
+}
+.qr-icon-btn:hover {
+    opacity: 0.8;
+    transform: scale(1.1);
+}
+/* (2026-07-13) Stronger top black fade down gradient 180px; prev: 120px 0.75 */
+.qr-modal-gradient-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 180px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.65) 45%, rgba(0, 0, 0, 0) 100%);
+    pointer-events: none;
+    z-index: 10001;
+}
+.qr-modal-gradient-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 140px;
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    pointer-events: none;
+    z-index: 10001;
+}
+.qr-modal-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    margin: 0;
+    padding: 0;
+}
+/* (2026-07-13) Scale-down contain to prevent image zooming; prev: cover zoom */
+.qr-modal-image-wrapper {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+.qr-modal-image-wrapper img {
+    max-width: 100vw;
+    max-height: 100vh;
+    width: auto;
+    height: auto;
+    object-fit: scale-down;
+    object-position: center center;
+    border-radius: 0;
+    display: block;
+}
+.qr-modal-bottom-bar {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    z-index: 10002;
+    margin: 0;
+}
+.qr-modal-bottom-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 18px;
+    border-radius: 30px;
+    font-size: 13.5px;
+    font-weight: 800;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s ease, background 0.2s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+.qr-modal-bottom-btn.download {
+    background: #2563eb;
+    color: #ffffff;
+}
+.qr-modal-bottom-btn.share {
+    background: #ffffff;
+    color: #0f172a;
+}
+.qr-modal-bottom-btn:hover {
+    transform: translateY(-2px);
+}
+.qr-modal-bottom-btn:active {
+    transform: scale(0.96);
+}
+
+/* (2026-07-13) Set max z-index on confirm modal above QR viewer; prev: 1000000 */
+.qr-confirm-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 2147483647 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qr-confirm-container {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    max-width: 280px;
+    width: 90%;
+}
+.qr-confirm-thumb-wrapper {
+    width: 220px;
+    height: 220px;
+    aspect-ratio: 1 / 1;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qr-confirm-thumb-wrapper img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    object-position: center;
+}
+.qr-confirm-actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+}
+.qr-confirm-btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+}
+.qr-confirm-btn.cancel {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+.qr-confirm-btn.save {
+    background: #2563eb;
+    color: #ffffff;
+}
+.qr-modal-bottom-btn.share {
+    background: #ffffff;
+    color: #0f172a;
+}
+.qr-modal-bottom-btn:hover {
+    transform: translateY(-2px);
+}
+.qr-modal-bottom-btn:active {
+    transform: scale(0.96);
+}
+/* (2026-07-13) Removed card shadow & added QR bar top margin; prev: 12px margin */
 .my-card-item.is-active-card .my-card-inner {
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    box-shadow: none !important;
+}
+.my-cards-qr-bar {
+    margin-top: 24px !important;
 }
 .my-card-inner {
     position: relative;
@@ -6055,12 +6378,17 @@ body.dark-mode #donut-center-info {
     background: linear-gradient(135deg, #9fe870, #82d94c);
     color: #0f172a;
 }
+/* (2026-07-13) Set dark copy icon for Wise card back; prev: white icon */
 .my-card-back.theme-wise .my-card-back-number,
 .my-card-back.theme-wise .my-card-back-expiry,
 .my-card-back.theme-wise .my-card-back-name,
-.my-card-back.theme-wise .my-card-cvv-strip {
+.my-card-back.theme-wise .my-card-cvv-strip,
+.my-card-back.theme-wise .my-card-copy-btn {
     color: #0f172a;
     text-shadow: none;
+}
+.my-card-back.theme-wise .my-card-copy-btn i {
+    filter: none;
 }
 .my-card-back.theme-wise .my-card-cvv-strip {
     background: rgba(0, 0, 0, 0.1);
@@ -6090,15 +6418,46 @@ body.dark-mode #donut-center-info {
     padding: 0 18px;
     box-sizing: border-box;
 }
+/* (2026-07-13) Icon-only copy button next to card number; prev: padded button */
+.my-card-back-number-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+}
 .my-card-back-number {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 800;
-    letter-spacing: 1.8px;
+    letter-spacing: 1.5px;
     font-family: 'Montserrat', sans-serif;
     color: #ffffff;
     text-align: left;
-    width: 100%;
     text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+.my-card-copy-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+/* (2026-07-13) Reset copy icon stroke to regular weight; prev: 0.6px stroke */
+.my-card-copy-btn i {
+    font-size: 13.5px;
+    font-weight: 400;
+    -webkit-text-stroke: none;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+.my-card-copy-btn:hover {
+    opacity: 0.8;
+}
+.my-card-copy-btn:active {
+    transform: scale(0.9);
 }
 .my-card-back-subrow {
     display: flex;
@@ -6116,13 +6475,13 @@ body.dark-mode #donut-center-info {
     text-shadow: 0 1px 2px rgba(0,0,0,0.4);
     text-align: left;
 }
-/* (2026-07-13) Enhanced CVV text contrast and readability; prev: faint white */
+/* (2026-07-13) Reduced CVV strip font size & padding; prev: 11px, 2px 8px */
 .my-card-cvv-strip {
     background: rgba(255, 255, 255, 0.28);
     color: #ffffff;
-    padding: 2px 8px;
+    padding: 1px 5px;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 800;
     font-family: 'Montserrat', sans-serif;
     letter-spacing: 0.8px;

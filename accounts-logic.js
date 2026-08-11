@@ -148,6 +148,8 @@
             }
 
             this.scheduleLoadingFailsafe('accounts-snapshot');
+            // (2026-07-13) Connect My Cards to Firestore with onSnapshot; prev: local storage
+            this.subscribeMyCards(uid);
 
             const configRef = f.doc(f.db, "users", uid, "config", "accounts");
             if (this.unsubscribeAccounts) {
@@ -276,6 +278,17 @@
                     this.applyAccountTheme(activeAccountId);
                 }
 
+                // (2026-07-13) Dynamic last4 lookup from My Cards for accounts; prev: acc.last4
+                const getRealLast4 = (acc) => {
+                    const myCards = this.myCards || [];
+                    const match = myCards.find(c => c.issuer && c.issuer.toLowerCase() === acc.id.toLowerCase());
+                    if (match && match.number) {
+                        const clean = match.number.replace(/\D/g, '');
+                        if (clean.length >= 4) return clean.slice(-4);
+                    }
+                    return acc.last4 || '0000';
+                };
+
                 container.innerHTML = this.accounts.map((acc, index) => `
                 <!-- [FIXED: 2026-04-05 - Added explicit ID tracking for robust mapping - Antigravity] -->
                 <div class="accounts-card ${getAccentClass(acc.name)}" 
@@ -293,7 +306,7 @@
                         <div class="accounts-type-row">
                             <span>${(acc.type || 'bank').toUpperCase()}</span>
                             <span style="opacity: 0.3;">•</span>
-                            <span>•••• ${acc.last4 || '0000'}</span>
+                            <span>•••• ${getRealLast4(acc)}</span>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
@@ -814,6 +827,44 @@
             return 'wallet_my_cards_data';
         },
 
+        unsubscribeMyCards: null,
+        subscribeMyCards: function(uid) {
+            const f = getFirebase();
+            if (!uid || !f.db || !f.onSnapshot || !f.doc) {
+                this.initMyCards();
+                this.renderMyCards();
+                return;
+            }
+            const myCardsRef = f.doc(f.db, "users", uid, "config", "my_cards");
+            if (this.unsubscribeMyCards) {
+                this.unsubscribeMyCards();
+                this.unsubscribeMyCards = null;
+            }
+            this.unsubscribeMyCards = f.onSnapshot(myCardsRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    this.myCards = docSnap.data().list || [];
+                } else {
+                    const key = this.getStorageKey();
+                    const saved = localStorage.getItem(key);
+                    let localList = [];
+                    if (saved) {
+                        try { localList = JSON.parse(saved) || []; } catch(e) {}
+                    }
+                    this.myCards = localList;
+                    if (localList.length > 0 && f.setDoc) {
+                        f.setDoc(myCardsRef, { list: localList }).catch(e => console.error(e));
+                    }
+                }
+                const key = this.getStorageKey();
+                localStorage.setItem(key, JSON.stringify(this.myCards || []));
+                this.renderMyCards();
+            }, (err) => {
+                console.warn('MyCards snapshot warn:', err);
+                this.initMyCards();
+                this.renderMyCards();
+            });
+        },
+
         initMyCards: function() {
             const key = this.getStorageKey();
             const saved = localStorage.getItem(key);
@@ -826,12 +877,30 @@
             } else {
                 this.myCards = [];
             }
+            // (2026-07-13) Migrate legacy gotyme.jpg image paths to png; prev: raw storage
+            if (Array.isArray(this.myCards)) {
+                let fixCount = 0;
+                this.myCards.forEach(card => {
+                    if (card && card.image && card.image.includes('gotyme.jpg')) {
+                        card.image = card.image.replace('gotyme.jpg', 'gotyme.png');
+                        fixCount++;
+                    }
+                });
+                if (fixCount > 0) this.saveMyCardsToStorage();
+            }
         },
 
         saveMyCardsToStorage: function() {
             try {
                 const key = this.getStorageKey();
                 localStorage.setItem(key, JSON.stringify(this.myCards || []));
+
+                const f = getFirebase();
+                const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
+                if (uid && f.db && f.doc && f.setDoc) {
+                    const myCardsRef = f.doc(f.db, "users", uid, "config", "my_cards");
+                    f.setDoc(myCardsRef, { list: this.myCards || [] }).catch(e => console.error('Firestore saveMyCards error:', e));
+                }
             } catch (e) {
                 console.error('Error saving my cards to storage:', e);
             }
@@ -909,7 +978,8 @@
                 const formattedNum = (card.number || '•••• •••• •••• ' + last4);
 
                 return `
-                    <div class="my-card-item ${card._isClonePrev ? 'clone-prev' : ''} ${card._isCloneNext ? 'clone-next' : ''}"
+                    <!-- (2026-07-13) Added data-card-id attribute to card items; prev: missing -->
+                    <div class="my-card-item ${card._isClonePrev ? 'clone-prev' : ''} ${card._isCloneNext ? 'clone-next' : ''}" data-card-id="${card.id}"
                          onmousedown="AccountsView.handleCardTouchStart('${card.id}', this, event)"
                          onmousemove="AccountsView.handleCardTouchMove(event)"
                          onmouseup="AccountsView.handleCardTouchEnd('${card.id}', this)"
@@ -925,7 +995,13 @@
                             <div class="my-card-back ${card.theme}">
                                 <div class="my-card-magnetic-strip"></div>
                                 <div class="my-card-back-center-group">
-                                    <div class="my-card-back-number">${formattedNum}</div>
+                                    <!-- (2026-07-13) Revert to content_copy -->
+                                    <div class="my-card-back-number-row">
+                                        <div class="my-card-back-number">${formattedNum}</div>
+                                        <button type="button" class="my-card-copy-btn" onclick="AccountsView.copyCardNumber('${card.number || ''}', event)" title="Copy card number">
+                                            <i class="material-icons" style="font-size: 13.5px;">content_copy</i>
+                                        </button>
+                                    </div>
                                     <div class="my-card-back-subrow">
                                         <span class="my-card-back-expiry">EXP ${card.expiry || 'MM/YY'}</span>
                                         <div class="my-card-cvv-strip">CVV ${card.cvv || '***'}</div>
@@ -965,7 +1041,10 @@
                 setTimeout(() => {
                     const realFirst = carousel.querySelectorAll('.my-card-item')[1];
                     if (realFirst) {
-                        realFirst.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
+                        // (2026-07-13) Instant scroll centering for first card; prev: scrollIntoView
+                        const containerCenter = carousel.clientWidth / 2;
+                        const itemCenter = realFirst.offsetLeft + realFirst.offsetWidth / 2;
+                        carousel.scrollLeft = itemCenter - containerCenter;
                     }
                     this.updateCardStackZIndex();
                 }, 50);
@@ -1006,12 +1085,312 @@
                     item.classList.remove('is-flipped');
                 }
             });
+            this.updateCardQrButton();
+        },
+
+        // (2026-07-13) 1x1 QR preview modal & in-place Edit QR upload; prev: instant save
+        cardQrs: {},
+        pendingQrCardId: null,
+        pendingQrDataUrl: null,
+        activeViewQrCardId: null,
+
+        // (2026-07-13) Guaranteed card fallback for QR actions; prev: return null
+        getActiveCard: function() {
+            const carousel = document.getElementById('my-cards-carousel');
+            const baseCards = this.myCards || [];
+            if (carousel) {
+                const activeEl = carousel.querySelector('.my-card-item.is-active-card') || carousel.querySelector('.my-card-item');
+                if (activeEl && activeEl.dataset && activeEl.dataset.cardId) {
+                    const match = baseCards.find(c => c.id === activeEl.dataset.cardId);
+                    if (match) return match;
+                    return { id: activeEl.dataset.cardId };
+                }
+            }
+            if (baseCards.length) return baseCards[0];
+            return { id: 'card_default' };
+        },
+
+        getCardQr: function(cardId) {
+            if (!cardId) return null;
+            if (this.cardQrs[cardId]) return this.cardQrs[cardId];
+            const f = getFirebase();
+            const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+            const localKey = `card_qr_${uid}_${cardId}`;
+            const cached = localStorage.getItem(localKey);
+            if (cached) {
+                this.cardQrs[cardId] = cached;
+                return cached;
+            }
+            if (uid && uid !== 'guest' && f.db && f.doc && f.getDoc) {
+                const docRef = f.doc(f.db, "users", uid, "card_qrs", cardId);
+                f.getDoc(docRef).then(docSnap => {
+                    if (docSnap.exists() && docSnap.data().qrDataUrl) {
+                        const url = docSnap.data().qrDataUrl;
+                        this.cardQrs[cardId] = url;
+                        try { localStorage.setItem(localKey, url); } catch (e) {}
+                        this.updateCardQrButton();
+                    }
+                }).catch(e => console.error('Error fetching card QR doc:', e));
+            }
+            return null;
+        },
+
+        updateCardQrButton: function() {
+            const btn = document.getElementById('my-cards-qr-btn');
+            const label = document.getElementById('my-cards-qr-btn-label');
+            const bar = document.getElementById('my-cards-qr-bar');
+            if (!btn || !label || !bar) return;
+            const card = this.getActiveCard();
+            if (!card) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = 'flex';
+            const hasQr = !!this.getCardQr(card.id);
+            label.textContent = hasQr ? 'View QR' : 'Add QR';
+            const icon = btn.querySelector('i');
+            if (icon) icon.textContent = hasQr ? 'qr_code' : 'qr_code_scanner';
+        },
+
+        handleQrButtonClick: function() {
+            const card = this.getActiveCard();
+            const cardId = card ? card.id : 'card_default';
+            if (this.getCardQr(cardId)) {
+                this.openViewQrModal(cardId);
+            } else {
+                this.triggerAddQr(cardId);
+            }
+        },
+
+        triggerAddQr: function(cardId) {
+            const id = cardId || this.getActiveCard()?.id || 'card_default';
+            this.pendingQrCardId = id;
+            const input = document.getElementById('card-qr-file-input');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        },
+
+        // (2026-07-13) Store full image without square canvas crop; prev: 600x600 crop
+        handleQrFileSelect: function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const cardId = this.pendingQrCardId || this.getActiveCard()?.id;
+            if (!cardId) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const rawUrl = e.target.result;
+                this.pendingQrDataUrl = rawUrl;
+                
+                const thumb = document.getElementById('card-qr-confirm-thumb');
+                const modal = document.getElementById('card-qr-confirm-modal');
+                if (thumb) thumb.src = rawUrl;
+                if (modal) modal.style.display = 'flex';
+            };
+            reader.readAsDataURL(file);
+        },
+
+        confirmSaveQr: function() {
+            const cardId = this.pendingQrCardId || this.getActiveCard()?.id;
+            const dataUrl = this.pendingQrDataUrl;
+            if (!cardId || !dataUrl) return;
+            
+            this.saveCardQr(cardId, dataUrl);
+            this.cancelQrConfirm();
+            
+            const galleryImg = document.getElementById('qr-gallery-image');
+            const galleryModal = document.getElementById('card-qr-gallery-modal');
+            if (galleryImg) galleryImg.src = dataUrl;
+            if (galleryModal && galleryModal.style.display !== 'none') {
+                this.openViewQrModal(cardId);
+            }
+        },
+
+        cancelQrConfirm: function() {
+            const modal = document.getElementById('card-qr-confirm-modal');
+            if (modal) modal.style.display = 'none';
+            this.pendingQrDataUrl = null;
+        },
+
+        saveCardQr: function(cardId, dataUrl) {
+            if (!cardId || !dataUrl) return;
+            const f = getFirebase();
+            const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+            const localKey = `card_qr_${uid}_${cardId}`;
+            
+            this.cardQrs[cardId] = dataUrl;
+            try { localStorage.setItem(localKey, dataUrl); } catch (e) {}
+
+            if (uid && uid !== 'guest' && f.db && f.doc && f.setDoc) {
+                const qrDocRef = f.doc(f.db, "users", uid, "card_qrs", cardId);
+                f.setDoc(qrDocRef, {
+                    cardId: cardId,
+                    qrDataUrl: dataUrl,
+                    updatedAt: Date.now()
+                }).catch(err => console.error('Firestore saveCardQr error:', err));
+            }
+            this.updateCardQrButton();
+            if (window.showToast) window.showToast('QR Code saved!');
+        },
+
+        // (2026-07-13) Direct modal toggle for View QR; prev: class-based transition
+        openViewQrModal: function(cardId) {
+            const id = cardId || this.getActiveCard()?.id;
+            this.activeViewQrCardId = id;
+            const dataUrl = id ? this.getCardQr(id) : null;
+            const modal = document.getElementById('card-qr-gallery-modal');
+            const img = document.getElementById('qr-gallery-image');
+            if (img && dataUrl) img.src = dataUrl;
+            if (modal) {
+                modal.style.display = 'flex';
+                const container = modal.querySelector('.qr-modal-container');
+                if (container) container.style.transform = 'none';
+                this.bindQrSwipeDownClose(modal);
+            }
+        },
+
+        closeViewQrModal: function() {
+            const modal = document.getElementById('card-qr-gallery-modal');
+            if (!modal) return;
+            modal.style.display = 'none';
+            const container = modal.querySelector('.qr-modal-container');
+            if (container) container.style.transform = 'none';
+        },
+
+        bindQrSwipeDownClose: function(modalEl) {
+            if (!modalEl || modalEl.dataset.swipeBound) return;
+            modalEl.dataset.swipeBound = "true";
+            const container = modalEl.querySelector('.qr-modal-container');
+            if (!container) return;
+
+            let startY = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            container.addEventListener('touchstart', (e) => {
+                if (e.target.closest('button') || e.target.closest('.qr-modal-action-chip')) return;
+                startY = e.touches[0].clientY;
+                currentY = startY;
+                isDragging = true;
+                container.style.transition = 'none';
+            }, { passive: true });
+
+            container.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentY = e.touches[0].clientY;
+                const deltaY = currentY - startY;
+                if (deltaY > 0) {
+                    container.style.transform = `translateY(${deltaY}px)`;
+                    modalEl.style.opacity = `${Math.max(0.2, 1 - deltaY / 350)}`;
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchend', () => {
+                if (!isDragging) return;
+                isDragging = false;
+                const deltaY = currentY - startY;
+                container.style.transition = '';
+                modalEl.style.opacity = '';
+                if (deltaY > 100) {
+                    this.closeViewQrModal();
+                } else {
+                    container.style.transform = '';
+                }
+            }, { passive: true });
+        },
+
+        triggerEditQr: function() {
+            const id = this.activeViewQrCardId || this.getActiveCard()?.id;
+            if (id) this.triggerAddQr(id);
+        },
+
+        // (2026-07-13) Custom QR delete confirm modal; prev: native confirm alert
+        deleteCurrentCardQr: function() {
+            const modal = document.getElementById('card-qr-delete-modal');
+            if (modal) modal.style.display = 'flex';
+        },
+
+        cancelDeleteQrModal: function() {
+            const modal = document.getElementById('card-qr-delete-modal');
+            if (modal) modal.style.display = 'none';
+        },
+
+        confirmDeleteQrModal: function() {
+            const cardId = this.activeViewQrCardId || this.getActiveCard()?.id;
+            if (!cardId) return;
+            this.cancelDeleteQrModal();
+
+            const f = getFirebase();
+            const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
+            const localKey = `card_qr_${uid}_${cardId}`;
+
+            delete this.cardQrs[cardId];
+            try { localStorage.removeItem(localKey); } catch (e) {}
+
+            if (uid && uid !== 'guest' && f.db && f.doc && f.deleteDoc) {
+                const qrDocRef = f.doc(f.db, "users", uid, "card_qrs", cardId);
+                f.deleteDoc(qrDocRef).catch(err => console.error('Firestore deleteCardQr error:', err));
+            }
+
+            this.closeViewQrModal();
+            this.updateCardQrButton();
+            if (window.showToast) window.showToast('QR Code deleted');
+        },
+
+        // (2026-07-13) Show Downloading... toast on gallery save; prev: QR downloaded!
+        downloadCurrentQr: function() {
+            const cardId = this.activeViewQrCardId;
+            const dataUrl = cardId ? this.getCardQr(cardId) : null;
+            if (!dataUrl) return;
+            if (window.showToast) window.showToast('Downloading...');
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = `Card-QR-${cardId}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        },
+
+        shareCurrentQr: function() {
+            const cardId = this.activeViewQrCardId;
+            const dataUrl = cardId ? this.getCardQr(cardId) : null;
+            if (!dataUrl) return;
+
+            if (navigator.share) {
+                try {
+                    fetch(dataUrl)
+                        .then(res => res.blob())
+                        .then(blob => {
+                            const file = new File([blob], `Card-QR-${cardId}.png`, { type: 'image/png' });
+                            navigator.share({ title: 'Card QR Code', files: [file] }).catch(() => {});
+                        });
+                } catch (e) {
+                    if (window.showToast) window.showToast('Share initialized');
+                }
+            } else {
+                if (navigator.clipboard) navigator.clipboard.writeText(dataUrl);
+                if (window.showToast) window.showToast('QR data copied to clipboard!');
+            }
         },
 
         bindCarouselEndLoop: function() {
             const carousel = document.getElementById('my-cards-carousel');
             if (!carousel || carousel.dataset.loopBound) return;
             carousel.dataset.loopBound = "true";
+
+            // (2026-07-13) Seamless instant scroll reset on loop ends; prev: scrollIntoView
+            const jumpToItem = (targetItem) => {
+                if (!targetItem) return;
+                const prevBehavior = carousel.style.scrollBehavior;
+                carousel.style.scrollBehavior = 'auto';
+                const containerCenter = carousel.clientWidth / 2;
+                const itemCenter = targetItem.offsetLeft + targetItem.offsetWidth / 2;
+                carousel.scrollLeft = itemCenter - containerCenter;
+                carousel.style.scrollBehavior = prevBehavior;
+                this.updateCardStackZIndex();
+            };
 
             const checkSettleLoop = () => {
                 const baseCards = this.myCards || [];
@@ -1022,18 +1401,10 @@
                 const maxScroll = carousel.scrollWidth - carousel.clientWidth;
                 if (maxScroll <= 10) return;
 
-                if (carousel.scrollLeft >= maxScroll - 6) {
-                    const firstReal = items[1];
-                    if (firstReal) {
-                        firstReal.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
-                        this.updateCardStackZIndex();
-                    }
-                } else if (carousel.scrollLeft <= 6) {
-                    const lastReal = items[items.length - 2];
-                    if (lastReal) {
-                        lastReal.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' });
-                        this.updateCardStackZIndex();
-                    }
+                if (carousel.scrollLeft >= maxScroll - 12) {
+                    jumpToItem(items[1]);
+                } else if (carousel.scrollLeft <= 12) {
+                    jumpToItem(items[items.length - 2]);
                 }
             };
 
@@ -1058,6 +1429,26 @@
                 cardItemEl.classList.toggle('is-flipped');
             } else {
                 cardItemEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        },
+
+        // (2026-07-13) Added copyCardNumber helper method for card back; prev: none
+        copyCardNumber: function(num, event) {
+            if (event) event.stopPropagation();
+            if (!num) return;
+            const cleanNum = num.replace(/\s+/g, '');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(cleanNum);
+            } else {
+                const input = document.createElement('input');
+                input.value = cleanNum;
+                document.body.appendChild(input);
+                input.select();
+                document.execCommand('copy');
+                document.body.removeChild(input);
+            }
+            if (window.showToast) {
+                window.showToast('Card number copied!');
             }
         },
 
@@ -1219,7 +1610,8 @@
             const map = {
                 bpi: { image: 'bank_cards/bpi.png', theme: 'theme-bpi' },
                 gcash: { image: 'bank_cards/gcash.png', theme: 'theme-gcash' },
-                gotyme: { image: 'bank_cards/gotyme.jpg', theme: 'theme-gotyme' },
+                // (2026-07-13) Update gotyme card image extension to png (was gotyme.jpg)
+                gotyme: { image: 'bank_cards/gotyme.png', theme: 'theme-gotyme' },
                 maribank: { image: 'bank_cards/maribank.png', theme: 'theme-maribank' },
                 maya: { image: 'bank_cards/maya.png', theme: 'theme-maya' },
                 wise: { image: 'bank_cards/wise.png', theme: 'theme-wise' },
@@ -1260,4 +1652,7 @@
             if (window.showToast) window.showToast(editId ? 'Card updated!' : 'Card added successfully!');
         }
     };
+
+    // (2026-07-13) Explicit global window binding for Card QR methods; prev: none
+    window.handleQrButtonClick = function() { if (window.AccountsView && window.AccountsView.handleQrButtonClick) window.AccountsView.handleQrButtonClick(); };
 })(window);

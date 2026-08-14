@@ -253,6 +253,9 @@
                 view.classList.add('fade-in-load');
             }
 
+            // (2026-07-13) Real-time listener trigger for QR sync; prev: manual getDoc
+            this.initCardQrRealtimeSync();
+
             const container = document.getElementById('accounts-dynamic-cards');
             if (!container) return;
             // Apply premium entrance to the card container
@@ -1110,9 +1113,51 @@
             return { id: 'card_default' };
         },
 
+        // (2026-07-13) Real-time snapshot delete & edit sync; prev: doc append only
+        initCardQrRealtimeSync: function() {
+            const f = getFirebase();
+            const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
+            if (!uid || uid === 'guest' || !f.db || !f.collection || !f.onSnapshot) return;
+
+            if (this._qrUnsubscribe) this._qrUnsubscribe();
+
+            const colRef = f.collection(f.db, "users", uid, "card_qrs");
+            this._qrUnsubscribe = f.onSnapshot(colRef, (snapshot) => {
+                const liveDocIds = new Set();
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const cardId = docSnap.id || data.cardId;
+                    if (cardId && data.qrDataUrl) {
+                        liveDocIds.add(cardId);
+                        this.cardQrs[cardId] = data.qrDataUrl;
+                        try {
+                            localStorage.setItem(`card_qr_${uid}_${cardId}`, data.qrDataUrl);
+                        } catch (e) {}
+                    }
+                });
+
+                Object.keys(this.cardQrs).forEach(cardId => {
+                    if (!liveDocIds.has(cardId) && this.cardQrs[cardId] !== undefined) {
+                        delete this.cardQrs[cardId];
+                        try {
+                            localStorage.removeItem(`card_qr_${uid}_${cardId}`);
+                            localStorage.removeItem(`card_qr_${cardId}`);
+                            localStorage.removeItem(`card_qr_guest_${cardId}`);
+                        } catch (e) {}
+                    }
+                });
+
+                this.updateCardQrButton();
+                if (this.activeViewQrCardId && !this.cardQrs[this.activeViewQrCardId]) {
+                    this.closeViewQrModal();
+                }
+            }, (err) => console.error('onSnapshot card_qrs error:', err));
+        },
+
+        // (2026-07-13) Explicit null tombstone check prevents cache reload; prev: undefined
         getCardQr: function(cardId) {
             if (!cardId) return null;
-            if (this.cardQrs[cardId]) return this.cardQrs[cardId];
+            if (this.cardQrs[cardId] !== undefined) return this.cardQrs[cardId];
             const f = getFirebase();
             const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
             const localKey = `card_qr_${uid}_${cardId}`;
@@ -1172,7 +1217,7 @@
             }
         },
 
-        // (2026-07-13) Store full image without square canvas crop; prev: 600x600 crop
+        // (2026-07-13) Added NavState push for QR confirm modal; prev: no nav state
         handleQrFileSelect: function(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
@@ -1187,7 +1232,12 @@
                 const thumb = document.getElementById('card-qr-confirm-thumb');
                 const modal = document.getElementById('card-qr-confirm-modal');
                 if (thumb) thumb.src = rawUrl;
-                if (modal) modal.style.display = 'flex';
+                if (modal) {
+                    modal.style.display = 'flex';
+                    if (window.NavState) {
+                        window.NavState.pushModalState('card-qr-confirm-modal', () => this.cancelQrConfirm(true));
+                    }
+                }
             };
             reader.readAsDataURL(file);
         },
@@ -1208,10 +1258,16 @@
             }
         },
 
-        cancelQrConfirm: function() {
+        cancelQrConfirm: function(isFromBack) {
             const modal = document.getElementById('card-qr-confirm-modal');
             if (modal) modal.style.display = 'none';
             this.pendingQrDataUrl = null;
+            if (window.NavState) {
+                window.NavState.popModalState('card-qr-confirm-modal');
+            }
+            if (!isFromBack && history.state && history.state.modalId === 'card-qr-confirm-modal') {
+                history.back();
+            }
         },
 
         saveCardQr: function(cardId, dataUrl) {
@@ -1235,7 +1291,7 @@
             if (window.showToast) window.showToast('QR Code saved!');
         },
 
-        // (2026-07-13) Direct modal toggle for View QR; prev: class-based transition
+        // (2026-07-13) Added NavState integration to QR viewer modal; prev: missing nav state
         openViewQrModal: function(cardId) {
             const id = cardId || this.getActiveCard()?.id;
             this.activeViewQrCardId = id;
@@ -1248,15 +1304,24 @@
                 const container = modal.querySelector('.qr-modal-container');
                 if (container) container.style.transform = 'none';
                 this.bindQrSwipeDownClose(modal);
+                if (window.NavState) {
+                    window.NavState.pushModalState('card-qr-gallery-modal', () => this.closeViewQrModal(true));
+                }
             }
         },
 
-        closeViewQrModal: function() {
+        closeViewQrModal: function(isFromBack) {
             const modal = document.getElementById('card-qr-gallery-modal');
             if (!modal) return;
             modal.style.display = 'none';
             const container = modal.querySelector('.qr-modal-container');
             if (container) container.style.transform = 'none';
+            if (window.NavState) {
+                window.NavState.popModalState('card-qr-gallery-modal');
+            }
+            if (!isFromBack && history.state && history.state.modalId === 'card-qr-gallery-modal') {
+                history.back();
+            }
         },
 
         bindQrSwipeDownClose: function(modalEl) {
@@ -1306,17 +1371,29 @@
             if (id) this.triggerAddQr(id);
         },
 
-        // (2026-07-13) Custom QR delete confirm modal; prev: native confirm alert
+        // (2026-07-13) Added NavState push for QR delete modal; prev: no nav state
         deleteCurrentCardQr: function() {
             const modal = document.getElementById('card-qr-delete-modal');
-            if (modal) modal.style.display = 'flex';
+            if (modal) {
+                modal.style.display = 'flex';
+                if (window.NavState) {
+                    window.NavState.pushModalState('card-qr-delete-modal', () => this.cancelDeleteQrModal(true));
+                }
+            }
         },
 
-        cancelDeleteQrModal: function() {
+        cancelDeleteQrModal: function(isFromBack) {
             const modal = document.getElementById('card-qr-delete-modal');
             if (modal) modal.style.display = 'none';
+            if (window.NavState) {
+                window.NavState.popModalState('card-qr-delete-modal');
+            }
+            if (!isFromBack && history.state && history.state.modalId === 'card-qr-delete-modal') {
+                history.back();
+            }
         },
 
+        // (2026-07-13) Set explicit null tombstone on delete; prev: delete property only
         confirmDeleteQrModal: function() {
             const cardId = this.activeViewQrCardId || this.getActiveCard()?.id;
             if (!cardId) return;
@@ -1324,54 +1401,180 @@
 
             const f = getFirebase();
             const uid = f.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest';
-            const localKey = `card_qr_${uid}_${cardId}`;
 
-            delete this.cardQrs[cardId];
-            try { localStorage.removeItem(localKey); } catch (e) {}
+            this.cardQrs[cardId] = null;
+            Object.keys(this.cardQrs).forEach(k => {
+                if (k.includes(cardId) || cardId.includes(k)) {
+                    this.cardQrs[k] = null;
+                }
+            });
+
+            try {
+                localStorage.removeItem(`card_qr_${uid}_${cardId}`);
+                localStorage.removeItem(`card_qr_${cardId}`);
+                localStorage.removeItem(`card_qr_guest_${cardId}`);
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('card_qr_')) {
+                        if (key.includes(cardId) || (uid && key.includes(uid))) {
+                            localStorage.removeItem(key);
+                        }
+                    }
+                }
+            } catch (e) {}
 
             if (uid && uid !== 'guest' && f.db && f.doc && f.deleteDoc) {
                 const qrDocRef = f.doc(f.db, "users", uid, "card_qrs", cardId);
-                f.deleteDoc(qrDocRef).catch(err => console.error('Firestore deleteCardQr error:', err));
+                f.deleteDoc(qrDocRef)
+                    .then(() => console.log('Firestore deleteCardQr success for card:', cardId))
+                    .catch(err => console.error('Firestore deleteCardQr error:', err));
             }
+
+            const img = document.getElementById('qr-gallery-image');
+            if (img) {
+                img.src = '';
+                img.removeAttribute('src');
+            }
+            this.activeViewQrCardId = null;
 
             this.closeViewQrModal();
             this.updateCardQrButton();
             if (window.showToast) window.showToast('QR Code deleted');
         },
 
-        // (2026-07-13) Show Downloading... toast on gallery save; prev: QR downloaded!
+        // (2026-07-13) Enhanced APK-compatible QR save to gallery & share; prev: web-only standard share
         downloadCurrentQr: function() {
-            const cardId = this.activeViewQrCardId;
+            const cardId = this.activeViewQrCardId || this.getActiveCard()?.id;
             const dataUrl = cardId ? this.getCardQr(cardId) : null;
-            if (!dataUrl) return;
-            if (window.showToast) window.showToast('Downloading...');
-            const a = document.createElement('a');
-            a.href = dataUrl;
-            a.download = `Card-QR-${cardId}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            if (!dataUrl) {
+                if (window.showToast) window.showToast('No QR code found');
+                return;
+            }
+
+            const account = this.accounts ? this.accounts.find(a => a.id === cardId) : null;
+            const cardName = account?.name || 'Card';
+            const filename = `${cardName.replace(/\s+/g, '-')}-QR.png`;
+
+            if (window.showToast) window.showToast(`Downloading ${cardName} QR Code`);
+
+            const cap = window.Capacitor;
+            if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
+                const plugins = cap.Plugins || {};
+                if (plugins.Share) {
+                    plugins.Share.share({
+                        title: `${cardName} QR Code`,
+                        text: `${cardName} QR Code`,
+                        url: dataUrl,
+                        dialogTitle: 'Save / Share QR Code'
+                    }).catch(() => {});
+                    return;
+                }
+            }
+
+            try {
+                const parts = dataUrl.split(',');
+                const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+                const bstr = atob(parts[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                const blob = new Blob([u8arr], { type: mime });
+                const blobUrl = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    try {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(blobUrl);
+                    } catch (e) {}
+                }, 1000);
+            } catch (err) {
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    try { document.body.removeChild(a); } catch (e) {}
+                }, 300);
+            }
         },
 
         shareCurrentQr: function() {
-            const cardId = this.activeViewQrCardId;
+            const cardId = this.activeViewQrCardId || this.getActiveCard()?.id;
             const dataUrl = cardId ? this.getCardQr(cardId) : null;
-            if (!dataUrl) return;
+            if (!dataUrl) {
+                if (window.showToast) window.showToast('No QR code found');
+                return;
+            }
+
+            const account = this.accounts ? this.accounts.find(a => a.id === cardId) : null;
+            const cardName = account?.name || 'Card';
+            const cap = window.Capacitor;
+
+            if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform() && cap.Plugins && cap.Plugins.Share) {
+                cap.Plugins.Share.share({
+                    title: `${cardName} QR Code`,
+                    text: `${cardName} QR Code`,
+                    url: dataUrl,
+                    dialogTitle: 'Share QR Code'
+                }).catch(() => {});
+                return;
+            }
 
             if (navigator.share) {
                 try {
-                    fetch(dataUrl)
-                        .then(res => res.blob())
-                        .then(blob => {
-                            const file = new File([blob], `Card-QR-${cardId}.png`, { type: 'image/png' });
-                            navigator.share({ title: 'Card QR Code', files: [file] }).catch(() => {});
+                    const parts = dataUrl.split(',');
+                    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+                    const bstr = atob(parts[1]);
+                    let n = bstr.length;
+                    const u8arr = new Uint8Array(n);
+                    while (n--) {
+                        u8arr[n] = bstr.charCodeAt(n);
+                    }
+                    const blob = new Blob([u8arr], { type: mime });
+                    const file = new File([blob], `${cardName.replace(/\s+/g, '-')}-QR.png`, { type: mime });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        navigator.share({ title: `${cardName} QR Code`, files: [file] }).catch(() => {
+                            this.fallbackShareQr(dataUrl, cardName);
                         });
+                    } else {
+                        this.fallbackShareQr(dataUrl, cardName);
+                    }
                 } catch (e) {
-                    if (window.showToast) window.showToast('Share initialized');
+                    this.fallbackShareQr(dataUrl, cardName);
                 }
             } else {
-                if (navigator.clipboard) navigator.clipboard.writeText(dataUrl);
-                if (window.showToast) window.showToast('QR data copied to clipboard!');
+                this.fallbackShareQr(dataUrl, cardName);
+            }
+        },
+
+        fallbackShareQr: function(dataUrl, cardName) {
+            if (navigator.share) {
+                navigator.share({ title: `${cardName} QR Code`, text: `${cardName} QR Code` }).catch(() => {
+                    this.copyQrToClipboard(dataUrl);
+                });
+            } else {
+                this.copyQrToClipboard(dataUrl);
+            }
+        },
+
+        copyQrToClipboard: function(dataUrl) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(dataUrl).then(() => {
+                    if (window.showToast) window.showToast('QR code copied to clipboard');
+                }).catch(() => {
+                    if (window.showToast) window.showToast('Share not supported');
+                });
+            } else {
+                if (window.showToast) window.showToast('Share not supported');
             }
         },
 

@@ -1092,8 +1092,9 @@ const NavState = {
                         const opacityVisible = computed ? Number.parseFloat(computed.opacity || '1') > 0.01 : true;
                         return displayVisible && visibilityVisible && opacityVisible;
                     };
+                    // (2026-07-13) Added QR backdrops to back button overlay check; prev: missing qr backdrops
                     const visibleOverlay = Array.from(
-                        document.querySelectorAll('.modal-overlay, .dialog-overlay, .custom-modal, .login-modal-overlay')
+                        document.querySelectorAll('.modal-overlay, .dialog-overlay, .custom-modal, .login-modal-overlay, .qr-modal-backdrop, .qr-confirm-backdrop')
                     ).find((el) => {
                         const hasOpenState = el.classList.contains('show') || el.classList.contains('active');
                         const hasVisibleDisplay = el.style.display === 'flex' || el.style.display === 'block';

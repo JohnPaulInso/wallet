@@ -14804,7 +14804,7 @@ Be direct, practical, and helpful.`;
                     const wasModalOpen = window.modalOpen;
                     let targetId = (typeof targetIdOrFromHistory === 'string') ? targetIdOrFromHistory : null;
                     let isFromHistory = (typeof targetIdOrFromHistory === 'boolean') ? targetIdOrFromHistory : fromHistory;
-                    // updated 2026-03-31 - closeModals fix - 2026-03-31
+                    // (2026-07-13) Added QR modals to closeModals registry; prev: missing qr modals
                     const ids = [
                         'duplicate-modal',
                         'manual-txn-modal',
@@ -14824,7 +14824,10 @@ Be direct, practical, and helpful.`;
                         'delete-modal',
                         'auth-trouble-modal',
                         'ai-modal',
-                        'receipt-delete-sheet-modal' // added 2026-04-10 - dedicated receipt delete sheet
+                        'receipt-delete-sheet-modal',
+                        'card-qr-confirm-modal',
+                        'card-qr-delete-modal',
+                        'card-qr-gallery-modal'
                     ];
 
                     let targetToClose = null;

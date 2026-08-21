@@ -212,12 +212,17 @@ export const NotificationsEngine = {
         return tiers.find((tier) => pct >= tier.pct) || null;
     },
 
+    // (2026-07-13) Skip threshold creation if 100% already reached for month; prev: allowed additions
     ensureBudgetThresholdInApp(uid, category, current, limitAmount) {
-        const tier = this.getBudgetThresholdTier(category, current, limitAmount);
-        if (!tier) return false;
-
         const monthKey = this.getCurrentMonthKey();
         const categoryKey = this.normalizeCategoryKey(category);
+        const existing = this.getBudgetThresholdState(uid, categoryKey, monthKey);
+        if (existing >= 100) return false;
+
+        const tier = this.getBudgetThresholdTier(category, current, limitAmount);
+        if (!tier) return false;
+        if (tier.pct <= existing) return false;
+
         const notifType = `threshold_${categoryKey}_${tier.pct}_${monthKey}`;
         const meta = {
             action: "open_budget_overview",
@@ -231,7 +236,6 @@ export const NotificationsEngine = {
             this.ensureStoredInAppNotification(tier.title, tier.body, notifType, meta);
         }
 
-        const existing = this.getBudgetThresholdState(uid, categoryKey, monthKey);
         this.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(existing, tier.pct));
         return !hasLocal;
     },
@@ -555,6 +559,12 @@ export const NotificationsEngine = {
         if (!plugin) return false;
         if (this.wasDeliveredLocally(uid, type, fallbackId, meta)) return true;
 
+        // (2026-07-13) Never deliver push popup for old notifications >2m; prev: no age check
+        if (Date.now() - Number(createdAtMs || 0) > 120000) {
+            this.markDeliveredLocally(uid, type, fallbackId, createdAtMs, meta);
+            return true;
+        }
+
         const allowed = await this.ensureLocalPermissions();
         if (!allowed) return false;
 
@@ -660,32 +670,15 @@ export const NotificationsEngine = {
                 limit(replayLimit)
             );
             const snap = await getDocs(q);
-            const pending = [];
             let newestSeen = lastSync;
 
             snap.forEach((docSnap) => {
                 const data = docSnap.data() || {};
                 const createdAtMs = this.getCreatedAtMillis(data);
                 if (!createdAtMs) return;
-                // (2026-07-13) Ignore notifications >24h old and pass meta to wasDeliveredLocally; prev: replayed all past
-                if (Date.now() - createdAtMs > 86400000) return;
                 newestSeen = Math.max(newestSeen, createdAtMs);
-                if (lastSync && createdAtMs <= lastSync) return;
-                if (this.wasDeliveredLocally(uid, data.type, docSnap.id, data.meta || null)) return;
-                pending.push({
-                    id: docSnap.id,
-                    title: data.title,
-                    body: data.body,
-                    type: data.type || "general",
-                    createdAtMs,
-                    meta: data.meta || null
-                });
+                this.markDeliveredLocally(uid, data.type, docSnap.id, createdAtMs, data.meta || null);
             });
-
-            pending.sort((a, b) => a.createdAtMs - b.createdAtMs);
-            for (const notif of pending) {
-                await this.deliverLocalNotification(uid, notif.id, notif.title, notif.body, notif.type, notif.createdAtMs, notif.meta);
-            }
 
             if (newestSeen > lastSync) {
                 localStorage.setItem(syncKey, String(newestSeen));
@@ -702,8 +695,12 @@ export const NotificationsEngine = {
             for (const change of snapshot.docChanges()) {
                 if (change.type !== "added") continue;
                 const data = change.doc.data() || {};
-                // (2026-07-13) Ignore docs >10m old and check wasDeliveredLocally; prev: delivered all snapshot additions
-                if (Date.now() - createdAtMs > 600000) continue;
+                const createdAtMs = this.getCreatedAtMillis(data) || Date.now();
+                // (2026-07-13) Ignore old docs and deliver only real-time events; prev: re-popped all docs
+                if (Date.now() - createdAtMs > 60000) {
+                    this.markDeliveredLocally(uid, data.type, change.doc.id, createdAtMs, data.meta || null);
+                    continue;
+                }
                 if (this.wasDeliveredLocally(uid, data.type, change.doc.id, data.meta || null)) continue;
                 await this.deliverLocalNotification(
                     uid,
@@ -849,13 +846,17 @@ export const NotificationsEngine = {
         }
     },
 
+    // (2026-07-13) Stop all alerts if 100% reached & dedupe pushes; prev: re-alerted
     async checkBudgetThresholds(uid, category, current, limitAmount) {
         if (!uid || !Number.isFinite(current) || !Number.isFinite(limitAmount) || limitAmount <= 0) return;
-        this.ensureBudgetThresholdInApp(uid, category, current, limitAmount);
-        const pct = (current / limitAmount) * 100;
         const monthKey = this.getCurrentMonthKey();
         const categoryKey = this.normalizeCategoryKey(category);
         const lastThreshold = this.getBudgetThresholdState(uid, categoryKey, monthKey);
+
+        if (lastThreshold >= 100) return;
+
+        this.ensureBudgetThresholdInApp(uid, category, current, limitAmount);
+        const pct = (current / limitAmount) * 100;
 
         const tiers = [
             { pct: 100, label: "Limit Reached", body: `Red Alert: You've hit 100% of your ${category} budget!` },
@@ -882,8 +883,7 @@ export const NotificationsEngine = {
             const hundredAlready = this.hasStoredInAppNotification(hundredType, hundredMeta)
                 || await this.hasNotified(uid, hundredType, hundredMeta);
             if (hundredAlready) {
-                // Once 100% is reached/notified, skip lower-tier notifications for same month cycle.
-                this.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(lastThreshold, 100));
+                this.setBudgetThresholdState(uid, categoryKey, monthKey, 100);
                 return;
             }
         }
@@ -931,21 +931,7 @@ export const NotificationsEngine = {
             if (!this.hasStoredInAppNotification(notifType, meta)) {
                 this.ensureStoredInAppNotification(currentTier.label, currentTier.body, notifType, meta);
             }
-
-            if (!this.wasDeliveredLocally(uid, notifType, notifType, meta)) {
-                const delivered = await this.deliverLocalNotification(
-                    uid,
-                    notifType,
-                    currentTier.label,
-                    currentTier.body,
-                    notifType,
-                    Date.now(),
-                    meta
-                );
-                if (!delivered) {
-                    this.markDeliveredLocally(uid, notifType, notifType, Date.now(), meta);
-                }
-            }
+            this.markDeliveredLocally(uid, notifType, notifType, Date.now(), meta);
         }
 
         const highestEligiblePct = eligibleTiers[0]?.pct || lastThreshold;

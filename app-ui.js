@@ -4401,15 +4401,20 @@ function ensureBudgetThresholdLocalFallback(category, current, limitAmount) {
 
 
     const pct = (current / limitAmount) * 100;
-    const monthKey = window.NotificationsEngine?.getCurrentMonthKey
-        ? window.NotificationsEngine.getCurrentMonthKey()
-        : (() => {
-            const now = new Date();
-            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        })();
+    const monthKey = getBudgetProgressMonthKey();
     const categoryKey = window.NotificationsEngine?.normalizeCategoryKey
         ? window.NotificationsEngine.normalizeCategoryKey(category)
         : String(category || 'general').trim().toLowerCase();
+
+    const uid = window.auth?.currentUser?.isAnonymous
+        ? null
+        : (window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid') || 'guest');
+
+    const existingState = window.NotificationsEngine?.getBudgetThresholdState
+        ? window.NotificationsEngine.getBudgetThresholdState(uid, categoryKey, monthKey)
+        : 0;
+
+    if (existingState >= 100) return false;
 
     let tier = null;
     if (pct >= 100) {
@@ -4432,7 +4437,7 @@ function ensureBudgetThresholdLocalFallback(category, current, limitAmount) {
         };
     }
 
-    if (!tier) return false;
+    if (!tier || tier.pct <= existingState) return false;
 
     const type = `threshold_${categoryKey}_${tier.pct}_${monthKey}`;
     const meta = {
@@ -4451,11 +4456,13 @@ function ensureBudgetThresholdLocalFallback(category, current, limitAmount) {
         )
     );
 
-    if (existing) return false;
+    if (existing) {
+        if (window.NotificationsEngine?.setBudgetThresholdState) {
+            window.NotificationsEngine.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(existingState, tier.pct));
+        }
+        return false;
+    }
 
-    const uid = window.auth?.currentUser?.isAnonymous
-        ? null
-        : (window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid'));
     if (uid && window.NotificationsEngine?.triggerNotification) {
         window.NotificationsEngine.triggerNotification(uid, tier.title, tier.body, type, meta)
             .catch(err => console.warn('Budget threshold Firestore save failed:', err));
@@ -4778,9 +4785,16 @@ function ensureSavedBudgetPctNotifications() {
     return true;
 }
 
+// (2026-07-13) Skip threshold if 100% already reached; prev: allowed repeat
 function ensureBudgetThresholdNotificationFromPct(uid, categoryKey, label, pct, current, limitAmount) {
     const numericPct = roundBudgetPct(pct);
     if (!Number.isFinite(numericPct)) return false;
+    const monthKey = getBudgetProgressMonthKey();
+    const existingState = window.NotificationsEngine?.getBudgetThresholdState
+        ? window.NotificationsEngine.getBudgetThresholdState(uid, categoryKey, monthKey)
+        : 0;
+    if (existingState >= 100) return false;
+
     const trigger = readBudgetTrigger(uid);
     if (!trigger) return false;
     const candidate = selectBudgetThresholdCandidate(uid, {
@@ -4791,9 +4805,8 @@ function ensureBudgetThresholdNotificationFromPct(uid, categoryKey, label, pct, 
     }
 
     const threshold = candidate.threshold;
-    if (!threshold) return false;
+    if (!threshold || threshold <= existingState) return false;
 
-    const monthKey = getBudgetProgressMonthKey();
     const notifType = `threshold_${categoryKey}_${threshold}_${monthKey}`;
     const meta = {
         action: 'open_budget_overview',
@@ -5069,10 +5082,18 @@ async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
         savings: { label: 'Savings', current: snapshot.savingsThresholdTotal, limit: snapshot.savingsLimit }
     };
 
+    // (2026-07-13) Skip threshold transitions if 100% already reached; prev: allowed repeat
     for (const [key, info] of Object.entries(categoryMap)) {
+        const existingState = window.NotificationsEngine?.getBudgetThresholdState
+            ? window.NotificationsEngine.getBudgetThresholdState(uid, key, monthKey)
+            : 0;
+        if (existingState >= 100) continue;
+
         const prevPct = Number(previous[key] || 0);
         const nextPct = Number(current[key] || 0);
-        const threshold = [100, 90, 70].find(level => prevPct < level && nextPct >= level);
+        if (prevPct >= 100) continue;
+
+        const threshold = [100, 90, 70].find(level => prevPct < level && nextPct >= level && level > existingState);
         if (!threshold) continue;
 
         const notificationKey = `threshold_${key}_${threshold}_${monthKey}`;
@@ -5099,6 +5120,10 @@ async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
             await window.NotificationsEngine.triggerNotification(uid, title, body, notifType, meta);
         } else if (window.NotificationsEngine?.ensureStoredInAppNotification) {
             window.NotificationsEngine.ensureStoredInAppNotification(title, body, notifType, meta);
+        }
+
+        if (window.NotificationsEngine?.setBudgetThresholdState) {
+            window.NotificationsEngine.setBudgetThresholdState(uid, key, monthKey, Math.max(existingState, threshold));
         }
     }
 

@@ -14608,13 +14608,17 @@ Be direct, practical, and helpful.`;
                                 savings: { label: 'Savings', current: snapshot.savingsThresholdTotal, limit: snapshot.savingsLimit }
                             };
 
+                            // (2026-07-13) Skip threshold if 100% already hit for month; prev: allowed repeat
                             for (const categoryKey of affectedBudgetCategories) {
                                 const info = categorySnapshotMap[categoryKey];
                                 if (!info || !Number.isFinite(info.current) || !Number.isFinite(info.limit) || info.limit <= 0) continue;
 
+                                const existingThreshold = engine.getBudgetThresholdState ? engine.getBudgetThresholdState(uid, categoryKey, monthKey) : 0;
+                                if (existingThreshold >= 100) continue;
+
                                 const pct = (info.current / info.limit) * 100;
                                 const thresholdPct = pct >= 100 ? 100 : (pct >= 90 ? 90 : (pct >= 70 ? 70 : 0));
-                                if (!thresholdPct) continue;
+                                if (!thresholdPct || thresholdPct <= existingThreshold) continue;
 
                                 const notifType = `threshold_${categoryKey}_${thresholdPct}_${monthKey}`;
                                 const meta = {
@@ -14632,7 +14636,7 @@ Be direct, practical, and helpful.`;
 
                                 const hasLocal = engine.hasStoredInAppNotification ? engine.hasStoredInAppNotification(notifType, meta) : false;
 
-                                if (!hasRemote) {
+                                if (!hasRemote && !hasLocal) {
                                     await engine.triggerNotification(uid, copy.title, copy.body, notifType, meta);
                                 } else {
                                     if (!hasLocal && engine.ensureStoredInAppNotification) {
@@ -14640,14 +14644,13 @@ Be direct, practical, and helpful.`;
                                     } else if (!hasLocal && window.createNotification) {
                                         window.createNotification(copy.title, copy.body, notifType, null, meta);
                                     }
-                                    if (engine.deliverLocalNotification && !engine.wasDeliveredLocally(uid, notifType, notifType)) {
-                                        await engine.deliverLocalNotification(uid, notifType, copy.title, copy.body, notifType, Date.now(), meta);
+                                    if (engine.markDeliveredLocally) {
+                                        engine.markDeliveredLocally(uid, notifType, notifType, Date.now(), meta);
                                     }
                                 }
 
-                                if (engine.setBudgetThresholdState && engine.getBudgetThresholdState) {
-                                    const existing = engine.getBudgetThresholdState(uid, categoryKey, monthKey);
-                                    engine.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(existing, thresholdPct));
+                                if (engine.setBudgetThresholdState) {
+                                    engine.setBudgetThresholdState(uid, categoryKey, monthKey, Math.max(existingThreshold, thresholdPct));
                                 }
                             }
                         };

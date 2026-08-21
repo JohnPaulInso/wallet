@@ -48,6 +48,7 @@
            SPA VIEWPORT SYSTEM 
            Added: 2026-04-02 for Horizontal-Tab Navigation (Facebook-style)
         */
+        /* (2026-07-13) GPU compositing & containment to reduce lag, prev none */
         .view-viewport {
             flex: 1;
             display: flex;
@@ -62,6 +63,7 @@
             overscroll-behavior-x: contain;
             overscroll-behavior-y: none;
             touch-action: pan-x pan-y pinch-zoom;
+            will-change: scroll-position;
         }
         .view-viewport::-webkit-scrollbar { display: none; }
         
@@ -76,10 +78,12 @@
             display: flex;
             flex-direction: column;
             position: relative;
-            /* Isolated padding for each view to prevent content spill */
             padding-bottom: 30px;
             overscroll-behavior-y: contain;
             -webkit-overflow-scrolling: touch;
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            contain: layout paint style;
         }
         #view-wallet .card-viewport { margin-top: var(--app-content-top-gap); }
         #view-calendar .main-content { padding-top: calc(var(--app-content-top-gap) - 6px) !important; }
@@ -89,6 +93,28 @@
         /* Mobile-wrapper is no longer the vertical scroll container for the app, 
            the individual view-sections are. */
         .mobile-wrapper { overflow-y: hidden !important; }
+
+        /* (2026-07-13) Lock scroll and tab nav during preloader, prev unlocked */
+        body.app-preload-locked,
+        body.app-preload-locked .view-viewport,
+        body.app-preload-locked .view-section,
+        body.app-preload-locked .mobile-wrapper {
+            overflow: hidden !important;
+            touch-action: none !important;
+            overscroll-behavior: none !important;
+        }
+        /* (2026-07-13) Disable header and FAB clicks during preloader, prev active */
+        body.app-preload-locked .bottom-nav,
+        body.app-preload-locked .fab,
+        body.app-preload-locked .wallet-fab,
+        body.app-preload-locked .goals-fab,
+        body.app-preload-locked #wallet-add-fab,
+        body.app-preload-locked #goals-add-fab,
+        body.app-preload-locked #smartwallet-ai-btn,
+        body.app-preload-locked .notification-trigger,
+        body.app-preload-locked #profile-badge {
+            pointer-events: none !important;
+        }
 
         .spa-pull-refresh {
             position: absolute;
@@ -1299,10 +1325,10 @@
             border: 1px solid rgba(255,255,255,0.08); /* Minimalist border */
         }
 
-        /* [FIX 2026-07-01] MY WALLET CARD - Dark Blue Gradient */
+        /* (2026-07-13) Set wallet card to black to gray gradient, prev dark blue */
         .wallet-card {
-            background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #2d333b 0%, #1c2128 50%, #0d1117 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             position: relative;
         }
         
@@ -1310,17 +1336,17 @@
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-image: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0.5px, transparent 0.5px);
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.25) 0.5px, transparent 0.5px);
             background-size: 12px 12px;
-            opacity: 0.08;
+            opacity: 0.06;
             pointer-events: none;
             z-index: 1;
         }
 
         .wallet-card.active {
-            box-shadow: 0 5px 15px rgba(30, 58, 138, 0.4);
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.5);
             transform: scale(1.05);
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         /* PIE CHART ANIMATION */
@@ -3275,13 +3301,12 @@
         .dialog-btn--primary { background: #000; color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .dialog-btn:active { transform: scale(0.96); opacity: 0.8; }
 
+        /* (2026-07-13) Pure white backdrop, removed blur, prev rgba with blur */
         .guest-gate-overlay {
             position: fixed;
-            top: 0; left: 50%; transform: translateX(-50%); right: auto; bottom: 0;
-            width: 100%; max-width: 430px;
-            background: rgba(18, 18, 18, 0.6);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%;
+            background: #ffffff;
             z-index: 5000;
             display: flex;
             flex-direction: column;
@@ -3300,9 +3325,7 @@
                 width: 100vw;
                 max-width: none;
                 transform: none;
-                background: rgba(15, 23, 42, 0.52);
-                backdrop-filter: blur(20px) saturate(120%);
-                -webkit-backdrop-filter: blur(20px) saturate(120%);
+                background: #ffffff;
             }
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -6815,16 +6838,34 @@ body.dark-mode #donut-center-info {
 /* (2026-07-13) Align fuel tank dropdown menus to right edge; prev: shifted off-screen left */
 .custom-dropdown-menu-fuel-tank-month-select,
 .custom-dropdown-menu-fuel-tank-year-select { right: 0 !important; left: auto !important; max-width: 140px !important; min-width: 100px !important; }
+/* (2026-07-13) Compact fuel tank dropdowns and hide arrow, prev wide overlay */
+.custom-dropdown-trigger-fuel-tank-month-select,
+.custom-dropdown-trigger-fuel-tank-year-select,
 .fuel-tank-select {
-    font-size: 10px;
+    font-size: 9px !important;
     font-weight: 700;
     color: #1e293b;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 3px 8px;
+    border-radius: 6px !important;
+    padding: 3px 6px !important;
     outline: none;
     cursor: pointer;
+    min-height: auto !important;
+    line-height: 1.2 !important;
+    gap: 0 !important;
+}
+.custom-dropdown-trigger-fuel-tank-month-select .custom-dropdown-arrow,
+.custom-dropdown-trigger-fuel-tank-year-select .custom-dropdown-arrow {
+    display: none !important;
+}
+/* (2026-07-13) Dark mode styling for fuel tank dropdowns, prev light only */
+body.dark-mode .custom-dropdown-trigger-fuel-tank-month-select,
+body.dark-mode .custom-dropdown-trigger-fuel-tank-year-select,
+body.dark-mode .fuel-tank-select {
+    background: #1e293b;
+    color: #f8fafc;
+    border-color: #334155;
 }
 .fuel-tank-history-list {
     display: flex;

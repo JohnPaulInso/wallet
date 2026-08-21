@@ -3,5 +3,6 @@
         "dynamic/pages/pages-build-deployment"
     ],
     "java.configuration.updateBuildConfiguration": "interactive",
-    "liveServer.settings.port": 5503
+    // (2026-07-13) Set live server port to 5510, prev 5503
+    "liveServer.settings.port": 5510
 }

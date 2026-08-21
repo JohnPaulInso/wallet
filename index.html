@@ -748,18 +748,23 @@
                             (Wallet + Salary)</div>
 
                         <div class="breakdown-list" id="safe-spend-breakdown">
-                            <!-- Maintaining Balance -->
-                            <div class="breakdown-item" id="item-maintaining" onclick="toggleMaintainingBalance()"
-                                style="cursor: pointer; transition: all 0.3s ease;">
-                                <div class="breakdown-icon breakdown-red" id="icon-maintaining">
-                                    <i class="material-icons" id="maintaining-check">account_balance</i>
-                                </div>
-                                <div class="breakdown-info">
-                                    <div class="breakdown-name">MAINTAINING BALANCE</div>
-                                    <div class="breakdown-meta" id="maintaining-meta">BPI Required</div>
+                            <!-- (2026-07-13) Separate click for maintaining edit and toggle, prev joint -->
+                            <div class="breakdown-item" id="item-maintaining"
+                                style="transition: all 0.3s ease;">
+                                <div class="breakdown-left" onclick="toggleMaintainingBalance()"
+                                    style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer;">
+                                    <div class="breakdown-icon breakdown-red" id="icon-maintaining">
+                                        <i class="material-icons" id="maintaining-check">account_balance</i>
+                                    </div>
+                                    <div class="breakdown-info">
+                                        <div class="breakdown-name">MAINTAINING BALANCE</div>
+                                        <div class="breakdown-meta" id="maintaining-meta">BPI Required</div>
+                                    </div>
                                 </div>
                                 <div id="breakdown-maintaining"
-                                    class="breakdown-val breakdown-red-text privacy-mask skeleton"></div>
+                                    class="breakdown-val breakdown-red-text privacy-mask skeleton"
+                                    onclick="promptSetMaintainingBalance()"
+                                    style="cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s;"></div>
                             </div>
 
                             <!-- Credit Card Payment -->
@@ -774,8 +779,10 @@
                                         <div class="breakdown-meta" id="credit-meta">Atome Wallet Link</div>
                                     </div>
                                 </div>
+                                <!-- (2026-07-13) Align breakdown-credit padding with others, prev misaligned -->
                                 <div id="breakdown-credit"
-                                    class="breakdown-val breakdown-yellow-text privacy-mask skeleton"></div>
+                                    class="breakdown-val breakdown-yellow-text privacy-mask skeleton"
+                                    style="padding: 4px 8px; border-radius: 6px; transition: background 0.2s;"></div>
                             </div>
 
                             <!-- Savings -->
@@ -3200,6 +3207,7 @@
                         // DYNAMIC ACCOUNT HUB
                         if (!user.isAnonymous) {
                             // Safe to Spend Config Listener
+                            // (2026-07-13) Full snapshot sync for safe-to-spend config, prev skipped
                             const safeSpendRef = doc(db, "users", user.uid, "config", "safe_to_spend");
                             onSnapshot(safeSpendRef, (docSnap) => {
                                 let data = docSnap.exists() ? docSnap.data() : {
@@ -3217,8 +3225,8 @@
                                 } else if (!data.obligations) {
                                     data.obligations = [];
                                 }
-                                window.safeToSpendConfig = data;
-                                if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(data);
+                                window.safeToSpendConfig = { ...(window.safeToSpendConfig || {}), ...data };
+                                if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
 
                                 // Sync salary targets and rule to localStorage for speed
                                 // Priority: monthly budget profile history -> current profile -> legacy fields
@@ -3359,11 +3367,9 @@
                                 // Adaptive Sync Trigger
                                 triggerAdaptiveSync();
 
-                                // Ensure active card is visible with initial loading guard
-                                window.isInitialLoading = true;
+                                // (2026-07-13) Remove re-entering preloading on card scroll, prev reset true
                                 setTimeout(() => {
                                     scrollToActiveCard(window.currentAccount);
-                                    setTimeout(() => { window.isInitialLoading = false; }, 800);
                                 }, 500);
 
                                 // START BACKGROUND WATCHERS (Keep Triple Progress Bar & Safe To Spend accurate)
@@ -5140,8 +5146,8 @@
                         });
                     }
 
-                    // 3. Calculate Safe to Spend
-                    const mainBalValue = 3000;
+                    // (2026-07-13) Dynamic maintaining balance from config, prev hardcoded 3000
+                    const mainBalValue = config.maintainingAmount || 3000;
 
                     const isExcluded = config.excludeMaintaining === true;
                     const isSavingsExcluded = config.excludeSavings === true;
@@ -5176,11 +5182,7 @@
                     } else {
                         safeAmount = balance - effectiveMainBal - effectiveSavings - effectiveAtome - obligationsTotal + effectiveSalary;
                         if (safeEl) safeEl.style.opacity = '1';
-
-                        // Save stable value to Firestore (throttle updates)
-                        if (window.saveSafeSpendConfig && Math.abs((config.lastSafeAmount || 0) - safeAmount) > 0.1) {
-                            window.saveSafeSpendConfig({ lastSafeAmount: safeAmount });
-                        }
+                        // (2026-07-13) Remove recursive saveSafeSpendConfig in UI, prev write loop
                     }
 
                     if (safeEl) {
@@ -6632,7 +6634,18 @@
                     }
                 };
 
+                // (2026-07-13) Debounce safe-to-spend item toggles, prev double-fired clicks
+                const _stsToggleDebounce = new Map();
+                const _isStsDebounced = (key, cooldown = 400) => {
+                    const now = Date.now();
+                    const last = _stsToggleDebounce.get(key) || 0;
+                    if (now - last < cooldown) return true;
+                    _stsToggleDebounce.set(key, now);
+                    return false;
+                };
+
                 window.toggleMaintainingBalance = async () => {
+                    if (_isStsDebounced('maintaining')) return;
                     const config = window.safeToSpendConfig || {};
                     const isExcluded = config.excludeMaintaining === true;
                     const newState = !isExcluded;
@@ -6654,6 +6667,7 @@
                 };
 
                 window.toggleSavings = async () => {
+                    if (_isStsDebounced('savings')) return;
                     const config = window.safeToSpendConfig || {};
                     const isExcluded = config.excludeSavings === true;
                     const newState = !isExcluded;
@@ -6702,6 +6716,7 @@
                         const diffX = currentX - window.swipeStartX;
 
                         if (diffX > 60) { // Confirmation threshold
+                            window._lastSwipedObligationId = id;
                             item.style.transform = 'translateX(100%)';
                             setTimeout(() => {
                                 window.toggleObligationMode(id);
@@ -6714,6 +6729,7 @@
                 };
 
                 window.toggleObligationMode = async (id) => {
+                    if (_isStsDebounced('mode_' + id)) return;
                     if (navigator.vibrate) navigator.vibrate(50);
                     const config = window.safeToSpendConfig || { obligations: [] };
                     const ob = config.obligations.find(o => o.id === id);
@@ -6726,6 +6742,7 @@
                 };
 
                 window.toggleAtome = async () => {
+                    if (_isStsDebounced('atome')) return;
                     const config = window.safeToSpendConfig || {};
                     const isExcluded = config.excludeAtome === true;
                     const newState = !isExcluded;
@@ -6744,6 +6761,7 @@
                 };
 
                 window.toggleSalary = async () => {
+                    if (_isStsDebounced('salary')) return;
                     const config = window.safeToSpendConfig || {};
                     const isIncluded = config.includeSalary === true;
                     const newState = !isIncluded;
@@ -6761,6 +6779,30 @@
                     showToast(newState ? 'Salary included' : 'Salary excluded');
                 };
 
+                // (2026-07-13) Optimistic edit handlers for safe-to-spend items, prev static
+                window.promptSetMaintainingBalance = async () => {
+                    const currentAmount = window.safeToSpendConfig?.maintainingAmount || 3000;
+                    const res = await showAppDialog({
+                        title: 'Maintaining Balance',
+                        message: 'Enter your required maintaining balance (₱).',
+                        input: true,
+                        value: currentAmount
+                    });
+                    if (res !== null && res !== false && !isNaN(res) && String(res).trim() !== '') {
+                        const val = parseFloat(res);
+                        const uid = auth.currentUser?.uid;
+                        window.safeToSpendConfig = { ...(window.safeToSpendConfig || {}), maintainingAmount: val };
+                        updateSafeSpendUI();
+                        if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
+                        if (uid) {
+                            await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                                maintainingAmount: val
+                            }, { merge: true });
+                        }
+                        showToast('Maintaining balance updated!');
+                    }
+                };
+
                 window.promptSetSalary = async () => {
                     const currentAmount = window.safeToSpendConfig?.salaryAmount || 8800;
                     const res = await showAppDialog({
@@ -6769,12 +6811,17 @@
                         input: true,
                         value: currentAmount
                     });
-                    if (res !== null && res !== false && !isNaN(res)) {
+                    if (res !== null && res !== false && !isNaN(res) && String(res).trim() !== '') {
                         const val = parseFloat(res);
-                        const uid = auth.currentUser.uid;
-                        await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                            salaryAmount: val
-                        }, { merge: true });
+                        const uid = auth.currentUser?.uid;
+                        window.safeToSpendConfig = { ...(window.safeToSpendConfig || {}), salaryAmount: val };
+                        updateSafeSpendUI();
+                        if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
+                        if (uid) {
+                            await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                                salaryAmount: val
+                            }, { merge: true });
+                        }
                         showToast('Salary amount updated!');
                     }
                 };
@@ -6787,20 +6834,24 @@
                         input: true,
                         value: currentAmount
                     });
-                    if (res !== null && res !== false && !isNaN(res)) {
+                    if (res !== null && res !== false && !isNaN(res) && String(res).trim() !== '') {
                         const val = parseFloat(res);
-                        const uid = auth.currentUser.uid;
-                        await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                            ...window.safeToSpendConfig,
-                            savingsAmount: val
-                        }, { merge: true });
+                        const uid = auth.currentUser?.uid;
+                        window.safeToSpendConfig = { ...(window.safeToSpendConfig || {}), savingsAmount: val };
+                        updateSafeSpendUI();
+                        if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
+                        if (uid) {
+                            await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                                savingsAmount: val
+                            }, { merge: true });
+                        }
                         showToast('Savings goal updated!');
                     }
                 };
 
                 window.closeObligationModal = (fromPopState = false) => {
                     const modal = document.getElementById('obligation-modal');
-                    modal.classList.remove('show');
+                    if (modal) modal.classList.remove('show');
                     if (window.NavState && !fromPopState) {
                         window.NavState.popModalState('obligation-modal');
                     }
@@ -6810,16 +6861,27 @@
                     const config = window.safeToSpendConfig || { obligations: [] };
                     const updatedObligations = (config.obligations || []).filter(ob => ob.id !== id);
 
-                    const uid = auth.currentUser.uid;
-                    await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                        ...config,
-                        obligations: updatedObligations
-                    }, { merge: true });
+                    window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+                    updateSafeSpendUI();
+                    if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
+
+                    const uid = auth.currentUser?.uid;
+                    if (uid) {
+                        await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                            obligations: updatedObligations
+                        }, { merge: true });
+                    }
 
                     showToast('Obligation removed');
                 };
 
+                // (2026-07-13) Debounce toggleObligation against double clicks, prev buggy
                 window.toggleObligation = async (id) => {
+                    if (_isStsDebounced('ob_' + id)) return;
+                    if (window._lastSwipedObligationId === id) {
+                        window._lastSwipedObligationId = null;
+                        return;
+                    }
                     const config = window.safeToSpendConfig || { obligations: [] };
                     const updatedObligations = (config.obligations || []).map(ob => {
                         if (ob.id === id) {
@@ -6831,6 +6893,7 @@
                     // Optimistic update
                     window.safeToSpendConfig = { ...config, obligations: updatedObligations };
                     updateSafeSpendUI();
+                    if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
 
                     const uid = auth.currentUser?.uid;
                     if (uid) {
@@ -6852,9 +6915,9 @@
                         value: obligation.amount || 0
                     });
 
-                    if (result !== null && result !== false && !isNaN(result)) {
+                    if (result !== null && result !== false && !isNaN(result) && String(result).trim() !== '') {
                         const newAmount = parseFloat(result);
-                        const updatedObligations = config.obligations.map(ob => {
+                        const updatedObligations = (config.obligations || []).map(ob => {
                             if (ob.id === id) {
                                 return { ...ob, amount: newAmount };
                             }
@@ -6864,6 +6927,7 @@
                         // Optimistic update
                         window.safeToSpendConfig = { ...config, obligations: updatedObligations };
                         updateSafeSpendUI();
+                        if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
 
                         const uid = auth.currentUser?.uid;
                         if (uid) {
@@ -6876,46 +6940,52 @@
                 };
 
                 window.promptSetObligations = () => {
-                    const config = window.safeToSpendConfig || { obligations: [] };
                     const titleInput = document.getElementById('ob-input-title');
                     const amountInput = document.getElementById('ob-input-amount');
                     const saveBtn = document.getElementById('ob-save-btn');
 
-                    titleInput.value = '';
-                    amountInput.value = '';
+                    if (titleInput) titleInput.value = '';
+                    if (amountInput) amountInput.value = '';
 
                     const modal = document.getElementById('obligation-modal');
-                    document.getElementById('ob-type-selector').style.display = 'none'; // Hide type selector for standard obligations
-                    modal.classList.add('show');
-                    if (window.focusFieldWithoutPageJump) {
+                    const typeSel = document.getElementById('ob-type-selector');
+                    if (typeSel) typeSel.style.display = 'none'; // Hide type selector for standard obligations
+                    if (modal) modal.classList.add('show');
+                    if (window.focusFieldWithoutPageJump && titleInput) {
                         window.focusFieldWithoutPageJump(titleInput, 140);
                     }
 
-                    saveBtn.onclick = async () => {
-                        const title = titleInput.value.trim() || 'Obligation';
-                        const amount = parseFloat(amountInput.value) || 0;
+                    if (saveBtn) {
+                        saveBtn.onclick = async () => {
+                            const config = window.safeToSpendConfig || { obligations: [] };
+                            const title = (titleInput?.value || '').trim() || 'Obligation';
+                            const amount = parseFloat(amountInput?.value) || 0;
 
-                        const uid = auth.currentUser.uid;
-                        const newObligation = {
-                            id: Date.now().toString(),
-                            title: title,
-                            amount: amount
+                            const uid = auth.currentUser?.uid;
+                            const newObligation = {
+                                id: Date.now().toString(),
+                                title: title,
+                                amount: amount,
+                                included: true
+                            };
+
+                            const updatedObligations = [...(config.obligations || []), newObligation];
+
+                            // Synchronize local state
+                            window.safeToSpendConfig = { ...config, obligations: updatedObligations };
+                            updateSafeSpendUI();
+                            if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
+
+                            if (uid) {
+                                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
+                                    obligations: updatedObligations
+                                }, { merge: true });
+                            }
+
+                            closeObligationModal();
+                            showToast('Obligation added!');
                         };
-
-                        const updatedObligations = [...(config.obligations || []), newObligation];
-
-                        await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                            ...config,
-                            obligations: updatedObligations
-                        }, { merge: true });
-
-                        // Synchronize local state
-                        window.safeToSpendConfig = { ...config, obligations: updatedObligations };
-                        updateSafeSpendUI();
-
-                        closeObligationModal();
-                        showToast('Obligation added!');
-                    };
+                    }
                 };
 
                 const THEME_PREFERENCE_KEY = 'theme_preference';

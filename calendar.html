@@ -469,8 +469,8 @@
             text-transform: uppercase;
         }
 
-        /* GUEST GATE OVERLAY */
-        .guest-gate-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18, 18, 18, 0.6); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; animation: fadeIn 0.4s ease-out; }
+        /* (2026-07-13) Pure white backdrop, removed blur, prev rgba with blur */
+        .guest-gate-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #ffffff; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .guest-gate-card { background: #fff; padding: 32px 24px; border-radius: 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
         .guest-gate-btn { background: #121212; color: #fff; border: none; padding: 14px 28px; border-radius: 50px; font-weight: 800; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s; width: 100%; justify-content: center; }

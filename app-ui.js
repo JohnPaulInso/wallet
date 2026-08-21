@@ -1068,10 +1068,8 @@ export function updateTripleProgressBar() {
         : true;
     const manualReady = (window.budgetManualTxns !== undefined);
 
-    // Categories are only "Live Ready" if ALL their possible sources are loaded (Atomic Readiness)
-    // Modified 2026-03-27: Consolidate to a single ready flag to prevent partial updates/flickers
-    // Added window.hasBudgetLiveData check to ensure we wait for a LIVE sync, not just cache
-    const isAggregatedReady = window.hasBudgetLiveData && atomeReady && bpiReady && manualReady && currentReady;
+    // (2026-07-13) Unified preload completion and reveal sync, prev partial flip
+    const isAggregatedReady = (window.hasBudgetLiveData && atomeReady && bpiReady && manualReady && currentReady) || (hasLiveTxnSources && window.hasCompletedPreload);
     
     // Safety Fallback: Allow cache rendering if live takes > 2.5s
     if (!window.budgetLoadStartTime) {
@@ -1780,17 +1778,10 @@ export function updateTripleProgressBar() {
             }
         }
 
-        if (window.syncWidgets) window.syncWidgets();
-
-        // --- SAVE TO CACHE ---
-        if (hasLiveTxnSources) {
-            localStorage.setItem(cacheKey, JSON.stringify({
-                needs: needsTotal,
-                wants: wantsTotal,
-                savings: savingsTotal,
-                savingsSpent: savingsSpent,
-                lastUpdate: Date.now()
-            }));
+        // (2026-07-13) Unlock preloader once all accounts loaded into budget, prev 200ms
+        if (window.isInitialLoading && (isAggregatedReady || isTimeoutFallback)) {
+            if (typeof finishInitialPreload === 'function') finishInitialPreload();
+            else if (window.finishInitialPreload) window.finishInitialPreload();
         }
 }
 
@@ -3599,6 +3590,29 @@ export function updateInsightCards(txns) {
         }
         window.thisMonthTxns = [];
     };
+
+    // (2026-07-13) Preloader skeletons for insights and full lock, prev unlocked
+    if (window.isInitialLoading && !window.hasCompletedPreload) {
+        if (dailyAvgEl && !dailyAvgEl.querySelector('.skeleton')) {
+            dailyAvgEl.innerHTML = '<div class="skeleton" style="width: 70px; height: 22px; border-radius: 6px;"></div>';
+        }
+        if (dailyAvgSub && !dailyAvgSub.querySelector('.skeleton')) {
+            dailyAvgSub.innerHTML = '<div class="skeleton" style="width: 90px; height: 12px; border-radius: 4px; margin-top: 4px;"></div>';
+        }
+        if (bigVal && !bigVal.querySelector('.skeleton')) {
+            bigVal.innerHTML = '<div class="skeleton" style="width: 70px; height: 22px; border-radius: 6px;"></div>';
+        }
+        if (bigSub && !bigSub.querySelector('.skeleton')) {
+            bigSub.innerHTML = '<div class="skeleton" style="width: 90px; height: 12px; border-radius: 4px; margin-top: 4px;"></div>';
+        }
+        if (summaryTotal && !summaryTotal.querySelector('.skeleton')) {
+            summaryTotal.innerHTML = '<div class="skeleton" style="width: 60px; height: 16px; border-radius: 4px;"></div>';
+        }
+        if (summaryChange && !summaryChange.querySelector('.skeleton')) {
+            summaryChange.innerHTML = '<div class="skeleton" style="width: 50px; height: 16px; border-radius: 4px;"></div>';
+        }
+        return;
+    }
 
     // (2026-07-13) Fallback to window.allTxns when txns argument is null to prevent overwriting rendered cards with skeletons; prev: null fallback
     const rawTxns = Array.isArray(txns) ? txns.filter(t => t && typeof t === 'object') : (Array.isArray(window.allTxns) ? window.allTxns.filter(t => t && typeof t === 'object') : null);
@@ -5501,17 +5515,47 @@ window.closeAllNotifMenus = () => {
     document.querySelectorAll('.notif-dropdown.active').forEach(d => d.classList.remove('active'));
 };
 
-// INITIAL LOADING STATE: Prevent JS from overwriting skeletons too early
+// (2026-07-13) Preloader skeletons for insights and full lock, prev unlocked
 window.isInitialLoading = true;
+window.hasCompletedPreload = false;
+if (document.body) document.body.classList.add('app-preload-locked');
+
+// (2026-07-13) Atomic preload unlock for all components, prev re-entered loop
+export function finishInitialPreload() {
+    if (window.hasCompletedPreload) return;
+    window.isInitialLoading = false;
+    window.hasCompletedPreload = true;
+    if (document.body) document.body.classList.remove('app-preload-locked');
+    setupFastPath();
+    if (typeof updateInsightCards === 'function') {
+        updateInsightCards(window.allTxns);
+    }
+    if (typeof updateTripleProgressBar === 'function') {
+        updateTripleProgressBar();
+    }
+    if (Array.isArray(window.allTxns)) {
+        rehydrateDashboardFromCurrentTxns();
+        requestAnimationFrame(() => {
+            const summaryTotalEl = document.getElementById('summary-total');
+            if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
+                rehydrateDashboardFromCurrentTxns();
+            }
+        });
+    }
+}
+window.finishInitialPreload = finishInitialPreload;
 
 export function initUI() {
     log('Initializing UI Engine...');
     initKeyboardViewportBridge();
     
-    // Initial Skeleton States
-    updateProfileUI(null);
-    updateBalanceCardsUI(null);
-    updateInsightCards(null);
+    if (!window.hasCompletedPreload) {
+        window.isInitialLoading = true;
+        if (document.body) document.body.classList.add('app-preload-locked');
+        updateProfileUI(null);
+        updateBalanceCardsUI(null);
+        updateInsightCards(null);
+    }
 
     // Notifications Bridging (Internal - initUI still handles some setup)
     updateUnreadCount();
@@ -5563,26 +5607,12 @@ export function initUI() {
         window.populateBudgetMonthFilter();
     }
 
-    // 3. Setup Fast Path rendering if possible (Delayed for skeleton visibility)
+    // Safety fallback timeout to unlock preloader if network is slow
     setTimeout(() => {
-        window.isInitialLoading = false;
-        setupFastPath();
-        
-        // Force refresh UI after loading gate
-        if (window.updateTripleProgressBar) window.updateTripleProgressBar();
-        
-        // IMPORTANT: Trigger dashboard refresh once gate is open
-        if (Array.isArray(window.allTxns)) {
-            console.log('Loading Gate Open: Refreshing Dashboard...');
-            rehydrateDashboardFromCurrentTxns();
-            requestAnimationFrame(() => {
-                const summaryTotalEl = document.getElementById('summary-total');
-                if (summaryTotalEl && summaryTotalEl.querySelector('.skeleton')) {
-                    rehydrateDashboardFromCurrentTxns();
-                }
-            });
+        if (window.isInitialLoading) {
+            finishInitialPreload();
         }
-    }, 200);
+    }, 3000);
 }
 
 function populateMonthFilter() {

@@ -274,8 +274,13 @@ const NavState = {
             return true;
         };
         
+        // (2026-07-13) Lock tab navigation during preloading, prev allowed clicks
         const handleBottomNavTap = (link, index, e) => {
             if (!isSPA || !link.closest('.bottom-nav')) return false;
+            if (window.isInitialLoading || document.body.classList.contains('app-preload-locked')) {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
+                return true;
+            }
             const now = Date.now();
             if (link._lastNavTapAt && (now - link._lastNavTapAt) < 300) {
                 if (e) {
@@ -422,7 +427,8 @@ const NavState = {
             if (document.visibilityState !== 'visible') persistActiveTab();
         });
 
-        const settleToNearestTab = (forcedIndex = null, smooth = true) => {
+        // (2026-07-13) Direct 2-view GPU transform slide, prev scrollLeft with glimpse
+        const settleToNearestTab = (forcedIndex = null, smooth = true, forcedCurrentIndex = null) => {
             if (!viewport) return;
 
             const views = document.querySelectorAll('.view-section');
@@ -439,8 +445,10 @@ const NavState = {
                 ? Math.round(viewport.scrollLeft / viewport.clientWidth)
                 : forcedIndex;
             const targetIndex = Math.max(0, Math.min(rawIndex, maxIndex));
-            const targetX = viewport.clientWidth * targetIndex;
-            const distance = Math.abs(viewport.scrollLeft - targetX);
+            const w = viewport.clientWidth;
+            const currentIndex = typeof forcedCurrentIndex === 'number' && Number.isFinite(forcedCurrentIndex)
+                ? forcedCurrentIndex
+                : (typeof this.lastSPAIndex === 'number' ? this.lastSPAIndex : Math.round(viewport.scrollLeft / w));
 
             if (this.spaAnimationFrame) {
                 window.cancelAnimationFrame(this.spaAnimationFrame);
@@ -451,44 +459,83 @@ const NavState = {
                 this.spaSettleTimer = null;
             }
 
+            const resetViewTransforms = () => {
+                views.forEach((v) => {
+                    v.style.transform = '';
+                    v.style.zIndex = '';
+                    v.style.visibility = '';
+                });
+            };
+
             const restoreSnapType = () => {
                 viewport.style.scrollSnapType = 'x mandatory';
             };
 
             const finalize = () => {
-                viewport.scrollLeft = targetX;
+                resetViewTransforms();
+                viewport.scrollLeft = targetIndex * w;
                 this.spaAnimationFrame = null;
                 this.isProgrammaticSwipe = false;
                 restoreSnapType();
                 this.updateActiveTabUI(targetIndex, true);
             };
 
-            if (distance <= 1) {
+            const distance = Math.abs(viewport.scrollLeft - (targetIndex * w));
+            if (distance <= 1 && currentIndex === targetIndex) {
                 finalize();
                 return;
             }
 
-            if (!smooth) {
+            if (!smooth || currentIndex === targetIndex) {
                 this.isProgrammaticSwipe = false;
                 restoreSnapType();
                 finalize();
                 return;
             }
 
-            const startX = viewport.scrollLeft;
-            const deltaX = targetX - startX;
-            const duration = Math.min(420, Math.max(280, Math.abs(deltaX) * 0.48));
-            const startTime = performance.now();
-            const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+            resetViewTransforms();
+            const fromView = views[currentIndex];
+            const toView = views[targetIndex];
+
+            views.forEach((v, idx) => {
+                if (idx !== currentIndex && idx !== targetIndex) {
+                    v.style.visibility = 'hidden';
+                }
+            });
 
             this.isProgrammaticSwipe = true;
             viewport.style.scrollSnapType = 'none';
+            viewport.scrollLeft = targetIndex * w;
+
+            const isForward = targetIndex > currentIndex;
+            const fromBaseOffset = (targetIndex - currentIndex) * 100;
+            const toBaseOffset = isForward ? 100 : -100;
+            const slideStep = isForward ? -100 : 100;
+
+            if (fromView) {
+                fromView.style.zIndex = '10';
+                fromView.style.transform = `translate3d(${fromBaseOffset}%, 0, 0)`;
+            }
+            if (toView) {
+                toView.style.zIndex = '5';
+                toView.style.transform = `translate3d(${toBaseOffset}%, 0, 0)`;
+            }
+
+            const duration = 240;
+            const startTime = performance.now();
+            const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
             const animateStep = (now) => {
                 const elapsed = now - startTime;
                 const progress = Math.min(1, elapsed / duration);
                 const eased = easeOutCubic(progress);
-                viewport.scrollLeft = startX + (deltaX * eased);
+
+                if (fromView) {
+                    fromView.style.transform = `translate3d(${fromBaseOffset + (slideStep * eased)}%, 0, 0)`;
+                }
+                if (toView) {
+                    toView.style.transform = `translate3d(${toBaseOffset + (slideStep * eased)}%, 0, 0)`;
+                }
 
                 if (progress < 1) {
                     this.spaAnimationFrame = window.requestAnimationFrame(animateStep);
@@ -589,8 +636,11 @@ const NavState = {
             settleToNearestTab(this.lastSPAIndex ?? 0, false);
         }, { passive: true });
 
-        // 3. Global scrollToView function
+        // (2026-07-13) Lock tab navigation during preloading, prev allowed clicks
         window.scrollToView = (index) => {
+            if (window.isInitialLoading || document.body.classList.contains('app-preload-locked')) {
+                return;
+            }
             const views = document.querySelectorAll('.view-section');
             const maxIndex = Math.max(views.length - 1, 0);
             const targetIndex = Math.max(0, Math.min(index, maxIndex));
@@ -598,6 +648,13 @@ const NavState = {
             const currentIndex = typeof this.lastSPAIndex === 'number'
                 ? this.lastSPAIndex
                 : (isDesktop || viewport.clientWidth === 0 ? 0 : Math.round(viewport.scrollLeft / viewport.clientWidth));
+
+            const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+            navItems.forEach((item, i) => {
+                if (i === targetIndex) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+
             const directionClass = isDesktop
                 ? 'tab-fade-desktop'
                 : targetIndex > currentIndex
@@ -607,12 +664,12 @@ const NavState = {
                         : null;
 
             if (targetIndex === currentIndex) {
-                settleToNearestTab(targetIndex, false);
+                settleToNearestTab(targetIndex, false, currentIndex);
                 return;
             }
 
-            this.pendingTabAnimation = directionClass ? { targetIndex, directionClass } : null;
-            settleToNearestTab(targetIndex, !isDesktop);
+            this.pendingTabAnimation = isDesktop && directionClass ? { targetIndex, directionClass } : null;
+            settleToNearestTab(targetIndex, !isDesktop, currentIndex);
 
             if (window.triggerHaptic) {
                 window.triggerHaptic('selection');
@@ -661,20 +718,19 @@ const NavState = {
         if (this.lastSPAIndex === index && !accountsNeedsLateInit) return;
         this.lastSPAIndex = index;
 
-        // [FIX: View Refresh Logic - 2026-04-03]
-        // Trigger data refresh when landing on a tab (swipe or click)
-        if (index === 0 && typeof window.loadData === 'function') {
-            window.loadData();
-        }
-        if (index === 1 && typeof window.renderCalendar === 'function') {
-            window.renderCalendar();
-        }
-        if (index === 2 && window.AccountsView && typeof window.AccountsView.init === 'function') {
-            window.AccountsView.init();
-        }
-        if (index === 3 && typeof window.loadGoals === 'function') {
-            window.loadGoals();
-        }
+        // (2026-07-13) Defer tab refresh to idle timer to eliminate lag, prev sync
+        window.clearTimeout(this._tabRefreshTimer);
+        this._tabRefreshTimer = window.setTimeout(() => {
+            if (index === 0 && typeof window.loadData === 'function' && !window.allTxns) {
+                window.loadData();
+            } else if (index === 1 && typeof window.renderCalendar === 'function') {
+                window.renderCalendar();
+            } else if (index === 2 && window.AccountsView && typeof window.AccountsView.init === 'function') {
+                window.AccountsView.init();
+            } else if (index === 3 && typeof window.loadGoals === 'function') {
+                window.loadGoals();
+            }
+        }, 80);
     },
 
     prepareSPATabRefreshState(index) {

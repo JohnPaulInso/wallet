@@ -453,8 +453,8 @@
             border-color: rgba(255, 255, 255, 0.1) !important;
         }
 
-        /* GUEST GATE OVERLAY */
-        .guest-gate-overlay { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; bottom: 0; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
+        /* (2026-07-13) Pure white backdrop, removed blur, prev rgba with blur */
+        .guest-gate-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; background: #ffffff; z-index: 5000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
         .guest-gate-card { background: #fff; padding: 40px 32px; border-radius: 40px; box-shadow: 0 30px 60px rgba(0,0,0,0.12); width: 100%; max-width: 360px; display: flex; flex-direction: column; align-items: center; gap: 24px; border: 1px solid #f8fafc; }
         .guest-gate-btn { background: #1e293b; color: #fff; border: none; padding: 16px 32px; border-radius: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center; font-size: 16px; }
         .guest-gate-btn:active { transform: scale(0.96); }

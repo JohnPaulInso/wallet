@@ -282,10 +282,13 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.bpi-scan-clear-btn:hover {
-    background: rgba(239, 68, 68, 0.9);
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
+/* (2026-07-13) Wrap clear btn hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .bpi-scan-clear-btn:hover {
+        background: rgba(239, 68, 68, 0.9);
+        border-color: rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+    }
 }
 
 .bpi-scan-clear-btn:active {
@@ -771,9 +774,15 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
 }
 
-.bpi-txn-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+/* (2026-07-13) Wrap card hover in media, add active; prev: direct :hover */
+@media (hover: hover) {
+    .bpi-txn-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    }
+}
+.bpi-txn-card:active {
+    transform: translateY(0);
 }
 
 /* Synced cards: Soft green background with standard thin green border [FIXED: 2026-06-28] */
@@ -1059,10 +1068,13 @@
     transition: all 0.2s ease;
 }
 
-.bpi-txn-status.undoable:hover {
-    background: #fef2f2;
-    color: #dc2626;
-    transform: scale(1.05);
+/* (2026-07-13) Wrap undoable hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .bpi-txn-status.undoable:hover {
+        background: #fef2f2;
+        color: #dc2626;
+        transform: scale(1.05);
+    }
 }
 
 .bpi-txn-status.undoable:active {
@@ -1097,20 +1109,10 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.bpi-txn-btn:hover {
-    transform: scale(1.08);
-}
-
 /* Accept transaction button */
 .bpi-txn-btn-check {
     background: #d2f4ea;
     color: #0f9d58;
-}
-
-.bpi-txn-btn-check:hover {
-    background: #0f9d58;
-    color: #ffffff;
-    box-shadow: 0 4px 8px rgba(15, 157, 88, 0.25);
 }
 
 .bpi-txn-btn-check:active {
@@ -1143,14 +1145,27 @@
     color: #c5221f;
 }
 
-.bpi-txn-btn-x:hover {
-    background: #c5221f;
-    color: #ffffff;
-    box-shadow: 0 4px 8px rgba(197, 34, 31, 0.25);
-}
-
 .bpi-txn-btn-x:active {
     transform: scale(0.92);
+}
+
+/* (2026-07-13) Wrap button hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .bpi-txn-btn:hover {
+        transform: scale(1.08);
+    }
+
+    .bpi-txn-btn-check:hover {
+        background: #0f9d58;
+        color: #ffffff;
+        box-shadow: 0 4px 8px rgba(15, 157, 88, 0.25);
+    }
+
+    .bpi-txn-btn-x:hover {
+        background: #c5221f;
+        color: #ffffff;
+        box-shadow: 0 4px 8px rgba(197, 34, 31, 0.25);
+    }
 }
 
 .bpi-txn-btn .material-icons {

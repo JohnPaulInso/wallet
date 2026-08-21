@@ -72,9 +72,12 @@
     color: #ffffff;
 }
 
-.analytics-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: scale(1.05);
+/* (2026-07-13) Wrap hover in media query; prev: direct :hover */
+@media (hover: hover) {
+    .analytics-close-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        transform: scale(1.05);
+    }
 }
 
 .analytics-close-btn:active {
@@ -145,9 +148,15 @@
     transition: all 0.2s ease;
 }
 
-.analytics-line-toggles label:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.9);
+/* (2026-07-13) Wrap hover and add active; prev: direct :hover */
+@media (hover: hover) {
+    .analytics-line-toggles label:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+.analytics-line-toggles label:active {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 .analytics-line-toggles input[type="checkbox"]:checked + span {
@@ -343,8 +352,11 @@
     border-radius: 5px;
 }
 
-.analytics-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+/* (2026-07-13) Wrap scrollbar hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .analytics-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
 }
 
 /* Accessibility - Focus Indicators */
@@ -363,9 +375,12 @@
 }
 
 /* Subtle Glow Effects */
-.analytics-line-section:hover,
-.analytics-donut-section:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+/* (2026-07-13) Wrap section glow in media; prev: direct :hover */
+@media (hover: hover) {
+    .analytics-line-section:hover,
+    .analytics-donut-section:hover {
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
 }
 

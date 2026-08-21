@@ -3,11 +3,15 @@
 // PERF: Optimized shimmer with will-change, GPU layers
 // Privacy: Shows only ****** when hidden
 // Shimmer: 10-20s interval, smooth synchronized dual-layer
-const CACHE_NAME = 'smartwallet-v7.18';
+// (2026-07-13) Bump cache to v7.19 & add local icon assets; prev: v7.18
+const CACHE_NAME = 'smartwallet-v7.19';
 const ASSETS = [
     './',
     './index.html',
     './index.css',
+    './material-icons.css',
+    './material-icons.woff2',
+    './material-icons.ttf',
     './index.js',
     './app-data.js',
     './app-ui.js',

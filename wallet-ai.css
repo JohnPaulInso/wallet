@@ -23,10 +23,20 @@
     flex-shrink: 0;
 }
 
-#smartwallet-ai-btn:hover {
-    background: rgba(0, 0, 0, 0.04);
-    color: #475569;
-    transform: scale(1.05);
+/* (2026-07-13) Wrap AI btn hover in media; prev: direct :hover */
+@media (hover: hover) {
+    #smartwallet-ai-btn:hover {
+        background: rgba(0, 0, 0, 0.04);
+        color: #475569;
+        transform: scale(1.05);
+    }
+
+    #smartwallet-ai-btn:hover .material-icons {
+        color: #475569;
+    }
+
+    body.dark-mode #smartwallet-ai-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
 }
 
 #smartwallet-ai-btn:active {
@@ -40,15 +50,9 @@
     color: #64748b;
 }
 
-#smartwallet-ai-btn:hover .material-icons {
-    color: #475569;
-}
-
 /* Dark mode support */
 body.dark-mode #smartwallet-ai-btn { color: #94a3b8; }
-body.dark-mode #smartwallet-ai-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
 body.dark-mode #smartwallet-ai-btn .material-icons { color: #94a3b8; }
-body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
 
 /* ---------- Fullscreen Overlay Backdrop ---------- */
 #smartwallet-ai-overlay {
@@ -130,9 +134,17 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     transition: background 0.2s, color 0.2s;
 }
 
-.sidebar-close-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #fff;
+/* (2026-07-13) Wrap sidebar close hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .sidebar-close-btn:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+    }
+}
+
+.sidebar-close-btn:active {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(0.95);
 }
 
 .sidebar-close-btn .material-icons {
@@ -158,10 +170,17 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     transition: background 0.2s, border-color 0.2s, transform 0.1s;
 }
 
-.sidebar-action-btn:hover {
-    background: rgba(34, 197, 94, 0.15);
-    border-color: rgba(34, 197, 94, 0.7);
-    transform: scale(1.02);
+/* (2026-07-13) Wrap sidebar action hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .sidebar-action-btn:hover {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.7);
+        transform: scale(1.02);
+    }
+}
+
+.sidebar-action-btn:active {
+    transform: scale(0.98);
 }
 
 .sidebar-list-title {
@@ -212,9 +231,16 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     flex-shrink: 0;
 }
 
-.sidebar-item:hover {
-    background: rgba(255, 255, 255, 0.03);
-    color: #fff;
+/* (2026-07-13) Wrap sidebar item hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .sidebar-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+        color: #fff;
+    }
+}
+
+.sidebar-item:active {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-item.active {
@@ -272,9 +298,16 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.ai-header-icon:hover {
-    transform: scale(1.08);
-    box-shadow: 0 4px 18px rgba(34,197,94,0.5);
+/* (2026-07-13) Wrap header icon hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .ai-header-icon:hover {
+        transform: scale(1.08);
+        box-shadow: 0 4px 18px rgba(34,197,94,0.5);
+    }
+}
+
+.ai-header-icon:active {
+    transform: scale(0.95);
 }
 
 .ai-header-icon .material-icons { font-size: 22px; }
@@ -329,8 +362,15 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     flex-shrink: 0;
 }
 
-#ai-history-menu-btn:hover {
-    background: rgba(255,255,255,0.1);
+/* (2026-07-13) Wrap history menu hover in media; prev: direct :hover */
+@media (hover: hover) {
+    #ai-history-menu-btn:hover {
+        background: rgba(255,255,255,0.1);
+    }
+}
+
+#ai-history-menu-btn:active {
+    transform: scale(0.95);
 }
 
 #ai-history-menu-btn .material-icons { font-size: 20px; }
@@ -351,10 +391,17 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     flex-shrink: 0;
 }
 
-#ai-new-chat-btn:hover {
-    background: rgba(255,255,255,0.08);
-    color: #fff;
-    transform: scale(1.08);
+/* (2026-07-13) Wrap new chat hover in media; prev: direct :hover */
+@media (hover: hover) {
+    #ai-new-chat-btn:hover {
+        background: rgba(255,255,255,0.08);
+        color: #fff;
+        transform: scale(1.08);
+    }
+}
+
+#ai-new-chat-btn:active {
+    transform: scale(0.95);
 }
 
 #ai-new-chat-btn .material-icons { font-size: 20px; }
@@ -375,9 +422,16 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     flex-shrink: 0;
 }
 
-#ai-close-btn:hover {
-    background: rgba(255,255,255,0.1);
-    transform: scale(1.08);
+/* (2026-07-13) Wrap close btn hover in media; prev: direct :hover */
+@media (hover: hover) {
+    #ai-close-btn:hover {
+        background: rgba(255,255,255,0.1);
+        transform: scale(1.08);
+    }
+}
+
+#ai-close-btn:active {
+    transform: scale(0.95);
 }
 
 #ai-close-btn .material-icons { font-size: 20px; }
@@ -400,9 +454,16 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     transition: background 0.2s, transform 0.1s;
 }
 
-.ai-show-older-btn:hover {
-    background: rgba(34,197,94,0.16);
-    transform: scale(1.02);
+/* (2026-07-13) Wrap show older hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .ai-show-older-btn:hover {
+        background: rgba(34,197,94,0.16);
+        transform: scale(1.02);
+    }
+}
+
+.ai-show-older-btn:active {
+    transform: scale(0.98);
 }
 
 .ai-msg-hidden {
@@ -650,11 +711,14 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     font-family: inherit;
 }
 
-.ai-chip:hover {
-    background: rgba(34, 197, 94, 0.18);
-    border-color: rgba(34, 197, 94, 0.6);
-    color: #d1fae5;
-    transform: translateY(-1px);
+/* (2026-07-13) Wrap ai chip hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .ai-chip:hover {
+        background: rgba(34, 197, 94, 0.18);
+        border-color: rgba(34, 197, 94, 0.6);
+        color: #d1fae5;
+        transform: translateY(-1px);
+    }
 }
 
 .ai-chip:active { transform: translateY(0); }
@@ -759,9 +823,12 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     box-shadow: 0 4px 14px rgba(34,197,94,0.35);
 }
 
-#ai-send-btn:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 20px rgba(34,197,94,0.5);
+/* (2026-07-13) Wrap send btn hover in media; prev: direct :hover */
+@media (hover: hover) {
+    #ai-send-btn:hover {
+        transform: scale(1.08);
+        box-shadow: 0 6px 20px rgba(34,197,94,0.5);
+    }
 }
 
 #ai-send-btn:active { transform: scale(0.95); }
@@ -961,9 +1028,16 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     transition: background 0.2s, transform 0.2s;
 }
 
-.ai-summary-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.1);
+/* (2026-07-13) Wrap summary close hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .ai-summary-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: scale(1.1);
+    }
+}
+
+.ai-summary-close:active {
+    transform: scale(0.95);
 }
 
 .ai-summary-modal-body {
@@ -1066,20 +1140,10 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     color: rgba(167, 243, 208, 0.8);
 }
 
-.ai-summary-cancel:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateY(-1px);
-}
-
 .ai-summary-generate {
     background: linear-gradient(135deg, #16a34a, #059669);
     color: #fff;
     box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
-}
-
-.ai-summary-generate:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
 }
 
 .ai-summary-generate .material-icons {
@@ -1096,10 +1160,35 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     align-items: center;
 }
 
-.ai-chip-summary:hover {
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.28), rgba(16, 185, 129, 0.22));
-    border-color: rgba(34, 197, 94, 0.8);
-    color: #d1fae5;
+/* (2026-07-13) Wrap summary buttons hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .ai-summary-cancel:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .ai-summary-generate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+    }
+
+    .ai-chip-summary:hover {
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.28), rgba(16, 185, 129, 0.22));
+        border-color: rgba(34, 197, 94, 0.8);
+        color: #d1fae5;
+    }
+}
+
+.ai-summary-cancel:active {
+    transform: translateY(0);
+}
+
+.ai-summary-generate:active {
+    transform: translateY(0);
+}
+
+.ai-chip-summary:active {
+    transform: scale(0.98);
 }
 
 /* ---------- Claude-Style Button Options (Conversational Flow) ---------- */
@@ -1125,10 +1214,13 @@ body.dark-mode #smartwallet-ai-btn:hover .material-icons { color: #fff; }
     margin-top: 4px !important;
 }
 
-.ai-back-button:hover {
-    background: rgba(239, 68, 68, 0.15) !important;
-    border-color: rgba(239, 68, 68, 0.5) !important;
-    color: #fee2e2 !important;
+/* (2026-07-13) Wrap back button hover in media; prev: direct :hover */
+@media (hover: hover) {
+    .ai-back-button:hover {
+        background: rgba(239, 68, 68, 0.15) !important;
+        border-color: rgba(239, 68, 68, 0.5) !important;
+        color: #fee2e2 !important;
+    }
 }
 
 @keyframes ai-fade-in {

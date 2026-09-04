@@ -3341,14 +3341,59 @@ i.material-icons-outlined {
             transform: scale(1.15);
         }
         
-        .ios-action-item { padding: 10px 14px; font-size: 11.05px; font-weight: 600; color: #1e293b; display: flex; align-items: center; gap: 8px; cursor: pointer; border-radius: 10px; transition: background 0.2s; -webkit-user-select: none; user-select: none; }
-        body.dark-mode .ios-action-item { color: #ffffff; }
-/* (2026-07-13) Wrap ios action item hover in media; prev: direct :hover */
-        @media (hover: hover) {
-            .ios-action-item:hover { background: rgba(0,0,0,0.05); }
-            body.dark-mode .ios-action-item:hover { background: rgba(255,255,255,0.1); }
+        .ios-action-item { 
+            padding: 10px 14px; 
+            font-size: 11.05px; 
+            font-weight: 600; 
+            color: #1e293b; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            cursor: pointer; 
+            border-radius: 10px; 
+            transition: background 0.15s ease, transform 0.12s ease; 
+            -webkit-user-select: none; 
+            user-select: none; 
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
-        .ios-action-item i { font-size: 15.3px; color: #3b82f6; }
+        body.dark-mode .ios-action-item { color: #ffffff; }
+/* (2026-07-13) Touch & hover response on action menu items; prev: hover only */
+        .ios-action-item:hover,
+        .ios-action-item:active,
+        .ios-action-item.touch-active { 
+            background: #f1f5f9; 
+            transform: scale(0.98); 
+        }
+        body.dark-mode .ios-action-item:hover,
+        body.dark-mode .ios-action-item:active,
+        body.dark-mode .ios-action-item.touch-active { 
+            background: rgba(255, 255, 255, 0.15); 
+            transform: scale(0.98); 
+        }
+        .ios-action-item.danger:hover,
+        .ios-action-item.danger:active,
+        .ios-action-item.danger.touch-active {
+            background: rgba(239, 68, 68, 0.12);
+        }
+        body.dark-mode .ios-action-item.danger:hover,
+        body.dark-mode .ios-action-item.danger:active,
+        body.dark-mode .ios-action-item.danger.touch-active {
+            background: rgba(239, 68, 68, 0.22);
+        }
+        .ios-action-item.warning:hover,
+        .ios-action-item.warning:active,
+        .ios-action-item.warning.touch-active {
+            background: rgba(245, 158, 11, 0.12);
+        }
+        body.dark-mode .ios-action-item.warning:hover,
+        body.dark-mode .ios-action-item.warning:active,
+        body.dark-mode .ios-action-item.warning.touch-active {
+            background: rgba(245, 158, 11, 0.22);
+        }
+        .ios-action-item i { font-size: 15.3px; color: #3b82f6; transition: transform 0.12s ease; }
+        .ios-action-item:active i,
+        .ios-action-item.touch-active i { transform: scale(1.08); }
         body.dark-mode .ios-action-item i { color: #60a5fa; }
         .ios-action-item.danger { color: #ef4444; }
         .ios-action-item.danger i { color: #ef4444; }

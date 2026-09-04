@@ -11833,6 +11833,20 @@ Be direct, practical, and helpful.`;
                     menu.style.top = `${topPos}px`;
                     menu.style.right = 'auto';
                     menu.style.transform = 'none';
+
+                    // (2026-07-13) Add touch response listener to ios-menu; prev: none
+                    if (!menu._hasTouchResponse) {
+                        menu._hasTouchResponse = true;
+                        menu.addEventListener('touchstart', (e) => {
+                            const actItem = e.target.closest('.ios-action-item');
+                            if (actItem) actItem.classList.add('touch-active');
+                        }, { passive: true });
+                        const clearTouch = () => {
+                            menu.querySelectorAll('.ios-action-item.touch-active').forEach(el => el.classList.remove('touch-active'));
+                        };
+                        menu.addEventListener('touchend', clearTouch, { passive: true });
+                        menu.addEventListener('touchcancel', clearTouch, { passive: true });
+                    }
                 }
 
                 window.closeIOSMenu = (fromPopState = false) => {

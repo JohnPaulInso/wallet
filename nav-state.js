@@ -1060,7 +1060,16 @@ const NavState = {
 
         // Standard Web History Listener
         window.addEventListener('popstate', (event) => {
-            // (2026-07-13) Auto-save edited txn modal on popstate; prev: discard on close
+            // (2026-07-13) Prioritize modalStack pop before DOM check; prev: blocked stack
+            if (this.modalStack.length > 0) {
+                const modal = this.modalStack.pop();
+                if (modal && typeof modal.closeFn === 'function') {
+                    console.log(` Back button: Closing modal ${modal.id}`);
+                    modal.closeFn();
+                    return;
+                }
+            }
+
             const manualModal = document.getElementById('manual-txn-modal');
             const isManualOpen = manualModal && (manualModal.classList.contains('show') || manualModal.style.display === 'flex' || manualModal.style.display === 'block');
             if (isManualOpen) {
@@ -1071,15 +1080,6 @@ const NavState = {
                 }
                 if (window.closeModals) {
                     window.closeModals('manual-txn-modal', true);
-                    return;
-                }
-            }
-
-            if (this.modalStack.length > 0) {
-                const modal = this.modalStack.pop();
-                if (modal && typeof modal.closeFn === 'function') {
-                    console.log(` Back button: Closing modal ${modal.id}`);
-                    modal.closeFn();
                     return;
                 }
             }

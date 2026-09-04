@@ -1068,8 +1068,14 @@ export function updateTripleProgressBar() {
         : true;
     const manualReady = (window.budgetManualTxns !== undefined);
 
-    // (2026-07-13) Unified preload completion and reveal sync, prev partial flip
-    const isAggregatedReady = (window.hasBudgetLiveData && atomeReady && bpiReady && manualReady && currentReady) || (hasLiveTxnSources && window.hasCompletedPreload);
+    const hasLiveTxnSources = Array.isArray(window.allTxns)
+        || (window.walletTxns && typeof window.walletTxns === 'object' && Object.values(window.walletTxns).some((txns) => Array.isArray(txns)))
+        || Array.isArray(window.budgetManualTxns);
+
+    // (2026-07-13) Fix budget bars TDZ and unlock reveal; prev: ref before init
+    const isAggregatedReady = (window.hasBudgetLiveData && atomeReady && bpiReady && manualReady && currentReady)
+        || (hasLiveTxnSources && (window.hasCompletedPreload || !window.isInitialLoading || window.hasBudgetLiveData))
+        || (hasLiveTxnSources && atomeReady && bpiReady && manualReady && currentReady);
     
     // Safety Fallback: Allow cache rendering if live takes > 2.5s
     if (!window.budgetLoadStartTime) {
@@ -1084,9 +1090,6 @@ export function updateTripleProgressBar() {
     const budgetProfile = typeof window.getMonthlyBudgetProfile === 'function'
         ? window.getMonthlyBudgetProfile(window.safeToSpendConfig || {}, monthContext.monthKey)
         : null;
-    const hasLiveTxnSources = Array.isArray(window.allTxns)
-        || (window.walletTxns && typeof window.walletTxns === 'object' && Object.values(window.walletTxns).some((txns) => Array.isArray(txns)))
-        || Array.isArray(window.budgetManualTxns);
 
     if (preserveVisuals && !hasLiveTxnSources && !isTimeoutFallback) {
         widget.style.display = 'block';

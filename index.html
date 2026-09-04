@@ -3223,6 +3223,7 @@
                                         title: data.obligationsTitle || 'Upcoming Bills',
                                         amount: data.obligationsAmount
                                     }];
+                                }
                                 // (2026-07-13) Preserve cached obligations and toggles; prev: wiped to empty
                                 if (!data.obligations || data.obligations.length === 0) {
                                     if (window.safeToSpendConfig?.obligations?.length > 0) {
@@ -11959,6 +11960,40 @@ Be direct, practical, and helpful.`;
                         case 'classify':
                             updateTransactionBudgetCategory(txnId, args[0]);
                             break;
+                    }
+                };
+
+                // (2026-07-13) Toggle reimbursement paid/unpaid status; prev: none
+                window.toggleReimbursementPaid = async (id, isCurrentlyPaid) => {
+                    const idx = (window.allTxns || []).findIndex(t => String(t.id) === String(id));
+                    const txn = idx > -1 ? window.allTxns[idx] : null;
+                    const origAmt = txn ? Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : (txn.amount || 0))) : 0;
+                    const newPaid = !isCurrentlyPaid;
+                    const newAmt = newPaid ? origAmt : 0;
+
+                    if (idx > -1) {
+                        window.allTxns[idx].reimbursementAmount = newAmt;
+                        window.allTxns[idx].reimbursementPaid = newPaid;
+                        if (window.renderHistory) renderHistory(window.allTxns);
+                        if (window.updateTripleProgressBar) updateTripleProgressBar();
+                    }
+
+                    try {
+                        if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
+                        const col = getCollectionName(window.currentAccount);
+                        await updateDoc(doc(db, "users", uid, col, id), {
+                            reimbursementAmount: newAmt,
+                            reimbursementPaid: newPaid
+                        });
+                        showToast(newPaid ? 'Marked as Paid' : 'Marked as Unpaid');
+                    } catch (e) {
+                        console.error('Toggle paid failed', e);
+                        if (idx > -1) {
+                            window.allTxns[idx].reimbursementAmount = isCurrentlyPaid ? origAmt : 0;
+                            window.allTxns[idx].reimbursementPaid = isCurrentlyPaid;
+                            if (window.renderHistory) renderHistory(window.allTxns);
+                        }
                     }
                 };
 

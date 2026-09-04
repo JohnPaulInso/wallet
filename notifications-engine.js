@@ -695,10 +695,10 @@ export const NotificationsEngine = {
             for (const change of snapshot.docChanges()) {
                 if (change.type !== "added") continue;
                 const data = change.doc.data() || {};
-                const createdAtMs = this.getCreatedAtMillis(data) || Date.now();
-                // (2026-07-13) Ignore old docs and deliver only real-time events; prev: re-popped all docs
-                if (Date.now() - createdAtMs > 60000) {
-                    this.markDeliveredLocally(uid, data.type, change.doc.id, createdAtMs, data.meta || null);
+                // (2026-07-13) Ignore old docs to prevent login spam; prev: Date.now() fallback
+                const createdAtMs = this.getCreatedAtMillis(data);
+                if (!createdAtMs || Date.now() - createdAtMs > 60000) {
+                    this.markDeliveredLocally(uid, data.type, change.doc.id, createdAtMs || Date.now(), data.meta || null);
                     continue;
                 }
                 if (this.wasDeliveredLocally(uid, data.type, change.doc.id, data.meta || null)) continue;
@@ -745,10 +745,8 @@ export const NotificationsEngine = {
                         const thresholdPct = item.pct >= 100 ? 100 : item.pct >= 90 ? 90 : item.pct >= 70 ? 70 : 0;
                         if (!thresholdPct) continue;
                         const localState = this.getBudgetThresholdState(uid, item.key, monthKey);
+                        // (2026-07-13) Keep threshold state while loading; prev: reset to 0 on load
                         if (!snapshotMatchesCurrentMonth) {
-                            if (localState > 0) {
-                                this.setBudgetThresholdState(uid, item.key, monthKey, 0);
-                            }
                             continue;
                         }
 

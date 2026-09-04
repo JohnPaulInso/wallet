@@ -1178,7 +1178,11 @@ export function updateTripleProgressBar() {
     const salaryTarget = parseFloat(
         budgetProfile?.budgetSalaryTarget ?? localStorage.getItem('monthly_salary_target') ?? '17600'
     );
-    const budgetRule = budgetProfile?.budgetRule || localStorage.getItem('budget_rule') || '50/30/20';
+    // (2026-07-13) Preserve custom budget rule and weights; prev: default fallback
+    const savedRule = localStorage.getItem('budget_rule');
+    const budgetRule = (savedRule === 'custom' || budgetProfile?.budgetRule === 'custom')
+        ? 'custom'
+        : (budgetProfile?.budgetRule || savedRule || '50/30/20');
 
     let weights = { needs: 0.50, wants: 0.30, savings: 0.20 };
     if (budgetRule === '40/30/30') {
@@ -4319,7 +4323,8 @@ export async function forceBudgetNotificationCheck() {
 
     const snapshot = window.lastBudgetNotificationSnapshot;
     const uid = snapshot?.uid || window.auth?.currentUser?.uid || localStorage.getItem('wallet_last_uid');
-    if (!isCurrentBudgetNotificationSnapshot(snapshot) || !uid || !window.NotificationsEngine) return;
+    // (2026-07-13) Suppress notifications while loading or over 100%; prev: fired
+    if (!isCurrentBudgetNotificationSnapshot(snapshot) || !uid || !window.NotificationsEngine || window.isInitialLoading || !window.hasBudgetLiveData) return;
 
     seedBudgetThresholdNotificationsFromSnapshot();
 
@@ -5062,8 +5067,9 @@ async function persistBudgetProgress(uid, monthKey, filterVal, snapshot) {
     }
 }
 
+// (2026-07-13) Suppress notifications while loading or over 100%; prev: fired
 async function syncBudgetThresholdTransitionNotifications(uid, snapshot) {
-    if (!snapshot || snapshot.filterVal !== 'this_month' || !snapshot.liveReady) return;
+    if (!snapshot || snapshot.filterVal !== 'this_month' || !snapshot.liveReady || window.isInitialLoading || !window.hasBudgetLiveData) return;
 
     const monthKey = String(snapshot.monthKey || getBudgetProgressMonthKey());
     if (monthKey !== getBudgetProgressMonthKey()) return;

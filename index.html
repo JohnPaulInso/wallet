@@ -3223,8 +3223,13 @@
                                         title: data.obligationsTitle || 'Upcoming Bills',
                                         amount: data.obligationsAmount
                                     }];
-                                } else if (!data.obligations) {
-                                    data.obligations = [];
+                                // (2026-07-13) Preserve cached obligations and toggles; prev: wiped to empty
+                                if (!data.obligations || data.obligations.length === 0) {
+                                    if (window.safeToSpendConfig?.obligations?.length > 0) {
+                                        data.obligations = window.safeToSpendConfig.obligations;
+                                    } else {
+                                        data.obligations = [];
+                                    }
                                 }
                                 window.safeToSpendConfig = { ...(window.safeToSpendConfig || {}), ...data };
                                 if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
@@ -4801,6 +4806,13 @@
                             seenIds.add(t.id);
                             return true;
                         });
+                        // (2026-07-13) Clear BPI scanner image on account changes; prev: kept image
+                        if (window.__bpiInitialLoaded && snap.docChanges().length > 0) {
+                            if (window.BPIScanner && typeof window.BPIScanner.clearImage === 'function') {
+                                window.BPIScanner.clearImage();
+                            }
+                        }
+                        window.__bpiInitialLoaded = true;
                         if (!window.walletTxns) window.walletTxns = {};
                         window.walletTxns.bpi = txns;
                         window.hasBudgetLiveData = true;
@@ -4940,22 +4952,29 @@
                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                 };
 
+                // (2026-07-13) Preserve custom budget rule and weights; prev: default fallback
                 const normalizeBudgetProfile = (profile = {}) => {
-                    const budgetRule = profile.budgetRule || '50/30/20';
+                    const savedRule = localStorage.getItem('budget_rule');
+                    const budgetRule = (profile.budgetRule && profile.budgetRule !== 'default')
+                        ? profile.budgetRule
+                        : (savedRule || '50/30/20');
                     const weights = profile.customRuleWeights || profile.ruleWeights || null;
                     const defaultWeights = BUDGET_RULE_DEFAULTS[budgetRule] || BUDGET_RULE_DEFAULTS['50/30/20'];
+                    const customNeeds = Number(weights?.needs ?? profile.custom_rule_needs ?? localStorage.getItem('custom_rule_needs') ?? 50);
+                    const customWants = Number(weights?.wants ?? profile.custom_rule_wants ?? localStorage.getItem('custom_rule_wants') ?? 30);
+                    const customSavings = Number(weights?.savings ?? profile.custom_rule_savings ?? localStorage.getItem('custom_rule_savings') ?? 20);
                     return {
                         budgetSalaryTarget: Number(profile.budgetSalaryTarget ?? profile.salaryAmount ?? profile.monthly_salary_target ?? localStorage.getItem('monthly_salary_target') ?? 17600),
                         budgetRule,
                         customRuleWeights: budgetRule === 'custom' ? {
-                            needs: Number(weights?.needs ?? profile.custom_rule_needs ?? 50),
-                            wants: Number(weights?.wants ?? profile.custom_rule_wants ?? 30),
-                            savings: Number(weights?.savings ?? profile.custom_rule_savings ?? 20)
+                            needs: customNeeds,
+                            wants: customWants,
+                            savings: customSavings
                         } : null,
                         ruleWeights: budgetRule === 'custom' ? {
-                            needs: Number(weights?.needs ?? profile.custom_rule_needs ?? 50) / 100,
-                            wants: Number(weights?.wants ?? profile.custom_rule_wants ?? 30) / 100,
-                            savings: Number(weights?.savings ?? profile.custom_rule_savings ?? 20) / 100
+                            needs: customNeeds / 100,
+                            wants: customWants / 100,
+                            savings: customSavings / 100
                         } : {
                             needs: defaultWeights.needs / 100,
                             wants: defaultWeights.wants / 100,
@@ -4990,18 +5009,15 @@
                     });
                 };
 
+                // (2026-07-13) Keep custom rule weights in localStorage; prev: removed
                 window.applyBudgetProfileToLocalStorage = (profile = null) => {
                     const nextProfile = normalizeBudgetProfile(profile || window.getMonthlyBudgetProfile?.());
                     localStorage.setItem('monthly_salary_target', String(nextProfile.budgetSalaryTarget || 17600));
                     localStorage.setItem('budget_rule', nextProfile.budgetRule || '50/30/20');
-                    if (nextProfile.budgetRule === 'custom' && nextProfile.customRuleWeights) {
+                    if (nextProfile.customRuleWeights) {
                         localStorage.setItem('custom_rule_needs', nextProfile.customRuleWeights.needs);
                         localStorage.setItem('custom_rule_wants', nextProfile.customRuleWeights.wants);
                         localStorage.setItem('custom_rule_savings', nextProfile.customRuleWeights.savings);
-                    } else {
-                        localStorage.removeItem('custom_rule_needs');
-                        localStorage.removeItem('custom_rule_wants');
-                        localStorage.removeItem('custom_rule_savings');
                     }
                     return nextProfile;
                 };
@@ -6221,6 +6237,29 @@
                     if (window.updateBudgetModalSwipe) window.updateBudgetModalSwipe();
                 };
 
+                // (2026-07-13) Auto-format merchant uppercase & note title case; prev: none
+                window.formatMerchantInput = (el) => {
+                    if (!el || typeof el.value !== 'string') return;
+                    const start = el.selectionStart;
+                    const end = el.selectionEnd;
+                    const upper = el.value.toUpperCase();
+                    if (el.value !== upper) {
+                        el.value = upper;
+                        if (start !== null && end !== null) el.setSelectionRange(start, end);
+                    }
+                };
+
+                window.formatNoteInput = (el) => {
+                    if (!el || typeof el.value !== 'string') return;
+                    const start = el.selectionStart;
+                    const end = el.selectionEnd;
+                    const title = el.value.replace(/(?:^|[^\w'])([a-z])/g, m => m.toUpperCase());
+                    if (el.value !== title) {
+                        el.value = title;
+                        if (start !== null && end !== null) el.setSelectionRange(start, end);
+                    }
+                };
+
                 window.openBudgetManualEntryModal = (type) => {
                     window.editingBudgetManualId = null;
                     document.getElementById('budget-manual-title').innerText = 'Add Cash Log';
@@ -6253,7 +6292,8 @@
                     window.editingBudgetManualId = t.id;
                     document.getElementById('budget-manual-title').innerText = 'Edit Cash Log';
                     document.getElementById('budget-manual-amt').value = t.manualAmount || t.amount;
-                    document.getElementById('budget-manual-name').value = t.merchant || t.name;
+                    // (2026-07-13) Format merchant uppercase on open; prev: raw value
+                    document.getElementById('budget-manual-name').value = (t.merchant || t.name || '').toUpperCase();
 
                     const display = getMerchantDisplay(t.name || t.merchant, t);
                     window.selectedBudgetManualCat = display.category;
@@ -6372,7 +6412,8 @@
                 window.saveBudgetManualTxn = async () => {
                     const amtVal = document.getElementById('budget-manual-amt').value;
                     const amt = parseFloat(amtVal);
-                    const name = document.getElementById('budget-manual-name').value.trim();
+                    // (2026-07-13) Format merchant name uppercase on save; prev: raw trimmed name
+                    const name = document.getElementById('budget-manual-name').value.trim().toUpperCase();
                     const btn = document.getElementById('budget-manual-save-btn');
 
                     // (2026-07-13) Allow negative/zero amounts for cash logs; prev: amt <= 0 blocked them
@@ -11626,6 +11667,10 @@ Be direct, practical, and helpful.`;
                     const flagColor = (txnObj && txnObj.flagColor) ? txnObj.flagColor : (item.dataset.flagColor || '');
                     const date = item.dataset.date || '';
                     const manualAmount = item.dataset.manualAmount || '';
+                    // (2026-07-13) Detect reimbursement paid status for action menu; prev: none
+                    const origTxnAmt = Math.abs(Number(txnObj?.manualAmount !== undefined ? txnObj.manualAmount : (txnObj?.amount || amount || 0)));
+                    const paidReimbAmt = txnObj?.reimbursementAmount !== undefined ? Number(txnObj.reimbursementAmount) : origTxnAmt;
+                    const isReimbPaid = isReimbursed && (origTxnAmt - paidReimbAmt <= 0.01) && txnObj?.reimbursementPaid !== false && (txnObj?.reimbursementAmount !== 0 || origTxnAmt === 0);
 
                     // Clean up existing clones & restore item state before measuring
                     if (clonedItem) {
@@ -11736,6 +11781,13 @@ Be direct, practical, and helpful.`;
                     <i class="material-icons">${isReimbursed ? 'undo' : 'account_balance_wallet'}</i>
                     <span>${isReimbursed ? 'Unmark Reimbursed' : 'Mark as Reimbursed'}</span>
                 </div>
+                <!-- (2026-07-13) Paid/Unpaid toggle row for reimbursed txns; prev: none -->
+                ${isReimbursed ? `
+                <div class="ios-action-item" onclick="handleIOSAction('togglePaid', '${txnId}', ${isReimbPaid})">
+                    <i class="material-icons" style="color:${isReimbPaid ? '#f59e0b' : '#10b981'};">${isReimbPaid ? 'money_off' : 'check_circle'}</i>
+                    <span>${isReimbPaid ? 'Unpaid' : 'Paid'}</span>
+                </div>
+                ` : ''}
                 <div class="ios-action-item danger" onclick="handleIOSAction('delete', '${txnId}')">
                     <i class="material-icons">delete</i>
                     <span>Delete</span>
@@ -11898,12 +11950,49 @@ Be direct, practical, and helpful.`;
                                 promptReimbursementType(txnId);
                             }
                             break;
+                        case 'togglePaid':
+                            toggleReimbursementPaid(txnId, args[0]);
+                            break;
                         case 'delete':
                             openDeleteModal(txnId, window.currentAccount);
                             break;
                         case 'classify':
                             updateTransactionBudgetCategory(txnId, args[0]);
                             break;
+                    }
+                };
+
+                // (2026-07-13) Toggle reimbursement paid/unpaid status; prev: none
+                window.toggleReimbursementPaid = async (id, isCurrentlyPaid) => {
+                    const idx = (window.allTxns || []).findIndex(t => String(t.id) === String(id));
+                    const txn = idx > -1 ? window.allTxns[idx] : null;
+                    const origAmt = txn ? Math.abs(Number(txn.manualAmount !== undefined ? txn.manualAmount : (txn.amount || 0))) : 0;
+                    const newPaid = !isCurrentlyPaid;
+                    const newAmt = newPaid ? origAmt : 0;
+
+                    if (idx > -1) {
+                        window.allTxns[idx].reimbursementAmount = newAmt;
+                        window.allTxns[idx].reimbursementPaid = newPaid;
+                        if (window.renderHistory) renderHistory(window.allTxns);
+                        if (window.updateTripleProgressBar) updateTripleProgressBar();
+                    }
+
+                    try {
+                        if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
+                        const col = getCollectionName(window.currentAccount);
+                        await updateDoc(doc(db, "users", uid, col, id), {
+                            reimbursementAmount: newAmt,
+                            reimbursementPaid: newPaid
+                        });
+                        showToast(newPaid ? 'Marked as Paid' : 'Marked as Unpaid');
+                    } catch (e) {
+                        console.error('Toggle paid failed', e);
+                        if (idx > -1) {
+                            window.allTxns[idx].reimbursementAmount = isCurrentlyPaid ? origAmt : 0;
+                            window.allTxns[idx].reimbursementPaid = isCurrentlyPaid;
+                            if (window.renderHistory) renderHistory(window.allTxns);
+                        }
                     }
                 };
 
@@ -13016,11 +13105,13 @@ Be direct, practical, and helpful.`;
                 window.openNoteModal = (id, merchant, note) => {
                     currentTxnId = id;
                     const input = document.getElementById('note-text');
-                    const counter = document.getElementById('note-counter');
-                    input.value = note || '';
+                    // (2026-07-13) Format note title case on open and typing; prev: raw input
+                    const formattedNote = note ? note.replace(/(?:^|[^\w'])([a-z])/g, m => m.toUpperCase()) : '';
+                    input.value = formattedNote;
                     counter.innerText = `${input.value.length}/30`;
 
                     input.oninput = () => {
+                        if (window.formatNoteInput) window.formatNoteInput(input);
                         counter.innerText = `${input.value.length}/30`;
                     };
 
@@ -13762,7 +13853,16 @@ Be direct, practical, and helpful.`;
                     window.storeManualTxnModalBaseline();
                     window.modalOpen = true;
 
-                    if (window.NavState) window.NavState.pushModalState('manual-txn-modal', () => closeModals(true));
+                    // (2026-07-13) Auto-save on back button when modal is edited; prev: closed
+                    if (window.NavState) {
+                        window.NavState.pushModalState('manual-txn-modal', () => {
+                            if (!window.isManualTxnModalPristine?.() && window.saveManualTxn) {
+                                window.saveManualTxn();
+                            } else {
+                                closeModals(true);
+                            }
+                        });
+                    }
 
                     // Remove global blur to fix blurry modal content issues
                     // document.querySelector('.mobile-wrapper')?.classList.add('blur-active');
@@ -13788,11 +13888,28 @@ Be direct, practical, and helpful.`;
                             el.removeEventListener('keydown', handleEnterKey);
                             el.addEventListener('keydown', handleEnterKey);
 
-                            // [ADD: 2026-04-05] Auto-fill 'split-wants' with the total amount when typed
-                            if (id === 'manual-amt') {
+                            // (2026-07-13) Auto-format merchant uppercase & note title case; prev: none
+                            if (id === 'manual-merchant') {
+                                el.addEventListener('input', () => window.formatMerchantInput && window.formatMerchantInput(el));
+                            } else if (id === 'manual-note') {
+                                el.addEventListener('input', () => window.formatNoteInput && window.formatNoteInput(el));
+                            } else if (id === 'manual-amt') {
                                 el.addEventListener('input', () => {
                                     const val = el.value;
                                     const amount = parseCurrencyAmount(val);
+                                    // (2026-07-13) Sync reimbursement amount and denominator label; prev: static
+                                    const prevOrig = window.currentTxnOriginalAmount || 0;
+                                    window.currentTxnOriginalAmount = amount;
+                                    const origLbl = document.getElementById('reimb-original-amount-label');
+                                    if (origLbl) origLbl.textContent = amount > 0 ? `/ \u20b1${amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '';
+                                    const customAmtInput = document.getElementById('reimbursement-custom-amount');
+                                    if (customAmtInput) {
+                                        const curVal = parseCurrencyAmount(customAmtInput.value);
+                                        if (!customAmtInput.value || curVal === prevOrig || curVal === 0) {
+                                            customAmtInput.value = amount > 0 ? amount : '';
+                                        }
+                                    }
+
                                     const splitWants = document.getElementById('split-wants');
                                     // [FIXED: 2026-04-05] Check for empty OR zero to trigger auto-fill
                                     const needs = document.getElementById('split-needs').value;
@@ -13849,10 +13966,11 @@ Be direct, practical, and helpful.`;
                     // [FIXED: 2026-04-05] Sanitize amount (remove commas/symbols) to ensure valid number for split logic
                     const cleanAmt = typeof amount === 'string' ? amount.replace(/[^0-9.-]/g, '') : amount;
                     document.getElementById('manual-amt').value = cleanAmt;
-                    document.getElementById('manual-merchant').value = merchant;
+                    // (2026-07-13) Format merchant uppercase & note title case on open; prev: raw
+                    document.getElementById('manual-merchant').value = (merchant || '').toUpperCase();
                     // (2026-07-13) Populate vehicle fallback note using classifyVehicleFuel if note is empty; prev: simple >250 check
                     const effectiveNote = note || (txn?.note) || ((category === 'Vehicle' || txn?.category === 'Vehicle') ? window.classifyVehicleFuel(cleanAmt, merchant) : '');
-                    document.getElementById('manual-note').value = effectiveNote;
+                    document.getElementById('manual-note').value = effectiveNote ? effectiveNote.replace(/(?:^|[^\w'])([a-z])/g, m => m.toUpperCase()) : '';
                     window.updateManualExcludeUI(txn ? txn.excluded === true : false);
 
                     // Populate split inputs if they exist
@@ -13986,9 +14104,15 @@ Be direct, practical, and helpful.`;
                     window.storeManualTxnModalBaseline();
                     window.modalOpen = true;
 
-                    // Push history state if not already handled by replaceModalState
-                    if (!window.modalOpen) {
-                        if (window.NavState) window.NavState.pushModalState('edit-txn', () => window.closeModals(true));
+                    // (2026-07-13) Push manual-txn-modal to NavState with auto-save; prev: skipped
+                    if (window.NavState) {
+                        window.NavState.pushModalState('manual-txn-modal', () => {
+                            if (!window.isManualTxnModalPristine?.() && window.saveManualTxn) {
+                                window.saveManualTxn();
+                            } else {
+                                window.closeModals(true);
+                            }
+                        });
                     }
 
                     // Removed global blurring to match manual modal fix
@@ -14015,11 +14139,28 @@ Be direct, practical, and helpful.`;
                             el.removeEventListener('keydown', handleEnterKey);
                             el.addEventListener('keydown', handleEnterKey);
 
-                            // [ADD: 2026-04-05] Auto-fill 'split-wants' with the total amount when typed in Edit Modal
-                            if (id === 'manual-amt') {
+                            // (2026-07-13) Auto-format merchant uppercase & note title case; prev: none
+                            if (id === 'manual-merchant') {
+                                el.addEventListener('input', () => window.formatMerchantInput && window.formatMerchantInput(el));
+                            } else if (id === 'manual-note') {
+                                el.addEventListener('input', () => window.formatNoteInput && window.formatNoteInput(el));
+                            } else if (id === 'manual-amt') {
                                 el.addEventListener('input', () => {
                                     const val = el.value;
                                     const amount = parseCurrencyAmount(val);
+                                    // (2026-07-13) Sync reimbursement amount and denominator label; prev: static
+                                    const prevOrig = window.currentTxnOriginalAmount || 0;
+                                    window.currentTxnOriginalAmount = amount;
+                                    const origLbl = document.getElementById('reimb-original-amount-label');
+                                    if (origLbl) origLbl.textContent = amount > 0 ? `/ \u20b1${amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : '';
+                                    const customAmtInput = document.getElementById('reimbursement-custom-amount');
+                                    if (customAmtInput) {
+                                        const curVal = parseCurrencyAmount(customAmtInput.value);
+                                        if (!customAmtInput.value || curVal === prevOrig || curVal === 0) {
+                                            customAmtInput.value = amount > 0 ? amount : '';
+                                        }
+                                    }
+
                                     const splitWants = document.getElementById('split-wants');
                                     // [FIXED: 2026-04-05] Check for empty OR zero to trigger auto-fill in Edit Modal
                                     const needs = document.getElementById('split-needs').value;
@@ -14351,6 +14492,8 @@ Be direct, practical, and helpful.`;
                         paymentMethod: window.currentPaymentMethod || 'cash',
                         reimbursementAllocation: window.currentReimbursementAllocation || 'none',
                         reimbursementAmount: readValue('reimbursement-custom-amount'),
+                        // (2026-07-13) Include fuel price per liter in baseline comparator; prev: none
+                        fuelPricePerLiter: readValue('fuel-price-per-liter'),
                         splitNeeds: readSplitAmount('split-needs'),
                         splitWants: readSplitAmount('split-wants'),
                         splitSavings: readSplitAmount('split-savings'),
@@ -14370,6 +14513,7 @@ Be direct, practical, and helpful.`;
                         return current.amount <= 0 &&
                             !current.merchant &&
                             !current.note &&
+                            !current.fuelPricePerLiter &&
                             current.splitNeeds <= 0 &&
                             current.splitWants <= 0 &&
                             current.splitSavings <= 0 &&
@@ -14410,9 +14554,9 @@ Be direct, practical, and helpful.`;
                     btn.style.opacity = '0.5';
 
                     let note = document.getElementById('manual-note').value.trim();
-                    // Enforce Title Case
+                    // (2026-07-13) Format note title case & merchant uppercase on save; prev: note
                     if (note) {
-                        note = note.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+                        note = note.replace(/(?:^|[^\w'])([a-z])/g, m => m.toUpperCase());
                     }
 
                     const dateVal = document.getElementById('manual-date').value;
@@ -14420,7 +14564,7 @@ Be direct, practical, and helpful.`;
 
                     const cat = CATEGORIES.find(c => c.id === selectedManualCatId);
 
-                    const merchantName = document.getElementById('manual-merchant').value.trim();
+                    const merchantName = document.getElementById('manual-merchant').value.trim().toUpperCase();
 
                     let budgetSplit = null;
                     const needsS = parseCurrencyAmount(document.getElementById('split-needs').value);
@@ -15787,8 +15931,10 @@ Be direct, practical, and helpful.`;
                     <p style="color: #64748b; font-size: 13px;">Personalized note for this transaction.</p>
                     <div class="modal-body">
                         <div style="position: relative;">
+                            <!-- (2026-07-13) Added oninput formatting & capitalize style; prev: raw -->
                             <textarea id="note-text" class="note-input" maxlength="30"
-                                placeholder="Enter note here..."></textarea>
+                                placeholder="Enter note here..." style="text-transform: capitalize;"
+                                oninput="window.formatNoteInput && window.formatNoteInput(this)"></textarea>
                             <div id="note-counter"
                                 style="position: absolute; right: 8px; bottom: 8px; font-size: 10px; color: #94a3b8; font-weight: 600;">
                                 0/30</div>
@@ -16368,8 +16514,10 @@ Be direct, practical, and helpful.`;
                         <label
                             style="display: block; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 8px;">Merchant
                             / Remarks</label>
+                        <!-- (2026-07-13) Added oninput formatting & uppercase style; prev: raw -->
                         <input type="text" id="budget-manual-name" placeholder="e.g. Street Food, Taxi"
-                            style="width: 100%; padding: 14px 16px; border-radius: 16px; border: 2px solid #f1f5f9; font-size: 15px; font-weight: 700; color: #1e293b; outline: none; background: #fafafa;">
+                            oninput="window.formatMerchantInput && window.formatMerchantInput(this)"
+                            style="width: 100%; padding: 14px 16px; border-radius: 16px; border: 2px solid #f1f5f9; font-size: 15px; font-weight: 700; color: #1e293b; outline: none; background: #fafafa; text-transform: uppercase;">
                     </div>
 
                     <div id="budget-manual-cat-display" onclick="window.openBudgetManualCategoryPicker()"
@@ -16510,9 +16658,11 @@ Be direct, practical, and helpful.`;
                                     <div
                                         style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
                                         Merchant Name</div>
+                                    <!-- (2026-07-13) Auto-format merchant uppercase on input; prev: raw -->
                                     <input type="text" id="manual-merchant" maxlength="50"
                                         placeholder="Enter merchant name..."
-                                        style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                                        oninput="window.formatMerchantInput && window.formatMerchantInput(this)"
+                                        style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0; text-transform: uppercase;">
                                 </div>
                             </div>
 
@@ -16527,9 +16677,10 @@ Be direct, practical, and helpful.`;
                                     <div
                                         style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
                                         Notes</div>
-                                    <!-- (2026-07-30) Note input maxlength set to 32 by default (24 for Vehicle); prev: 20 -->
+                                    <!-- (2026-07-13) Auto-format note title case on input; prev: raw -->
                                     <input type="text" id="manual-note" maxlength="32" placeholder="Add notes..."
-                                        style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0;">
+                                        oninput="window.formatNoteInput && window.formatNoteInput(this)"
+                                        style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0; text-transform: capitalize;">
                                 </div>
                             </div>
 
@@ -17294,13 +17445,27 @@ Be direct, practical, and helpful.`;
                     }
 
                     // Real-time Notifications Listener
+                    // (2026-07-13) Ignore initial snapshot in watcher; prev: triggered on all docs
                     window.setupNotifWatcher = (uid) => {
                         if (!uid || !window.db) return;
                         const { collection, query, orderBy, onSnapshot, where } = window;
                         const notifRef = collection(window.db, `users/${uid}/notifications`);
                         const q = query(notifRef, orderBy('createdAt', 'desc'));
 
+                        let isInitialSnap = true;
                         onSnapshot(q, (snapshot) => {
+                            if (isInitialSnap) {
+                                isInitialSnap = false;
+                                if (window.NotificationsEngine?.markDeliveredLocally) {
+                                    snapshot.docs.forEach(docSnap => {
+                                        const data = docSnap.data() || {};
+                                        const ms = window.NotificationsEngine.getCreatedAtMillis(data) || Date.now();
+                                        window.NotificationsEngine.markDeliveredLocally(uid, data.type, docSnap.id, ms, data.meta || null);
+                                    });
+                                }
+                                if (window.updateUnreadCount) window.updateUnreadCount();
+                                return;
+                            }
                             if (window.NotificationsEngine?.handleRealtimeSnapshot) {
                                 window.NotificationsEngine.handleRealtimeSnapshot(uid, snapshot).catch(err => {
                                     console.warn('Realtime notification bridge failed:', err);

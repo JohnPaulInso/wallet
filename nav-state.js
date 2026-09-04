@@ -1060,6 +1060,21 @@ const NavState = {
 
         // Standard Web History Listener
         window.addEventListener('popstate', (event) => {
+            // (2026-07-13) Auto-save edited txn modal on popstate; prev: discard on close
+            const manualModal = document.getElementById('manual-txn-modal');
+            const isManualOpen = manualModal && (manualModal.classList.contains('show') || manualModal.style.display === 'flex' || manualModal.style.display === 'block');
+            if (isManualOpen) {
+                const isPristine = typeof window.isManualTxnModalPristine === 'function' ? window.isManualTxnModalPristine() : false;
+                if (!isPristine && window.saveManualTxn) {
+                    window.saveManualTxn();
+                    return;
+                }
+                if (window.closeModals) {
+                    window.closeModals('manual-txn-modal', true);
+                    return;
+                }
+            }
+
             if (this.modalStack.length > 0) {
                 const modal = this.modalStack.pop();
                 if (modal && typeof modal.closeFn === 'function') {

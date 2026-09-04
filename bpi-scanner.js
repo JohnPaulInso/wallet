@@ -810,9 +810,9 @@
                                         <i class="material-icons" style="font-size: 13px; color: #ef4444; margin-top: 1px;">explore</i>
                                         <span>Remaining balance found: <strong>${typeMismatchedTxn.merchant}</strong> (₱${typeMismatchedTxn.amount.toFixed(2)}) is synced in your wallet as <strong>${walletTypeStr}</strong> instead of <strong>${scannedTypeStr}</strong>. This causes a discrepancy of <strong>₱${balancingAmt.toFixed(2)}</strong>.</span>
                                     </span>
-                                    <!-- [ADDED: 2026-07-01] Suggestion button to add balancing transaction manually -->
+                                    <!-- (2026-07-13) Fix balancing direction for income/expense; prev: wrong debit -->
                                     <div class="bpi-balancing-action-container" style="margin-top: 6px; padding-left: 17px;">
-                                        <button class="bpi-balancing-btn" onclick="window.BPIScanner.addBalancingTransaction(${balancingAmt}, this)" style="background: none; border: none; padding: 0; color: #dc2626; font-size: 10.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
+                                        <button class="bpi-balancing-btn" onclick="window.BPIScanner.addBalancingTransaction(${balancingAmt}, this, '${typeMismatchedTxn.type === 'credit' ? 'credit' : 'debit'}')" style="background: none; border: none; padding: 0; color: #dc2626; font-size: 10.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
                                             <i class="material-icons" style="font-size: 12px;">add_circle_outline</i>
                                             <span style="text-decoration: underline;">Add balancing transaction for ₱${balancingAmt.toFixed(2)}</span>
                                         </button>
@@ -829,9 +829,9 @@
                                             <i class="material-icons" style="font-size: 13px; color: #ef4444; margin-top: 1px;">explore</i>
                                             <span>Remaining balance found: Unsynced transaction <strong>${missingTxn.merchant}</strong> (₱${missingTxn.amount.toFixed(2)}) is missing from your wallet (discrepancy of <strong>₱${absDiff.toFixed(2)}</strong>).</span>
                                         </span>
-                                        <!-- [ADDED: 2026-07-01] Suggestion button to add balancing transaction manually -->
+                                        <!-- (2026-07-13) Fix balancing direction for income/expense; prev: wrong debit -->
                                         <div class="bpi-balancing-action-container" style="margin-top: 6px; padding-left: 17px;">
-                                            <button class="bpi-balancing-btn" onclick="window.BPIScanner.addBalancingTransaction(${absDiff}, this)" style="background: none; border: none; padding: 0; color: #dc2626; font-size: 10.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
+                                            <button class="bpi-balancing-btn" onclick="window.BPIScanner.addBalancingTransaction(${absDiff}, this, '${missingTxn.type === 'credit' ? 'credit' : 'debit'}')" style="background: none; border: none; padding: 0; color: #dc2626; font-size: 10.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
                                                 <i class="material-icons" style="font-size: 12px;">add_circle_outline</i>
                                                 <span style="text-decoration: underline;">Add balancing transaction for ₱${absDiff.toFixed(2)}</span>
                                             </button>
@@ -846,9 +846,9 @@
                                             <i class="material-icons" style="font-size: 13px; color: #ef4444; margin-top: 1px;">info_outline</i>
                                             <span>Remaining balance finder: Wallet balance is off by <strong>₱${diffFormatted}</strong>.<br>Check if any transaction is missing or has an incorrect amount.</span>
                                         </span>
-                                        <!-- [ADDED: 2026-07-01] Suggestion button to add balancing transaction manually -->
+                                        <!-- (2026-07-13) Fix balancing direction for income/expense; prev: wrong debit -->
                                         <div class="bpi-balancing-action-container" style="margin-top: 6px; padding-left: 17px;">
-                                            <button class="bpi-balancing-btn" onclick="window.BPIScanner.addBalancingTransaction(${absDiff}, this)" style="background: none; border: none; padding: 0; color: #dc2626; font-size: 10.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
+                                            <button class="bpi-balancing-btn" onclick="window.BPIScanner.addBalancingTransaction(${absDiff}, this, '${diff > 0 ? 'credit' : 'debit'}')" style="background: none; border: none; padding: 0; color: #dc2626; font-size: 10.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
                                                 <i class="material-icons" style="font-size: 12px;">add_circle_outline</i>
                                                 <span style="text-decoration: underline;">Add balancing transaction for ₱${absDiff.toFixed(2)}</span>
                                             </button>
@@ -1257,7 +1257,8 @@
         };
 
         // [ADDED: 2026-07-01] Manually add a balancing transaction for statement discrepancies
-        window.BPIScanner.addBalancingTransaction = async function (amount, buttonEl) {
+        // (2026-07-13) Fix balancing direction for income/expense; prev: wrong debit
+        window.BPIScanner.addBalancingTransaction = async function (amount, buttonEl, explicitType = null) {
             if (buttonEl) {
                 buttonEl.disabled = true;
                 buttonEl.style.opacity = '0.6';
@@ -1287,16 +1288,23 @@
                 const uid = auth.currentUser.uid;
 
                 // Detect mismatch direction
-                const scannedBal = window._bpiScanBalance || 0;
-                let walletBal = 0;
-                const walletBalEl = document.querySelector('.balance-card[data-account="bpi"] .balance-amount');
-                if (walletBalEl) {
-                    const rawText = walletBalEl.getAttribute('data-raw') || walletBalEl.textContent;
-                    const numMatch = rawText.replace(/[^0-9.,-]/g, '').replace(/,/g, '');
-                    walletBal = parseFloat(numMatch) || 0;
+                let type = explicitType;
+                if (!type) {
+                    const scannedBal = window._bpiScanBalance || 0;
+                    let walletBal = (window.bpiBalanceVal !== undefined && window.bpiBalanceVal !== null)
+                        ? window.bpiBalanceVal
+                        : 0;
+                    if (walletBal === 0) {
+                        const walletBalEl = document.querySelector('.balance-card[data-account="bpi"] .balance-amount') || document.getElementById('bpi-balance');
+                        if (walletBalEl) {
+                            const rawText = walletBalEl.getAttribute('data-raw') || walletBalEl.textContent;
+                            const numMatch = rawText.replace(/[^0-9.,-]/g, '').replace(/,/g, '');
+                            walletBal = parseFloat(numMatch) || 0;
+                        }
+                    }
+                    const diff = scannedBal - walletBal;
+                    type = diff > 0 ? 'credit' : 'debit';
                 }
-                const diff = scannedBal - walletBal;
-                const type = diff > 0 ? 'credit' : 'debit';
                 const note = type === 'credit'
                     ? 'Balancing adjustment (unrecorded income/correction) for BPI statement discrepancy'
                     : 'Balancing adjustment (unrecorded fee/expense) for BPI statement discrepancy';

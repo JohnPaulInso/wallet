@@ -44,6 +44,12 @@ i.material-icons-outlined {
         /* Disable text selection highlighting */
         ::selection { background: transparent; }
         ::-moz-selection { background: transparent; }
+        /* (2026-07-13) Set visible grayish selection on inputs; prev: transparent */
+        input::selection, textarea::selection { background: #cbd5e1 !important; color: #0f172a !important; }
+        input::-moz-selection, textarea::-moz-selection { background: #cbd5e1 !important; color: #0f172a !important; }
+        /* (2026-07-13) Auto-format merchant uppercase & note title case; prev: none */
+        #manual-merchant, #budget-manual-name { text-transform: uppercase !important; }
+        #manual-note, #note-text { text-transform: capitalize !important; }
 
         html, body { background: #ffffff; margin: 0; padding: 0; min-height: 100vh; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; touch-action: manipulation; overscroll-behavior-y: contain; }
         :root { --app-header-offset: calc(env(safe-area-inset-top, 24px) + 60px); --app-page-top-pad: 0px; --app-content-top-gap: calc(var(--app-header-offset) + 8px); --app-visual-height: 100vh; --app-visual-offset-top: 0px; --app-keyboard-lift: 0px; --app-bottom-safe: env(safe-area-inset-bottom, 0px); }
@@ -10575,4 +10581,15 @@ body.dark-mode #confirmation-modal-title {
 
 body.dark-mode #confirmation-modal-message {
     color: #64748b !important;
+}
+
+/* (2026-07-13) Auto-format input text transforms; prev: none */
+#manual-merchant,
+#budget-manual-name {
+    text-transform: uppercase !important;
+}
+
+#manual-note,
+#note-text {
+    text-transform: capitalize !important;
 }

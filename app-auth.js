@@ -60,6 +60,8 @@ export async function handleAuthClick() {
     try {
         const provider = new GoogleAuthProvider();
         provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
+        // (2026-07-13) Force account selection prompt; prev: default prompt
+        provider.setCustomParameters({ prompt: 'select_account' });
         
         // Mark that we just logged in — suppress automatic GIS popup after login
         window.justLoggedIn = true;
@@ -267,6 +269,16 @@ export async function handleSignout() {
         if (logContainer) logContainer.innerHTML = '';
         
         try {
+            // (2026-07-13) Reset Google auth on signout; prev: only auth.signOut
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                if (SocialLogin) {
+                    await SocialLogin.logout({ provider: 'google' }).catch(e => console.warn('SocialLogin logout error:', e));
+                }
+            }
+            if (window.google?.accounts?.id) {
+                window.google.accounts.id.disableAutoSelect();
+            }
             await auth.signOut();
             window.location.href = window.location.origin + window.location.pathname + '?logout=true&t=' + Date.now();
         } catch (e) {

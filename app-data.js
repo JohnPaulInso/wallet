@@ -10,8 +10,8 @@ window.allTxns = null;
 window.hasBudgetLiveData = false; // Modified 2026-03-27: Prevent cache from triggering bar build-up
 window.isSyncing = false;
 window.unsubscribeSnapshot = null;
-window.unsubscribeSafeSpend = null;
-window.safeToSpendConfig = {
+// (2026-07-13) Preserve safeToSpendConfig on import; prev: wiped to defaults
+window.safeToSpendConfig = window.safeToSpendConfig || (typeof window.restoreSafeSpendConfigFromCache === 'function' ? window.restoreSafeSpendConfigFromCache() : null) || {
     savingsAmount: 3000,
     obligations: [],
     receipts: []
@@ -526,10 +526,18 @@ export function watchSafeToSpend() {
                 title: data.obligationsTitle || 'Upcoming Bills',
                 amount: data.obligationsAmount 
             }];
-        } else if (!data.obligations) {
-            data.obligations = [];
         }
-        window.safeToSpendConfig = data;
+        // (2026-07-13) Preserve cached obligations & toggles in watcher; prev: wiped
+        const cached = window.safeToSpendConfig || (typeof window.restoreSafeSpendConfigFromCache === 'function' ? window.restoreSafeSpendConfigFromCache() : null);
+        if (!data.obligations || data.obligations.length === 0) {
+            if (cached?.obligations?.length > 0) {
+                data.obligations = cached.obligations;
+            } else {
+                data.obligations = [];
+            }
+        }
+        window.safeToSpendConfig = { ...(cached || {}), ...data };
+        if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
         
         // Sync salary targets and rule to localStorage for speed
         const resolvedBudgetProfile = window.getMonthlyBudgetProfile

@@ -2704,7 +2704,12 @@
                     } catch (e) { log('Profile refresh fail: ' + e.message, 'error'); }
                 }
 
+                // (2026-07-13) Native popup auth guard; prev: external browser & dup login
                 window.handleAuthClick = async () => {
+                    if (window.isAuthInProgress) return;
+                    if (auth.currentUser && !auth.currentUser.isAnonymous && localStorage.getItem('g_access_token')) {
+                        return;
+                    }
                     log('Starting Google Sign-In Flow...');
                     const btn = event?.currentTarget || document.activeElement;
                     const isGuestBtn = btn && btn.classList && btn.classList.contains('guest-gate-btn');
@@ -2728,7 +2733,6 @@
                             }
 
                             try {
-                                // (2026-07-13) Enhanced native token extraction & full error detail; prev: simple try-catch
                                 log('Calling GoogleAuth.signIn()...');
                                 let user;
                                 try {
@@ -2794,7 +2798,7 @@
                             btn.classList.remove('loading');
                         }
                         window.isAuthInProgress = false;
-                        window.justLoggedIn = false;
+                        setTimeout(() => { window.justLoggedIn = false; }, 60000);
                     }
                 };
 
@@ -3224,16 +3228,41 @@
                                         amount: data.obligationsAmount
                                     }];
                                 }
-                                // (2026-07-13) Preserve cached obligations and toggles; prev: wiped to empty
-                                if (!data.obligations || data.obligations.length === 0) {
-                                    if (window.safeToSpendConfig?.obligations?.length > 0) {
-                                        data.obligations = window.safeToSpendConfig.obligations;
-                                    } else {
-                                        data.obligations = [];
-                                    }
-                                }
-                                window.safeToSpendConfig = { ...(window.safeToSpendConfig || {}), ...data };
+                                // (2026-07-13) Merge offline obligations & receipts by id; prev: overwrite
+                                const cachedSts = window.safeToSpendConfig || (typeof window.restoreSafeSpendConfigFromCache === 'function' ? window.restoreSafeSpendConfigFromCache() : null);
+
+                                const remoteObs = Array.isArray(data.obligations) ? data.obligations : [];
+                                const localObs = Array.isArray(cachedSts?.obligations) ? cachedSts.obligations : [];
+                                const mergedObsMap = new Map();
+                                remoteObs.forEach(o => mergedObsMap.set(String(o.id), o));
+                                localObs.forEach(o => {
+                                    if (!mergedObsMap.has(String(o.id))) mergedObsMap.set(String(o.id), o);
+                                });
+                                data.obligations = Array.from(mergedObsMap.values());
+
+                                const remoteRcpts = Array.isArray(data.receipts) ? data.receipts : [];
+                                const localRcpts = Array.isArray(cachedSts?.receipts) ? cachedSts.receipts : [];
+                                const mergedRcptsMap = new Map();
+                                remoteRcpts.forEach(r => mergedRcptsMap.set(String(r.id), r));
+                                localRcpts.forEach(r => {
+                                    if (!mergedRcptsMap.has(String(r.id))) mergedRcptsMap.set(String(r.id), r);
+                                });
+                                data.receipts = Array.from(mergedRcptsMap.values());
+
+                                const remoteSecs = Array.isArray(data.sections) ? data.sections : [];
+                                const localSecs = Array.isArray(cachedSts?.sections) ? cachedSts.sections : [];
+                                const mergedSecsMap = new Map();
+                                remoteSecs.forEach(s => mergedSecsMap.set(String(s.id), s));
+                                localSecs.forEach(s => {
+                                    if (!mergedSecsMap.has(String(s.id))) mergedSecsMap.set(String(s.id), s);
+                                });
+                                data.sections = Array.from(mergedSecsMap.values());
+                                if (data.sections.length > 0) window.receiptSections = data.sections;
+
+                                window.safeToSpendConfig = { ...(cachedSts || {}), ...data };
                                 if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
+                                if (typeof updateReceiptsUI === 'function') updateReceiptsUI();
+                                if (typeof updateSafeSpendUI === 'function') updateSafeSpendUI();
 
                                 // Sync salary targets and rule to localStorage for speed
                                 // Priority: monthly budget profile history -> current profile -> legacy fields
@@ -3320,12 +3349,9 @@
                                         console.log('⚠️ Gmail token missing or expired. Please use the sync button to authenticate.');
                                     } else {
                                         const daysUntilExpiry = Math.floor((parseInt(gmailExpiry) - Date.now()) / (1000 * 60 * 60 * 24));
-                                        console.log(`✅ Gmail token valid for ${daysUntilExpiry} more days`);
-                                    }
-
-                                    // AUTO-REFRESH GMAIL TOKEN: Proactively refresh every 45 minutes
-                                    // Google OAuth access tokens expire in ~60 min; this prevents expiry
-                                    if (gmailToken && tokenClient) {
+                                        // (2026-07-13) Suppress GIS popup in Capacitor; prev: external browser popup
+                                    const isCapacitorNative = Boolean(window.Capacitor && window.Capacitor.isNativePlatform());
+                                    if (gmailToken && tokenClient && !isCapacitorNative) {
                                         if (window.gmailRefreshInterval) clearInterval(window.gmailRefreshInterval);
                                         window.gmailRefreshInterval = setInterval(() => {
                                             const now = Date.now();
@@ -3349,11 +3375,9 @@
                                 }
 
                                 // WAKE-UP TOKEN REFRESH: When user returns to app after sleeping/inactivity
-                                // The 45-min timer doesn't run while the tab is inactive, so this catches
-                                // the case where the user opens the app after 8+ hours
                                 document.addEventListener('visibilitychange', () => {
                                     if (document.visibilityState !== 'visible') return;
-                                    if (!tokenClient) return;
+                                    if (!tokenClient || (window.Capacitor && window.Capacitor.isNativePlatform())) return;
 
                                     const lastIssued = localStorage.getItem('g_token_issued_at');
                                     const now = Date.now();
@@ -3362,7 +3386,7 @@
                                     // Only refresh if token is older than 50 minutes
                                     if (tokenAge > 50 * 60 * 1000) {
                                         if (!tokenRefreshInProgress && (now - lastTokenRefreshAttempt) >= TOKEN_REFRESH_COOLDOWN) {
-                                            console.log('☀️ App woke up — token stale. Silent refresh...');
+                                            console.log('☀️  App woke up —  token stale. Silent refresh...');
                                             tokenRefreshInProgress = true;
                                             lastTokenRefreshAttempt = now;
                                             window.isSilentRefresh = true;
@@ -3401,11 +3425,12 @@
                         applyUserView(user);
 
                         // SILENT TOKEN REFRESH ON LOAD (If Google user)
-                        // Skip if we just logged in — handleAuthResult already saved the token
+                        // Skip if we just logged in —  handleAuthResult already saved the token
                         // Skip if we already refreshed this session (prevents popup on page navigation)
                         const sessionRefreshed = sessionStorage.getItem('gis_session_refreshed');
+                        const isNativePlatform = Boolean(window.Capacitor && window.Capacitor.isNativePlatform());
 
-                        if (!user.isAnonymous && tokenClient && !window.justLoggedIn && !sessionRefreshed) {
+                        if (!user.isAnonymous && tokenClient && !isNativePlatform && !window.justLoggedIn && !sessionRefreshed) {
                             const lastIssued = localStorage.getItem('g_token_issued_at');
                             const now = Date.now();
                             const filterAge = 50 * 60 * 1000; // 50 minutes
@@ -3827,7 +3852,15 @@
                         // Safe to Spend is specifically for BPI account
                         const shouldShowSafeSpend = (resolvedId === 'bpi') || isDesktopSafeSpendMode();
                         safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
-                        if (shouldShowSafeSpend) updateSafeSpendUI();
+                        if (shouldShowSafeSpend) {
+                            // (2026-07-13) Restore STS cache before UI update; prev: direct call
+                            if (typeof window.restoreSafeSpendConfigFromCache === 'function') {
+                                if (!window.safeToSpendConfig || !window.safeToSpendConfig.obligations?.length) {
+                                    window.restoreSafeSpendConfigFromCache();
+                                }
+                            }
+                            updateSafeSpendUI();
+                        }
                     }
 
                     // BPI Scanner button - Show only when BPI is active
@@ -4216,7 +4249,15 @@
                             if (safeSpendWidget) {
                                 const shouldShowSafeSpend = ((account === 'bpi') || isDesktopSafeSpendMode());
                                 safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
-                                if (shouldShowSafeSpend) updateSafeSpendUI();
+                                if (shouldShowSafeSpend) {
+                                    // (2026-07-13) Restore STS cache before UI update; prev: direct call
+                                    if (typeof window.restoreSafeSpendConfigFromCache === 'function') {
+                                        if (!window.safeToSpendConfig || !window.safeToSpendConfig.obligations?.length) {
+                                            window.restoreSafeSpendConfigFromCache();
+                                        }
+                                    }
+                                    updateSafeSpendUI();
+                                }
                             }
 
                             // BPI Scanner button - Show only when BPI is active
@@ -4908,6 +4949,16 @@
                 window.cacheSafeSpendConfig = (config = window.safeToSpendConfig) => {
                     try {
                         if (!config || typeof config !== 'object') return;
+                        // (2026-07-13) Guard cached obligations from empty overwrite; prev: wiped
+                        const raw = localStorage.getItem(SAFE_SPEND_CACHE_KEY);
+                        if (raw) {
+                            try {
+                                const existing = JSON.parse(raw);
+                                if (existing && existing.obligations?.length > 0 && (!config.obligations || config.obligations.length === 0)) {
+                                    config = { ...existing, ...config, obligations: existing.obligations };
+                                }
+                            } catch (err) {}
+                        }
                         localStorage.setItem(SAFE_SPEND_CACHE_KEY, JSON.stringify(config));
                     } catch (e) {
                         console.warn('Failed to cache safe-to-spend config', e);
@@ -5067,14 +5118,52 @@
                     window.applyBudgetProfileToLocalStorage(window.getMonthlyBudgetProfile(window.safeToSpendConfig));
                 }
 
+                // (2026-07-13) Silent offline sync for STS & obligations; prev: online-only
+                window.queueOfflineSync = (key, data) => {
+                    try {
+                        const queue = JSON.parse(localStorage.getItem('wallet_offline_sync_queue') || '{}');
+                        queue[key] = { ...(queue[key] || {}), ...data };
+                        localStorage.setItem('wallet_offline_sync_queue', JSON.stringify(queue));
+                    } catch (e) {}
+                };
+
+                window.flushOfflineSyncQueue = async () => {
+                    const uid = auth.currentUser?.uid;
+                    if (!uid || !navigator.onLine) return;
+                    try {
+                        const raw = localStorage.getItem('wallet_offline_sync_queue');
+                        if (!raw) return;
+                        const queue = JSON.parse(raw);
+                        const stsData = queue['safe_to_spend'];
+                        if (stsData && Object.keys(stsData).length > 0) {
+                            await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), stsData, { merge: true });
+                            delete queue['safe_to_spend'];
+                            localStorage.setItem('wallet_offline_sync_queue', JSON.stringify(queue));
+                        }
+                    } catch (e) {}
+                };
+
+                window.addEventListener('online', () => {
+                    if (window.flushOfflineSyncQueue) window.flushOfflineSyncQueue();
+                });
+                setInterval(() => {
+                    if (window.flushOfflineSyncQueue && navigator.onLine) window.flushOfflineSyncQueue();
+                }, 30000);
+
                 window.saveSafeSpendConfig = async (update) => {
                     const uid = auth.currentUser?.uid;
                     const mergedConfig = { ...(window.safeToSpendConfig || {}), ...(update || {}) };
                     window.safeToSpendConfig = mergedConfig;
                     window.cacheSafeSpendConfig(mergedConfig);
-                    if (!uid) return;
+                    window.queueOfflineSync('safe_to_spend', update);
+                    if (!uid || !navigator.onLine) return;
                     try {
                         await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), update, { merge: true });
+                        const queue = JSON.parse(localStorage.getItem('wallet_offline_sync_queue') || '{}');
+                        if (queue['safe_to_spend']) {
+                            delete queue['safe_to_spend'];
+                            localStorage.setItem('wallet_offline_sync_queue', JSON.stringify(queue));
+                        }
                     } catch (e) { console.error('Failed to save safe focus config', e); }
                 };
 
@@ -5135,6 +5224,13 @@
 
                     widget.style.display = 'block';
 
+                    // (2026-07-13) Restore cached STS config if empty; prev: empty fallback
+                    if (!window.safeToSpendConfig || (!window.safeToSpendConfig.obligations?.length && window.safeToSpendConfig.excludeMaintaining === undefined && window.safeToSpendConfig.excludeSavings === undefined)) {
+                        if (typeof window.restoreSafeSpendConfigFromCache === 'function') {
+                            window.safeToSpendConfig = window.restoreSafeSpendConfigFromCache() || window.safeToSpendConfig;
+                        }
+                    }
+
                     // Config from Firestore (with fallbacks)
                     const config = window.safeToSpendConfig || {
                         savingsAmount: 3000,
@@ -5144,13 +5240,17 @@
                     // 1. Get Balance
                     let balance = window.bpiBalanceVal || 0;
                     if (balance === 0) {
-                        const bpiEl = document.getElementById('bpi-balance');
+                        const bpiEl = document.querySelector('.balance-card[data-account="bpi"] .balance-amount') || document.getElementById('bpi-balance');
                         if (bpiEl) balance = parseFloat(bpiEl.innerText.replace(/[^\d.-]/g, '')) || 0;
                     }
 
                     // 2. Savings from Firestore
                     const savingsValue = config.savingsAmount || 3000;
-                    const ccPayment = Math.abs(window.atomeBalanceVal || 0);
+                    let ccPayment = Math.abs(window.atomeBalanceVal || 0);
+                    if (ccPayment === 0) {
+                        const atomeEl = document.querySelector('.balance-card[data-account="atome"] .balance-amount') || document.getElementById('atome-balance');
+                        if (atomeEl) ccPayment = Math.abs(parseFloat(atomeEl.innerText.replace(/[^\d.-]/g, '')) || 0);
+                    }
 
                     // 3. Obligations Sum (only included ones)
                     let obligationsTotal = 0;
@@ -6998,13 +7098,13 @@
                         window.focusFieldWithoutPageJump(titleInput, 140);
                     }
 
+                    // (2026-07-13) Immediate offline display for obligations; prev: await setDoc
                     if (saveBtn) {
-                        saveBtn.onclick = async () => {
+                        saveBtn.onclick = () => {
                             const config = window.safeToSpendConfig || { obligations: [] };
                             const title = (titleInput?.value || '').trim() || 'Obligation';
                             const amount = parseFloat(amountInput?.value) || 0;
 
-                            const uid = auth.currentUser?.uid;
                             const newObligation = {
                                 id: Date.now().toString(),
                                 title: title,
@@ -7013,20 +7113,10 @@
                             };
 
                             const updatedObligations = [...(config.obligations || []), newObligation];
-
-                            // Synchronize local state
                             window.safeToSpendConfig = { ...config, obligations: updatedObligations };
                             updateSafeSpendUI();
-                            if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(window.safeToSpendConfig);
-
-                            if (uid) {
-                                await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
-                                    obligations: updatedObligations
-                                }, { merge: true });
-                            }
-
                             closeObligationModal();
-                            showToast('Obligation added!');
+                            window.saveSafeSpendConfig({ obligations: updatedObligations });
                         };
                     }
                 };
@@ -10106,15 +10196,25 @@ Be direct, practical, and helpful.`;
 
                 // GMAIL SCAN (OPTIMIZED WITH PARALLELISM + CONCURRENCY GUARD)
                 window.isSyncing = false; // Persistent flag
+                // (2026-07-13) Guard sync auth against duplicate popups; prev: unshielded GIS
                 window.requestInteractiveGmailSyncAuth = (limit = 25, manualTrigger = true) => {
+                    if (!manualTrigger) {
+                        return false;
+                    }
+                    if (window.isAuthInProgress || window.justLoggedIn) {
+                        return false;
+                    }
                     setPendingSyncRequest(limit, manualTrigger, 'interactive_auth', false);
                     window.isSilentRefresh = false;
 
-                    if (window.Capacitor && window.Capacitor.isNativePlatform() && typeof handleAuthClick === 'function') {
-                        tokenRefreshInProgress = true;
-                        lastTokenRefreshAttempt = Date.now();
-                        handleAuthClick();
-                        return true;
+                    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                        if (typeof handleAuthClick === 'function') {
+                            tokenRefreshInProgress = true;
+                            lastTokenRefreshAttempt = Date.now();
+                            handleAuthClick();
+                            return true;
+                        }
+                        return false;
                     }
 
                     try {
@@ -10918,7 +11018,6 @@ Be direct, practical, and helpful.`;
                         currentCalcInput = "0";
                         calcHistory = "";
                         updateCalcUI();
-                        showToast("Receipt added");
                     };
                 };
 
@@ -10952,11 +11051,11 @@ Be direct, practical, and helpful.`;
                         }
                         addReceipt(title, amount, currentObType, targetSectionId || window.currentReceiptSectionId);
                         closeObligationModal();
-                        showToast(currentObType.toUpperCase() + " added");
                     };
                 };
 
                 // Receipts CRUD
+                // (2026-07-13) Immediate offline receipt render; prev: wait on async save
                 function addReceipt(title, amount, type = 'expense', targetSectionId) {
                     if (!window.safeToSpendConfig) window.safeToSpendConfig = { receipts: [], sections: [] };
                     if (!window.safeToSpendConfig.receipts) window.safeToSpendConfig.receipts = [];
@@ -10978,9 +11077,9 @@ Be direct, practical, and helpful.`;
                     };
 
                     window.safeToSpendConfig.receipts.push(newReceipt);
-                    saveReceiptsData().then(() => {
-                        updateReceiptsUI();
-                    });
+                    updateReceiptsUI();
+                    if (typeof updateSafeSpendUI === 'function') updateSafeSpendUI();
+                    saveReceiptsData();
                 }
 
                 window.addNewReceiptSection = () => {
@@ -11185,6 +11284,7 @@ Be direct, practical, and helpful.`;
                     };
                 };
 
+                // (2026-07-13) Queue receipts for offline sync; prev: unqueued online setDoc
                 function saveReceiptsData() {
                     const receiptsSnapshot = JSON.parse(JSON.stringify(window.safeToSpendConfig?.receipts || []));
                     const sectionsSnapshot = JSON.parse(JSON.stringify(window.receiptSections || []));
@@ -11195,6 +11295,12 @@ Be direct, practical, and helpful.`;
                     };
                     localStorage.setItem('wallet_receipts_backup', JSON.stringify(receiptsSnapshot));
                     localStorage.setItem('wallet_receipt_sections_backup', JSON.stringify(sectionsSnapshot));
+                    if (window.queueOfflineSync) {
+                        window.queueOfflineSync('safe_to_spend', {
+                            receipts: receiptsSnapshot,
+                            sections: sectionsSnapshot
+                        });
+                    }
 
                     if (!window.__receiptSaveQueue) window.__receiptSaveQueue = Promise.resolve();
                     const uid = auth.currentUser?.uid;
@@ -11202,11 +11308,18 @@ Be direct, practical, and helpful.`;
 
                     window.__receiptSaveQueue = window.__receiptSaveQueue.then(async () => {
                         if (window.cacheSafeSpendConfig) window.cacheSafeSpendConfig(payload);
-                        if (uid) {
+                        if (uid && navigator.onLine) {
                             await setDoc(doc(db, "users", uid, "config", "safe_to_spend"), {
                                 receipts: receiptsSnapshot,
                                 sections: sectionsSnapshot
                             }, { merge: true });
+                            try {
+                                const queue = JSON.parse(localStorage.getItem('wallet_offline_sync_queue') || '{}');
+                                if (queue['safe_to_spend']) {
+                                    delete queue['safe_to_spend'];
+                                    localStorage.setItem('wallet_offline_sync_queue', JSON.stringify(queue));
+                                }
+                            } catch (e) {}
                         }
                     }).catch(e => console.error('Receipt save error:', e));
 

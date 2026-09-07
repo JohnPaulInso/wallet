@@ -44,6 +44,11 @@ if exist "node_modules\@capacitor\android\capacitor\build.gradle" (
     if errorlevel 1 set /a fixed_count+=1
 )
 
+REM (2026-07-13) Pin play-services-auth 18.1.0; prev: dynamic 18.+
+if exist "node_modules\@codetrix-studio\capacitor-google-auth\android\build.gradle" (
+    powershell -Command "$content = Get-Content 'node_modules\@codetrix-studio\capacitor-google-auth\android\build.gradle' -Raw; if ($content -match 'play-services-auth:18\.\+') { $content -replace 'play-services-auth:18\.\+', 'play-services-auth:18.1.0' | Set-Content 'node_modules\@codetrix-studio\capacitor-google-auth\android\build.gradle'; Write-Host '    FIXED google-auth dynamic version' -ForegroundColor Green }"
+)
+
 echo.
 echo ========================================
 if %fixed_count% GTR 0 (

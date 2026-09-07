@@ -109,11 +109,10 @@ export async function handleAuthClick() {
             }
 
             handleAuthResult(result.user);
+        // (2026-07-13) Retain popup without external browser; prev: signInWithRedirect
         } catch (popupError) {
             if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                log('Popup blocked. Falling back to redirect...');
-                localStorage.setItem('auth_redirect_pending', 'true');
-                await signInWithRedirect(auth, provider);
+                log('Popup cancelled or blocked. Retaining popup flow.');
             } else {
                 throw popupError;
             }

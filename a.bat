@@ -5,7 +5,7 @@ call npx cap sync android
 call npm run fix-java
 rem (2026-07-13) Run gradlew inside android directory; prev: root directory
 cd /d "%~dp0android"
-call gradlew.bat :app:assembleDebug
+call gradlew.bat :app:assembleDebug || call gradlew.bat :app:assembleDebug --offline
 cd /d "%~dp0"
 if exist "%~dp0android\app\build\outputs\apk\debug" (
     explorer "%~dp0android\app\build\outputs\apk\debug"

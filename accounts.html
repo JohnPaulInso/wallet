@@ -849,14 +849,29 @@
             const provider = new GoogleAuthProvider();
             provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
             
-            // DETECT MOBILE FOR REDIRECT
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            if (isMobile) {
-                try { 
-                    localStorage.setItem('auth_redirect_pending', 'true');
-                    await signInWithRedirect(auth, provider); 
-                } catch (e) { console.error(e); }
-                return;
+            // (2026-07-13) Use popup auth on mobile; prev: external browser redirect
+            if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+                const GoogleAuth = window.Capacitor.Plugins?.GoogleAuth;
+                if (GoogleAuth) {
+                    try {
+                        const user = await GoogleAuth.signIn();
+                        const { signInWithCredential, GoogleAuthProvider: FirebaseProvider } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                        const idToken = user?.authentication?.idToken || user?.idToken;
+                        if (idToken) {
+                            const credential = FirebaseProvider.credential(idToken);
+                            await signInWithCredential(auth, credential);
+                        }
+                        if (user?.authentication?.accessToken) {
+                            localStorage.setItem('g_access_token', user.authentication.accessToken);
+                        }
+                        window.isAuthInProgress = false;
+                        const gate = document.getElementById('guestGate');
+                        if (gate) gate.style.display = 'none';
+                        return;
+                    } catch (err) {
+                        console.warn('Native auth failed in accounts:', err);
+                    }
+                }
             }
 
             try { 

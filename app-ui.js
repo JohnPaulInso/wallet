@@ -3175,7 +3175,15 @@ export function switchAccount(id, silentRestore = false, forceReload = false) {
     if (safeSpendWidget) {
         const shouldShowSafeSpend = resolvedId === 'bpi' || isDesktopWalletLayout();
         safeSpendWidget.style.display = shouldShowSafeSpend ? 'block' : 'none';
-        if (shouldShowSafeSpend) updateSafeSpendUI();
+        if (shouldShowSafeSpend) {
+            // (2026-07-13) Restore STS cache before UI update; prev: direct call
+            if (typeof window.restoreSafeSpendConfigFromCache === 'function') {
+                if (!window.safeToSpendConfig || !window.safeToSpendConfig.obligations?.length) {
+                    window.restoreSafeSpendConfigFromCache();
+                }
+            }
+            updateSafeSpendUI();
+        }
     }
 
     // Toggle BPI Scanner Button Visibility

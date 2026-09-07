@@ -2521,16 +2521,17 @@
                 let accessToken = localStorage.getItem('g_access_token');
                 let expiry = localStorage.getItem('g_token_expiry');
 
-                // (2026-07-13) Omitted clientId for Android native GoogleAuth init; prev: clientId & serverClientId
+                // (2026-07-13) Init SocialLogin Credential Manager; prev: GoogleAuth init
                 if (window.Capacitor && window.Capacitor.isNativePlatform()) {
                     try {
-                        const GoogleAuth = window.Capacitor.Plugins.GoogleAuth;
-                        if (GoogleAuth) {
-                            GoogleAuth.initialize({
-                                serverClientId: CLIENT_ID,
-                                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
-                                grantOfflineAccess: true
-                            }).catch(e => console.warn('Native GoogleAuth Early Init:', e));
+                        const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                        if (SocialLogin) {
+                            SocialLogin.initialize({
+                                google: {
+                                    webClientId: CLIENT_ID,
+                                    mode: 'online'
+                                }
+                            }).catch(e => console.warn('Native SocialLogin Early Init:', e));
                         }
                     } catch (e) {}
                 }
@@ -2724,35 +2725,39 @@
                         provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
                         window.justLoggedIn = true;
 
+                        // (2026-07-13) Use SocialLogin bottom sheet; prev: GoogleAuth plugin
                         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                            log('Native platform detected. Using Capacitor GoogleAuth...');
-                            const GoogleAuth = window.Capacitor.Plugins.GoogleAuth;
+                            log('Native platform detected. Using Credential Manager One Tap...');
+                            const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
 
-                            if (!GoogleAuth) {
-                                throw new Error('GoogleAuth plugin not available');
+                            if (!SocialLogin) {
+                                throw new Error('SocialLogin plugin not available');
                             }
 
                             try {
-                                log('Calling GoogleAuth.signIn()...');
-                                let user;
-                                try {
-                                    user = await GoogleAuth.signIn();
-                                } catch (signInErr) {
-                                    log('Initial GoogleAuth.signIn failed: ' + (signInErr.message || JSON.stringify(signInErr)), 'warn');
-                                    await GoogleAuth.initialize({
-                                        serverClientId: CLIENT_ID,
-                                        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
-                                        grantOfflineAccess: true
-                                    }).catch(e => console.warn('Re-init warning', e));
-                                    user = await GoogleAuth.signIn();
-                                }
+                                log('Calling SocialLogin.login() bottom sheet...');
+                                await SocialLogin.initialize({
+                                    google: {
+                                        webClientId: CLIENT_ID,
+                                        mode: 'online'
+                                    }
+                                }).catch(e => console.warn('SocialLogin init:', e));
+
+                                const res = await SocialLogin.login({
+                                    provider: 'google',
+                                    options: {
+                                        style: 'bottom',
+                                        filterByAuthorizedAccounts: false,
+                                        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly']
+                                    }
+                                });
 
                                 log('Native sign-in response received');
-                                const idToken = user?.authentication?.idToken || user?.idToken || user?.serverAuthCode;
+                                const idToken = res?.result?.idToken || res?.idToken;
 
                                 if (!idToken) {
-                                    log('User object received but missing idToken: ' + JSON.stringify(user), 'error');
-                                    throw new Error('No idToken received from native GoogleAuth');
+                                    log('User object received but missing idToken: ' + JSON.stringify(res), 'error');
+                                    throw new Error('No idToken received from native SocialLogin');
                                 }
 
                                 const { signInWithCredential, GoogleAuthProvider: FirebaseProvider } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
@@ -2760,9 +2765,9 @@
                                 const result = await signInWithCredential(auth, credential);
                                 handleAuthResult(result);
 
-                                const accessTokenVal = user?.authentication?.accessToken || user?.accessToken;
+                                const accessTokenVal = res?.result?.accessToken?.token || res?.result?.accessToken || res?.accessToken;
                                 if (accessTokenVal) {
-                                    localStorage.setItem('g_access_token', accessTokenVal);
+                                    localStorage.setItem('g_access_token', typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token);
                                 }
                             } catch (nativeError) {
                                 const errMsg = nativeError.message || nativeError.error || (typeof nativeError === 'string' ? nativeError : JSON.stringify(nativeError));

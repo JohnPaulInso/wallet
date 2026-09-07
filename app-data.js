@@ -634,14 +634,15 @@ export async function handleScan(limit, manualTrigger = false) {
                 window.isSyncing = false;
                 localStorage.removeItem('g_access_token');
                 
-                // 📱 NATIVE APP FIX: Try silent refresh using Capacitor GoogleAuth
+                // (2026-07-13) Refresh via SocialLogin; prev: GoogleAuth.refresh()
                 if (window.Capacitor && window.Capacitor.isNativePlatform()) {
                     log('📱 Attempting native token refresh...');
                     try {
-                        const { GoogleAuth } = window.Capacitor.Plugins;
-                        const authRes = await GoogleAuth.refresh();
-                        if (authRes && authRes.authentication.accessToken) {
-                            localStorage.setItem('g_access_token', authRes.authentication.accessToken);
+                        const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                        const authRes = await SocialLogin?.refresh({ provider: 'google' });
+                        const token = authRes?.result?.accessToken?.token || authRes?.accessToken;
+                        if (token) {
+                            localStorage.setItem('g_access_token', typeof token === 'string' ? token : token?.token);
                             log('📱 Native token refreshed. Retrying sync...');
                             // Recursively retry the scan with the new token
                             return handleScan(limit, manualTrigger);

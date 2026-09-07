@@ -10,10 +10,11 @@ const config: CapacitorConfig = {
       backgroundColor: '#00000000',
       overlaysWebView: true,
     },
-    GoogleAuth: {
-      scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly'],
-      serverClientId: '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com',
-      forceCodeForRefreshToken: true,
+    // (2026-07-13) Use SocialLogin config; prev: GoogleAuth config
+    SocialLogin: {
+      providers: {
+        google: true,
+      },
     },
     LocalNotifications: {
       smallIcon: 'ic_stat_wallet',

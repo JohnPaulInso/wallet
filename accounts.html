@@ -849,20 +849,35 @@
             const provider = new GoogleAuthProvider();
             provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
             
-            // (2026-07-13) Use popup auth on mobile; prev: external browser redirect
+            // (2026-07-13) Use SocialLogin bottom sheet; prev: GoogleAuth
             if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const GoogleAuth = window.Capacitor.Plugins?.GoogleAuth;
-                if (GoogleAuth) {
+                const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                if (SocialLogin) {
                     try {
-                        const user = await GoogleAuth.signIn();
+                        await SocialLogin.initialize({
+                            google: {
+                                webClientId: '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com',
+                                mode: 'online'
+                            }
+                        }).catch(e => console.warn('SocialLogin init accounts:', e));
+
+                        const res = await SocialLogin.login({
+                            provider: 'google',
+                            options: {
+                                style: 'bottom',
+                                filterByAuthorizedAccounts: false,
+                                scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly']
+                            }
+                        });
                         const { signInWithCredential, GoogleAuthProvider: FirebaseProvider } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                        const idToken = user?.authentication?.idToken || user?.idToken;
+                        const idToken = res?.result?.idToken || res?.idToken;
                         if (idToken) {
                             const credential = FirebaseProvider.credential(idToken);
                             await signInWithCredential(auth, credential);
                         }
-                        if (user?.authentication?.accessToken) {
-                            localStorage.setItem('g_access_token', user.authentication.accessToken);
+                        const accessTokenVal = res?.result?.accessToken?.token || res?.result?.accessToken || res?.accessToken;
+                        if (accessTokenVal) {
+                            localStorage.setItem('g_access_token', typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token);
                         }
                         window.isAuthInProgress = false;
                         const gate = document.getElementById('guestGate');

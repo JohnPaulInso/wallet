@@ -65,22 +65,41 @@ export async function handleAuthClick() {
         window.justLoggedIn = true;
         
         // 🚀 NATIVE CAPACITOR SIGN-IN
+        // (2026-07-13) Use SocialLogin bottom sheet; prev: GoogleAuth plugin
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            log('📱 Native platform detected, using Capacitor GoogleAuth plugin');
-            const { GoogleAuth } = window.Capacitor.Plugins;
+            log('📱 Native platform detected, using SocialLogin Credential Manager');
+            const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
             try {
-                const user = await GoogleAuth.signIn();
+                await SocialLogin?.initialize({
+                    google: {
+                        webClientId: '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com',
+                        mode: 'online'
+                    }
+                }).catch(e => console.warn('SocialLogin init:', e));
+
+                const res = await SocialLogin?.login({
+                    provider: 'google',
+                    options: {
+                        style: 'bottom',
+                        filterByAuthorizedAccounts: false,
+                        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly']
+                    }
+                });
                 log('📱 Native Google Sign-In success!');
                 
+                const idToken = res?.result?.idToken || res?.idToken;
+                if (!idToken) throw new Error('No idToken from SocialLogin');
+
                 const { signInWithCredential } = await import("./firebase-config.js");
-                const credential = GoogleAuthProvider.credential(user.authentication.idToken);
+                const credential = GoogleAuthProvider.credential(idToken);
                 
                 const result = await signInWithCredential(auth, credential);
                 log('📱 Firebase auth with native credential success!');
                 
                 // Save access token for Gmail Sync
-                if (user.authentication && user.authentication.accessToken) {
-                    localStorage.setItem('g_access_token', user.authentication.accessToken);
+                const accessTokenVal = res?.result?.accessToken?.token || res?.result?.accessToken || res?.accessToken;
+                if (accessTokenVal) {
+                    localStorage.setItem('g_access_token', typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token);
                     log('📱 Saved native access token for Gmail sync.');
                 }
                 

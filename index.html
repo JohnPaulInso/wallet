@@ -3378,6 +3378,8 @@
                                         console.log('⏱️ Gmail auto-refresh timer started (every 20 min)');
                                     }
                                 }
+                                // (2026-07-13) Close if block; prev: missing brace
+                                }
 
                                 // WAKE-UP TOKEN REFRESH: When user returns to app after sleeping/inactivity
                                 document.addEventListener('visibilitychange', () => {

@@ -10,10 +10,13 @@ const config: CapacitorConfig = {
       backgroundColor: '#00000000',
       overlaysWebView: true,
     },
-    // (2026-07-13) Use SocialLogin config; prev: GoogleAuth config
+    // (2026-07-13) Enable only Google in SocialLogin; prev: unconfigured defaults
     SocialLogin: {
       providers: {
         google: true,
+        facebook: false,
+        apple: false,
+        twitter: false,
       },
     },
     LocalNotifications: {

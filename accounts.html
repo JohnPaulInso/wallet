@@ -851,36 +851,57 @@
             // (2026-07-13) Force account selection prompt; prev: default prompt
             provider.setCustomParameters({ prompt: 'select_account' });
             
-            // (2026-07-13) Use SocialLogin bottom sheet; prev: GoogleAuth
+            // (2026-07-13) Use Capawesome Google Sign-In; prev: SocialLogin only
             if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-                const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
-                if (SocialLogin) {
-                    try {
-                        await SocialLogin.initialize({
-                            google: {
-                                webClientId: '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com',
-                                mode: 'online'
-                            }
-                        }).catch(e => console.warn('SocialLogin init accounts:', e));
+                try {
+                    const firebaseAuthPlugin = window.Capacitor?.Plugins?.FirebaseAuthentication;
+                    let idToken = null;
+                    let accessTokenVal = null;
 
-                        // (2026-07-13) Credential Manager bottom sheet; prev: requested scopes
-                        const res = await SocialLogin.login({
-                            provider: 'google',
-                            options: {
-                                style: 'bottom',
-                                filterByAuthorizedAccounts: false
-                            }
+                    if (firebaseAuthPlugin) {
+                        const nativeResult = await firebaseAuthPlugin.signInWithGoogle({
+                            skipNativeAuth: true,
+                            scopes: ["email", "profile"],
+                            useCredentialManager: true
                         });
+                        idToken = nativeResult?.credential?.idToken;
+                        if (!idToken) {
+                            const tokenResult = await firebaseAuthPlugin.getIdToken({ forceRefresh: true });
+                            idToken = tokenResult?.token;
+                        }
+                    } else {
+                        const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                        if (SocialLogin) {
+                            await SocialLogin.initialize({
+                                google: {
+                                    webClientId: '64186651619-3eb9ki680f4c8q2g2mese3c8hhfur23b.apps.googleusercontent.com',
+                                    mode: 'online'
+                                }
+                            }).catch(e => console.warn('SocialLogin init accounts:', e));
+
+                            const res = await SocialLogin.login({
+                                provider: 'google',
+                                options: {
+                                    style: 'bottom',
+                                    filterByAuthorizedAccounts: false
+                                }
+                            });
+                            idToken = res?.result?.idToken || res?.idToken;
+                            accessTokenVal = res?.result?.accessToken?.token || res?.result?.accessToken || res?.accessToken;
+                        }
+                    }
+
+                    if (idToken) {
                         const { signInWithCredential, GoogleAuthProvider: FirebaseProvider } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-                        const idToken = res?.result?.idToken || res?.idToken;
-                        if (idToken) {
-                            const credential = FirebaseProvider.credential(idToken);
-                            await signInWithCredential(auth, credential);
-                        }
-                        const accessTokenVal = res?.result?.accessToken?.token || res?.result?.accessToken || res?.accessToken;
-                        if (accessTokenVal) {
-                            localStorage.setItem('g_access_token', typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token);
-                        }
+                        const credential = FirebaseProvider.credential(idToken);
+                        await signInWithCredential(auth, credential);
+                    }
+                    if (accessTokenVal) {
+                        localStorage.setItem('g_access_token', typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token);
+                    }
+                } catch (nativeErr) {
+                    console.error('Native sign-in error:', nativeErr);
+                }
                         window.isAuthInProgress = false;
                         const gate = document.getElementById('guestGate');
                         if (gate) gate.style.display = 'none';

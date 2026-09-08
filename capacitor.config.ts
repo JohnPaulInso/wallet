@@ -10,7 +10,11 @@ const config: CapacitorConfig = {
       backgroundColor: '#00000000',
       overlaysWebView: true,
     },
-    // (2026-07-13) Enable only Google in SocialLogin; prev: unconfigured defaults
+    // (2026-07-13) Add FirebaseAuthentication config; prev: SocialLogin only
+    FirebaseAuthentication: {
+      skipNativeAuth: true,
+      providers: ['google.com'],
+    },
     SocialLogin: {
       providers: {
         google: true,

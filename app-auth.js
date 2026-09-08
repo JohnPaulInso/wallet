@@ -79,12 +79,12 @@ export async function handleAuthClick() {
                     }
                 }).catch(e => console.warn('SocialLogin init:', e));
 
+                // (2026-07-13) Credential Manager bottom sheet; prev: requested scopes
                 const res = await SocialLogin?.login({
                     provider: 'google',
                     options: {
                         style: 'bottom',
-                        filterByAuthorizedAccounts: false,
-                        scopes: ['profile', 'email', 'https://www.googleapis.com/auth/gmail.readonly']
+                        filterByAuthorizedAccounts: false
                     }
                 });
                 log('📱 Native Google Sign-In success!');

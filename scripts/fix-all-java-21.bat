@@ -49,6 +49,12 @@ if exist "node_modules\@codetrix-studio\capacitor-google-auth\android\build.grad
     powershell -Command "$content = Get-Content 'node_modules\@codetrix-studio\capacitor-google-auth\android\build.gradle' -Raw; if ($content -match 'play-services-auth:18\.\+') { $content -replace 'play-services-auth:18\.\+', 'play-services-auth:18.1.0' | Set-Content 'node_modules\@codetrix-studio\capacitor-google-auth\android\build.gradle'; Write-Host '    FIXED google-auth dynamic version' -ForegroundColor Green }"
 )
 
+REM (2026-07-13) Patch Capawesome to use GetGoogleIdOption; prev: GetSignIn
+set "CAP_HANDLER=node_modules\@capacitor-firebase\authentication\android\src\main\java\io\capawesome\capacitorjs\plugins\firebase\authentication\handlers\GoogleAuthProviderHandler.java"
+if exist "%CAP_HANDLER%" (
+    powershell -Command "$content = Get-Content $env:CAP_HANDLER -Raw; if ($content -match 'GetSignInWithGoogleOption') { $content = $content -replace 'GetSignInWithGoogleOption', 'GetGoogleIdOption'; $content = $content -replace 'createSignInWithGoogleOptionBuilder\([\s\S]*?\)\.build\(\)', 'new GetGoogleIdOption.Builder().setServerClientId(pluginImplementation.getPlugin().getContext().getString(R.string.default_web_client_id)).setFilterByAuthorizedAccounts(false).setAutoSelectEnabled(false).build()'; [IO.File]::WriteAllText($env:CAP_HANDLER, $content); Write-Host '    PATCHED Capawesome GoogleAuthProviderHandler to GetGoogleIdOption bottom sheet' -ForegroundColor Green }"
+)
+
 echo.
 echo ========================================
 if %fixed_count% GTR 0 (

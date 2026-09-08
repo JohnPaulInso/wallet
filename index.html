@@ -2736,11 +2736,11 @@
                                 let accessTokenVal = null;
 
                                 if (firebaseAuthPlugin) {
-                                    log('Calling Capawesome FirebaseAuthentication.signInWithGoogle...');
+                                    // (2026-07-13) Set useCredentialManager false; prev: true causing error 16
                                     const nativeResult = await firebaseAuthPlugin.signInWithGoogle({
                                         skipNativeAuth: true,
                                         scopes: ["email", "profile"],
-                                        useCredentialManager: true
+                                        useCredentialManager: false
                                     });
                                     idToken = nativeResult?.credential?.idToken;
                                     if (!idToken) {

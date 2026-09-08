@@ -34,6 +34,16 @@ subprojects {
                     targetCompatibility JavaVersion.VERSION_17
                 }
             }
+            // (2026-07-13) Ensure typedefs.txt for syncLibJars; prev: missing input file
+            project.gradle.taskGraph.whenReady { taskGraph ->
+                taskGraph.allTasks.findAll { it.project == project && it.name.startsWith("sync") && it.name.endsWith("LibJars") }.each { syncTask ->
+                    def variant = syncTask.name.replace("sync", "").replace("LibJars", "")
+                    def dir = new File(project.buildDir, "intermediates/annotations_typedef_file/${variant.uncapitalize()}/extract${variant}Annotations")
+                    dir.mkdirs()
+                    def f = new File(dir, "typedefs.txt")
+                    if (!f.exists()) f.createNewFile()
+                }
+            }
         }
     }
 }

@@ -2727,38 +2727,50 @@
                         provider.setCustomParameters({ prompt: 'select_account' });
                         window.justLoggedIn = true;
 
-                        // (2026-07-13) Use Capawesome Google Sign-In; prev: SocialLogin only
+                        // (2026-07-13) Native SocialLogin One Tap with Gmail scope; prev: CM false
                         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
                             log('Native platform detected. Using Credential Manager One Tap...');
                             try {
+                                const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
                                 const firebaseAuthPlugin = window.Capacitor?.Plugins?.FirebaseAuthentication;
                                 let idToken = null;
                                 let accessTokenVal = null;
 
-                                if (firebaseAuthPlugin) {
-                                    // (2026-07-13) Set useCredentialManager false; prev: true causing error 16
-                                    const nativeResult = await firebaseAuthPlugin.signInWithGoogle({
-                                        skipNativeAuth: true,
-                                        scopes: ["email", "profile"],
-                                        useCredentialManager: false
-                                    });
-                                    idToken = nativeResult?.credential?.idToken;
-                                    if (!idToken) {
-                                        const tokenResult = await firebaseAuthPlugin.getIdToken({ forceRefresh: true });
-                                        idToken = tokenResult?.token;
-                                    }
-                                } else {
-                                    const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
-                                    if (!SocialLogin) throw new Error('Native auth plugin not available');
+                                if (SocialLogin) {
                                     await SocialLogin.initialize({
                                         google: { webClientId: CLIENT_ID, mode: 'online' }
                                     }).catch(e => console.warn('SocialLogin init:', e));
                                     const res = await SocialLogin.login({
                                         provider: 'google',
-                                        options: { style: 'bottom', filterByAuthorizedAccounts: false }
+                                        options: {
+                                            style: 'bottom',
+                                            scopes: [
+                                                'https://www.googleapis.com/auth/gmail.readonly',
+                                                'https://www.googleapis.com/auth/userinfo.profile',
+                                                'email',
+                                                'profile'
+                                            ],
+                                            filterByAuthorizedAccounts: false
+                                        }
                                     });
                                     idToken = res?.result?.idToken || res?.idToken;
                                     accessTokenVal = res?.result?.accessToken?.token || res?.result?.accessToken || res?.accessToken;
+                                } else if (firebaseAuthPlugin) {
+                                    const nativeResult = await firebaseAuthPlugin.signInWithGoogle({
+                                        skipNativeAuth: true,
+                                        scopes: [
+                                            "https://www.googleapis.com/auth/gmail.readonly",
+                                            "email",
+                                            "profile"
+                                        ],
+                                        useCredentialManager: true
+                                    });
+                                    idToken = nativeResult?.credential?.idToken;
+                                    accessTokenVal = nativeResult?.credential?.accessToken || nativeResult?.accessToken;
+                                    if (!idToken) {
+                                        const tokenResult = await firebaseAuthPlugin.getIdToken({ forceRefresh: true });
+                                        idToken = tokenResult?.token;
+                                    }
                                 }
 
                                 if (!idToken) {
@@ -2771,7 +2783,12 @@
                                 handleAuthResult(result);
 
                                 if (accessTokenVal) {
-                                    localStorage.setItem('g_access_token', typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token);
+                                    const tokenStr = typeof accessTokenVal === 'string' ? accessTokenVal : accessTokenVal?.token;
+                                    const ONE_HOUR_MS = 60 * 60 * 1000;
+                                    localStorage.setItem('g_access_token', tokenStr);
+                                    localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
+                                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                                    accessToken = tokenStr;
                                 }
                             } catch (nativeError) {
                                 const errMsg = nativeError.message || nativeError.error || (typeof nativeError === 'string' ? nativeError : JSON.stringify(nativeError));
@@ -2807,7 +2824,8 @@
                             btn.classList.remove('loading');
                         }
                         window.isAuthInProgress = false;
-                        setTimeout(() => { window.justLoggedIn = false; }, 60000);
+                        tokenRefreshInProgress = false;
+                        setTimeout(() => { window.justLoggedIn = false; }, 1000);
                     }
                 };
 
@@ -2818,6 +2836,8 @@
 
                     // Clear progress flags
                     window.isAuthInProgress = false;
+                    tokenRefreshInProgress = false;
+                    window.justLoggedIn = false;
                     localStorage.removeItem('auth_redirect_pending');
 
                     // IMMEDIATELY hide guest gate and sync banner on login success
@@ -10222,7 +10242,8 @@ Be direct, practical, and helpful.`;
                     if (!manualTrigger) {
                         return false;
                     }
-                    if (window.isAuthInProgress || window.justLoggedIn) {
+                    // (2026-07-13) Permit sync auth triggers without justLoggedIn lock; prev: blocked
+                    if (window.isAuthInProgress) {
                         return false;
                     }
                     setPendingSyncRequest(limit, manualTrigger, 'interactive_auth', false);
@@ -10288,9 +10309,32 @@ Be direct, practical, and helpful.`;
 
                     // SMART TOKEN VALIDATION: Try existing token first, auto-refresh on 401
                     // Instead of rejecting tokens after 50 min, let the API tell us via 401
-                    const storedToken = localStorage.getItem('g_access_token');
-                    const storedExpiry = parseInt(localStorage.getItem('g_token_expiry') || '0', 10);
-                    const isTokenExpired = !!storedToken && Number.isFinite(storedExpiry) && storedExpiry > 0 && Date.now() >= storedExpiry;
+                    let storedToken = localStorage.getItem('g_access_token');
+                    let storedExpiry = parseInt(localStorage.getItem('g_token_expiry') || '0', 10);
+                    let isTokenExpired = !storedToken || (Number.isFinite(storedExpiry) && storedExpiry > 0 && Date.now() >= storedExpiry);
+
+                    // (2026-07-13) Silent native token renewal on expiry; prev: prompt immediately
+                    if (isTokenExpired && window.Capacitor && window.Capacitor.isNativePlatform()) {
+                        try {
+                            const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                            if (SocialLogin) {
+                                console.log('📱 Attempting silent native token refresh...');
+                                const authRes = await SocialLogin.refresh({ provider: 'google' });
+                                const refreshedToken = authRes?.result?.accessToken?.token || authRes?.accessToken || authRes?.result?.accessToken;
+                                if (refreshedToken) {
+                                    const tokenStr = typeof refreshedToken === 'string' ? refreshedToken : refreshedToken?.token;
+                                    const ONE_HOUR_MS = 60 * 60 * 1000;
+                                    localStorage.setItem('g_access_token', tokenStr);
+                                    localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
+                                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                                    storedToken = tokenStr;
+                                    isTokenExpired = false;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Silent token renewal error:', e);
+                        }
+                    }
 
                     if (isTokenExpired) {
                         console.warn('Gmail token expired (local check).');
@@ -10377,8 +10421,26 @@ Be direct, practical, and helpful.`;
                                 if (manualTrigger) {
                                     const isNativeApp = (window.Capacitor && window.Capacitor.isNativePlatform());
 
-                                    // For APK users, explicit re-login is often more reliable than silent background refresh
+                                    // (2026-07-13) Silent native refresh retry on 401; prev: prompt immediately
                                     if (isNativeApp) {
+                                        try {
+                                            const SocialLogin = window.Capacitor.Plugins?.SocialLogin;
+                                            if (SocialLogin) {
+                                                const authRes = await SocialLogin.refresh({ provider: 'google' });
+                                                const refreshedToken = authRes?.result?.accessToken?.token || authRes?.accessToken || authRes?.result?.accessToken;
+                                                if (refreshedToken) {
+                                                    const tokenStr = typeof refreshedToken === 'string' ? refreshedToken : refreshedToken?.token;
+                                                    const ONE_HOUR_MS = 60 * 60 * 1000;
+                                                    localStorage.setItem('g_access_token', tokenStr);
+                                                    localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
+                                                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                                                    accessToken = tokenStr;
+                                                    return window.handleScan(limit, manualTrigger);
+                                                }
+                                            }
+                                        } catch (e) {
+                                            console.warn('Silent 401 refresh error:', e);
+                                        }
                                         setPendingSyncRequest(limit, manualTrigger, 'token_refresh_401', true);
                                         log('🔄 Session expired. Triggering re-authentication...');
                                         window.requestInteractiveGmailSyncAuth(limit, manualTrigger);

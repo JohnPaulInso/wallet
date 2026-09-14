@@ -10321,47 +10321,39 @@ Be direct, practical, and helpful.`;
                                 console.log('📱 Attempting silent native token refresh...');
                                 const authRes = await SocialLogin.refresh({ provider: 'google' });
                                 const refreshedToken = authRes?.result?.accessToken?.token || authRes?.accessToken || authRes?.result?.accessToken;
-                                if (refreshedToken) {
-                                    const tokenStr = typeof refreshedToken === 'string' ? refreshedToken : refreshedToken?.token;
-                                    const ONE_HOUR_MS = 60 * 60 * 1000;
-                                    localStorage.setItem('g_access_token', tokenStr);
-                                    localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
-                                    localStorage.setItem('g_token_issued_at', Date.now().toString());
-                                    storedToken = tokenStr;
-                                    isTokenExpired = false;
+                                    if (refreshedToken) {
+                                        const tokenStr = typeof refreshedToken === 'string' ? refreshedToken : refreshedToken?.token;
+                                        const ONE_HOUR_MS = 60 * 60 * 1000;
+                                        localStorage.setItem('g_access_token', tokenStr);
+                                        localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
+                                        localStorage.setItem('g_token_issued_at', Date.now().toString());
+                                        storedToken = tokenStr;
+                                        isTokenExpired = false;
+                                    }
                                 }
+                            } catch (e) {
+                                console.warn('Silent token renewal error:', e);
                             }
-                        } catch (e) {
-                            console.warn('Silent token renewal error:', e);
                         }
-                    }
 
-                    if (isTokenExpired) {
-                        console.warn('Gmail token expired (local check).');
-                        localStorage.removeItem('g_access_token');
-                        localStorage.removeItem('g_token_expiry');
-                        localStorage.removeItem('g_token_issued_at');
-                        accessToken = null;
+                        // (2026-07-13) Silent token use & refresh; prev: expired local purge & popup
+                        if (storedToken) {
+                            console.log('🚀 Using stored Gmail token (will auto-refresh on 401)...');
+                            accessToken = storedToken;
+                        } else {
+                            if (!manualTrigger) return;
 
-                        if (!manualTrigger) return;
-
-                        window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
-                        return;
-                    }
-
-                    if (storedToken) {
-                        console.log('🚀 Using stored Gmail token (will auto-refresh on 401)...');
-                        accessToken = storedToken;
-                    } else if (!storedToken) {
-                        // No token at all — need to authenticate
-                        if (!manualTrigger) return;
-
-                        if (tokenClient || typeof handleAuthClick === 'function') {
-                            console.log('🔑 No token found. Requesting authentication...');
-                            window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
-                            return;
+                            if (tokenClient) {
+                                console.log('🔑 Attempting silent Gmail auth...');
+                                window.isSilentRefresh = true;
+                                setPendingSyncRequest(limit, manualTrigger, 'token_refresh_silent', true);
+                                tokenClient.requestAccessToken({ prompt: '' });
+                                return;
+                            } else if (typeof handleAuthClick === 'function') {
+                                window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
+                                return;
+                            }
                         }
-                    }
 
                     window.isSyncing = true;
 

@@ -17,10 +17,11 @@ window.safeToSpendConfig = window.safeToSpendConfig || (typeof window.restoreSaf
     receipts: []
 };
 
-// Helper to get collection name from account ID
+// (2026-07-13) Add maribank collection name; prev: atome and bpi only
 export function getCollectionName(accId) {
     if (accId === 'atome') return 'transactions';
     if (accId === 'bpi') return 'bpi_transactions';
+    if (accId === 'maribank') return 'maribank_transactions';
     if (accId === 'default_wallet') return 'transactions_default';
     return `txns_${accId}`;
 }
@@ -574,11 +575,12 @@ export async function handleScan(limit, manualTrigger = false) {
     }
     
     const syncAccount = window.currentAccount;
-    const allowedSyncAccounts = ['bpi', 'atome'];
+    // (2026-07-13) Add maribank sync query; prev: bpi and atome only
+    const allowedSyncAccounts = ['bpi', 'atome', 'maribank'];
     
     if (!allowedSyncAccounts.includes(syncAccount)) {
         if (manualTrigger) {
-            showToast('Email sync is only available for BPI and Atome accounts');
+            showToast('Email sync is only available for BPI, Atome, and MariBank accounts');
         }
         return;
     }
@@ -612,6 +614,8 @@ export async function handleScan(limit, manualTrigger = false) {
         let gmailQuery = '';
         if (syncAccount === 'atome') {
             gmailQuery = `(subject:"Transaction Confirmation" OR subject:"payment confirmation" OR subject:"Atome Card") (from:Atome OR from:no-reply@atome.ph OR from:noreply@atome.ph)`;
+        } else if (syncAccount === 'maribank') {
+            gmailQuery = `(from:alerts@maribank.com.ph OR from:maribank.com.ph OR from:MariBank) (subject:"Successful Debit Card Transaction" OR subject:"Transfer Notification" OR subject:"MariBank")`;
         } else {
             gmailQuery = `(subject:"Funds Transfer" OR subject:"Fund Transfer" OR subject:"Interbank" OR subject:"Pay via QR" OR from:bpi_online@bpi.com.ph OR from:onlinebanking@bpi.com.ph OR from:bpiinstapay@bpi.com.ph OR from:BPI)`;
         }
@@ -691,8 +695,13 @@ export async function handleScan(limit, manualTrigger = false) {
                         const fullBody = getBody(d.payload);
                         const cleanText = stripTags(fullBody) || d.snippet;
 
+                        // (2026-07-13) Dispatch MariBank parser; prev: BPI fallback only
                         if (syncAccount === 'atome') {
                             txn = parseAtomeEmail(cleanText, d.internalDate);
+                        } else if (syncAccount === 'maribank') {
+                            const subjectHeader = d.payload.headers.find(h => h.name.toLowerCase() === 'subject');
+                            const subject = subjectHeader ? subjectHeader.value : '';
+                            txn = parseMariBankEmail(cleanText, d.internalDate, subject);
                         } else {
                             const subjectHeader = d.payload.headers.find(h => h.name.toLowerCase() === 'subject');
                             const subject = subjectHeader ? subjectHeader.value : '';
@@ -705,8 +714,16 @@ export async function handleScan(limit, manualTrigger = false) {
                             const docRef = doc(db, "users", uid, colName, txn.id);
                             
                             const snap = await getDoc(docRef);
+                            // (2026-07-13) Allow updating existing txns on resync; prev: return null
                             if (!snap.exists()) {
                                 return { txn, docRef, uid };
+                            } else {
+                                const existing = snap.data();
+                                const oldCat = (existing?.manualCategory || '').toLowerCase();
+                                const newCat = (txn.manualCategory || '').toLowerCase();
+                                if ((syncAccount === 'maribank' && (oldCat === 'financial expenses' || !existing?.manualCategory)) || (oldCat === 'financial expenses' && newCat && newCat !== 'financial expenses') || (syncAccount === 'maribank' && newCat && oldCat !== newCat)) {
+                                    return { txn, docRef, uid, isUpdate: true };
+                                }
                             }
                         }
                     } catch (err) { return null; }
@@ -720,8 +737,13 @@ export async function handleScan(limit, manualTrigger = false) {
                     const firestoreBatch = writeBatch(db);
                     const uid = validTxns[0].uid;
                     
-                    for (const {txn, docRef} of validTxns) {
-                        firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                    // (2026-07-13) Support batch merge update on resync; prev: insert set only
+                    for (const {txn, docRef, isUpdate} of validTxns) {
+                        if (isUpdate) {
+                            firestoreBatch.set(docRef, { ...txn, updatedAt: serverTimestamp() }, { merge: true });
+                        } else {
+                            firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                        }
                         
                         // Auto-duplicate BPI "Atome Payment" to Atome wallet
                         const isAtomePayment = txn.merchant === 'ATOME PAYMENT' || 
@@ -817,6 +839,83 @@ function parseAtomeEmail(text, ts) {
         merchant,
         date: formatLocalDate(parseInt(ts)),
         manualCategory: inferred.category
+    };
+}
+
+// (2026-07-13) Add MariBank email parser; prev: absent
+function parseMariBankEmail(text, ts, subject) {
+    let amount = 0;
+    let merchant = "MariBank";
+    let note = "";
+    let isIncome = false;
+    let category = "Financial Expenses";
+    let dateVal = formatLocalDate(parseInt(ts));
+
+    const tLower = text.toLowerCase();
+    const sLower = (subject || '').toLowerCase();
+
+    // 1. Transaction Time from body if present
+    const timeMatch = text.match(/Transaction time\s*:\s*([^\n\r|]+)/i);
+    if (timeMatch) {
+        const parsedDate = new Date(timeMatch[1].trim());
+        if (!isNaN(parsedDate)) dateVal = formatLocalDate(parsedDate);
+    }
+
+    // 2. Reference Number if present
+    const refMatch = text.match(/Reference No\s*:\s*([A-Za-z0-9]+)/i);
+    const refNo = refMatch ? refMatch[1].trim() : '';
+
+    // 3. Detect Transaction Type
+    if (sLower.includes("successful debit card") || tLower.includes("maricard debit transaction was successful")) {
+        // Debit Card Purchase (e.g. TECFUEL BOGO)
+        const amtMatch = text.match(/(?:Transaction Amount|Amount)\s*:\s*(?:PHP|₱)?\s*([\d,]+\.?\d*)/i);
+        if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+
+        const merchMatch = text.match(/Merchant\s*:\s*([^\n\r|]+)/i);
+        if (merchMatch) {
+            merchant = merchMatch[1].trim();
+        } else {
+            merchant = "MariCard Purchase";
+        }
+        isIncome = false;
+        note = "MariCard Debit - " + merchant;
+        // (2026-07-13) Set inferred category from merchant; prev: fixed financial
+        if (typeof getMerchantDisplay === 'function') {
+            const inferred = getMerchantDisplay(merchant, { note });
+            if (inferred && inferred.category) {
+                category = inferred.category;
+            }
+        }
+        if (!category) category = 'Financial Expenses';
+    } else if (sLower.includes("transfer notification") || tLower.includes("received a funds transfer") || tLower.includes("transfer from")) {
+        // Funds Transfer Received (Income: BPI, GCash, etc.)
+        const amtMatch = text.match(/(?:Transfer amount|Amount)\s*:\s*(?:PHP|₱)?\s*([\d,]+\.?\d*)/i);
+        if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+
+        const fromMatch = text.match(/Transfer from\s*:\s*([^\n\r|]+)/i);
+        const transferFrom = fromMatch ? fromMatch[1].trim() : '';
+
+        isIncome = true;
+        merchant = "INCOME";
+        category = "Income";
+        note = transferFrom ? ("FROM " + transferFrom.toUpperCase()) : "FUNDS RECEIVED";
+        if (refNo) note += " (Ref: " + refNo + ")";
+    } else {
+        // Fallback amount matching
+        const amtMatch = text.match(/(?:Amount|PHP|₱)\s*[:|]?\s*(?:PHP|₱)?\s*([\d,]+\.\d{2})/i);
+        if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+    }
+
+    if (!amount || amount <= 0) return null;
+
+    return {
+        id: refNo ? ('mb_' + refNo) : ('mb_' + ts),
+        amount: amount,
+        merchant: merchant,
+        note: note,
+        date: dateVal,
+        manualCategory: category,
+        manualBudgetCategory: 'n/a'
     };
 }
 

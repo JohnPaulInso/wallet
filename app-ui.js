@@ -3015,23 +3015,26 @@ export function updateBalanceCardsUI(accounts) {
         return acc.last4 || '0000';
     };
 
+    // (2026-07-13) Support MariBank balance card; prev: Atome + BPI only
     container.innerHTML = accounts.map((acc, index) => {
         const isAtome = acc.id === 'atome';
         const isBPI = acc.id === 'bpi';
+        const isMariBank = acc.id === 'maribank';
         const isActiveCard = acc.id === activeAccountId;
-        const cardClass = `balance-card ${isActiveCard ? 'active instant-active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''}`;
+        const cardClass = `balance-card ${isActiveCard ? 'active instant-active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''} ${isMariBank ? 'maribank-card' : ''}`;
         
         return `
-        <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI ? 'background: ' + acc.color + ';' : ''}">
+        <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI && !isMariBank ? 'background: ' + acc.color + ';' : ''}">
             <div class="card-shimmer" style="animation-delay: ${index * 1.8}s;"></div>
             ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
             ${isBPI ? '<div class="bpi-rays"></div>' : ''}
+            <!-- (2026-07-13) Remove logo circle behind sync; prev: M brand circle -->
             
             <div class="card-header-row">
                 <!-- card-header-titles: Wrapper for card name label and debit/credit badge (Labeled: 2026-07-03) -->
                 <div class="card-header-titles" style="display: flex; align-items: baseline; gap: 6px;">
                     <div class="card-label" style="text-transform: uppercase;">${acc.name}</div>
-                    ${isBPI ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
+                    ${(isBPI || isMariBank) ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
                 </div>
                 ${acc.id !== 'default_wallet' ? `
                 <div class="card-sync-status-chip">
@@ -3058,7 +3061,7 @@ export function updateBalanceCardsUI(accounts) {
                 </div>
                 <!-- card-footer-actions: Wrapper for card sync action and mastercard logo (Labeled: 2026-07-03) -->
                 <div class="card-footer-actions" style="display: flex; align-items: center; gap: 12px;">
-                    ${(isAtome || isBPI) ? `
+                    ${(isAtome || isBPI || isMariBank) ? `
                     <button class="sync-icon-btn scan-btn" onclick="handleScan(100, true)" title="Sync Account">
                         <i class="material-icons">sync</i>
                     </button>
@@ -3497,8 +3500,17 @@ if (typeof document !== 'undefined') {
     }
 }
 
+// (2026-07-13) Set header card orange on MariBank; prev: BPI red or black
 export function updateHeaderIcon(account) {
-    const color = account === 'bpi' ? '#8b0000' : '#1a1a1a';
+    let color = '#1a1a1a';
+    if (account === 'bpi') {
+        color = '#8b0000';
+    } else if (account === 'maribank') {
+        color = '#FF5722';
+    } else if (window.walletAccounts) {
+        const acc = window.walletAccounts.find(a => a.id === account);
+        if (acc && acc.color) color = acc.color;
+    }
     ['header-card-bg', 'card-bg'].forEach((id) => {
         const cardBg = document.getElementById(id);
         if (cardBg) cardBg.setAttribute('fill', color);

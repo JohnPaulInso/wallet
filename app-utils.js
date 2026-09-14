@@ -295,12 +295,13 @@ function inferMerchantCategory(name = '', note = '') {
 
     const keywordMap = [
         { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'shein', 'carousell'] },
+        // (2026-07-13) Add prince and hypermart keywords; prev: omitted
         { cat: 'Shopping', key: [
             'mall', 'supermet', 'gaisano', 'mr diy', 'mr. diy', 'watsons', 'sm store', 'sm superm', 'sm supermarket',
             'sm city', 'sm mall', 'sm hypermarket', 'robinsons', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m',
             'uniqlo', 'puregold', 'landmark', 'daiso', 'national bookstore', 'fully booked', 'landers', 's&r',
             's and r', 'waltermart', 'shopwise', 'ace hardware', 'handyman', 'wilcon', 'true value', 'octagon',
-            'mercury drug', 'generika', 'southstar drug', 'rose pharmacy'
+            'mercury drug', 'generika', 'southstar drug', 'rose pharmacy', 'prince', 'hypermart', 'supermarket'
         ] },
         { cat: 'Vehicle', key: [
             'locq', 'tecfuel', 'tec fuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'unioil',
@@ -393,8 +394,8 @@ export function getMerchantDisplay(name = '', t = {}) {
 
     let display = { name: cleaned, category: 'Financial Expenses', icon: 'payments', catClass: 'cat-financial' };
 
-    // 3. MANUAL OVERRIDE (USER CHOICE)
-    if (t.manualCategory) {
+    // (2026-07-13) Don't bypass keywords on default financial; prev: t.manualCat
+    if (t.manualCategory && t.manualCategory.toLowerCase() !== 'financial expenses') {
         const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
         if (userCat) {
             display.category = userCat.id;

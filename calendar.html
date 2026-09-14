@@ -861,7 +861,8 @@
             if (cleaned.toUpperCase().includes('TIKTOK SHOP')) cleaned = 'TIKTOK SHOP';
             if (cleaned.toUpperCase().includes('SPOTIFY')) cleaned = 'SPOTIFY';
             let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
-            if (t.manualCategory) {
+            // (2026-07-13) Don't bypass keywords on default financial; prev: t.manualCat
+            if (t.manualCategory && t.manualCategory.toLowerCase() !== 'financial expenses') {
                 const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
                 if (userCat) {
                     display.category = userCat.id;
@@ -881,7 +882,8 @@
             }
             else if (finalRaw.includes('SHOPEE') || finalRaw.includes('TIKTOK') || finalRaw.includes('LAZADA') || finalRaw.includes('SHEIN') || finalRaw.includes('TEMU') || finalRaw.includes('SHOPIFY') || finalRaw.includes('CAROUSELL')) { display.category = 'Online shopping'; display.icon = 'shopping_bag'; }
             else if (finalRaw.includes('LOCQ') || finalRaw.includes('TECFUEL') || finalRaw.includes('SHELL') || finalRaw.includes('PETRON') || finalRaw.includes('SEAOIL') || finalRaw.includes('CALTEX') || finalRaw.includes('UNIOIL') || finalRaw.includes('PHOENIX') || finalRaw.includes('TOTAL')) { display.category = 'Vehicle'; display.icon = 'local_gas_station'; }
-            else if (/\bSM\b/.test(finalRaw) || finalRaw.startsWith('SM ') || finalRaw.includes('SM STORE') || finalRaw.includes('SM SUPERMARKET') || finalRaw.includes('SM MALL') || finalRaw.includes('SM CITY') || finalRaw.includes('SM HYPERMARKET') || finalRaw.includes('ROBINSONS') || finalRaw.includes('LANDERS') || finalRaw.includes('PUREGOLD') || finalRaw.includes('WALTERMART') || finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS')) { display.category = 'Shopping'; display.icon = 'shopping_cart'; }
+            // (2026-07-13) Add prince and hypermart keywords; prev: omitted
+            else if (/\bSM\b/.test(finalRaw) || finalRaw.startsWith('SM ') || finalRaw.includes('SM STORE') || finalRaw.includes('SM SUPERMARKET') || finalRaw.includes('SM MALL') || finalRaw.includes('SM CITY') || finalRaw.includes('SM HYPERMARKET') || finalRaw.includes('ROBINSONS') || finalRaw.includes('LANDERS') || finalRaw.includes('PUREGOLD') || finalRaw.includes('WALTERMART') || finalRaw.includes('MR DIY') || finalRaw.includes('WATSONS') || finalRaw.includes('PRINCE') || finalRaw.includes('HYPERMART')) { display.category = 'Shopping'; display.icon = 'shopping_cart'; }
             else if (finalRaw.includes('J AND L MALL') || finalRaw.includes('J & L MALL') || finalRaw.includes('J AND L SHOPPING') || finalRaw.includes('J & L') || finalRaw.includes('NATIONAL BOOKSTORE') || finalRaw.includes('FULLY BOOKED') || finalRaw.includes('ACE HARDWARE') || finalRaw.includes('MERCURY DRUG')) { display.category = 'Shopping'; display.icon = 'shopping_cart'; }
             else if (finalRaw.includes('JOLLIBEE') || finalRaw.includes('MCDO') || finalRaw.includes('7 11') || finalRaw.includes('7/11') || finalRaw.includes('KFC') || finalRaw.includes('STARBUCKS') || finalRaw.includes('RIBSHACK') || finalRaw.includes('CHOWKING') || finalRaw.includes('MANG INASAL') || finalRaw.includes('BURGER KING') || finalRaw.includes('BONCHON') || finalRaw.includes('PIZZA HUT') || finalRaw.includes('GREENWICH')) { display.category = 'Food & Drinks'; display.icon = 'restaurant'; }
             else if (finalRaw.includes('TRADERS CONNECT') || finalRaw.includes('IC MARKETS') || finalRaw.includes('EXNESS') || finalRaw.includes('TRADERSCONNECT')) { display.category = 'Trading Expenses'; display.icon = 'insights'; }
@@ -905,19 +907,23 @@
         
         // Apply Header Theme from Current Account
         function applyAccountTheme(accId) {
-            const cardBg = document.getElementById('card-bg');
-            if (cardBg) {
-                const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
-                const acc = accounts.find(a => a.id === accId);
-                if (acc) {
-                    cardBg.setAttribute('fill', acc.color);
-                } else {
-                    // Fallback
-                    if (accId === 'bpi') cardBg.setAttribute('fill', '#931B1B');
-                    else if (accId === 'atome') cardBg.setAttribute('fill', '#121212');
-                    else cardBg.setAttribute('fill', '#1a1a1a');
+            // (2026-07-13) Support header-card-bg & maribank orange; prev: card-bg only
+            ['header-card-bg', 'card-bg'].forEach((id) => {
+                const cardBg = document.getElementById(id);
+                if (cardBg) {
+                    const accounts = JSON.parse(localStorage.getItem('wallet_accounts') || '[]');
+                    const acc = accounts.find(a => a.id === accId);
+                    if (acc) {
+                        cardBg.setAttribute('fill', acc.color);
+                    } else {
+                        // Fallback
+                        if (accId === 'bpi') cardBg.setAttribute('fill', '#931B1B');
+                        else if (accId === 'maribank') cardBg.setAttribute('fill', '#FF5722');
+                        else if (accId === 'atome') cardBg.setAttribute('fill', '#121212');
+                        else cardBg.setAttribute('fill', '#1a1a1a');
+                    }
                 }
-            }
+            });
         }
         applyAccountTheme(currentAccount);
 

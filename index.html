@@ -3324,19 +3324,21 @@
                                 const accounts = docSnap.exists() ? (docSnap.data().list || []) : [];
                                 const isAdmin = auth.currentUser && auth.currentUser.email === 'johnpaulinso123@gmail.com';
 
-                                // Scenario Check: Admin must have all 3 specific cards
+                                // Scenario Check: Admin must have all specific cards
                                 const hasAtome = accounts.find(a => a.id === 'atome');
                                 const hasBPI = accounts.find(a => a.id === 'bpi');
+                                const hasMariBank = accounts.find(a => a.id === 'maribank');
                                 const hasWallet = accounts.find(a => a.id === 'default_wallet');
 
-                                if (accounts.length === 0 || (isAdmin && (!hasAtome || !hasBPI || !hasWallet))) {
+                                if (accounts.length === 0 || (isAdmin && (!hasAtome || !hasBPI || !hasMariBank || !hasWallet))) {
                                     // INITIALIZE DEFAULT WALLETS
                                     let list = [];
                                     if (isAdmin) {
-                                        log('Provisioning Admin Scenario (Atome + BPI + Wallet)...');
+                                        log('Provisioning Admin Scenario (Atome + BPI + MariBank + Wallet)...');
                                         list = [
                                             { id: 'atome', name: 'Atome Card', balance: 0, last4: '1556', color: '#121212', type: 'credit', isDefault: true, isBuiltIn: true, createdAt: 1700000000000 },
                                             { id: 'bpi', name: 'BPI Card', balance: 0, last4: '7287', color: '#931B1B', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000100 },
+                                            { id: 'maribank', name: 'MariBank Card', balance: 0, last4: '9750', color: '#FF5722', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000150 },
                                             { id: 'default_wallet', name: 'My Wallet', balance: 0, last4: '0000', color: '#121212', type: 'wallet', isDefault: false, isBuiltIn: true, createdAt: 1700000000200 }
                                         ];
                                     } else {
@@ -3345,6 +3347,19 @@
                                         ];
                                     }
                                     setDoc(configRef, { list });
+                                    return;
+                                }
+
+                                // (2026-07-13) Add MariBank after BPI if missing in existing admin account list
+                                if (isAdmin && !hasMariBank) {
+                                    const bpiIdx = accounts.findIndex(a => a.id === 'bpi');
+                                    const mariAcc = { id: 'maribank', name: 'MariBank Card', balance: 0, last4: '9750', color: '#FF5722', type: 'debit', isDefault: false, isBuiltIn: true, createdAt: 1700000000150 };
+                                    if (bpiIdx !== -1) {
+                                        accounts.splice(bpiIdx + 1, 0, mariAcc);
+                                    } else {
+                                        accounts.push(mariAcc);
+                                    }
+                                    setDoc(configRef, { list: accounts }, { merge: true });
                                     return;
                                 }
 
@@ -3654,23 +3669,26 @@
                         return acc.last4 || '0000';
                     };
 
+                    // (2026-07-13) Support MariBank balance card; prev: Atome + BPI only
                     container.innerHTML = accounts.map(acc => {
                         const isAtome = acc.id === 'atome';
                         const isBPI = acc.id === 'bpi';
+                        const isMariBank = acc.id === 'maribank';
                         const isWallet = acc.id === 'default_wallet';
-                        const cardClass = `balance-card ${acc.id === activeAccountId ? 'active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''} ${isWallet ? 'wallet-card' : ''}`;
+                        const cardClass = `balance-card ${acc.id === activeAccountId ? 'active' : ''} ${isAtome ? 'atome-card' : ''} ${isBPI ? 'bpi-card' : ''} ${isMariBank ? 'maribank-card' : ''} ${isWallet ? 'wallet-card' : ''}`;
 
                         return `
-                <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI && !isWallet ? 'background: ' + acc.color + ';' : ''}">
+                <div class="${cardClass}" id="${acc.id}Card" data-account="${acc.id}" style="${!isBPI && !isWallet && !isMariBank ? 'background: ' + acc.color + ';' : ''}">
                     ${isAtome ? '<div class="card-brand-logo atome-brand-logo">A</div>' : ''}
                     ${isBPI ? '<div class="bpi-rays"></div>' : ''}
+                    <!-- (2026-07-13) Remove logo circle behind sync; prev: M brand circle -->
                     <div class="card-shimmer"></div>
 
                     <div class="card-header-row">
                         <!-- card-header-titles: Wrapper for card name label and debit/credit badge (Labeled: 2026-07-03) -->
                         <div class="card-header-titles" style="display: flex; align-items: baseline; gap: 6px;">
                             <div class="card-label" style="text-transform: uppercase;">${acc.name}</div>
-                            ${isBPI ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
+                            ${(isBPI || isMariBank) ? '<div class="card-type-label" style="text-transform: lowercase; opacity: 0.5;">debit</div>' : ''}
                         </div>
                         ${acc.id !== 'default_wallet' ? `
                         <div class="card-sync-status-chip">
@@ -3697,7 +3715,7 @@
                         </div>
                         <!-- card-footer-actions: Wrapper for card sync action and mastercard logo (Labeled: 2026-07-03) -->
                         <div class="card-footer-actions" style="display: flex; align-items: center; gap: 12px;">
-                            ${(isAtome || isBPI) ? `
+                            ${(isAtome || isBPI || isMariBank) ? `
                             <button class="sync-icon-btn scan-btn" onclick="handleScan(100, true)" title="Sync Account">
                                 <i class="material-icons">sync</i>
                             </button>
@@ -3846,8 +3864,11 @@
                     // Sync overall UI theme (FAB, Nav, Charts)
                     applyTheme(accId);
 
-                    const cardBg = document.getElementById('card-bg');
-                    if (cardBg) cardBg.setAttribute('fill', acc.color);
+                    // (2026-07-13) Support header-card-bg in theme update; prev: card-bg only
+                    ['header-card-bg', 'card-bg'].forEach((id) => {
+                        const cardBg = document.getElementById(id);
+                        if (cardBg) cardBg.setAttribute('fill', acc.color);
+                    });
 
                     // Update balance display label if exists
                     const label = document.getElementById('wallet-label');
@@ -3952,9 +3973,11 @@
                 // ACCOUNT MANAGEMENT & SWIPE LOGIC
                 window.currentAccount = localStorage.getItem('wallet_current_account') || 'atome';
 
+                // (2026-07-13) Add maribank collection name; prev: atome and bpi only
                 window.getCollectionName = (accId) => {
                     if (accId === 'atome') return "transactions";
                     if (accId === 'bpi') return "bpi_transactions";
+                    if (accId === 'maribank') return "maribank_transactions";
                     if (accId === 'default_wallet') return "transactions_default";
                     return `txns_${accId}`;
                 };
@@ -4334,15 +4357,21 @@
                     }
                 }
 
+                // (2026-07-13) Set header card orange on MariBank; prev: BPI red or black
                 function updateHeaderIcon(account) {
-                    const cardBg = document.getElementById('card-bg');
-                    if (cardBg) {
-                        if (account === 'bpi') {
-                            cardBg.setAttribute('fill', '#8b0000'); // BPI red
-                        } else {
-                            cardBg.setAttribute('fill', '#1a1a1a'); // Atome black (Default)
-                        }
+                    let color = '#1a1a1a';
+                    if (account === 'bpi') {
+                        color = '#8b0000';
+                    } else if (account === 'maribank') {
+                        color = '#FF5722';
+                    } else if (window.walletAccounts) {
+                        const acc = window.walletAccounts.find(a => a.id === account);
+                        if (acc && acc.color) color = acc.color;
                     }
+                    ['header-card-bg', 'card-bg'].forEach((id) => {
+                        const cardBg = document.getElementById(id);
+                        if (cardBg) cardBg.setAttribute('fill', color);
+                    });
                 }
 
                 // FETCH TRANSACTIONS FROM FIRESTORE (REAL-TIME LISTENER)
@@ -10297,12 +10326,12 @@ Be direct, practical, and helpful.`;
 
                     const syncAccount = window.currentAccount;
 
-                    // BLOCK EMAIL SYNC FOR REGULAR WALLETS: Only BPI and Atome accounts can sync with Gmail
-                    const allowedSyncAccounts = ['bpi', 'atome'];
+                    // (2026-07-13) Allow maribank in email sync; prev: bpi and atome only
+                    const allowedSyncAccounts = ['bpi', 'atome', 'maribank'];
                     if (!allowedSyncAccounts.includes(syncAccount)) {
                         console.log(`🚫 Email sync blocked for regular wallet: ${syncAccount}`);
                         if (manualTrigger) {
-                            showToast('Email sync is only available for BPI and Atome accounts');
+                            showToast('Email sync is only available for BPI, Atome, and MariBank accounts');
                         }
                         return;
                     }
@@ -10371,11 +10400,14 @@ Be direct, practical, and helpful.`;
                     try {
                         log(`Syncing ${syncAccount.toUpperCase()}...`);
 
-                        // MULTI-ACCOUNT QUERY
+                        // (2026-07-13) Add maribank query filters; prev: atome and bpi only
                         let query = '';
                         if (syncAccount === 'atome') {
                             // Broader Atome Query
                             query = `(subject:"Transaction Confirmation" OR subject:"payment confirmation" OR subject:"Atome Card") (from:Atome OR from:no-reply@atome.ph OR from:noreply@atome.ph)`;
+                        } else if (syncAccount === 'maribank') {
+                            // MariBank Query
+                            query = `(from:alerts@maribank.com.ph OR from:maribank.com.ph OR from:MariBank) (subject:"Successful Debit Card Transaction" OR subject:"Transfer Notification" OR subject:"MariBank")`;
                         } else {
                             // BPI Query
                             query = `(subject:"Funds Transfer" OR subject:"Fund Transfer" OR subject:"Interbank" OR subject:"Pay via QR" OR from:bpi_online@bpi.com.ph OR from:onlinebanking@bpi.com.ph OR from:bpiinstapay@bpi.com.ph OR from:BPI)`;
@@ -10492,8 +10524,13 @@ Be direct, practical, and helpful.`;
                                         const fullBody = getBody(d.payload);
                                         const cleanText = stripTags(fullBody) || d.snippet;
 
+                                        // (2026-07-13) Dispatch MariBank email parser; prev: BPI fallback only
                                         if (syncAccount === 'atome') {
                                             txn = parseAtomeEmail(cleanText, d.internalDate);
+                                        } else if (syncAccount === 'maribank') {
+                                            const subjectHeader = d.payload.headers.find(h => h.name.toLowerCase() === 'subject');
+                                            const subject = subjectHeader ? subjectHeader.value : '';
+                                            txn = parseMariBankEmail(cleanText, d.internalDate, subject);
                                         } else {
                                             const subjectHeader = d.payload.headers.find(h => h.name.toLowerCase() === 'subject');
                                             const subject = subjectHeader ? subjectHeader.value : '';
@@ -10510,8 +10547,16 @@ Be direct, practical, and helpful.`;
                                             const docRef = doc(db, "users", uid, collectionName, txn.id);
 
                                             const snap = await getDoc(docRef);
+                                            // (2026-07-13) Allow updating existing txns on resync; prev: return null
                                             if (!snap.exists()) {
                                                 return { txn, docRef, uid };
+                                            } else {
+                                                const existing = snap.data();
+                                                const oldCat = (existing?.manualCategory || '').toLowerCase();
+                                                const newCat = (txn.manualCategory || '').toLowerCase();
+                                                if ((syncAccount === 'maribank' && (oldCat === 'financial expenses' || !existing?.manualCategory)) || (oldCat === 'financial expenses' && newCat && newCat !== 'financial expenses') || (syncAccount === 'maribank' && newCat && oldCat !== newCat)) {
+                                                    return { txn, docRef, uid, isUpdate: true };
+                                                }
                                             }
                                         }
                                     } catch (err) { return null; }
@@ -10526,8 +10571,13 @@ Be direct, practical, and helpful.`;
                                     const firestoreBatch = writeBatch(db);
                                     const uid = validTxns[0].uid;
 
-                                    for (const { txn, docRef } of validTxns) {
-                                        firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                    // (2026-07-13) Support batch merge update on resync; prev: insert set only
+                                    for (const { txn, docRef, isUpdate } of validTxns) {
+                                        if (isUpdate) {
+                                            firestoreBatch.set(docRef, { ...txn, updatedAt: serverTimestamp() }, { merge: true });
+                                        } else {
+                                            firestoreBatch.set(docRef, { ...txn, deleted: false, createdAt: serverTimestamp() });
+                                        }
 
                                         // USER REQUEST 2026: Automatic duplicate BPI "Atome Payment" to Atome
                                         const merchantLower = txn.merchant?.toLowerCase() || '';
@@ -10621,6 +10671,87 @@ Be direct, practical, and helpful.`;
                         merchant: merchMatch ? merchMatch[1].trim() : "Atome Transaction",
                         date: formatLocalDate(parseInt(ts))
                     };
+                }
+
+                // (2026-07-13) Auto-categorize MariBank transactions; prev: fixed financial
+                function parseMariBankEmail(text, ts, subject) {
+                    let amount = 0;
+                    let merchant = "MariBank";
+                    let note = "";
+                    let isIncome = false;
+                    let category = null;
+                    let dateVal = formatLocalDate(parseInt(ts));
+
+                    const tLower = text.toLowerCase();
+                    const sLower = (subject || '').toLowerCase();
+
+                    // 1. Transaction Time from body if present
+                    const timeMatch = text.match(/Transaction time\s*:\s*([^\n\r|]+)/i);
+                    if (timeMatch) {
+                        const parsedDate = new Date(timeMatch[1].trim());
+                        if (!isNaN(parsedDate)) dateVal = formatLocalDate(parsedDate);
+                    }
+
+                    // 2. Reference Number if present
+                    const refMatch = text.match(/Reference No\s*:\s*([A-Za-z0-9]+)/i);
+                    const refNo = refMatch ? refMatch[1].trim() : '';
+
+                    // 3. Detect Transaction Type
+                    if (sLower.includes("successful debit card") || tLower.includes("maricard debit transaction was successful")) {
+                        // Debit Card Purchase (e.g. TECFUEL BOGO)
+                        const amtMatch = text.match(/(?:Transaction Amount|Amount)\s*:\s*(?:PHP|₱)?\s*([\d,]+\.?\d*)/i);
+                        if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+
+                        const merchMatch = text.match(/Merchant\s*:\s*([^\n\r|]+)/i);
+                        if (merchMatch) {
+                            merchant = merchMatch[1].trim();
+                        } else {
+                            merchant = "MariCard Purchase";
+                        }
+                        isIncome = false;
+                        note = "MariCard Debit - " + merchant;
+
+                        // (2026-07-13) Set inferred category from merchant; prev: null check
+                        if (typeof getMerchantDisplay === 'function') {
+                            const inferred = getMerchantDisplay(merchant, { note });
+                            if (inferred && inferred.category) {
+                                category = inferred.category;
+                            }
+                        }
+                        if (!category) category = 'Financial Expenses';
+                    } else if (sLower.includes("transfer notification") || tLower.includes("received a funds transfer") || tLower.includes("transfer from")) {
+                        // Funds Transfer Received (Income: BPI, GCash, etc.)
+                        const amtMatch = text.match(/(?:Transfer amount|Amount)\s*:\s*(?:PHP|₱)?\s*([\d,]+\.?\d*)/i);
+                        if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+
+                        const fromMatch = text.match(/Transfer from\s*:\s*([^\n\r|]+)/i);
+                        const transferFrom = fromMatch ? fromMatch[1].trim() : '';
+
+                        isIncome = true;
+                        merchant = "INCOME";
+                        category = "Income";
+                        note = transferFrom ? ("FROM " + transferFrom.toUpperCase()) : "FUNDS RECEIVED";
+                        if (refNo) note += " (Ref: " + refNo + ")";
+                    } else {
+                        // Fallback amount matching
+                        const amtMatch = text.match(/(?:Amount|PHP|₱)\s*[:|]?\s*(?:PHP|₱)?\s*([\d,]+\.\d{2})/i);
+                        if (amtMatch) amount = parseFloat(amtMatch[1].replace(/,/g, ''));
+                    }
+
+                    if (!amount || amount <= 0) return null;
+
+                    const result = {
+                        id: refNo ? ('mb_' + refNo) : ('mb_' + ts),
+                        amount: amount,
+                        merchant: merchant,
+                        note: note,
+                        date: dateVal,
+                        manualBudgetCategory: 'n/a'
+                    };
+                    if (category) {
+                        result.manualCategory = category;
+                    }
+                    return result;
                 }
 
                 function parseBPIEmail(text, ts, subject) {
@@ -13563,8 +13694,8 @@ Be direct, practical, and helpful.`;
 
                     let display = { name: cleaned, category: 'Financial expenses', icon: 'payments', catClass: 'cat-financial' };
 
-                    // 3. MANUAL OVERRIDE (USER CHOICE)
-                    if (t.manualCategory) {
+                    // (2026-07-13) Don't bypass keywords on default financial; prev: t.manualCat
+                    if (t.manualCategory && t.manualCategory.toLowerCase() !== 'financial expenses') {
                         const userCat = CATEGORIES.find(c => c.id === t.manualCategory);
                         if (userCat) {
                             display.category = userCat.id;
@@ -13650,7 +13781,8 @@ Be direct, practical, and helpful.`;
                         // Feature 2: Keyword-based Smart Categorization
                         const keywordMap = [
                             { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'carousell'] },
-                            { cat: 'Shopping', key: ['mall', 'supermet', 'gaisano', 'mr diy', 'mr. diy', 'watsons', 'sm store', 'sm superm', 'sm supermarket', 'sm city', 'sm mall', 'sm hypermarket', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m', 'uniqlo', 'puregold', 'landmark', 'daiso', 'national bookstore', 'fully booked', 'landers', 's&r', 's and r', 'waltermart', 'shopwise', 'ace hardware', 'handyman', 'wilcon', 'true value', 'octagon', 'mercury drug', 'generika', 'southstar drug', 'rose pharmacy'] },
+                            // (2026-07-13) Add prince and hypermart keywords; prev: omitted
+                            { cat: 'Shopping', key: ['mall', 'supermet', 'gaisano', 'mr diy', 'mr. diy', 'watsons', 'sm store', 'sm superm', 'sm supermarket', 'sm city', 'sm mall', 'sm hypermarket', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m', 'uniqlo', 'puregold', 'landmark', 'daiso', 'national bookstore', 'fully booked', 'landers', 's&r', 's and r', 'waltermart', 'shopwise', 'ace hardware', 'handyman', 'wilcon', 'true value', 'octagon', 'mercury drug', 'generika', 'southstar drug', 'rose pharmacy', 'prince', 'hypermart', 'supermarket'] },
                             { cat: 'Vehicle', key: ['locq', 'tecfuel', 'tec fuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'unioil', 'phoenix', 'total', 'flying v', 'fuel', 'gas station', 'gas', 'toyota', 'honda', 'mitsub', 'car wash', 'autoshop', 'parking', 'tire', 'auto supply'] },
                             { cat: 'Food & Drinks', key: ['jollibee', 'mcdo', 'mcdonald', 'burger king', 'starbucks', 'chowking', 'kfc', 'mang inasal', 'greenwich', 'ribshack', 'coffee', 'resto', 'cafe', 'tea', 'bakery', 'j.co', 'dunkin', 'boba', 'pizza', '7-eleven', 'seven eleven', '7 11', '7/11', 'alfamart', 'familymart', 'ministop', 'lawson', 'pickup coffee', 'bo s coffee', "bo's coffee", 'bonchon', 'pizza hut', 'pizzahut', 'shakey', 'conti', 'yellow cab', 'potato corner'] },
                             { cat: 'Service', key: ['globe', 'smart', 'pldt', 'converge', 'tm', 'gomo', 'dito', 'netflix', 'spotify', 'youtube', 'disney', 'prime', 'apple', 'icloud', 'google', 'canva', 'paypal', 'gcash', 'maya', 'paymaya', 'subscription', 'bill', 'insurance', 'philhealth', 'sss', 'pag-ibig', 'veco', 'mcwd', 'meralco', 'bayad', 'internet', 'load', 'top up', 'streaming'] },

@@ -10666,3 +10666,252 @@ body.dark-mode #confirmation-modal-message {
 #note-text {
     text-transform: capitalize !important;
 }
+
+/* (2026-07-13) Trash modal 90% screen height; prev: max-height 85vh */
+.trash-modal-card {
+    max-width: 480px;
+    width: 100%;
+    height: 90vh !important;
+    height: 90dvh !important;
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    min-height: 90vh !important;
+    min-height: 90dvh !important;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 20px 24px;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+    background: #ffffff;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+@media (min-width: 600px) {
+    .trash-modal-card {
+        border-radius: 24px;
+        margin: auto;
+    }
+}
+body.dark-mode .trash-modal-card {
+    background: #18181b;
+    color: #f4f4f5;
+    border: 1px solid #27272a;
+}
+.trash-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+body.dark-mode .trash-modal-header {
+    border-bottom-color: #27272a;
+}
+.trash-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.trash-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+}
+body.dark-mode .trash-modal-title {
+    color: #f4f4f5;
+}
+.trash-modal-subtitle {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+.trash-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.trash-empty-btn {
+    background: #fee2e2;
+    color: #dc2626;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.trash-empty-btn:hover {
+    background: #fecaca;
+}
+body.dark-mode .trash-empty-btn {
+    background: rgba(220, 38, 38, 0.2);
+    color: #f87171;
+}
+.trash-close-btn {
+    background: #f1f5f9;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    cursor: pointer;
+}
+body.dark-mode .trash-close-btn {
+    background: #27272a;
+    color: #a1a1aa;
+}
+.trash-account-pills {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    margin-bottom: 8px;
+    scrollbar-width: none;
+}
+.trash-account-pills::-webkit-scrollbar {
+    display: none;
+}
+.trash-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #64748b;
+    transition: all 0.2s;
+}
+.trash-pill.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+body.dark-mode .trash-pill {
+    background: #27272a;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+}
+body.dark-mode .trash-pill.active {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+/* (2026-07-13) Flex trash items to fill 90vh modal; prev: max-height 55vh */
+.trash-items-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    padding-right: 4px;
+}
+body.dark-mode #empty-trash-modal .custom-modal {
+    background: #18181b;
+    color: #f4f4f5;
+    border: 1px solid #27272a;
+}
+body.dark-mode #empty-trash-modal .modal-header {
+    color: #f4f4f5 !important;
+}
+.trash-item-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s;
+}
+body.dark-mode .trash-item-card {
+    background: #202023;
+    border-color: #2e2e32;
+}
+.trash-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.trash-account-badge {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+.trash-acc-bpi { background: #fee2e2; color: #b91c1c; }
+.trash-acc-atome { background: #ecfdf5; color: #047857; }
+.trash-acc-maribank { background: #ffedd5; color: #c2410c; }
+.trash-acc-default { background: #f1f5f9; color: #475569; }
+.trash-expiry-tag {
+    font-size: 10px;
+    color: #ef4444;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.trash-item-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #f1f5f9;
+}
+body.dark-mode .trash-item-actions {
+    border-top-color: #2e2e32;
+}
+.trash-restore-btn {
+    background: #ecfdf5;
+    color: #059669;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+}
+.trash-restore-btn:hover {
+    background: #d1fae5;
+}
+body.dark-mode .trash-restore-btn {
+    background: rgba(5, 150, 105, 0.2);
+    color: #34d399;
+}
+.trash-delete-btn {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.trash-delete-btn:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+body.dark-mode .trash-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+}

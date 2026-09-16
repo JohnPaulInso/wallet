@@ -658,6 +658,11 @@
                         <i class="material-icons">lock</i>
                         <span>Privacy PIN</span>
                     </div>
+                    <!-- (2026-07-13) Add Trash Bin option in profile dropdown; prev: omitted -->
+                    <div class="dropdown-item" onclick="openTrashModal()">
+                        <i class="material-icons">delete_outline</i>
+                        <span>Trash Bin</span>
+                    </div>
                     <div class="dropdown-item logout" onclick="handleSignout()">
                         <i class="material-icons">logout</i>
                         <span>Log Out</span>
@@ -3453,6 +3458,8 @@
                                 if (true) { // Relaxed check
                                     if (window.watchAtomeBalance) window.watchAtomeBalance();
                                     if (window.watchBpiTransactions) window.watchBpiTransactions();
+                                    // (2026-09-16) Start MariBank watcher; prev: absent
+                                    if (window.watchMariBankTransactions) window.watchMariBankTransactions();
                                     if (window.watchBudgetManual) window.watchBudgetManual();
                                 }
                             });
@@ -4935,6 +4942,32 @@
                         window.bpiDataLoaded = true;
                         updateBPIInsight();
                         window.debouncedUpdateBudget();
+                    });
+                };
+
+                // (2026-09-16) MariBank background watcher; prev: absent — caused budget/fuel to drop MariBank values
+                window.watchMariBankTransactions = () => {
+                    const uid = auth.currentUser?.uid;
+                    if (!uid) return;
+                    if (window.unsubscribeMariBankWatch) window.unsubscribeMariBankWatch();
+
+                    const q = query(collection(db, 'users', uid, 'maribank_transactions'), orderBy('date', 'desc'));
+                    window.unsubscribeMariBankWatch = onSnapshot(q, (snap) => {
+                        let txns = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                        const seenIds = new Set();
+                        txns = txns.filter(t => {
+                            if (!t.id) return true;
+                            if (seenIds.has(t.id)) return false;
+                            seenIds.add(t.id);
+                            return true;
+                        });
+                        if (!window.walletTxns) window.walletTxns = {};
+                        window.walletTxns.maribank = txns;
+                        window.hasBudgetLiveData = true;
+                        window.debouncedUpdateBudget();
+                        if (window.AccountsView && window.AccountsView.updateFuelTankWidget) {
+                            window.AccountsView.updateFuelTankWidget();
+                        }
                     });
                 };
 
@@ -10365,11 +10398,11 @@ Be direct, practical, and helpful.`;
                             }
                         }
 
-                        // (2026-07-13) Silent token use & refresh; prev: expired local purge & popup
-                        if (storedToken) {
+                        // (2026-09-16) Atome skips Gmail; token not required for cross-sync
+                        if (storedToken && syncAccount !== 'atome') {
                             console.log('🚀 Using stored Gmail token (will auto-refresh on 401)...');
                             accessToken = storedToken;
-                        } else {
+                        } else if (!storedToken && syncAccount !== 'atome') {
                             if (!manualTrigger) return;
 
                             if (tokenClient) {
@@ -10401,16 +10434,17 @@ Be direct, practical, and helpful.`;
                         log(`Syncing ${syncAccount.toUpperCase()}...`);
 
                         // (2026-07-13) Add maribank query filters; prev: atome and bpi only
-                        let query = '';
+                        // (2026-09-16) Renamed query -> gmailQuery to avoid shadowing Firestore query()
+                        let gmailQuery = '';
                         if (syncAccount === 'atome') {
                             // Broader Atome Query
-                            query = `(subject:"Transaction Confirmation" OR subject:"payment confirmation" OR subject:"Atome Card") (from:Atome OR from:no-reply@atome.ph OR from:noreply@atome.ph)`;
+                            gmailQuery = `(subject:"Transaction Confirmation" OR subject:"payment confirmation" OR subject:"Atome Card") (from:Atome OR from:no-reply@atome.ph OR from:noreply@atome.ph)`;
                         } else if (syncAccount === 'maribank') {
                             // MariBank Query
-                            query = `(from:alerts@maribank.com.ph OR from:maribank.com.ph OR from:MariBank) (subject:"Successful Debit Card Transaction" OR subject:"Transfer Notification" OR subject:"MariBank")`;
+                            gmailQuery = `(from:alerts@maribank.com.ph OR from:maribank.com.ph OR from:MariBank) (subject:"Successful Debit Card Transaction" OR subject:"Transfer Notification" OR subject:"MariBank")`;
                         } else {
                             // BPI Query
-                            query = `(subject:"Funds Transfer" OR subject:"Fund Transfer" OR subject:"Interbank" OR subject:"Pay via QR" OR from:bpi_online@bpi.com.ph OR from:onlinebanking@bpi.com.ph OR from:bpiinstapay@bpi.com.ph OR from:BPI)`;
+                            gmailQuery = `(subject:"Funds Transfer" OR subject:"Fund Transfer" OR subject:"Interbank" OR subject:"Pay via QR" OR from:bpi_online@bpi.com.ph OR from:onlinebanking@bpi.com.ph OR from:bpiinstapay@bpi.com.ph OR from:BPI)`;
                         }
 
                         log(`Scanning ${syncAccount} (Target Limit: ${limit})...`);
@@ -10418,11 +10452,13 @@ Be direct, practical, and helpful.`;
                         let savedCount = 0;
                         let pageToken = '';
                         let totalProcessed = 0;
+                        // (2026-09-16) Atome: skip Gmail loop, use cross-sync only
+                        if (syncAccount === 'atome') totalProcessed = limit;
 
                         // Loop for pagination if limit > 500
                         while (totalProcessed < limit) {
                             const maxResults = Math.min(500, limit - totalProcessed);
-                            let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(query)}`;
+                            let url = `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${maxResults}&q=${encodeURIComponent(gmailQuery)}`;
                             if (pageToken) url += `&pageToken=${pageToken}`;
 
                             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${accessToken}` } });
@@ -10620,6 +10656,121 @@ Be direct, practical, and helpful.`;
 
                             totalProcessed += msgs.length;
                             if (!pageToken) break;
+                        }
+
+                        // (2026-09-16) Atome cross-sync: duplicate current-month BPI ATOME PAYMENT
+                        // transactions into Atome. No email scanning involved.
+                        if (syncAccount === 'atome') {
+                            try {
+                                if (!auth.currentUser) throw new Error('No auth user for cross-sync');
+                                const uid = auth.currentUser.uid;
+                                const atomeCol = 'transactions'; // Atome collection
+                                const twoDaysAgoStr = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+                                console.log(`[Atome CrossSync] START — twoDaysAgoStr=${twoDaysAgoStr}`);
+
+                                // Step 1: Get BPI transactions (memory first, Firestore fallback)
+                                let bpiSources = (Array.isArray(window.walletTxns?.bpi) && window.walletTxns.bpi.length > 0)
+                                    ? window.walletTxns.bpi
+                                    : null;
+
+                                if (!bpiSources) {
+                                    console.log('[Atome CrossSync] walletTxns.bpi empty — fetching from Firestore...');
+                                    const bpiSnap = await getDocs(
+                                        query(collection(db, 'users', uid, 'bpi_transactions'), orderBy('date', 'desc'))
+                                    );
+                                    bpiSources = bpiSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !t.deleted);
+                                    console.log(`[Atome CrossSync] Firestore returned ${bpiSources.length} BPI docs`);
+                                } else {
+                                    console.log(`[Atome CrossSync] walletTxns.bpi has ${bpiSources.length} items`);
+                                }
+
+                                // Step 2: Filter to past 2 days + ATOME payment
+                                // (2026-07-13) Limit BPI sync to past 2 days & prevent dups; prev: this month
+                                const candidates = bpiSources.filter(t => {
+                                    if (!t || t.deleted) return false;
+                                    const d = t.date ? String(t.date).slice(0, 10) : '';
+                                    if (d < twoDaysAgoStr) return false;
+                                    const isCCPmt = (t.manualCategory || '').toLowerCase().includes('credit card') ||
+                                                    (t.merchant || '').toUpperCase().includes('ATOME');
+                                    return isCCPmt;
+                                });
+
+                                console.log(`[Atome CrossSync] Candidates to mirror: ${candidates.length}`, candidates.map(t => `${t.merchant}|${t.date}|${t.manualCategory}`));
+
+                                if (candidates.length === 0) {
+                                    console.log('[Atome CrossSync] No matching BPI transactions found for past 2 days.');
+                                } else {
+                                    const crossBatch = writeBatch(db);
+                                    let batchCount = 0;
+                                    const atomeItems = (Array.isArray(window.walletTxns?.atome) && window.walletTxns.atome) || [];
+
+                                    for (const t of candidates) {
+                                        const dupIdNew = `atome_cs_bpi_${t.id}`;
+                                        const dupIdOld = `auto_${t.id}`;
+
+                                        const [snapNew, snapOld] = await Promise.all([
+                                            getDoc(doc(db, 'users', uid, atomeCol, dupIdNew)),
+                                            getDoc(doc(db, 'users', uid, atomeCol, dupIdOld))
+                                        ]);
+
+                                        const dataNew = snapNew.exists() ? snapNew.data() : null;
+                                        const dataOld = snapOld.exists() ? snapOld.data() : null;
+                                        const alreadyInAtome = atomeItems.some(at =>
+                                            !at.deleted && (
+                                                at.duplicatedFrom === t.id ||
+                                                at.id === dupIdNew ||
+                                                at.id === dupIdOld ||
+                                                (at.merchant === 'ATOME PAYMENT' && String(at.date).slice(0, 10) === String(t.date).slice(0, 10) && Math.abs(at.amount || 0) === Math.abs(t.amount || 0))
+                                            )
+                                        );
+
+                                        if (alreadyInAtome || (dataNew && !dataNew.deleted) || (dataOld && !dataOld.deleted)) {
+                                            console.log(`[Atome CrossSync] Skip (already synced): ${t.merchant} ${t.date}`);
+                                            continue;
+                                        }
+
+                                        // (2026-07-13) Set duplicated Atome payments to Income; prev: Credit Card Payment
+                                        const dupTxn = {
+                                            ...t,
+                                            id: dupIdNew,
+                                            merchant: 'ATOME PAYMENT',
+                                            amount: Math.abs(t.amount || 0),
+                                            type: 'income',
+                                            category: 'Income',
+                                            manualCategory: 'Income',
+                                            manualBudgetCategory: 'n/a',
+                                            note: ((t.note || '') + ' (Synced from BPI)').trim(),
+                                            duplicatedFrom: t.id,
+                                            duplicatedFromAccount: 'bpi',
+                                            isAutoGenerated: true,
+                                            deleted: false
+                                        };
+                                        if (t.manualAmount !== undefined && t.manualAmount !== null) {
+                                            dupTxn.manualAmount = Math.abs(t.manualAmount);
+                                        } else {
+                                            delete dupTxn.manualAmount;
+                                        }
+                                        Object.keys(dupTxn).forEach(key => dupTxn[key] === undefined && delete dupTxn[key]);
+                                        console.log(`[Atome CrossSync] Adding: ${t.merchant} ${t.date} ₱${t.amount}`);
+                                        crossBatch.set(doc(db, 'users', uid, atomeCol, dupIdNew), { ...dupTxn, createdAt: serverTimestamp() });
+                                        batchCount++;
+                                    }
+
+                                    if (batchCount > 0) {
+                                        await crossBatch.commit();
+                                        savedCount += batchCount;
+                                        console.log(`[Atome CrossSync] ✅ Committed ${batchCount} records.`);
+                                        log(`Cross-sync: +${batchCount} BPI payment(s) mirrored to Atome.`, 'success');
+                                        await loadData();
+                                    } else {
+                                        console.log('[Atome CrossSync] All candidates already exist — nothing to write.');
+                                    }
+                                }
+                            } catch (csErr) {
+                                console.error('[Atome CrossSync] ❌ Error:', csErr);
+                                log('Cross-sync error: ' + csErr.message, 'error');
+                            }
                         }
 
                         if (savedCount > 0) {
@@ -12987,6 +13138,10 @@ Be direct, practical, and helpful.`;
                     if (entry.deletedItem) {
                         window.allTxns.push(entry.deletedItem);
                         window.allTxns.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        if (window.walletTxns && window.walletTxns[entry.accId]) {
+                            window.walletTxns[entry.accId].push(entry.deletedItem);
+                            window.walletTxns[entry.accId].sort((a, b) => new Date(b.date) - new Date(a.date));
+                        }
                         renderHistory(window.allTxns);
                         updateBalanceToThisMonth(window.allTxns);
                         showToast('Transaction restored');
@@ -13191,28 +13346,26 @@ Be direct, practical, and helpful.`;
 
                     closeModals(); // Close modal immediately
 
-                    // Locate element for animation
+                    // (2026-07-13) Remove txn immediately on delete; prev: delayed by Thanos snap
                     const txnEl = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
+                    if (txnEl) {
+                        const wrapper = txnEl.closest('.txn-swipe-wrapper') || txnEl;
+                        wrapper.remove();
+                    }
 
                     // OPTIMISTIC UPDATE: Remove from UI immediately
-                    const idx = window.allTxns.findIndex(t => t.id === txnId);
+                    const idx = window.allTxns ? window.allTxns.findIndex(t => t.id === txnId) : -1;
                     let deletedItem = null;
                     if (idx > -1) {
                         deletedItem = { ...window.allTxns[idx] };
                         window.allTxns.splice(idx, 1);
                     }
-
-                    const removeAndRender = () => {
-                        renderHistory(window.allTxns);
-                        updateBalanceToThisMonth(window.allTxns);
-                    };
-
-                    // Trigger Thanos animation then render
-                    if (txnEl) {
-                        window.runThanosSnap(txnEl, removeAndRender);
-                    } else {
-                        removeAndRender();
+                    if (window.walletTxns && window.walletTxns[accId]) {
+                        window.walletTxns[accId] = window.walletTxns[accId].filter(t => t.id !== txnId);
                     }
+
+                    renderHistory(window.allTxns);
+                    updateBalanceToThisMonth(window.allTxns);
 
                     // CREATE UNDO SNACKBAR (max 3 stacked)
                     createUndoSnackbar(txnId, accId, col, deletedItem);
@@ -13222,8 +13375,12 @@ Be direct, practical, and helpful.`;
                 async function commitDelete(txnId, accId, col) {
                     try {
                         if (!auth.currentUser) return;
-                        const uid = auth.currentUser.uid;
-                        await setDoc(doc(db, "users", uid, col, txnId), { deleted: true }, { merge: true });
+                        // (2026-07-13) Store deletedAt and deletedFromAccount; prev: deleted: true only
+                        await setDoc(doc(db, "users", uid, col, txnId), {
+                            deleted: true,
+                            deletedAt: Date.now(),
+                            deletedFromAccount: accId
+                        }, { merge: true });
 
                         const cacheKey = `wallet_cache_${uid}_${accId}`;
                         localStorage.setItem(cacheKey, JSON.stringify({
@@ -13235,6 +13392,335 @@ Be direct, practical, and helpful.`;
                         showToast('Delete failed');
                     }
                 }
+
+                // (2026-07-13) Add Trash Bin system with 30-day auto-purge; prev: omitted
+                window.trashTxns = [];
+                window.currentTrashTab = 'all';
+
+                window.openTrashModal = async function () {
+                    const dropdown = document.getElementById('profile-dropdown');
+                    if (dropdown) dropdown.classList.remove('active');
+
+                    const modal = document.getElementById('trash-modal');
+                    if (!modal) return;
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                    window.modalOpen = true;
+                    if (window.NavState) window.NavState.pushModalState('trash-modal', () => closeModals('trash-modal', true));
+
+                    const pillsContainer = document.getElementById('trash-account-pills');
+                    const itemsContainer = document.getElementById('trash-items-container');
+                    if (pillsContainer) pillsContainer.innerHTML = '';
+                    if (itemsContainer) {
+                        itemsContainer.innerHTML = `
+                            <div class="trash-loading-spinner" style="text-align:center; padding: 32px; color: #94a3b8;">
+                                <i class="material-icons spin" style="font-size: 26px;">autorenew</i>
+                                <div style="font-size: 12px; margin-top: 6px;">Loading deleted transactions...</div>
+                            </div>
+                        `;
+                    }
+
+                    await loadTrashTransactions();
+                };
+
+                window.closeTrashModal = function () {
+                    closeModals('trash-modal', true);
+                };
+
+                async function loadTrashTransactions() {
+                    try {
+                        if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
+                        const accounts = ['atome', 'bpi', 'maribank'];
+                        if (Array.isArray(window.walletAccounts)) {
+                            window.walletAccounts.forEach(acc => {
+                                if (acc.id && !accounts.includes(acc.id)) accounts.push(acc.id);
+                            });
+                        }
+
+                        const trashList = [];
+                        const purgePromises = [];
+                        const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                        const now = Date.now();
+
+                        for (const accId of accounts) {
+                            const col = getCollectionName(accId);
+                            try {
+                                const snap = await getDocs(collection(db, 'users', uid, col));
+                                snap.docs.forEach(docSnap => {
+                                    const data = docSnap.data();
+                                    if (!data.deleted) return;
+
+                                    const deletedAt = data.deletedAt || (data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.date ? new Date(data.date).getTime() : now));
+                                    // 30-day auto-purge
+                                    if (now - deletedAt >= thirtyDaysMs) {
+                                        purgePromises.push(deleteDoc(doc(db, 'users', uid, col, docSnap.id)));
+                                        return;
+                                    }
+
+                                    const daysPassed = Math.floor((now - deletedAt) / 86400000);
+                                    const daysLeft = Math.max(1, 30 - daysPassed);
+
+                                    trashList.push({
+                                        id: docSnap.id,
+                                        ...data,
+                                        _account: data.deletedFromAccount || accId,
+                                        _col: col,
+                                        _deletedAt: deletedAt,
+                                        _daysLeft: daysLeft
+                                    });
+                                });
+                            } catch (err) {
+                                console.warn(`Trash scan error for ${accId}:`, err);
+                            }
+                        }
+
+                        if (purgePromises.length > 0) {
+                            await Promise.all(purgePromises);
+                        }
+
+                        trashList.sort((a, b) => b._deletedAt - a._deletedAt);
+                        window.trashTxns = trashList;
+                        window.currentTrashTab = 'all';
+
+                        renderTrashPills();
+                        renderTrashList();
+                    } catch (error) {
+                        console.error('Failed to load trash transactions:', error);
+                        const itemsContainer = document.getElementById('trash-items-container');
+                        if (itemsContainer) {
+                            itemsContainer.innerHTML = '<div style="text-align:center; padding: 24px; color:#ef4444; font-size: 13px;">Failed to load deleted items.</div>';
+                        }
+                    }
+                }
+
+                function renderTrashPills() {
+                    const pillsContainer = document.getElementById('trash-account-pills');
+                    if (!pillsContainer) return;
+
+                    const allCount = window.trashTxns.length;
+                    const countsByAcc = {};
+                    window.trashTxns.forEach(t => {
+                        const a = t._account || 'other';
+                        countsByAcc[a] = (countsByAcc[a] || 0) + 1;
+                    });
+
+                    let html = `
+                        <div class="trash-pill ${window.currentTrashTab === 'all' ? 'active' : ''}" onclick="setTrashAccountFilter('all')">
+                            All (${allCount})
+                        </div>
+                    `;
+
+                    Object.keys(countsByAcc).forEach(accId => {
+                        const label = accId.toUpperCase();
+                        const isActive = window.currentTrashTab === accId ? 'active' : '';
+                        html += `
+                            <div class="trash-pill ${isActive}" onclick="setTrashAccountFilter('${accId}')">
+                                ${label} (${countsByAcc[accId]})
+                            </div>
+                        `;
+                    });
+
+                    pillsContainer.innerHTML = html;
+                }
+
+                window.setTrashAccountFilter = function (accId) {
+                    window.currentTrashTab = accId;
+                    renderTrashPills();
+                    renderTrashList();
+                };
+
+                function renderTrashList() {
+                    const container = document.getElementById('trash-items-container');
+                    if (!container) return;
+
+                    const filtered = window.currentTrashTab === 'all'
+                        ? window.trashTxns
+                        : window.trashTxns.filter(t => t._account === window.currentTrashTab);
+
+                    if (filtered.length === 0) {
+                        container.innerHTML = `
+                            <div style="text-align:center; padding: 40px 20px; color: #94a3b8;">
+                                <i class="material-icons" style="font-size: 40px; color: #cbd5e1; margin-bottom: 8px;">delete_sweep</i>
+                                <div style="font-weight: 700; font-size: 14px; color: #64748b;">Trash is empty</div>
+                                <div style="font-size: 11px; margin-top: 4px;">Deleted transactions will appear here for 30 days</div>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    let html = '';
+                    filtered.forEach(t => {
+                        const mapped = getMerchantDisplay(t.merchant, t);
+                        const isIncome = mapped.category === 'Income' || t.type === 'income' || (t.amount < 0 && window.currentAccount !== 'atome');
+                        const amt = t.manualAmount !== undefined ? t.manualAmount : (t.amount || 0);
+                        const absAmt = Math.abs(amt);
+                        const d = new Date(t.date || t._deletedAt);
+                        const dateStr = !isNaN(d) ? d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+
+                        let accClass = 'trash-acc-default';
+                        if (t._account === 'bpi') accClass = 'trash-acc-bpi';
+                        else if (t._account === 'atome') accClass = 'trash-acc-atome';
+                        else if (t._account === 'maribank') accClass = 'trash-acc-maribank';
+
+                        const logo = (typeof detectTxnLogo === 'function') ? detectTxnLogo(mapped.name) : null;
+                        const logoHTML = logo ? `<div class="brand-badge" style="display: flex;"><img src="${logo}"></div>` : '';
+                        const noteText = t.note ? `<div class="txn-note" style="color: #64748b; font-size: 11px; margin-top: 2px;">${t.note}</div>` : '';
+
+                        html += `
+                            <div class="trash-item-card" id="trash-item-${t.id}">
+                                <div class="trash-item-top">
+                                    <span class="trash-account-badge ${accClass}">${(t._account || 'Wallet').toUpperCase()}</span>
+                                    <span class="trash-expiry-tag">
+                                        <i class="material-icons" style="font-size: 13px;">schedule</i>
+                                        ${t._daysLeft}d left
+                                    </span>
+                                </div>
+                                <div class="premium-txn" style="padding: 0; background: transparent; box-shadow: none; border: none; margin: 0;">
+                                    <div class="icon-box ${mapped.catClass}">
+                                        <i class="material-icons">${mapped.icon}</i>
+                                        ${logoHTML}
+                                    </div>
+                                    <div class="txn-details">
+                                        <div class="txn-merch" style="font-size: 13px;">${mapped.name}</div>
+                                        <div class="txn-sub">
+                                            <span>${dateStr}</span> &nbsp;&bull;&nbsp; <span>${displayCategoryName(mapped.category)}</span>
+                                        </div>
+                                        ${noteText}
+                                    </div>
+                                    <div class="txn-right">
+                                        <div class="txn-amount" style="${isIncome ? 'color: #16a34a;' : ''}">
+                                            ${isIncome ? '+' : ''}\u20B1${absAmt.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="trash-item-actions">
+                                    <button class="trash-delete-btn" onclick="permanentDeleteTrashTxn('${t.id}', '${t._col}')" title="Delete permanently">
+                                        <i class="material-icons" style="font-size: 16px;">delete_forever</i>
+                                    </button>
+                                    <button class="trash-restore-btn" onclick="restoreTrashTxn('${t.id}', '${t._account}', '${t._col}')">
+                                        <i class="material-icons" style="font-size: 15px;">restore</i>
+                                        Restore
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = html;
+                }
+
+                window.restoreTrashTxn = async function (txnId, accId, col) {
+                    try {
+                        if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
+                        await setDoc(doc(db, 'users', uid, col, txnId), {
+                            deleted: false,
+                            deletedAt: null
+                        }, { merge: true });
+
+                        const restoredIdx = window.trashTxns.findIndex(t => t.id === txnId);
+                        let restoredItem = null;
+                        if (restoredIdx > -1) {
+                            restoredItem = window.trashTxns[restoredIdx];
+                            window.trashTxns.splice(restoredIdx, 1);
+                        }
+
+                        if (restoredItem) {
+                            delete restoredItem._account;
+                            delete restoredItem._col;
+                            delete restoredItem._deletedAt;
+                            delete restoredItem._daysLeft;
+                            restoredItem.deleted = false;
+
+                            if (window.walletTxns && window.walletTxns[accId]) {
+                                window.walletTxns[accId].push(restoredItem);
+                                window.walletTxns[accId].sort((a, b) => new Date(b.date) - new Date(a.date));
+                            }
+                            if (window.currentAccount === accId) {
+                                if (!Array.isArray(window.allTxns)) window.allTxns = [];
+                                window.allTxns.push(restoredItem);
+                                window.allTxns.sort((a, b) => new Date(b.date) - new Date(a.date));
+                                renderHistory(window.allTxns);
+                                updateBalanceToThisMonth(window.allTxns);
+                            }
+                        }
+
+                        renderTrashPills();
+                        renderTrashList();
+                        showToast('Transaction restored');
+                    } catch (e) {
+                        console.error('Failed to restore transaction:', e);
+                        showToast('Failed to restore');
+                    }
+                };
+
+                window.permanentDeleteTrashTxn = async function (txnId, col) {
+                    try {
+                        if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
+                        await deleteDoc(doc(db, 'users', uid, col, txnId));
+
+                        const idx = window.trashTxns.findIndex(t => t.id === txnId);
+                        if (idx > -1) window.trashTxns.splice(idx, 1);
+
+                        renderTrashPills();
+                        renderTrashList();
+                        showToast('Permanently deleted');
+                    } catch (e) {
+                        console.error('Failed to permanently delete:', e);
+                        showToast('Delete failed');
+                    }
+                };
+
+                // (2026-07-13) Add empty-trash modal flows; prev: used browser confirm()
+                window.emptyAllTrash = function () {
+                    window.openEmptyTrashModal();
+                };
+
+                window.openEmptyTrashModal = function () {
+                    if (!window.trashTxns || window.trashTxns.length === 0) {
+                        showToast('Trash is already empty');
+                        return;
+                    }
+                    const modal = document.getElementById('empty-trash-modal');
+                    if (!modal) return;
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                    if (window.NavState) window.NavState.pushModalState('empty-trash-modal', () => window.closeEmptyTrashModal(true));
+                };
+
+                window.closeEmptyTrashModal = function (fromHistory = false) {
+                    const modal = document.getElementById('empty-trash-modal');
+                    if (!modal) return;
+                    modal.classList.remove('show');
+                    modal.style.display = 'none';
+                    if (!fromHistory && window.NavState && window.NavState.modalStack.some(m => m.id === 'empty-trash-modal')) {
+                        history.back();
+                    }
+                };
+
+                window.confirmEmptyAllTrash = async function () {
+                    window.closeEmptyTrashModal(true);
+                    if (!window.trashTxns || window.trashTxns.length === 0) return;
+
+                    try {
+                        if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
+                        const b = writeBatch(db);
+                        window.trashTxns.forEach(t => {
+                            b.delete(doc(db, 'users', uid, t._col, t.id));
+                        });
+                        await b.commit();
+                        window.trashTxns = [];
+                        renderTrashPills();
+                        renderTrashList();
+                        showToast('Trash emptied');
+                    } catch (e) {
+                        console.error('Failed to empty trash:', e);
+                        showToast('Failed to empty trash');
+                    }
+                };
 
                 // --- CUSTOMIZATION MODALS ---
                 const CATEGORIES = [
@@ -15414,7 +15900,10 @@ Be direct, practical, and helpful.`;
                         'receipt-delete-sheet-modal',
                         'card-qr-confirm-modal',
                         'card-qr-delete-modal',
-                        'card-qr-gallery-modal'
+                        'card-qr-gallery-modal',
+                        // (2026-07-13) Register empty-trash-modal; prev: only trash-modal
+                        'trash-modal',
+                        'empty-trash-modal'
                     ];
 
                     let targetToClose = null;
@@ -16383,6 +16872,53 @@ Be direct, practical, and helpful.`;
                         <div class="cancel-link" onclick="closeModals()">CANCEL</div>
                         <button id="delete-confirm-btn" class="mui-btn mui-btn--raised" onclick="confirmDelete()"
                             style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (2026-07-13) Add Trash Bin modal; prev: omitted -->
+            <div id="trash-modal" class="modal-overlay" style="display: none; align-items: flex-end; justify-content: center;">
+                <div class="custom-modal trash-modal-card">
+                    <div class="trash-modal-header">
+                        <div class="trash-header-info">
+                            <div class="trash-modal-title">
+                                <i class="material-icons" style="color: #ef4444; font-size: 20px;">delete_outline</i>
+                                <span>Trash Bin</span>
+                            </div>
+                            <div class="trash-modal-subtitle">Auto-permanently deleted after 30 days</div>
+                        </div>
+                        <div class="trash-header-actions">
+                            <button class="trash-empty-btn" id="trash-empty-btn" onclick="emptyAllTrash()">Empty All</button>
+                            <button class="trash-close-btn" onclick="closeModals('trash-modal', true)"><i class="material-icons">close</i></button>
+                        </div>
+                    </div>
+                    <div class="trash-account-pills" id="trash-account-pills"></div>
+                    <div class="trash-items-container" id="trash-items-container">
+                        <div class="trash-loading-spinner" style="text-align:center; padding: 32px; color: #94a3b8;">
+                            <i class="material-icons spin" style="font-size: 26px;">autorenew</i>
+                            <div style="font-size: 12px; margin-top: 6px;">Loading deleted transactions...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (2026-07-13) Add empty-trash-modal; prev: browser confirm alert -->
+            <div id="empty-trash-modal" class="modal-overlay" onclick="closeEmptyTrashModal()" style="display: none; align-items: center; justify-content: center; z-index: 100010;">
+                <div class="custom-modal" onclick="event.stopPropagation()" style="text-align: center; max-width: 320px; width: 90%; border-radius: 20px; padding: 22px 20px;">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;">
+                        <i class="material-icons" style="font-size: 26px;">delete_forever</i>
+                    </div>
+                    <div class="modal-header" style="color: #0f172a; justify-content: center; margin-bottom: 6px; font-size: 17px; font-weight: 800;">
+                        Empty Trash Bin?
+                    </div>
+                    <p style="color: #64748b; font-size: 13px; margin: 0 0 20px 0; line-height: 1.5;">
+                        All items in the Trash Bin will be permanently deleted. This action cannot be undone.
+                    </p>
+                    <div class="modal-actions" style="justify-content: center; gap: 12px;">
+                        <button class="mui-btn mui-btn--flat" onclick="closeEmptyTrashModal()"
+                            style="border-radius: 12px; font-weight: 700; color: #64748b; padding: 8px 16px;">CANCEL</button>
+                        <button id="empty-trash-confirm-btn" class="mui-btn mui-btn--raised" onclick="confirmEmptyAllTrash()"
+                            style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3); padding: 8px 18px;">EMPTY ALL</button>
                     </div>
                 </div>
             </div>

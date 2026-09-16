@@ -1059,10 +1059,13 @@ export function updateTripleProgressBar() {
     const isCurrentAccountBucketSeparate = Boolean(
         isMultiWallet
         && window.currentAccount
-        && !['atome', 'bpi', 'budget_manual'].includes(window.currentAccount)
+        // (2026-09-16) Add maribank as shared bucket; prev: only atome/bpi
+        && !['atome', 'bpi', 'maribank', 'budget_manual'].includes(window.currentAccount)
     );
     const atomeReady = isMultiWallet ? (window.walletTxns.atome !== undefined) : (window.allTxns !== null);
     const bpiReady = isMultiWallet ? (window.walletTxns.bpi !== undefined) : (window.allTxns !== null);
+    // (2026-09-16) MariBank readiness guard; prev: absent
+    const maribankReady = isMultiWallet ? (window.walletTxns.maribank !== undefined) : true;
     const currentReady = isCurrentAccountBucketSeparate
         ? (Array.isArray(window.allTxns) || Boolean(window.__preserveBudgetWidgetVisuals))
         : true;
@@ -1073,9 +1076,9 @@ export function updateTripleProgressBar() {
         || Array.isArray(window.budgetManualTxns);
 
     // (2026-07-13) Fix budget bars TDZ and unlock reveal; prev: ref before init
-    const isAggregatedReady = (window.hasBudgetLiveData && atomeReady && bpiReady && manualReady && currentReady)
+    const isAggregatedReady = (window.hasBudgetLiveData && atomeReady && bpiReady && maribankReady && manualReady && currentReady)
         || (hasLiveTxnSources && (window.hasCompletedPreload || !window.isInitialLoading || window.hasBudgetLiveData))
-        || (hasLiveTxnSources && atomeReady && bpiReady && manualReady && currentReady);
+        || (hasLiveTxnSources && atomeReady && bpiReady && maribankReady && manualReady && currentReady);
     
     // Safety Fallback: Allow cache rendering if live takes > 2.5s
     if (!window.budgetLoadStartTime) {
@@ -1140,9 +1143,14 @@ export function updateTripleProgressBar() {
                         return;
                     }
 
+                    // (2026-07-13) Classify savings steals as spent; prev: checked atome only
                     if (bucket === 'savings') {
                         const sourceAcc = t.account || sourceAccount;
-                        if (sourceAcc === 'atome') {
+                        const cat = normalizeBudgetCategoryLabel(display?.category || t.manualCategory || t.category || '');
+                        const name = String(t.name || t.merchant || '').toLowerCase();
+                        const isWithdrawal = name.includes('withdraw');
+                        const isActualSaved = (cat === 'savings' || cat === 'investments') && !isWithdrawal && sourceAcc !== 'atome' && !t.budgetSplit?.savings;
+                        if (!isActualSaved) {
                             savingsSpent += amount;
                         } else {
                             savingsTotal += amount;
@@ -1540,10 +1548,18 @@ export function updateTripleProgressBar() {
                 const savingsHadSkeleton = savingsEl.classList.contains('skeleton');
                 savingsEl.classList.remove('skeleton');
                 if (savingsHadSkeleton) triggerFadeIn(savingsEl);
+                // (2026-07-13) Dynamic theme for savings pct badge; prev: static green
                 if (savingsPctEl) {
                     const savingsPctWasHidden = savingsPctEl.style.visibility !== 'visible';
                     const combinedPercentage = Math.round(((savingsTotal + savingsSpent) / (savingsLimit || 1)) * 100);
                     savingsPctEl.innerText = `${combinedPercentage}%`;
+                    if (savingsSpent > 0 && savingsTotal === 0) {
+                        savingsPctEl.style.color = '#468000';
+                        savingsPctEl.style.background = 'rgba(70, 128, 0, 0.15)';
+                    } else {
+                        savingsPctEl.style.color = '#16a34a';
+                        savingsPctEl.style.background = 'rgba(22, 163, 74, 0.1)';
+                    }
                     savingsPctEl.style.opacity = '1';
                     savingsPctEl.style.visibility = 'visible';
                     if (savingsPctWasHidden) triggerFadeIn(savingsPctEl);
@@ -2514,12 +2530,17 @@ export function updateProfileUI(user) {
                 <i class="material-icons">cloud_upload</i>
                 <span>Sign in with Google</span>
             </div>
+            <div class="dropdown-item" onclick="openTrashModal()">
+                <i class="material-icons">delete_outline</i>
+                <span>Trash Bin</span>
+            </div>
         `;
         const nameEl = document.getElementById('user-display-name');
         if (nameEl) nameEl.innerText = 'Guest';
         const badge = document.getElementById('profile-badge');
         if (badge) badge.classList.remove('has-pic');
     } else {
+        // (2026-07-13) Add Trash Bin to profile dropdown; prev: omitted in UI update
         dropdown.innerHTML = `
             <div class="dropdown-header" id="dropdown-user-email">${user.email.toUpperCase()}</div>
             <div class="dropdown-item" onclick="toggleDarkMode()">
@@ -2542,6 +2563,10 @@ export function updateProfileUI(user) {
             <div class="dropdown-item" onclick="promptSetPin()">
                 <i class="material-icons">lock</i>
                 <span>Privacy PIN</span>
+            </div>
+            <div class="dropdown-item" onclick="openTrashModal()">
+                <i class="material-icons">delete_outline</i>
+                <span>Trash Bin</span>
             </div>
             <div class="dropdown-item logout" onclick="handleSignout()">
                 <i class="material-icons">logout</i>

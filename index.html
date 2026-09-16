@@ -18788,6 +18788,11 @@ Be direct, practical, and helpful.`;
                             expenseTotalEl.innerText = `₱${Math.round(monthExpense).toLocaleString()}`;
                             expenseTotalEl.classList.remove('skeleton');
                         }
+
+                        // (2026-07-13) Sync bills card with active month; prev: static render
+                        if (window.CalendarView && typeof window.CalendarView.renderUpcomingBillsCard === 'function') {
+                            window.CalendarView.renderUpcomingBillsCard();
+                        }
                     } catch (err) {
                         console.error('CRITICAL: renderCalendar failed', err);
                         const msg = err.message || JSON.stringify(err);
@@ -18954,7 +18959,8 @@ Be direct, practical, and helpful.`;
                                     </div>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:8px;">
-                                    <button onclick="event.stopPropagation(); window.CalendarView && window.CalendarView.toggleBillPaid('${b.id}'); window.openCalendarModal(new Date('${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:8px; padding:5px 10px; font-size:10px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
+                                    <!-- (2026-07-13) Pass month key to toggleBillPaid; prev: no month param -->
+                                    <button onclick="event.stopPropagation(); window.CalendarView && window.CalendarView.toggleBillPaid('${b.id}', '${dateStr.substring(0, 7)}'); window.openCalendarModal(new Date('${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:8px; padding:5px 10px; font-size:10px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
                                     <button onclick="event.stopPropagation(); window.CalendarView && window.CalendarView.deleteBill('${b.id}', '${dateStr}'); window.openCalendarModal(new Date('${dateStr}'));" title="Delete Bill" style="background:transparent; border:none; cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center;"><i class="material-icons" style="font-size:18px; color:#ef4444;">delete</i></button>
                                 </div>
                             </div>

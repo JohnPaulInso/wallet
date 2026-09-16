@@ -651,22 +651,47 @@
             const targetDate = new Date(dateStr + 'T00:00:00');
             const targetDay = targetDate.getDate();
             const targetMonth = targetDate.getMonth();
+            const targetMonthKey = dateStr.substring(0, 7);
 
             return this.bills.filter(b => {
                 if (!b.date) return false;
-                if (dateStr < b.date) return false; // Bill hasn't started yet
+                const billStartMonth = b.date.substring(0, 7);
+                if (targetMonthKey < billStartMonth) return false;
+                if (targetMonthKey === billStartMonth && dateStr < b.date) return false;
 
                 const repeat = b.repeat || 'monthly';
                 if (repeat === 'this_month' || repeat === 'none') {
                     return b.date === dateStr;
                 } else if (repeat === 'monthly') {
+                    if (b.endDate && b.endDate.substring(0, 7) < targetMonthKey) return false;
                     return targetDay === new Date(b.date + 'T00:00:00').getDate();
                 } else if (repeat === 'yearly') {
                     const bDate = new Date(b.date + 'T00:00:00');
                     return targetDay === bDate.getDate() && targetMonth === bDate.getMonth();
                 }
                 return b.date === dateStr;
-            });
+            }).map(b => ({
+                ...b,
+                paid: this.isBillPaid(b, targetMonthKey)
+            }));
+        },
+
+        // (2026-07-13) Check paid status per month; prev: global boolean check
+        isBillPaid: function(bill, monthKey) {
+            if (!bill) return false;
+            const targetMonth = monthKey || (window.currentViewDate || this.currentViewDate || new Date()).toISOString().substring(0, 7);
+            if (bill.paidMonths && typeof bill.paidMonths === 'object' && !Array.isArray(bill.paidMonths)) {
+                if (targetMonth in bill.paidMonths) {
+                    return Boolean(bill.paidMonths[targetMonth]);
+                }
+            } else if (Array.isArray(bill.paidMonths)) {
+                return bill.paidMonths.includes(targetMonth);
+            }
+            if (bill.paid) {
+                const billStartMonth = bill.date ? bill.date.substring(0, 7) : '';
+                return targetMonth === billStartMonth;
+            }
+            return false;
         },
 
         addBill: function(billData) {
@@ -695,14 +720,28 @@
             }
         },
 
-        toggleBillPaid: function(id) {
+        // (2026-07-13) Monthly paid state toggle; prev: global boolean toggle
+        toggleBillPaid: function(id, targetMonthKey) {
             const idx = this.bills.findIndex(b => b.id === id);
             if (idx > -1) {
-                const wasPaid = this.bills[idx].paid;
-                this.bills[idx].paid = !this.bills[idx].paid;
+                const bill = this.bills[idx];
+                const curDate = window.currentViewDate || this.currentViewDate || new Date();
+                const monthKey = targetMonthKey || `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`;
+                
+                if (!bill.paidMonths || typeof bill.paidMonths !== 'object' || Array.isArray(bill.paidMonths)) {
+                    bill.paidMonths = {};
+                    if (bill.paid && bill.date) {
+                        bill.paidMonths[bill.date.substring(0, 7)] = true;
+                    }
+                }
+                
+                const wasPaid = Boolean(bill.paidMonths[monthKey]);
+                const nextPaid = !wasPaid;
+                bill.paidMonths[monthKey] = nextPaid;
+                bill.paid = nextPaid;
                 
                 // Add celebration animation when marking as paid
-                if (!wasPaid && this.bills[idx].paid) {
+                if (!wasPaid && nextPaid) {
                     // Find the bill card element
                     const billCards = document.querySelectorAll('.bill-card-item');
                     billCards.forEach(card => {
@@ -739,6 +778,7 @@
                 }
                 
                 this.saveBills();
+                this.render();
             }
         },
 
@@ -1028,122 +1068,105 @@
             this.renderUpcomingBillsCard();
         },
 
+        // (2026-07-13) Filter bills by calendar month; prev: static paid filter
         renderUpcomingBillsCard: function() {
-            console.log('?? renderUpcomingBillsCard called');
-            console.log('?? Bills array:', this.bills);
-            
             // CRITICAL: Ensure the card element exists before rendering
             this.ensureBillsCardExists();
             
             const listEl = document.getElementById('calendar-bills-card-list');
-            console.log('?? Target element:', listEl);
-            
             if (!listEl) {
-                console.error('?? calendar-bills-card-list element STILL not found after ensureBillsCardExists!');
+                console.error('calendar-bills-card-list element not found');
                 return;
             }
 
-            const todayObj = new Date();
-            const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
-            
-            console.log('?? Today:', todayStr);
-            
-            const in7DaysObj = new Date(todayObj.getTime() + 7 * 86400000);
+            const viewDate = window.currentViewDate || this.currentViewDate || new Date();
+            const viewYear = viewDate.getFullYear();
+            const viewMonth = viewDate.getMonth();
+            const viewMonthKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+            const maxDaysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const in7DaysObj = new Date(now.getTime() + 7 * 86400000);
             const in7DaysStr = `${in7DaysObj.getFullYear()}-${String(in7DaysObj.getMonth() + 1).padStart(2, '0')}-${String(in7DaysObj.getDate()).padStart(2, '0')}`;
+            const isCurrentMonthView = (viewMonthKey === todayStr.substring(0, 7));
 
-            // Get bills due TODAY (unpaid only)
-            const todayBills = (this.getBillsForDate ? this.getBillsForDate(todayStr) : this.bills.filter(b => b.date === todayStr)).filter(b => !b.paid);
-            
-            console.log('?? Today bills:', todayBills);
-            
-            const weekBills = [];
-            const upcomingBills = [];
+            const monthBills = [];
+            (this.bills || []).forEach(b => {
+                if (!b.date) return;
+                const billStartMonth = b.date.substring(0, 7);
+                if (viewMonthKey < billStartMonth) return;
 
-            // Generate dates for the next 7 days (excluding today)
-            const nextDates = [];
-            for (let i = 1; i <= 7; i++) {
-                const d = new Date(todayObj.getTime() + i * 86400000);
-                nextDates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-            }
+                const repeat = b.repeat || 'monthly';
+                const originalDay = parseInt(b.date.split('-')[2], 10) || 1;
+                const dueDay = Math.min(originalDay, maxDaysInMonth);
+                const displayDate = `${viewMonthKey}-${String(dueDay).padStart(2, '0')}`;
 
-            // Check each date in the next 7 days for bills (EXCLUDE bills already in todayBills)
-            nextDates.forEach(dateStr => {
-                const dateBills = this.getBillsForDate(dateStr).filter(b => !b.paid);
-                dateBills.forEach(b => {
-                    // Only add if not already in todayBills or weekBills
-                    if (!todayBills.some(x => x.id === b.id) && !weekBills.some(x => x.id === b.id)) {
-                        weekBills.push(b);
-                    }
+                if (repeat === 'none' || repeat === 'this_month') {
+                    if (billStartMonth !== viewMonthKey) return;
+                } else if (repeat === 'yearly') {
+                    const billStartMonthNum = parseInt(b.date.split('-')[1], 10) - 1;
+                    if (billStartMonthNum !== viewMonth) return;
+                } else {
+                    if (b.endDate && b.endDate.substring(0, 7) < viewMonthKey) return;
+                }
+
+                const isPaid = this.isBillPaid(b, viewMonthKey);
+                monthBills.push({
+                    ...b,
+                    displayDate,
+                    isPaid,
+                    paid: isPaid
                 });
             });
-            
-            // Sort weekBills by date (earliest first)
-            weekBills.sort((a, b) => {
-                const dateA = new Date(a.date + 'T00:00:00');
-                const dateB = new Date(b.date + 'T00:00:00');
-                return dateA - dateB;
-            });
 
-            // For upcoming bills (beyond 7 days), check bills with future dates
-            (this.bills || []).forEach(b => {
-                const bDateStr = b.date;
-                const repeat = b.repeat || 'monthly';
-                
-                // Skip if already in todayBills or weekBills
-                if (todayBills.some(x => x.id === b.id) || weekBills.some(x => x.id === b.id)) {
-                    return;
-                }
-                
-                // For non-recurring bills, just check the date
-                if (repeat === 'none' || repeat === 'this_month') {
-                    if (bDateStr > in7DaysStr && !b.paid) {
-                        if (!upcomingBills.some(x => x.id === b.id)) upcomingBills.push(b);
+            const todayBills = [];
+            const weekBills = [];
+            const upcomingBills = [];
+            const paidBills = [];
+
+            monthBills.forEach(b => {
+                if (b.isPaid) {
+                    paidBills.push(b);
+                } else if (isCurrentMonthView) {
+                    if (b.displayDate === todayStr) {
+                        todayBills.push(b);
+                    } else if (b.displayDate > todayStr && b.displayDate <= in7DaysStr) {
+                        weekBills.push(b);
+                    } else {
+                        upcomingBills.push(b);
                     }
                 } else {
-                    // For recurring bills, they're always "upcoming" unless paid or already in other sections
-                    if (!b.paid) {
-                        if (!upcomingBills.some(x => x.id === b.id)) upcomingBills.push(b);
-                    }
+                    upcomingBills.push(b);
                 }
             });
-            
-            // Sort upcomingBills by date (earliest first)
-            upcomingBills.sort((a, b) => {
-                const dateA = new Date(a.date + 'T00:00:00');
-                const dateB = new Date(b.date + 'T00:00:00');
-                return dateA - dateB;
-            });
 
-            const paidBills = (this.bills || []).filter(b => b.paid);
-            
-            // Sort paidBills by date (most recent first)
-            paidBills.sort((a, b) => {
-                const dateA = new Date(a.date + 'T00:00:00');
-                const dateB = new Date(b.date + 'T00:00:00');
-                return dateB - dateA;
-            });
+            todayBills.sort((a, b) => (b.amount || 0) - (a.amount || 0));
+            weekBills.sort((a, b) => a.displayDate.localeCompare(b.displayDate));
+            upcomingBills.sort((a, b) => a.displayDate.localeCompare(b.displayDate));
+            paidBills.sort((a, b) => b.displayDate.localeCompare(a.displayDate));
 
             const renderBillItem = (b) => `
                 <!-- (2026-07-13) Compact padding (8px 10px) & reduced gap (8px); prev: padding 12px 14px, gap 12px -->
-                <div class="bill-card-item" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: ${b.paid ? '#f1f5f9' : '#f8fafc'}; border: 1px solid ${b.paid ? '#e2e8f0' : '#f1f5f9'}; border-radius: 14px; transition: all 0.2s; margin-bottom: 6px; cursor: pointer; ${b.paid ? 'opacity: 0.75;' : ''}" oncontextmenu="event.preventDefault(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}');" onclick="if(!event.target.closest('button')) { event.stopPropagation(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}'); }">
+                <div class="bill-card-item" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: ${b.isPaid ? '#f1f5f9' : '#f8fafc'}; border: 1px solid ${b.isPaid ? '#e2e8f0' : '#f1f5f9'}; border-radius: 14px; transition: all 0.2s; margin-bottom: 6px; cursor: pointer; ${b.isPaid ? 'opacity: 0.75;' : ''}" oncontextmenu="event.preventDefault(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}');" onclick="if(!event.target.closest('button')) { event.stopPropagation(); window.CalendarView && window.CalendarView.openEditBillModal('${b.id}'); }">
                     <div style="display: flex; align-items: center; gap: 8px; pointer-events: none;">
-                        <div style="width: 32px; height: 32px; border-radius: 10px; background: ${b.color || '#3b82f6'}; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; ${b.paid ? 'filter: grayscale(40%);' : ''}">
+                        <div style="width: 32px; height: 32px; border-radius: 10px; background: ${b.color || '#3b82f6'}; color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; ${b.isPaid ? 'filter: grayscale(40%);' : ''}">
                             <i class="material-icons" style="font-size: 16px;">${b.icon || 'receipt_long'}</i>
                         </div>
                         <div>
-                            <div style="font-size: 12.5px; font-weight: 800; color: ${b.paid ? '#64748b' : '#1e293b'}; text-transform: capitalize; line-height: 1.2; ${b.paid ? 'text-decoration: line-through;' : ''}">${b.title}</div>
+                            <div style="font-size: 12.5px; font-weight: 800; color: ${b.isPaid ? '#64748b' : '#1e293b'}; text-transform: capitalize; line-height: 1.2; ${b.isPaid ? 'text-decoration: line-through;' : ''}">${b.title}</div>
                             <div style="font-size: 9.5px; font-weight: 700; margin-top: 1px; line-height: 1.25; color: #334155;">
-                                Due: ${new Date(b.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                Due: ${new Date((b.displayDate || b.date) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                             </div>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 6px; pointer-events: auto;">
                         <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-                            <div style="font-size: 12.5px; font-weight: 900; color: ${b.paid ? '#64748b' : '#1e293b'};">${b.amount ? '₱' + b.amount.toLocaleString() : 'No amount'}</div>
-                            <span style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; padding: 1.5px 5px; border-radius: 5px; display: inline-block; ${b.paid ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #d97706;'}">${b.paid ? 'Paid' : 'Pending'}</span>
+                            <div style="font-size: 12.5px; font-weight: 900; color: ${b.isPaid ? '#64748b' : '#1e293b'};">${b.amount ? '₱' + b.amount.toLocaleString() : 'No amount'}</div>
+                            <span style="font-size: 8.5px; font-weight: 800; text-transform: uppercase; padding: 1.5px 5px; border-radius: 5px; display: inline-block; ${b.isPaid ? 'background: #dcfce7; color: #15803d;' : 'background: #fef3c7; color: #d97706;'}">${b.isPaid ? 'Paid' : 'Pending'}</span>
                         </div>
-                        <button onclick="event.stopPropagation(); window.CalendarView.toggleBillPaid('${b.id}')" title="Toggle Paid Status" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${b.paid ? '#10b981' : '#64748b'}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <i class="material-icons" style="font-size: 16px;">${b.paid ? 'check_circle' : 'radio_button_unchecked'}</i>
+                        <button onclick="event.stopPropagation(); window.CalendarView.toggleBillPaid('${b.id}', '${viewMonthKey}')" title="Toggle Paid Status" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: ${b.isPaid ? '#10b981' : '#64748b'}; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <i class="material-icons" style="font-size: 16px;">${b.isPaid ? 'check_circle' : 'radio_button_unchecked'}</i>
                         </button>
                     </div>
                 </div>
@@ -1195,12 +1218,7 @@
                 cardHtml = `<div style="text-align: center; padding: 24px 0; color: #94a3b8; font-size: 12px; font-weight: 700;">No upcoming bills to pay.</div>`;
             }
 
-            console.log('?? Final counts - Today:', todayBills.length, 'Week:', weekBills.length, 'Upcoming:', upcomingBills.length, 'Paid:', paidBills.length);
-            console.log('? Rendering card HTML');
-            
             listEl.innerHTML = cardHtml;
-            
-            // Update sync status indicator after rendering
             this.updateSyncStatusIndicator();
         },
 
@@ -1242,7 +1260,8 @@
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <button onclick="window.CalendarView.toggleBillPaid('${b.id}'); window.CalendarView.openDayModal(new Date('${dateStr}'), window.CalendarView.txns.filter(t => t.date && t.date.split('T')[0] === '${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:6px; padding:4px 8px; font-size:9px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
+                            <!-- (2026-07-13) Pass month key to toggleBillPaid; prev: no month param -->
+                            <button onclick="window.CalendarView.toggleBillPaid('${b.id}', '${dateStr.substring(0, 7)}'); window.CalendarView.openDayModal(new Date('${dateStr}'), window.CalendarView.txns.filter(t => t.date && t.date.split('T')[0] === '${dateStr}'));" style="background:${b.paid ? '#dcfce7' : '#f1f5f9'}; color:${b.paid ? '#15803d' : '#475569'}; border:none; border-radius:6px; padding:4px 8px; font-size:9px; font-weight:800; cursor:pointer;">${b.paid ? 'Paid' : 'Pending'}</button>
                             <button onclick="window.CalendarView.deleteBill('${b.id}'); window.CalendarView.openDayModal(new Date('${dateStr}'), window.CalendarView.txns.filter(t => t.date && t.date.split('T')[0] === '${dateStr}'));" style="background:transparent; color:#ef4444; border:none; cursor:pointer; padding:2px;"><i class="material-icons" style="font-size:16px;">delete</i></button>
                         </div>
                     </div>

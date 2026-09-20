@@ -623,12 +623,21 @@ export async function handleScan(limit, manualTrigger = false) {
     }
 
     const accessToken = localStorage.getItem('g_access_token');
-    // (2026-09-16) Atome skips Gmail entirely; token not required for cross-sync
-    if (!accessToken && syncAccount !== 'atome') {
-        if (manualTrigger && window.tokenClient) {
+    const tokenExpiry = parseInt(localStorage.getItem('g_token_expiry') || '0', 10);
+    const isExpired = !accessToken || (Number.isFinite(tokenExpiry) && tokenExpiry > 0 && Date.now() >= tokenExpiry);
+
+    // (2026-07-13) Prompt interactive auth for scan; prev: prompt none and skip
+    if (isExpired) {
+        if (manualTrigger) {
             window.pendingSyncLimit = limit;
             window.pendingSyncManual = manualTrigger;
-            window.tokenClient.requestAccessToken({ prompt: '' });
+            if (typeof window.requestInteractiveGmailSyncAuth === 'function') {
+                window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
+            } else if (window.tokenClient) {
+                window.tokenClient.requestAccessToken({ prompt: 'select_account' });
+            } else if (typeof window.handleAuthClick === 'function') {
+                window.handleAuthClick();
+            }
         }
         return;
     }
@@ -663,8 +672,7 @@ export async function handleScan(limit, manualTrigger = false) {
         let savedCount = 0;
         let pageToken = '';
         let totalProcessed = 0;
-        // (2026-09-16) Atome uses cross-sync only; skip Gmail scan entirely
-        if (syncAccount === 'atome') totalProcessed = limit;
+        // (2026-07-13) Enable Atome email scan; prev: skip Gmail scan entirely
 
         while (totalProcessed < limit) {
             const maxResults = Math.min(500, limit - totalProcessed);
@@ -706,12 +714,15 @@ export async function handleScan(limit, manualTrigger = false) {
                     }
                 }
                 
-                // 🌐 WEB FALLBACK: Request fresh token
+                // (2026-07-13) Prompt interactive auth on 401; prev: prompt none in browser
                 if (window.tokenClient) {
                     window.pendingSyncLimit = limit;
                     window.pendingSyncManual = manualTrigger;
-                    log('Refreshing session... Please wait.');
-                    window.tokenClient.requestAccessToken({ prompt: '' });
+                    if (typeof window.requestInteractiveGmailSyncAuth === 'function') {
+                        window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
+                    } else {
+                        window.tokenClient.requestAccessToken({ prompt: manualTrigger ? 'select_account' : 'none' });
+                    }
                 }
                 throw new Error('Unauthorized - Refresh triggered');
             }

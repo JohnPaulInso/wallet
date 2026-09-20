@@ -2628,19 +2628,15 @@
                                 tokenRefreshInProgress = false; // Release the lock
                                 const wasSilent = window.isSilentRefresh;
                                 window.isSilentRefresh = false;
+                                // (2026-07-13) Escalate GIS interaction errors to prompt; prev: immediate_failed
                                 if (resp.error) {
-                                    if (resp.error === 'immediate_failed') {
-                                        // If silent refresh failed but it was a manual action (sync button/pull to refresh),
-                                        // escalate to an interactive prompt for better user experience.
-                                        if (window.pendingSyncRequest?.manualTrigger || window.pendingSyncManual) {
-                                            console.log('🔄 Silent refresh failed for manual action. Requesting interactive login...');
-                                            window.requestInteractiveGmailSyncAuth(window.pendingSyncRequest?.limit || window.pendingSyncLimit || 25, true);
-                                            return;
-                                        }
-                                        console.log('⏳ Silent refresh failed. Will retry on next manual sync.');
-                                    } else {
-                                        log('Google Auth failed: ' + resp.error, 'error');
+                                    const needsPrompt = resp.error === 'immediate_failed' || resp.error === 'interaction_required' || resp.error === 'consent_required' || resp.error === 'user_logged_out';
+                                    if (needsPrompt && (window.pendingSyncRequest?.manualTrigger || window.pendingSyncManual || wasSilent)) {
+                                        console.log('🔄 Silent refresh failed for manual action. Requesting interactive login...');
+                                        window.requestInteractiveGmailSyncAuth(window.pendingSyncRequest?.limit || window.pendingSyncLimit || 25, true);
+                                        return;
                                     }
+                                    log('Google Auth failed: ' + resp.error, 'error');
                                     consumePendingSyncRequest();
                                     return;
                                 }
@@ -10404,7 +10400,7 @@ Be direct, practical, and helpful.`;
                 };
                 window.triggerActiveAccountSync = (limit = 25, manualTrigger = true) => {
                     const syncAccount = window.currentAccount;
-                    if (!['atome', 'bpi'].includes(syncAccount)) {
+                    if (!['atome', 'bpi', 'maribank'].includes(syncAccount)) {
                         return Promise.resolve(false);
                     }
                     if (typeof window.handleScan === 'function') {
@@ -10431,7 +10427,6 @@ Be direct, practical, and helpful.`;
                     }
 
                     // SMART TOKEN VALIDATION: Try existing token first, auto-refresh on 401
-                    // Instead of rejecting tokens after 50 min, let the API tell us via 401
                     let storedToken = localStorage.getItem('g_access_token');
                     let storedExpiry = parseInt(localStorage.getItem('g_token_expiry') || '0', 10);
                     let isTokenExpired = !storedToken || (Number.isFinite(storedExpiry) && storedExpiry > 0 && Date.now() >= storedExpiry);
@@ -10444,39 +10439,30 @@ Be direct, practical, and helpful.`;
                                 console.log('📱 Attempting silent native token refresh...');
                                 const authRes = await SocialLogin.refresh({ provider: 'google' });
                                 const refreshedToken = authRes?.result?.accessToken?.token || authRes?.accessToken || authRes?.result?.accessToken;
-                                    if (refreshedToken) {
-                                        const tokenStr = typeof refreshedToken === 'string' ? refreshedToken : refreshedToken?.token;
-                                        const ONE_HOUR_MS = 60 * 60 * 1000;
-                                        localStorage.setItem('g_access_token', tokenStr);
-                                        localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
-                                        localStorage.setItem('g_token_issued_at', Date.now().toString());
-                                        storedToken = tokenStr;
-                                        isTokenExpired = false;
-                                    }
+                                if (refreshedToken) {
+                                    const tokenStr = typeof refreshedToken === 'string' ? refreshedToken : refreshedToken?.token;
+                                    const ONE_HOUR_MS = 60 * 60 * 1000;
+                                    localStorage.setItem('g_access_token', tokenStr);
+                                    localStorage.setItem('g_token_expiry', (Date.now() + ONE_HOUR_MS).toString());
+                                    localStorage.setItem('g_token_issued_at', Date.now().toString());
+                                    storedToken = tokenStr;
+                                    isTokenExpired = false;
                                 }
-                            } catch (e) {
-                                console.warn('Silent token renewal error:', e);
                             }
+                        } catch (e) {
+                            console.warn('Silent token renewal error:', e);
                         }
+                    }
 
-                        // (2026-09-16) Atome skips Gmail; token not required for cross-sync
-                        if (storedToken && syncAccount !== 'atome') {
-                            console.log('🚀 Using stored Gmail token (will auto-refresh on 401)...');
-                            accessToken = storedToken;
-                        } else if (!storedToken && syncAccount !== 'atome') {
-                            if (!manualTrigger) return;
-
-                            if (tokenClient) {
-                                console.log('🔑 Attempting silent Gmail auth...');
-                                window.isSilentRefresh = true;
-                                setPendingSyncRequest(limit, manualTrigger, 'token_refresh_silent', true);
-                                tokenClient.requestAccessToken({ prompt: '' });
-                                return;
-                            } else if (typeof handleAuthClick === 'function') {
-                                window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
-                                return;
-                            }
-                        }
+                    // (2026-07-13) Fix Gmail auth flow & restore Atome; prev: prompt none & skip
+                    if (storedToken && !isTokenExpired) {
+                        console.log('🚀 Using stored Gmail token...');
+                        accessToken = storedToken;
+                    } else {
+                        if (!manualTrigger) return;
+                        window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
+                        return;
+                    }
 
                     window.isSyncing = true;
 
@@ -10513,8 +10499,7 @@ Be direct, practical, and helpful.`;
                         let savedCount = 0;
                         let pageToken = '';
                         let totalProcessed = 0;
-                        // (2026-09-16) Atome: skip Gmail loop, use cross-sync only
-                        if (syncAccount === 'atome') totalProcessed = limit;
+                        // (2026-07-13) Enable Atome Gmail scanning; prev: skip Gmail scan entirely
 
                         // Loop for pagination if limit > 500
                         while (totalProcessed < limit) {
@@ -10590,10 +10575,16 @@ Be direct, practical, and helpful.`;
                                             throw new Error('Unauthorized - Native silent refresh unsupported');
                                         }
                                     } else {
-                                        // BROWSER: Try silent first
-                                        window.isSilentRefresh = true;
-                                        console.log('🔄 Browser Sync: Attempting silent token refresh...');
-                                        tokenClient.requestAccessToken({ prompt: 'none' });
+                                        // (2026-07-13) Prompt interactive auth on 401; prev: prompt none in browser
+                                        if (manualTrigger) {
+                                            window.isSilentRefresh = false;
+                                            console.log('🔄 Browser Manual Sync: Requesting interactive login...');
+                                            window.requestInteractiveGmailSyncAuth(limit, manualTrigger);
+                                        } else {
+                                            window.isSilentRefresh = true;
+                                            console.log('🔄 Browser Sync: Attempting silent token refresh...');
+                                            tokenClient.requestAccessToken({ prompt: 'none' });
+                                        }
                                     }
                                 }
                                 throw new Error('Unauthorized - Refresh triggered');

@@ -12073,7 +12073,26 @@ Be direct, practical, and helpful.`;
                 let currentElevatedItem = null;
                 let clonedItem = null;
 
+                // Safety cleanup for orphaned elevated clones
+                function cleanupElevatedClones() {
+                    document.querySelectorAll('.elevated-clone').forEach(el => {
+                        try { el.remove(); } catch (e) {}
+                    });
+                    if (clonedItem) {
+                        try { clonedItem.remove(); } catch (e) {}
+                        clonedItem = null;
+                    }
+                    if (currentElevatedItem) {
+                        currentElevatedItem.style.visibility = 'visible';
+                        currentElevatedItem.classList.remove('popped');
+                        currentElevatedItem = null;
+                    }
+                }
+
                 function setupLongPressHandlers() {
+                    // Clean up any orphaned clones before setting up new handlers
+                    cleanupElevatedClones();
+                    
                     document.querySelectorAll('.premium-txn').forEach(item => {
                         const wrapper = item.closest('.txn-swipe-wrapper');
                         const bgLeft = wrapper ? wrapper.querySelector('.txn-swipe-bg.left') : null;
@@ -12152,6 +12171,13 @@ Be direct, practical, and helpful.`;
                             if (longPressTimer) {
                                 clearTimeout(longPressTimer);
                                 longPressTimer = null;
+                            }
+
+                            // Clean up any accidental clones if touch ended without opening menu
+                            if (!window.modalOpen) {
+                                document.querySelectorAll('.elevated-clone').forEach(el => {
+                                    try { el.remove(); } catch (e) {}
+                                });
                             }
 
                             if (isSwiping) {
@@ -12238,10 +12264,7 @@ Be direct, practical, and helpful.`;
                     const isReimbPaid = isReimbursed && (origTxnAmt - paidReimbAmt <= 0.01) && txnObj?.reimbursementPaid !== false && (txnObj?.reimbursementAmount !== 0 || origTxnAmt === 0);
 
                     // Clean up existing clones & restore item state before measuring
-                    if (clonedItem) {
-                        try { clonedItem.remove(); } catch (e) {}
-                        clonedItem = null;
-                    }
+                    cleanupElevatedClones();
                     document.querySelectorAll('.elevated-clone').forEach(el => el.remove());
 
                     if (currentElevatedItem) {
@@ -12482,6 +12505,13 @@ Be direct, practical, and helpful.`;
                     if (wasMenuOpen && !fromPopState) {
                         history.back();
                     }
+
+                    // Final safety cleanup for any remaining elevated clones
+                    setTimeout(() => {
+                        document.querySelectorAll('.elevated-clone').forEach(el => {
+                            try { el.remove(); } catch (e) {}
+                        });
+                    }, 350);
                 };
 
                 window.handleIOSAction = (action, txnId, ...args) => {
@@ -13469,6 +13499,7 @@ Be direct, practical, and helpful.`;
                 async function commitDelete(txnId, accId, col) {
                     try {
                         if (!auth.currentUser) return;
+                        const uid = auth.currentUser.uid;
                         // (2026-07-13) Store deletedAt and deletedFromAccount; prev: deleted: true only
                         await setDoc(doc(db, "users", uid, col, txnId), {
                             deleted: true,

@@ -481,9 +481,11 @@ i.material-icons-outlined {
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0) 100%) !important;
-            animation: skeleton-card-shimmer 2s infinite !important;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%) !important;
+            animation: skeleton-card-shimmer 2s infinite ease-in-out !important;
             transform: translateX(-100%) !important;
+            pointer-events: none !important;
+            z-index: 1 !important;
         }
         
         @keyframes skeleton-card-shimmer {
@@ -4591,11 +4593,16 @@ i.material-icons-outlined {
             transform: translateX(-50%);
             width: calc(100% - 32px);
             max-width: 400px;
-            z-index: 3000;
+            z-index: 1001;
             display: flex;
             flex-direction: column-reverse;
             gap: 8px;
             pointer-events: none;
+        }
+        /* Lower snackbar z-index when modal is open */
+        .modal-overlay.show ~ * .undo-stack,
+        body:has(.modal-overlay.show) .undo-stack {
+            z-index: 500;
         }
         .undo-snackbar {
             background: #ffffff;
@@ -4875,6 +4882,7 @@ i.material-icons-outlined {
 
         /* ═══════ OFFLINE SNACKBAR ═══════ */
         .offline-snackbar {
+            z-index: 1001;
             position: fixed;
             bottom: calc(84px + var(--app-bottom-safe));
             left: 50%;
@@ -4911,6 +4919,12 @@ i.material-icons-outlined {
             font-size: 16px;
             color: #fbbf24;
             flex-shrink: 0;
+        }
+
+        /* Lower snackbar z-index when modal is open - ensures snackbars stay behind modals */
+        body:has(.modal-overlay.show) .undo-stack,
+        body:has(.modal-overlay.show) .offline-snackbar {
+            z-index: 500;
         }
         /* NUCLEAR DARK MODE OVERRIDES - HIGH SPECIFICITY */
         body.dark-mode #triple-progress-widget.triple-progress-card,

@@ -2709,9 +2709,17 @@
                 // (2026-07-13) Native popup auth guard; prev: external browser & dup login
                 window.handleAuthClick = async () => {
                     if (window.isAuthInProgress) return;
-                    if (auth.currentUser && !auth.currentUser.isAnonymous && localStorage.getItem('g_access_token')) {
+                    
+                    // Check if token is expired
+                    const storedToken = localStorage.getItem('g_access_token');
+                    const storedExpiry = parseInt(localStorage.getItem('g_token_expiry') || '0', 10);
+                    const isTokenExpired = storedToken && storedExpiry > 0 && Date.now() >= storedExpiry;
+                    
+                    // Only skip re-auth if user is logged in AND token is still valid
+                    if (auth.currentUser && !auth.currentUser.isAnonymous && storedToken && !isTokenExpired) {
                         return;
                     }
+                    
                     log('Starting Google Sign-In Flow...');
                     const btn = event?.currentTarget || document.activeElement;
                     const isGuestBtn = btn && btn.classList && btn.classList.contains('guest-gate-btn');

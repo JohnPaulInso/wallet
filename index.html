@@ -4569,10 +4569,10 @@
                                 const data = d.data();
                                 if (data.deleted) return;
 
-                                // PRE-CALCULATE SORT KEYS for performance
+                                // (2026-07-13) Extract createKey from id or createdAt; prev: 0 fallback
                                 const dateVal = new Date(data.date).getTime() || 0;
-                                const createVal = data.createdAt ?
-                                    (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : 0;
+                                const idMatch = d.id && d.id.match(/(?:txn_|bpi_|offline_)(\d{10,13})/);
+                                const createVal = data.createdAt ? (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : (idMatch ? Number(idMatch[1]) : 0);
 
                                 txns.push({
                                     id: d.id,
@@ -4582,10 +4582,10 @@
                                 });
                             });
 
-                            // Sort locally - Optimized (O(N log N) with fewer object creations)
+                            // (2026-07-13) Sort same day earliest first; prev: b._createKey - a._createKey
                             txns.sort((a, b) => {
                                 if (b._sortKey !== a._sortKey) return b._sortKey - a._sortKey;
-                                return b._createKey - a._createKey;
+                                return a._createKey - b._createKey;
                             });
 
                             // (2026-07-13) Prevent Atome duplicates across devices; prev: ID check only
@@ -4774,14 +4774,16 @@
                                 snap.docs.forEach((d) => {
                                     const data = d.data();
                                     if (data.deleted) return;
+                                    // (2026-07-13) Extract createKey from id or createdAt; prev: 0 fallback
                                     const dateVal = new Date(data.date).getTime() || 0;
-                                    const createVal = data.createdAt ?
-                                        (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : 0;
+                                    const idMatch = d.id && d.id.match(/(?:txn_|bpi_|offline_)(\d{10,13})/);
+                                    const createVal = data.createdAt ? (data.createdAt.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt).getTime()) : (idMatch ? Number(idMatch[1]) : 0);
                                     txns.push({ id: d.id, _sortKey: dateVal, _createKey: createVal, ...data });
                                 });
+                                // (2026-07-13) Sort same day earliest first; prev: b._createKey - a._createKey
                                 txns.sort((a, b) => {
                                     if (b._sortKey !== a._sortKey) return b._sortKey - a._sortKey;
-                                    return b._createKey - a._createKey;
+                                    return a._createKey - b._createKey;
                                 });
                                 window.walletDataPrimedLoadKey = loadKey;
                                 window.allTxns = txns;
@@ -9615,6 +9617,27 @@ Be direct, practical, and helpful.`;
                             return true;
                         });
                     }
+                    // (2026-07-13) Sort days desc, same-day earliest first; prev: unextracted ts
+                    if (Array.isArray(txns)) {
+                        // (2026-07-13) Prioritize original upload timestamp; prev: contaminated createdAtMs
+                        const getTxnCreateTime = (t) => {
+                            if (!t) return 0;
+                            if (typeof t.id === 'string') { const m = t.id.match(/(?:txn_|bpi_|offline_|sync_)(\d{10,13})/); if (m) return Number(m[1]); }
+                            if (typeof t.createdAt?.toMillis === 'function') return t.createdAt.toMillis();
+                            if (typeof t.createdAt?.seconds === 'number') return (t.createdAt.seconds * 1000) + Math.floor((t.createdAt.nanoseconds || 0) / 1000000);
+                            if (t.createdAt) { const p = new Date(t.createdAt).getTime(); if (Number.isFinite(p) && p > 0) return p; }
+                            if (t._createKey && Number.isFinite(Number(t._createKey)) && Number(t._createKey) > 0) return Number(t._createKey);
+                            if (Number.isFinite(Number(t.createdAtMs)) && Number(t.createdAtMs) > 0) return Number(t.createdAtMs);
+                            if (typeof t.date === 'string' && t.date.length > 10) { const p = new Date(t.date).getTime(); if (Number.isFinite(p) && p > 0) return p; }
+                            return 0;
+                        };
+                        txns.sort((a, b) => {
+                            const dayB = b.date ? String(b.date).slice(0, 10) : '';
+                            const dayA = a.date ? String(a.date).slice(0, 10) : '';
+                            if (dayB !== dayA) return dayB.localeCompare(dayA);
+                            return getTxnCreateTime(a) - getTxnCreateTime(b);
+                        });
+                    }
                     window.allTxns = txns;
 
                     // Update Triple Progress Bar when data is rendered, unless this pass is
@@ -13040,13 +13063,18 @@ Be direct, practical, and helpful.`;
                     }
 
                     // Build account list HTML (include all accounts)
+                    // (2026-07-13) Render duplicate account options with current badge; prev: text only
                     const listContainer = document.getElementById('duplicate-account-list');
-                    listContainer.innerHTML = accounts.map(acc => `
+                    listContainer.innerHTML = accounts.map(acc => {
+                        const isCurr = acc.id === window.currentAccount;
+                        return `
                 <label class="duplicate-account-option">
                     <input type="checkbox" value="${acc.id}" class="duplicate-account-checkbox">
-                    <span class="duplicate-account-label">${acc.name}${acc.id === window.currentAccount ? ' (Current)' : ''}</span>
+                    <span class="duplicate-account-label">${acc.name}</span>
+                    ${isCurr ? '<span class="duplicate-current-badge">CURRENT</span>' : ''}
                 </label>
-            `).join('');
+            `;
+                    }).join('');
 
                     // Show modal
                     const dupModal = document.getElementById('duplicate-modal');
@@ -13571,14 +13599,8 @@ Be direct, practical, and helpful.`;
 
                     closeModals(); // Close modal immediately
 
-                    // (2026-07-13) Remove txn immediately on delete; prev: delayed by Thanos snap
+                    // (2026-07-13) Run Thanos dust disintegration on delete; prev: removed instantly
                     const txnEl = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
-                    if (txnEl) {
-                        const wrapper = txnEl.closest('.txn-swipe-wrapper') || txnEl;
-                        wrapper.remove();
-                    }
-
-                    // OPTIMISTIC UPDATE: Remove from UI immediately
                     const idx = window.allTxns ? window.allTxns.findIndex(t => t.id === txnId) : -1;
                     let deletedItem = null;
                     if (idx > -1) {
@@ -13588,11 +13610,16 @@ Be direct, practical, and helpful.`;
                     if (window.walletTxns && window.walletTxns[accId]) {
                         window.walletTxns[accId] = window.walletTxns[accId].filter(t => t.id !== txnId);
                     }
-
-                    renderHistory(window.allTxns);
-                    updateBalanceToThisMonth(window.allTxns);
-
-                    // CREATE UNDO SNACKBAR (max 3 stacked)
+                    const removeAndRender = () => {
+                        renderHistory(window.allTxns);
+                        updateBalanceToThisMonth(window.allTxns);
+                    };
+                    if (txnEl && window.runThanosSnap) {
+                        const targetEl = txnEl.closest('.txn-swipe-wrapper') || txnEl;
+                        window.runThanosSnap(targetEl, removeAndRender);
+                    } else {
+                        removeAndRender();
+                    }
                     createUndoSnackbar(txnId, accId, col, deletedItem);
                 };
 
@@ -14915,8 +14942,14 @@ Be direct, practical, and helpful.`;
                     if (btn) {
                         btn.style.pointerEvents = 'auto';
                         btn.style.opacity = '1';
+                        btn.style.color = '#10b981';
+                        btn.style.cursor = 'pointer';
+                        btn.style.display = '';
                         btn.innerText = 'Done';
+                        // (2026-07-13) Reset save lock on modal open; prev: stale lock
+                        btn.classList.remove('done-saving');
                     }
+                    window.isSavingManualTxn = false;
 
                     // Update modal title
                     const titleEl = document.getElementById('modal-title');
@@ -14954,20 +14987,19 @@ Be direct, practical, and helpful.`;
                         setTimeout(() => document.getElementById('manual-amt').focus(), 300);
                     }
 
-                    // Add Enter key to save transaction
-                    const handleEnterKey = (e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (window.saveManualTxn) saveManualTxn();
-                        }
-                    };
-
-                    // Add listeners to form inputs
+                    // (2026-07-13) Attach Enter key once per input; prev: stacked on each open
                     ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
                         const el = document.getElementById(id);
+                        if (el && !el._enterKeyAttached) {
+                            el.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (window.saveManualTxn) window.saveManualTxn();
+                                }
+                            });
+                            el._enterKeyAttached = true;
+                        }
                         if (el) {
-                            el.removeEventListener('keydown', handleEnterKey);
-                            el.addEventListener('keydown', handleEnterKey);
 
                             // (2026-07-13) Auto-format merchant uppercase & note title case; prev: none
                             if (id === 'manual-merchant') {
@@ -15169,8 +15201,14 @@ Be direct, practical, and helpful.`;
                     if (btn) {
                         btn.style.pointerEvents = 'auto';
                         btn.style.opacity = '1';
+                        btn.style.color = '#10b981';
+                        btn.style.cursor = 'pointer';
+                        btn.style.display = '';
                         btn.innerText = 'Done';
+                        // (2026-07-13) Reset save lock on modal open; prev: stale lock
+                        btn.classList.remove('done-saving');
                     }
+                    window.isSavingManualTxn = false;
 
                     // Update modal title
                     const titleEl = document.getElementById('modal-title');
@@ -15206,19 +15244,19 @@ Be direct, practical, and helpful.`;
 
                     // ... (handleEnterKey logic remains the same)
 
-                    // Add Enter key to save transaction
-                    const handleEnterKey = (e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            if (window.saveManualTxn) saveManualTxn();
-                        }
-                    };
-
+                    // (2026-07-13) Attach Enter key once per input; prev: stacked on each open
                     ['manual-amt', 'manual-merchant', 'manual-note'].forEach(id => {
                         const el = document.getElementById(id);
+                        if (el && !el._enterKeyAttached) {
+                            el.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    if (window.saveManualTxn) window.saveManualTxn();
+                                }
+                            });
+                            el._enterKeyAttached = true;
+                        }
                         if (el) {
-                            el.removeEventListener('keydown', handleEnterKey);
-                            el.addEventListener('keydown', handleEnterKey);
 
                             // (2026-07-13) Auto-format merchant uppercase & note title case; prev: none
                             if (id === 'manual-merchant') {
@@ -15605,8 +15643,11 @@ Be direct, practical, and helpful.`;
                 };
 
                 window.saveManualTxn = async () => {
-                    // (2026-07-13) prevent double submission race conditions; prev: no lock checks
+                    // (2026-07-13) Debounce guard & lock against duplicate save; prev: lock check only
+                    const nowMs = Date.now();
+                    if (window._lastManualTxnSaveTime && (nowMs - window._lastManualTxnSaveTime) < 1200) return;
                     if (window.isSavingManualTxn) return;
+                    window._lastManualTxnSaveTime = nowMs;
                     window.isSavingManualTxn = true;
                     if (auth.currentUser?.isAnonymous) {
                         if (confirm('Your data is in "Local Mode". Sign in with Google to permanently save this to the cloud?')) {
@@ -15672,18 +15713,12 @@ Be direct, practical, and helpful.`;
                         if (!auth.currentUser) return;
                         const uid = auth.currentUser.uid;
 
-                        // Show loader on button
+                        // (2026-07-13) Show spinner on Done button; prev: gray out text
                         btn.style.pointerEvents = 'none';
-                        btn.style.opacity = '0.7';
-                        // (2026-07-13) Gray out Done before close; prev: 0ms
-                        btn.classList.add('done-saving');
-                        btn.style.opacity = '0.45';
-                        btn.style.color = '#94a3b8';
-                        btn.style.cursor = 'not-allowed';
-                        await new Promise(r => setTimeout(r, 120));
-                        btn.style.opacity = '0.4';
-                        btn.style.color = '#94a3b8';
-                        btn.style.cursor = 'not-allowed';
+                        btn.innerHTML = '<span class="done-spinner"></span>';
+                        btn.style.display = 'flex';
+                        btn.style.justifyContent = 'flex-end';
+                        btn.style.alignItems = 'center';
 
                         const specialStatus = window.currentSpecialStatus || 'normal';
                         const isRefund = specialStatus === 'refund';
@@ -15892,25 +15927,34 @@ Be direct, practical, and helpful.`;
                         };
 
                         const syncOptimisticTxnState = (txnId) => {
-                            const optimisticCreatedAtMs = Date.now();
+                            // (2026-07-13) Preserve original createdAt on edit; prev: Date.now() overwritten
+                            const origTxn = (window.allTxns || []).find(t => t.id === txnId);
+                            const origCreated = origTxn?.createdAt || originalTxnSnapshot?.txn?.createdAt || null;
+                            const origMs = (origTxn?.createdAtMs && origTxn.createdAtMs > 0) ? origTxn.createdAtMs :
+                                (originalTxnSnapshot?.txn?.createdAtMs && originalTxnSnapshot.txn.createdAtMs > 0) ? originalTxnSnapshot.txn.createdAtMs :
+                                (origCreated ? (origCreated.toMillis ? origCreated.toMillis() : new Date(origCreated).getTime()) : null);
+                            const optimisticCreatedAtMs = window.editingTxnId ? (origMs || Date.now()) : Date.now();
                             const txnRecord = {
                                 id: txnId,
                                 ...updateData,
                                 account: selectedAccount,
+                                createdAt: window.editingTxnId ? origCreated : serverTimestamp(),
                                 createdAtMs: optimisticCreatedAtMs
                             };
                             const getCreatedAtMs = (txn) => {
                                 if (!txn) return 0;
-                                if (Number.isFinite(Number(txn.createdAtMs || 0)) && Number(txn.createdAtMs || 0) > 0) return Number(txn.createdAtMs);
+                                if (typeof txn.id === 'string') { const m = txn.id.match(/(?:txn_|bpi_|offline_|sync_)(\d{10,13})/); if (m) return Number(m[1]); }
                                 if (typeof txn.createdAt?.toMillis === 'function') return txn.createdAt.toMillis();
                                 if (typeof txn.createdAt?.seconds === 'number') return (txn.createdAt.seconds * 1000) + Math.floor((txn.createdAt.nanoseconds || 0) / 1000000);
-                                const parsed = new Date(txn.createdAt || 0).getTime();
-                                return Number.isFinite(parsed) ? parsed : 0;
+                                if (txn.createdAt) { const p = new Date(txn.createdAt).getTime(); if (Number.isFinite(p) && p > 0) return p; }
+                                if (Number.isFinite(Number(txn.createdAtMs || 0)) && Number(txn.createdAtMs || 0) > 0) return Number(txn.createdAtMs);
+                                return 0;
                             };
+                            // (2026-07-13) Sort same day earliest first; prev: getCreatedAtMs(b)-getCreatedAtMs(a)
                             const sortTxns = (items) => [...items].sort((a, b) => {
                                 const dateDelta = new Date(b.date) - new Date(a.date);
                                 if (dateDelta !== 0) return dateDelta;
-                                return getCreatedAtMs(b) - getCreatedAtMs(a);
+                                return getCreatedAtMs(a) - getCreatedAtMs(b);
                             });
                             const upsertTxn = (items, txn) => {
                                 const list = Array.isArray(items) ? [...items] : [];
@@ -16061,8 +16105,23 @@ Be direct, practical, and helpful.`;
                         window.editingTxnId = null;
                         window.editTxnSnapshot = null;
                         window.manualTxnModalBaseline = null;
-                        // (2026-07-13) Close manual modal immediately on Done; prev: delayed setTimeout
-                        closeModals('manual-txn-modal', true);
+                        // (2026-07-13) Clear form fields immediately to prevent dupes; prev: kept values
+                        const amtIn = document.getElementById('manual-amt'); if (amtIn) amtIn.value = '';
+                        const merchIn = document.getElementById('manual-merchant'); if (merchIn) merchIn.value = '';
+                        const noteIn = document.getElementById('manual-note'); if (noteIn) noteIn.value = '';
+                        // (2026-07-13) Slide-down then hide modal; prev: instant display none
+                        const txnModal = document.getElementById('manual-txn-modal');
+                        if (txnModal) {
+                            txnModal.classList.add('closing');
+                            if (window.NavState) window.NavState.popModalState('manual-txn-modal');
+                            setTimeout(() => {
+                                txnModal.style.display = 'none';
+                                txnModal.classList.remove('show', 'closing');
+                                document.body.style.overflow = '';
+                                document.body.style.position = '';
+                            }, 300);
+                        }
+                        window.modalOpen = false;
 
                         // Refresh budget modal if it was open (logic derived from current state)
                         const budgetModal = document.getElementById('budget-txn-modal');
@@ -16091,31 +16150,27 @@ Be direct, practical, and helpful.`;
                         console.error(e);
                         showToast('Error saving');
                     } finally {
-                        // Restore button
-                        btn.style.pointerEvents = 'auto';
-                        btn.style.opacity = '1';
-                        // (2026-07-13) Keep Done disabled on close; prev: auto
-                        // (2026-07-13) Restore Done after close; prev: instant
-                        btn.innerHTML = 'Done';
-                        btn.classList.add('done-saving');
+                        // (2026-07-13) Force-hide modal in finally; prev: closeModals call
+                        const finalModal = document.getElementById('manual-txn-modal');
+                        if (finalModal && (finalModal.classList.contains('show') || finalModal.style.display === 'flex')) {
+                            finalModal.style.display = 'none';
+                            finalModal.classList.remove('show', 'closing');
+                            window.modalOpen = false;
+                            if (window.NavState) window.NavState.popModalState('manual-txn-modal');
+                            document.body.style.overflow = '';
+                            document.body.style.position = '';
+                        }
+                        // (2026-07-13) Restore button & unlock after modal closes; prev: instant unlock
                         setTimeout(() => {
+                            btn.innerHTML = 'Done';
+                            btn.style.pointerEvents = 'auto';
+                            btn.style.opacity = '1';
+                            btn.style.color = '#10b981';
+                            btn.style.cursor = 'pointer';
+                            btn.style.display = '';
                             btn.classList.remove('done-saving');
-                            btn.style.pointerEvents = 'auto';
-                            btn.style.opacity = '1';
-                            btn.style.color = '#10b981';
-                            btn.style.cursor = 'pointer';
-                        }, 400);
-                        btn.style.pointerEvents = 'none';
-                        btn.style.opacity = '0.4';
-                        btn.style.color = '#94a3b8';
-                        btn.style.cursor = 'not-allowed';
-                        setTimeout(() => {
-                            btn.style.pointerEvents = 'auto';
-                            btn.style.opacity = '1';
-                            btn.style.color = '#10b981';
-                            btn.style.cursor = 'pointer';
+                            window.isSavingManualTxn = false;
                         }, 350);
-                        window.isSavingManualTxn = false;
                     }
                 };
 
@@ -17122,16 +17177,20 @@ Be direct, practical, and helpful.`;
             </div>
 
             <!-- DELETE CONFIRMATION MODAL -->
+            <!-- (2026-07-13) Improve delete modal with soft icon and modern buttons; prev: raw -->
             <div id="delete-modal" class="modal-overlay">
-                <div class="custom-modal" style="text-align: center;">
-                    <div class="modal-header" style="color: #ef4444; justify-content: center; margin-bottom: 8px;">
-                        Delete Transaction?</div>
-                    <p style="color: #64748b; font-size: 13px; margin: 0 0 24px 0;">You can undo this within 7 seconds.
-                    </p>
-                    <div class="modal-actions" style="justify-content: center; gap: 16px;">
-                        <div class="cancel-link" onclick="closeModals()">CANCEL</div>
-                        <button id="delete-confirm-btn" class="mui-btn mui-btn--raised" onclick="confirmDelete()"
-                            style="border-radius: 12px; font-weight: 700; background: #ef4444; color: white; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">DELETE</button>
+                <div class="custom-modal" style="text-align: center; max-width: 320px; width: 90%; border-radius: 24px; padding: 24px 20px 20px 20px; box-shadow: 0 20px 45px rgba(0,0,0,0.2);">
+                    <div style="width: 52px; height: 52px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto;">
+                        <i class="material-icons" style="font-size: 26px;">delete_outline</i>
+                    </div>
+                    <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.3px;">Delete Transaction?</div>
+                    <p style="color: #64748b; font-size: 13px; line-height: 1.45; margin: 0 0 22px 0;">You can undo this within 7 seconds.</p>
+                    <!-- (2026-07-13) Center delete button text with flex layout; prev: mui-btn misaligned -->
+                    <div class="modal-actions" style="display: flex; gap: 12px; align-items: center; justify-content: center;">
+                        <button type="button" class="cancel-link" onclick="closeModals()"
+                            style="flex: 1; height: 42px; border-radius: 14px; background: #f1f5f9; color: #475569; font-weight: 700; font-size: 13px; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1; padding: 0; box-sizing: border-box; transition: background 0.15s;">Cancel</button>
+                        <button id="delete-confirm-btn" onclick="confirmDelete()"
+                            style="flex: 1; height: 42px; border-radius: 14px; font-weight: 700; font-size: 13px; background: #ef4444; color: white; border: none; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.3px; line-height: 1; padding: 0; box-sizing: border-box; cursor: pointer;">Delete</button>
                     </div>
                 </div>
             </div>
@@ -17410,26 +17469,24 @@ Be direct, practical, and helpful.`;
             </div>
 
             <!-- DUPLICATE TRANSACTION MODAL -->
-            <div id="duplicate-modal" class="modal-overlay"
+            <!-- (2026-07-13) Improve duplicate modal UI & backdrop dismiss; prev: raw buttons -->
+            <div id="duplicate-modal" class="modal-overlay" onclick="closeModals('duplicate-modal')"
                 style="align-items: flex-end; justify-content: center; backdrop-filter: blur(4px); background: rgba(0,0,0,0.4);">
-                <div class="custom-modal" id="duplicate-modal-content"
-                    style="width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; padding: 24px 24px calc(env(safe-area-inset-bottom, 24px) + 42px); box-shadow: 0 -10px 40px rgba(0,0,0,0.1); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
-                    <div class="modal-header" style="font-weight: 800; font-size: 18px; color: #1e293b;">Duplicate
-                        Transaction</div>
-                    <p style="color: #64748b; font-size: 13px; margin: 8px 0 16px;">Select which accounts to duplicate
-                        this transaction into.</p>
+                <div class="custom-modal" id="duplicate-modal-content" onclick="event.stopPropagation()"
+                    style="width: 100%; max-width: 100%; border-radius: 28px 28px 0 0; padding: 16px 20px calc(env(safe-area-inset-bottom, 24px) + 24px); box-shadow: 0 -10px 40px rgba(0,0,0,0.15); position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); background: #ffffff;">
+                    <div style="width: 36px; height: 4px; background: #cbd5e1; border-radius: 2px; margin: 0 auto 16px auto;"></div>
+                    <div class="modal-header" style="font-weight: 800; font-size: 18px; color: #0f172a; letter-spacing: -0.3px;">Duplicate Transaction</div>
+                    <p style="color: #64748b; font-size: 13px; line-height: 1.45; margin: 4px 0 16px;">Select which accounts to duplicate this transaction into.</p>
                     <div class="modal-body">
-                        <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div id="duplicate-account-list" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- Account checkboxes will be injected here -->
                         </div>
                     </div>
-                    <div class="modal-actions"
-                        style="margin-top: 24px; justify-content: space-between; align-items: center;">
-                        <div class="cancel-link" onclick="closeModals('duplicate-modal')" style="padding-left: 0;">
-                            CANCEL</div>
-                        <button id="duplicate-confirm-btn" class="mui-btn mui-btn--raised mui-btn--primary"
-                            onclick="confirmDuplicate()"
-                            style="border-radius: 12px; font-weight: 700; background-color: #2196F3; height: 44px; padding: 0 32px;">DUPLICATE</button>
+                    <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 12px; align-items: center;">
+                        <button type="button" class="cancel-link" onclick="closeModals('duplicate-modal')"
+                            style="flex: 1; height: 44px; border-radius: 14px; background: #f1f5f9; color: #475569; font-weight: 700; font-size: 13px; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.3px; transition: background 0.15s;">Cancel</button>
+                        <button id="duplicate-confirm-btn" onclick="confirmDuplicate()"
+                            style="flex: 1.3; height: 44px; border-radius: 14px; font-weight: 700; font-size: 13px; background: #2563eb; color: white; border: none; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); display: flex; align-items: center; justify-content: center; text-transform: uppercase; letter-spacing: 0.3px; cursor: pointer;">Duplicate</button>
                     </div>
                 </div>
             </div>
@@ -18093,9 +18150,15 @@ Be direct, practical, and helpful.`;
                             modalContent.style.transition = 'transform 0.3s ease-out';
                             modalContent.style.transform = 'translateY(100%)';
                             setTimeout(() => {
-                                closeModals('manual-txn-modal');
+                                // (2026-07-13) Hide before reset transform to fix flash; prev: reset before hide
+                                const overlay = document.getElementById('manual-txn-modal');
+                                if (overlay) { overlay.style.display = 'none'; overlay.classList.remove('show', 'closing'); }
                                 modalContent.style.transform = '';
                                 modalContent.style.transition = '';
+                                window.modalOpen = false;
+                                if (window.NavState) window.NavState.popModalState('manual-txn-modal');
+                                document.body.style.overflow = '';
+                                document.body.style.position = '';
                             }, 300);
                         } else {
                             // Snap back

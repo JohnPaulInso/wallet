@@ -2526,35 +2526,48 @@ i.material-icons-outlined {
             --border-color: #f1f5f9;
         }
 
-        /* DUPLICATE MODAL STYLES */
+        /* (2026-07-13) Modernize duplicate options with pill state; prev: plain border */
         .duplicate-account-option {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
+            padding: 13px 16px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 16px;
+            background: #ffffff;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: border-color 0.15s, background-color 0.15s;
         }
-/* (2026-07-13) Wrap duplicate option hover in media; prev: direct :hover */
+        .duplicate-account-option:has(input:checked) {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
         @media (hover: hover) {
             .duplicate-account-option:hover {
                 background: #f8fafc;
-                border-color: #3b82f6;
+                border-color: #93c5fd;
             }
         }
         .duplicate-account-option input[type="checkbox"] {
             width: 20px;
             height: 20px;
             cursor: pointer;
-            accent-color: #2196F3;
+            accent-color: #2563eb;
         }
         .duplicate-account-label {
             flex: 1;
             font-size: 14px;
             font-weight: 700;
-            color: #1e293b;
+            color: #0f172a;
+        }
+        .duplicate-current-badge {
+            font-size: 10px;
+            font-weight: 800;
+            color: #2563eb;
+            background: #dbeafe;
+            padding: 2px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.3px;
         }
 
         body.dark-mode {
@@ -3360,7 +3373,11 @@ i.material-icons-outlined {
         /* (2026-07-13) Done button hover/disabled gray; prev: static */
         #done-btn { transition: color 0.15s ease, opacity 0.15s ease, transform 0.12s ease; }
         #done-btn:hover { color: #059669 !important; opacity: 0.85; }
-        #done-btn:active, #done-btn.done-saving { color: #94a3b8 !important; opacity: 0.45 !important; pointer-events: none !important; cursor: not-allowed !important; }
+        /* (2026-07-13) Removed :active pointer-events:none; prev: blocked mobile taps */
+        #done-btn.done-saving { color: #94a3b8 !important; opacity: 0.45 !important; pointer-events: none !important; cursor: not-allowed !important; }
+        /* (2026-07-13) Done button spinner; prev: none */
+        .done-spinner { width: 16px; height: 16px; border: 2.5px solid #e2e8f0; border-top-color: #10b981; border-radius: 50%; animation: doneSpin 0.6s linear infinite; display: inline-block; }
+        @keyframes doneSpin { to { transform: rotate(360deg); } }
         .premium-txn:active:not(.elevated-clone) { transform: scale(1); }
         .premium-txn.popped { transform: scale(1.05); z-index: 2100; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.1s; }
         
@@ -3622,12 +3639,13 @@ i.material-icons-outlined {
             0% { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 0.8; }
             100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(0); opacity: 0; }
         }
-        .premium-txn {
+        /* (2026-07-13) Support snapping dust animation on swipe wrapper; prev: txn only */
+        .premium-txn, .txn-swipe-wrapper {
             transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
             overflow: hidden;
-            max-height: 200px; /* Large enough for any txn */
+            max-height: 200px;
         }
-        .premium-txn.snapping {
+        .premium-txn.snapping, .txn-swipe-wrapper.snapping {
             opacity: 0 !important;
             transform: scale(0.9) !important;
             max-height: 0 !important;

@@ -1533,6 +1533,46 @@
             <button class="wallet-fab" id="wallet-add-fab" onclick="openManualTxnModal()">
                 <i class="material-icons">add</i>
             </button>
+            <!-- (2026-07-13) Add scroll-to-top button above FAB; prev: none -->
+            <!-- Scroll back to top -->
+            <button class="wallet-scroll-top-fab" id="wallet-scroll-top-btn" onclick="window.scrollWalletToTop && window.scrollWalletToTop()" aria-label="Scroll to top">
+                <i class="material-icons">keyboard_arrow_up</i>
+            </button>
+            <script>
+                (function () {
+                    window.scrollWalletToTop = function () {
+                        const walletView = document.getElementById('view-wallet');
+                        if (walletView) walletView.scrollTo({ top: 0, behavior: 'smooth' });
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    };
+                    const bindScrollTopBtn = function () {
+                        const walletView = document.getElementById('view-wallet');
+                        const btn = document.getElementById('wallet-scroll-top-btn');
+                        if (!walletView || !btn || walletView.__scrollTopBound) return;
+                        walletView.__scrollTopBound = true;
+                        const updateBtn = function () {
+                            // (2026-07-13) Show back-to-top at >=75% scroll depth; prev: >120px
+                            const getDepth = function (el) {
+                                if (!el) return 0;
+                                const max = (el.scrollHeight || 0) - (el.clientHeight || 0);
+                                return max > 40 ? ((el.scrollTop || 0) / max) : 0;
+                            };
+                            const viewDepth = getDepth(walletView);
+                            const docDepth = getDepth(document.documentElement) || getDepth(document.body);
+                            const scrolled = viewDepth >= 0.75 || docDepth >= 0.75;
+                            btn.classList.toggle('is-visible', scrolled);
+                        };
+                        walletView.addEventListener('scroll', updateBtn, { passive: true });
+                        window.addEventListener('scroll', updateBtn, { passive: true });
+                        updateBtn();
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', bindScrollTopBtn);
+                    } else {
+                        bindScrollTopBtn();
+                    }
+                })();
+            </script>
             <!-- END Wallet FAB -->
 
             <!-- TAB 2: CALENDAR VIEW - Integrated 2026-04-02 -->
@@ -4956,10 +4996,10 @@
                             seenIds.add(t.id);
                             return true;
                         });
-                        // (2026-07-13) Clear BPI scanner image on account changes; prev: kept image
+                        // (2026-07-13) Keep BPI scanner image on txn sync; prev: clearImage()
                         if (window.__bpiInitialLoaded && snap.docChanges().length > 0) {
                             if (window.BPIScanner && typeof window.BPIScanner.clearImage === 'function') {
-                                window.BPIScanner.clearImage();
+                                /* keep scanned BPI image open when syncing single transaction */
                             }
                         }
                         window.__bpiInitialLoaded = true;
@@ -12119,7 +12159,32 @@ Be direct, practical, and helpful.`;
                             startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
                             isSwiping = false;
                             swipeDirection = null;
-                            newItem.style.transition = 'none';
+                            // (2026-07-13) Keep hover transition; prev: none
+                            // (2026-07-13) Highlight only touched card; prev: sticky CSS hover
+                            newItem.style.transition = '';
+                            document.querySelectorAll('.premium-txn.txn-touch-hover').forEach(el => el.classList.remove('txn-touch-hover'));
+                            newItem.classList.add('txn-touch-hover');
+                            // (2026-07-13) Triple-tap on card selects & opens menu; prev: long-press only
+                            const now = Date.now();
+                            const lastTap = newItem._lastTapTime || 0;
+                            if (now - lastTap < 450) {
+                                newItem._tapCount = (newItem._tapCount || 1) + 1;
+                            } else {
+                                newItem._tapCount = 1;
+                            }
+                            newItem._lastTapTime = now;
+                            if (newItem._tapCount >= 3) {
+                                newItem._tapCount = 0;
+                                newItem._isTripleTapped = true;
+                                if (longPressTimer) {
+                                    clearTimeout(longPressTimer);
+                                    longPressTimer = null;
+                                }
+                                if (!window.modalOpen && typeof showIOSMenu === 'function') {
+                                    showIOSMenu(newItem, e);
+                                }
+                                return;
+                            }
 
                             if (longPressTimer) clearTimeout(longPressTimer);
                             longPressTimer = setTimeout(() => {
@@ -12168,6 +12233,9 @@ Be direct, practical, and helpful.`;
                                 if (bgLeft) bgLeft.classList.toggle('active', moveX < -10);
                                 if (bgRight) bgRight.classList.toggle('active', moveX > 10);
                             } else if (Math.sqrt(diffX * diffX + diffY * diffY) > 15) { /* FIX 2026-03-31: Increased from 10px to 15px - Samsung high-sensitivity touch tolerance */
+                                // (2026-07-13) Clear touch hover & tap count on scroll; prev: hover only
+                                newItem._tapCount = 0;
+                                newItem.classList.remove('txn-touch-hover');
                                 if (longPressTimer) {
                                     clearTimeout(longPressTimer);
                                     longPressTimer = null;
@@ -12219,6 +12287,12 @@ Be direct, practical, and helpful.`;
                                 }, 300);
                             }
 
+                            // (2026-07-13) Keep touch hover if triple-tapped; prev: always clear
+                            if (newItem._isTripleTapped) {
+                                newItem._isTripleTapped = false;
+                                return;
+                            }
+                            newItem.classList.remove('txn-touch-hover');
                             startX = null;
                             startY = null;
                             isSwiping = false;
@@ -12232,6 +12306,7 @@ Be direct, practical, and helpful.`;
                         newItem.addEventListener('mousemove', moveTouch);
                         newItem.addEventListener('touchmove', moveTouch, { passive: false }); // Needs false to prevent scroll
                         newItem.addEventListener('mouseleave', endTouch);
+                        newItem.addEventListener('touchcancel', endTouch, { passive: true });
                     });
                 }
                 window.setupLongPressHandlers = setupLongPressHandlers;
@@ -12249,7 +12324,12 @@ Be direct, practical, and helpful.`;
 
                     const txnId = item ? item.dataset.txnId : null;
                     // (2026-07-13) Re-query live DOM node by txnId to avoid detached zero-bounds element; prev: stale item reference
-                    if (txnId) {
+                    // (2026-07-13) Guard liveNode assignment when disconnected; prev: unconditional if (txnId)
+                    if (txnId && (!item || !item.isConnected)) {
+                    }
+                    // (2026-07-13) Keep connected item, clear touch hover; prev: always queried first match
+                    document.querySelectorAll('.premium-txn.txn-touch-hover').forEach(el => el.classList.remove('txn-touch-hover'));
+                    if (txnId && (!item || !item.isConnected)) {
                         const liveNode = document.querySelector(`.premium-txn[data-txn-id="${txnId}"]`);
                         if (liveNode) item = liveNode;
                     }
@@ -12321,7 +12401,20 @@ Be direct, practical, and helpful.`;
 
                     clonedItem.style.visibility = 'visible';
                     clonedItem.onclick = closeIOSMenu;
+                    // (2026-07-13) Smooth scale up at full opacity; prev: instant/fade
+                    clonedItem.style.transition = 'none';
+                    clonedItem.style.transform = 'scale(1)';
+                    clonedItem.style.opacity = '1';
+                    clonedItem.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
                     document.body.appendChild(clonedItem);
+                    void clonedItem.offsetWidth;
+                    requestAnimationFrame(() => {
+                        if (!clonedItem) return;
+                        clonedItem.style.transition = 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease-out';
+                        clonedItem.style.transform = 'scale(1.04)';
+                        clonedItem.style.opacity = '1';
+                        clonedItem.style.boxShadow = '0 14px 34px rgba(0,0,0,0.22)';
+                    });
 
                     // 4. Show blur and backdrop with slight delay for opening animation
                     setTimeout(() => {
@@ -15582,7 +15675,15 @@ Be direct, practical, and helpful.`;
                         // Show loader on button
                         btn.style.pointerEvents = 'none';
                         btn.style.opacity = '0.7';
-                        btn.innerHTML = '<i class="material-icons spin" style="font-size:16px;">sync</i>';
+                        // (2026-07-13) Gray out Done before close; prev: 0ms
+                        btn.classList.add('done-saving');
+                        btn.style.opacity = '0.45';
+                        btn.style.color = '#94a3b8';
+                        btn.style.cursor = 'not-allowed';
+                        await new Promise(r => setTimeout(r, 120));
+                        btn.style.opacity = '0.4';
+                        btn.style.color = '#94a3b8';
+                        btn.style.cursor = 'not-allowed';
 
                         const specialStatus = window.currentSpecialStatus || 'normal';
                         const isRefund = specialStatus === 'refund';
@@ -15625,7 +15726,8 @@ Be direct, practical, and helpful.`;
                                 if (!navigator.onLine) {
                                     updateDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId), manualTxnData);
                                 } else {
-                                    await updateDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId), manualTxnData);
+                                    // (2026-07-13) Sync without await; prev: await updateDoc
+                                    updateDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId), manualTxnData);
                                 }
                             } else {
                                 let newRef;
@@ -15636,7 +15738,8 @@ Be direct, practical, and helpful.`;
                                         createdAt: serverTimestamp()
                                     });
                                 } else {
-                                    newRef = await addDoc(collection(db, "users", uid, "budget_manual_txns"), {
+                                    // (2026-07-13) Sync without await; prev: await addDoc
+                                    newRef = doc(collection(db, "users", uid, "budget_manual_txns")); setDoc(newRef, {
                                         ...manualTxnData,
                                         createdAt: serverTimestamp()
                                     });
@@ -15648,7 +15751,8 @@ Be direct, practical, and helpful.`;
                                 if (!navigator.onLine) {
                                     deleteDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId));
                                 } else {
-                                    await deleteDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId));
+                                    // (2026-07-13) Sync without await; prev: await deleteDoc
+                                    deleteDoc(doc(db, "users", uid, "budget_manual_txns", allocationTxnId));
                                 }
                                 allocationTxnId = null;
                             }
@@ -15881,8 +15985,10 @@ Be direct, practical, and helpful.`;
                                     syncOptimisticTxnState(window.editingTxnId);
                                     addToOfflineQueue('edit', merchantName || (cat ? cat.label : 'Transaction'));
                                 } else {
-                                    await deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
-                                    await setDoc(doc(db, "users", uid, col, window.editingTxnId), {
+                                    // (2026-07-13) Sync without await; prev: await deleteDoc
+                                    deleteDoc(doc(db, "users", uid, originalCol, window.editingTxnId));
+                                    // (2026-07-13) Sync without await; prev: await setDoc
+                                    setDoc(doc(db, "users", uid, col, window.editingTxnId), {
                                         ...updateData,
                                         createdAt: serverTimestamp()
                                     });
@@ -15905,7 +16011,8 @@ Be direct, practical, and helpful.`;
                                     syncOptimisticTxnState(window.editingTxnId);
                                     addToOfflineQueue('edit', merchantName || (cat ? cat.label : 'Transaction'));
                                 } else {
-                                    await updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
+                                    // (2026-07-13) Sync without await; prev: await updateDoc
+                                    updateDoc(doc(db, "users", uid, col, window.editingTxnId), updateData);
                                     syncOptimisticTxnState(window.editingTxnId);
                                     if (window.showTxnEditUndoSnackbar) {
                                         window.showTxnEditUndoSnackbarOnce({
@@ -15930,7 +16037,8 @@ Be direct, practical, and helpful.`;
                                 syncOptimisticTxnState(offlineTxnId);
                                 addToOfflineQueue('add', merchantName || (cat ? cat.label : 'Transaction'));
                             } else {
-                                const newDocRef = await addDoc(collection(db, "users", uid, col), {
+                                // (2026-07-13) Sync without await; prev: await addDoc
+                                const newDocRef = doc(collection(db, "users", uid, col)); setDoc(newDocRef, {
                                     ...updateData,
                                     createdAt: serverTimestamp()
                                 });
@@ -15953,11 +16061,7 @@ Be direct, practical, and helpful.`;
                         window.editingTxnId = null;
                         window.editTxnSnapshot = null;
                         window.manualTxnModalBaseline = null;
-                        const manualModalContent = document.getElementById('manual-modal-content');
-                        if (manualModalContent) {
-                            manualModalContent.style.transform = '';
-                            manualModalContent.style.transition = '';
-                        }
+                        // (2026-07-13) Close manual modal immediately on Done; prev: delayed setTimeout
                         closeModals('manual-txn-modal', true);
 
                         // Refresh budget modal if it was open (logic derived from current state)
@@ -15990,7 +16094,27 @@ Be direct, practical, and helpful.`;
                         // Restore button
                         btn.style.pointerEvents = 'auto';
                         btn.style.opacity = '1';
+                        // (2026-07-13) Keep Done disabled on close; prev: auto
+                        // (2026-07-13) Restore Done after close; prev: instant
                         btn.innerHTML = 'Done';
+                        btn.classList.add('done-saving');
+                        setTimeout(() => {
+                            btn.classList.remove('done-saving');
+                            btn.style.pointerEvents = 'auto';
+                            btn.style.opacity = '1';
+                            btn.style.color = '#10b981';
+                            btn.style.cursor = 'pointer';
+                        }, 400);
+                        btn.style.pointerEvents = 'none';
+                        btn.style.opacity = '0.4';
+                        btn.style.color = '#94a3b8';
+                        btn.style.cursor = 'not-allowed';
+                        setTimeout(() => {
+                            btn.style.pointerEvents = 'auto';
+                            btn.style.opacity = '1';
+                            btn.style.color = '#10b981';
+                            btn.style.cursor = 'pointer';
+                        }, 350);
                         window.isSavingManualTxn = false;
                     }
                 };
@@ -16081,11 +16205,14 @@ Be direct, practical, and helpful.`;
                             if (el.classList.contains('show') && !el.classList.contains('closing')) {
                                 return;
                             }
+                            // (2026-07-13) Set display none before removing closing class; prev: after
+                            el.style.display = 'none';
+                            el.classList.remove('show', 'closing');
                             if (targetToClose === 'manual-txn-modal') {
                                 window.manualTxnModalBaseline = null;
+                                const mc = document.getElementById('manual-modal-content');
+                                if (mc) { mc.style.transform = ''; mc.style.transition = ''; }
                             }
-                            el.classList.remove('show', 'closing');
-                            el.style.display = 'none';
                             el._closeTimer = null;
                             cleanupModalState(wasModalOpen, isFromHistory);
                         }, 300);
@@ -17582,8 +17709,10 @@ Be direct, practical, and helpful.`;
             <div id="manual-txn-modal" class="modal-overlay"
                 style="align-items: flex-end; justify-content: center; backdrop-filter: blur(10px); background: rgba(0,0,0,0.5);">
                 <!-- 2026-04-02: Modified height to 94vh and added top margin for better status-bar gap -->
+                <!-- (2026-07-13) Fix div tag to remove raw style text; prev: comment inside tag -->
                 <div class="custom-modal" id="manual-modal-content"
-                    style="margin-top: 40px; width: 100%; max-width: 100%; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); border-radius: 32px 35px 0 0 !important; height: 94vh; overflow-y: auto; position: relative; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); touch-action: pan-y;">
+
+                    style="margin-top: 40px; width: 100%; max-width: 100%; padding: 0; box-shadow: 0 -10px 40px rgba(0,0,0,0.2); border-radius: 32px 35px 0 0 !important; height: 94vh; overflow-y: auto; position: relative; touch-action: pan-y;">
 
                     <!-- Swipe Handle Area (includes title) -->
                     <!-- 2026-04-02: Optimized padding for Samsung S21+ / S24 top gap -->

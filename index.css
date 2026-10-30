@@ -1771,6 +1771,10 @@ i.material-icons-outlined {
         @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
+        /* (2026-07-13) Slide up only when modal is active; prev: inline style anim */
+        .modal-overlay.show:not(.closing) #manual-modal-content {
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .modal-overlay.closing { animation: fadeOut 0.3s forwards; opacity: 0; transition: opacity 0.3s ease; }
         .modal-overlay.closing .custom-modal { animation: modalOut 0.3s forwards; }
         .modal-overlay.closing .custom-modal[id="manual-modal-content"],
@@ -2467,6 +2471,32 @@ i.material-icons-outlined {
         .wallet-fab:active { transform: scale(0.92); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .wallet-fab i { font-size: 34px; max-width: none !important; } 
         /* END WALLET FAB STYLES */
+        /* (2026-07-13) Dark gray bg & right alignment for top FAB; prev: black/34px */
+        .wallet-scroll-top-fab {
+            position: absolute;
+            bottom: calc(170px + var(--app-bottom-safe));
+            right: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #334155;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+            z-index: 1000;
+            cursor: pointer;
+            border: none;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(8px) scale(0.85);
+            transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, box-shadow 0.2s;
+            will-change: transform, opacity;
+        }
+        .wallet-scroll-top-fab.is-visible { opacity: 1; pointer-events: auto; transform: translateY(0) scale(1); }
+        .wallet-scroll-top-fab.is-visible:active { transform: scale(0.92); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); }
+        .wallet-scroll-top-fab i { font-size: 22px; max-width: none !important; }
 
         #view-wallet {
             position: relative;
@@ -3316,6 +3346,21 @@ i.material-icons-outlined {
         /* Long-press scaling for transactions - QUICK initial animation */
         /* [FIX: 2026-07-20] Removed filter from transition (no longer using CSS blur) prev: filter 0.2s */
         .premium-txn { transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s; }
+        /* (2026-07-13) Subtle dark hover tint; prev: no hover effect */
+        .premium-txn:not(.elevated-clone) { cursor: pointer; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background-color 0.18s ease, filter 0.18s ease; }
+        /* (2026-07-13) Scope hover to pointer & touch class; prev: sticky :hover */
+        .premium-txn.txn-touch-hover:not(.elevated-clone) { background-color: #f1f5f9; filter: brightness(0.97); }
+        .dark-mode .premium-txn.txn-touch-hover:not(.elevated-clone) { background-color: rgba(15, 23, 42, 0.45); filter: brightness(0.92); }
+        @media (hover: hover) and (pointer: fine) {
+            .premium-txn:hover:not(.elevated-clone) { background-color: #f1f5f9; filter: brightness(0.97); }
+            .dark-mode .premium-txn:hover:not(.elevated-clone) { background-color: rgba(15, 23, 42, 0.45); filter: brightness(0.92); }
+    
+        }
+
+        /* (2026-07-13) Done button hover/disabled gray; prev: static */
+        #done-btn { transition: color 0.15s ease, opacity 0.15s ease, transform 0.12s ease; }
+        #done-btn:hover { color: #059669 !important; opacity: 0.85; }
+        #done-btn:active, #done-btn.done-saving { color: #94a3b8 !important; opacity: 0.45 !important; pointer-events: none !important; cursor: not-allowed !important; }
         .premium-txn:active:not(.elevated-clone) { transform: scale(1); }
         .premium-txn.popped { transform: scale(1.05); z-index: 2100; box-shadow: 0 20px 40px rgba(0,0,0,0.3); transition: transform 0.2s, box-shadow 0.1s; }
         
@@ -4566,7 +4611,8 @@ i.material-icons-outlined {
         .txn-swipe-wrapper .premium-txn {
             position: relative;
             z-index: 1;
-            transition: transform 0.15s ease;
+            /* (2026-07-13) Include hover transition; prev: transform only */
+            transition: transform 0.15s ease, background-color 0.18s ease, filter 0.18s ease;
             /* [FIX 2026-06-27: Added touch-action: pan-y to prevent horizontal swipe right from triggering global tab switch - Antigravity] */
             touch-action: pan-y;
         }
@@ -9329,6 +9375,16 @@ body.dark-mode .nav-item.active {
     letter-spacing: 0.6px;
   }
 
+  .wallet-scroll-top-fab {
+    position: fixed;
+    /* (2026-07-13) Right-align top button to 32px on desktop; prev: 42px */
+    right: 32px;
+    bottom: 102px;
+    z-index: 140;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .wallet-fab,
   .goals-fab {
     position: fixed;
@@ -9340,6 +9396,7 @@ body.dark-mode .nav-item.active {
   }
 
   #view-wallet.active-view + .wallet-fab,
+  #view-wallet.active-view ~ .wallet-scroll-top-fab.is-visible,
   #view-goals.active-view + .goals-fab {
     opacity: 1;
     pointer-events: auto;

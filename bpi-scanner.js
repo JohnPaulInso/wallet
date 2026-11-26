@@ -2414,9 +2414,8 @@
             // Remove any existing handlers
             scanButton.onclick = null;
             
-            // Add new handlers
+            // (2026-07-13) Open scanner on click release only; prev: fired on touchstart
             scanButton.addEventListener('click', handleButtonClick, false);
-            scanButton.addEventListener('touchstart', handleButtonClick, { passive: false });
             console.log('[BPI Scanner] Button handlers attached');
         } else {
             console.warn('[BPI Scanner] Button not found, retrying after DOM load');

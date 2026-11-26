@@ -294,7 +294,9 @@ function inferMerchantCategory(name = '', note = '') {
     const keywordMatches = (terms) => terms.some(term => combined.includes(term));
 
     const keywordMap = [
-        { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'shein', 'carousell'] },
+        // (2026-07-13) Add pinduoduo & decathlon/sport keywords; prev: omitted
+        { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'pinduoduo', 'carousell'] },
+        { cat: 'Sport', key: ['decathlon', 'badminton', 'gym', 'fitness', 'anytime fitness', 'gold s gym', "gold's gym", 'toby s', "toby's", 'chris sports'] },
         // (2026-07-13) Add prince and hypermart keywords; prev: omitted
         { cat: 'Shopping', key: [
             'mall', 'supermet', 'gaisano', 'mr diy', 'mr. diy', 'watsons', 'sm store', 'sm superm', 'sm supermarket',

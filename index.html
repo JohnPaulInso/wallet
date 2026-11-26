@@ -683,11 +683,12 @@
 
                 <!-- SWIPEABLE CARD VIEWPORT -->
                 <div class="card-viewport" id="cardViewport">
-                    <div class="card-carousel-scroll" id="cardCarouselScroll">
+                    <!-- (2026-07-13) Inline carousel padding to prevent preloader shift; prev: CSS only -->
+                    <div class="card-carousel-scroll" id="cardCarouselScroll" style="display: flex; padding: 20px 20px 25px 20px; gap: 16px;">
                         <!-- DYNAMICALLY RENDERED CARDS -->
                         <div id="dynamic-balance-cards" class="dynamic-balance-cards-container" style="display: flex; gap: 16px; flex-shrink: 0;">
-                            <!-- SINGLE CENTER SKELETON CARD - [FIX 2026-07-01] With left spacing to match carousel padding -->
-                            <div class="skeleton-card" data-is-skeleton="true" style="flex: 0 0 80vw; max-width: 80vw; min-width: 280px; width: 80vw; margin-left: 20px; scroll-snap-align: center; scroll-snap-stop: always; min-height: 220px; border-radius: 20px; background: linear-gradient(135deg, #1a1a1a 0%, #080808 100%); position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 24px 20px 18px; box-sizing: border-box; transition: none; transform: scale(1.05); opacity: 1; filter: grayscale(0); z-index: 200; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid rgba(192, 255, 0, 0.15); pointer-events: none; user-select: none;">
+                            <!-- (2026-07-13) Match .balance-card.active size & pos; prev: 220px/ml-20/1.05 -->
+                            <div class="balance-card active instant-active atome-card skeleton-card" data-is-skeleton="true" style="flex: 0 0 80vw; max-width: 80vw; min-width: 260px; margin-left: 16px; margin-top: 0; scroll-snap-align: none; min-height: 200px; border-radius: 20px; background: linear-gradient(135deg, #1a1a1a 0%, #080808 100%); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 24px 20px 18px; box-sizing: border-box; transition: none; transform: scale(1.05); opacity: 1; filter: grayscale(0); z-index: 200; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid rgba(192, 255, 0, 0.15); pointer-events: none; user-select: none;">
                                 <div class="skeleton-card-inner" style="display: flex; flex-direction: column; height: 100%; gap: 0;">
                                     <div class="skeleton skeleton-title" style="width: 40%; height: 12px; margin: 0 0 8px 0; background: rgba(255,255,255,0.08); border-radius: 6px; position: relative; overflow: hidden; display: block; pointer-events: none; color: transparent; min-height: 0;"></div>
                                     <div class="skeleton skeleton-balance" style="width: 60%; height: 32px; margin: 0 0 0 0; background: rgba(255,255,255,0.08); border-radius: 6px; position: relative; overflow: hidden; display: block; pointer-events: none; color: transparent; min-height: 0;"></div>
@@ -1345,6 +1346,32 @@
                         </div>
                     </div>
 
+
+                    <!-- (2026-07-13) Moved groceries-carts-widget under trend-card; prev: above summary -->
+                    <div id="groceries-carts-widget" class="groceries-carts-widget-card" onclick="window.CartModule && window.CartModule.openGroceriesModal('breakdown')"
+                        style="background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;padding:16px 18px;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.02);cursor:pointer;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:38px;height:38px;border-radius:12px;background:#ecfdf5;color:#10b981;display:flex;align-items:center;justify-content:center;">
+                                    <i class="material-icons" style="font-size:20px;">shopping_basket</i>
+                                </div>
+                                <div>
+                                    <div style="font-size:14px;font-weight:800;color:#0f172a;letter-spacing:-0.2px;">Groceries & Carts</div>
+                                    <div style="font-size:11px;color:#64748b;font-weight:600;">Itemized breakdown & checklist</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <span id="gc-widget-month-total" class="privacy-mask" style="font-size:15px;font-weight:800;color:#0f172a;">₱0</span>
+                                <i class="material-icons" style="font-size:18px;color:#94a3b8;">chevron_right</i>
+                            </div>
+                        </div>
+                        <div id="gc-widget-mini-bar" style="width:100%;height:7px;border-radius:99px;overflow:hidden;display:flex;gap:2px;background:#f1f5f9;margin-bottom:10px;"></div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <div id="gc-widget-pills" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                            <button type="button" onclick="event.stopPropagation(); window.CartModule && window.CartModule.openGroceriesModal('checklist')"
+                                style="border:none;background:#f1f5f9;color:#334155;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;">Open List</button>
+                        </div>
+                    </div>
 
                     <div class="recent-header">
                         <h3 style="font-size: 0.6rem !important;">Recent Transactions</h3>
@@ -2494,7 +2521,18 @@
             </script>
 
             <script type="module">
-                import { CONFIG } from "./config.js";
+                // (2026-07-13) Fallback Firebase config if config.js 404s; prev: static import
+                const CONFIG = await import("./config.js").then(m => m.CONFIG).catch(() => ({
+                    FIREBASE_CONFIG: {
+                        apiKey: "AIzaSyBHDN0xLi98qjYYjUf2RDCn5gJK0dzTk_M",
+                        authDomain: "atome-wallet.firebaseapp.com",
+                        projectId: "atome-wallet",
+                        storageBucket: "atome-wallet.firebasestorage.app",
+                        messagingSenderId: "64186651619",
+                        appId: "1:64186651619:web:cd7d426cfb663aab6606d6",
+                        measurementId: "G-2SHWJ6S3Z3"
+                    }
+                }));
                 window.CONFIG = CONFIG; // expose for plain-script modules (e.g. BPI Scanner)
                 import { LocalAI } from "./local-ai.js";
                 import { cleanAIText, formatAIAnalysisHTML } from "./app-utils.js";
@@ -2852,13 +2890,16 @@
                             }
                         } else {
                             try {
-                                const { signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
+                                // (2026-07-13) Direct popup & redirect fallback; prev: dynamic import
                                 const result = await signInWithPopup(auth, provider);
                                 log('signInWithPopup success!');
                                 handleAuthResult(result);
                             } catch (popupError) {
-                                if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/cancelled-popup-request') {
-                                    console.log('🚫 Popup auth blocked/cancelled. Keeping auth inside popup flow.');
+                                if (popupError.code === 'auth/popup-blocked') {
+                                    log('Popup blocked on web, falling back to signInWithRedirect...');
+                                    localStorage.setItem('auth_redirect_pending', '1');
+                                    await signInWithRedirect(auth, provider);
+                                } else if (popupError.code === 'auth/cancelled-popup-request' || popupError.code === 'auth/popup-closed-by-user') {
                                     showToast('Login cancelled.');
                                 } else {
                                     throw popupError;
@@ -3128,11 +3169,7 @@
                 window.addEventListener('DOMContentLoaded', async () => {
                     log('-------------------------', 'warn');
 
-                    // [FIX 2026-07-01] Scroll single skeleton card into center view
-                    const skeletonCard = document.querySelector('.skeleton-card');
-                    if (skeletonCard) {
-                        skeletonCard.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-                    }
+                    // (2026-07-13) Keep skeleton aligned left at x=20px; prev: scrollIntoView center
 
                     // Initialize SPA Navigation & Profile - Added 2026-04-02
                     if (window.NavState) {
@@ -3367,6 +3404,20 @@
                                 updateSafeSpendUI();
                                 window.debouncedUpdateBudget();
                             });
+
+                            // (2026-07-13) Sync saved merchant-category rules; prev: hardcoded only
+                            window.customMerchantCategories = JSON.parse(localStorage.getItem(`wallet_merchant_categories_${user.uid}`) || '{}');
+                            onSnapshot(doc(db, "users", user.uid, "config", "merchant_categories"), (mcSnap) => {
+                                if (mcSnap.exists() && mcSnap.data()?.rules) {
+                                    window.customMerchantCategories = mcSnap.data().rules;
+                                    localStorage.setItem(`wallet_merchant_categories_${user.uid}`, JSON.stringify(window.customMerchantCategories));
+                                    if (window.allTxns && window.renderHistory) renderHistory(window.allTxns);
+                                }
+                            });
+
+                            // (2026-07-13) Hydrate shopping checklist from Firestore; prev: absent
+                            window.getCollectionName = getCollectionName;
+                            if (window.CartModule) { window.CartModule.init(); window.CartModule.syncChecklistFromCloud(user.uid); }
 
                             const configRef = doc(db, "users", user.uid, "config", "accounts");
                             onSnapshot(configRef, (docSnap) => {
@@ -9639,6 +9690,8 @@ Be direct, practical, and helpful.`;
                         });
                     }
                     window.allTxns = txns;
+                    // (2026-07-13) Refresh Groceries & Carts widget on render; prev: absent
+                    if (window.CartModule && typeof window.CartModule.refreshDashboardWidget === 'function') window.CartModule.refreshDashboardWidget();
 
                     // Update Triple Progress Bar when data is rendered, unless this pass is
                     // only syncing account-specific widgets during a desktop account switch.
@@ -10954,6 +11007,8 @@ Be direct, practical, and helpful.`;
                             if (limit > 100) localStorage.setItem(`last_deep_sync_${syncAccount}`, Date.now());
                             log(`Sync complete! +${savedCount} processed.`, 'success');
                             await loadData();
+                            // (2026-07-13) Prompt category for newly detected unknown stores; prev: none
+                            setTimeout(() => { if (typeof window.checkNewStoresAfterSync === 'function') window.checkNewStoresAfterSync(); }, 600);
                         } else {
                             log('Sync complete. No new valid txns found.');
                         }
@@ -12955,8 +13010,10 @@ Be direct, practical, and helpful.`;
                     const originalState = isCurrentlyRefund;
                     const originalType = window.allTxns[idx]?.refundType || null;
                     if (idx > -1) {
+                        // (2026-07-13) Force N/A budget classification on refund; prev: kept old
                         window.allTxns[idx].refund = !isCurrentlyRefund;
                         window.allTxns[idx].refundType = !isCurrentlyRefund ? type : null;
+                        if (!isCurrentlyRefund) window.allTxns[idx].manualBudgetCategory = 'n/a';
                         renderHistory(window.allTxns);
                         updateBalanceToThisMonth(window.allTxns);
                         if (window.drawCashFlowChart) drawCashFlowChart();
@@ -12966,10 +13023,10 @@ Be direct, practical, and helpful.`;
                         if (!auth.currentUser) return;
                         const uid = auth.currentUser.uid;
                         const col = getCollectionName(window.currentAccount);
-                        await updateDoc(doc(db, "users", uid, col, id), { 
-                            refund: !isCurrentlyRefund,
-                            refundType: !isCurrentlyRefund ? type : null
-                        });
+                        // (2026-07-13) Persist N/A budget classification on refund; prev: omitted
+                        const refundPayload = { refund: !isCurrentlyRefund, refundType: !isCurrentlyRefund ? type : null };
+                        if (!isCurrentlyRefund) refundPayload.manualBudgetCategory = 'n/a';
+                        await updateDoc(doc(db, "users", uid, col, id), refundPayload);
                         showToast(isCurrentlyRefund ? 'Unmarked as refund' : 'Marked as refund');
                     } catch (e) {
                         log('Toggle refund failed: ' + e.message, 'error');
@@ -12997,8 +13054,10 @@ Be direct, practical, and helpful.`;
                     const originalType = window.allTxns[idx]?.reimbursementType || null;
                     const originalAllocated = window.allTxns[idx]?.reimbursementAllocated || false;
                     if (idx > -1) {
+                        // (2026-07-13) Force N/A budget classification on reimbursement; prev: kept old
                         window.allTxns[idx].reimbursed = !isCurrentlyReimbursed;
                         window.allTxns[idx].reimbursementType = !isCurrentlyReimbursed ? type : null;
+                        if (!isCurrentlyReimbursed) window.allTxns[idx].manualBudgetCategory = 'n/a';
                         if (isCurrentlyReimbursed) {
                             window.allTxns[idx].reimbursementAllocated = false;
                         }
@@ -13013,10 +13072,12 @@ Be direct, practical, and helpful.`;
                         const uid = auth.currentUser.uid;
                         const col = getCollectionName(window.currentAccount);
                         
+                        // (2026-07-13) Persist N/A budget classification on reimbursement; prev: omitted
                         const updateData = { 
                             reimbursed: !isCurrentlyReimbursed,
                             reimbursementType: !isCurrentlyReimbursed ? type : null
                         };
+                        if (!isCurrentlyReimbursed) updateData.manualBudgetCategory = 'n/a';
                         if (isCurrentlyReimbursed) {
                             updateData.reimbursementAllocated = false;
                         }
@@ -14518,8 +14579,23 @@ Be direct, practical, and helpful.`;
                         display.catClass = 'cat-shopping';
                     } else {
                         // Feature 2: Keyword-based Smart Categorization
+                        // (2026-07-13) Check saved custom store rules first; prev: hardcoded only
+                        const savedRules = window.customMerchantCategories || {};
+                        // (2026-07-13) Fuzzy match saved store rules incl. typos; prev: compact only
+                        const matchedRuleKey = Object.keys(savedRules).find(rk => rk && isFuzzyStoreMatch(finalRaw, rk));
+                        if (matchedRuleKey) {
+                            const ruleCat = CATEGORIES.find(c => c.id === savedRules[matchedRuleKey]);
+                            if (ruleCat) {
+                                display.category = ruleCat.id;
+                                display.icon = ruleCat.icon;
+                                display.catClass = ruleCat.cls || 'cat-financial';
+                                display.autoSuggested = true;
+                            }
+                        }
+                        // (2026-07-13) Add pinduoduo & decathlon/Sport keywords; prev: omitted
                         const keywordMap = [
-                            { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'carousell'] },
+                            { cat: 'Online shopping', key: ['shopee', 'tiktok', 'lazada', 'shein', 'temu', 'zalora', 'shopify', 'amazon', 'ebay', 'pinduoduo', 'carousell'] },
+                            { cat: 'Sport', key: ['decathlon', 'badminton', 'gym', 'fitness', 'anytime fitness', 'gold s gym', "gold's gym", 'toby s', "toby's", 'chris sports'] },
                             // (2026-07-13) Add prince and hypermart keywords; prev: omitted
                             { cat: 'Shopping', key: ['mall', 'supermet', 'gaisano', 'mr diy', 'mr. diy', 'watsons', 'sm store', 'sm superm', 'sm supermarket', 'sm city', 'sm mall', 'sm hypermarket', 'robinsons', 'kkv', 'miniso', 'unitop', 'h&m', 'uniqlo', 'puregold', 'landmark', 'daiso', 'national bookstore', 'fully booked', 'landers', 's&r', 's and r', 'waltermart', 'shopwise', 'ace hardware', 'handyman', 'wilcon', 'true value', 'octagon', 'mercury drug', 'generika', 'southstar drug', 'rose pharmacy', 'prince', 'hypermart', 'supermarket'] },
                             { cat: 'Vehicle', key: ['locq', 'tecfuel', 'tec fuel', 'shell', 'petron', 'seaoil', 'ptt', 'caltex', 'cleanfuel', 'unioil', 'phoenix', 'total', 'flying v', 'fuel', 'gas station', 'gas', 'toyota', 'honda', 'mitsub', 'car wash', 'autoshop', 'parking', 'tire', 'auto supply'] },
@@ -14530,7 +14606,7 @@ Be direct, practical, and helpful.`;
                             { cat: 'Life & Entertainment', key: ['cinema', 'movie', 'game', 'playstation', 'xbox', 'steam', 'valve', 'riot', 'epic', 'skating', 'zoo', 'park', 'concert', 'amusement', 'theater'] }
                         ];
 
-                        for (const map of keywordMap) {
+                        if (!matchedRuleKey) for (const map of keywordMap) {
                             if (map.key.some(k => lowerRaw.includes(k) || noteLower.includes(k))) {
                                 const findCat = CATEGORIES.find(c => c.id === map.cat);
                                 if (findCat) {
@@ -14563,6 +14639,204 @@ Be direct, practical, and helpful.`;
                     return display;
                 }
                 window.__inlineGetMerchantDisplay = getMerchantDisplay;
+
+                // (2026-07-13) Dynamic store-category rules & post-sync prompt; prev: none
+                window.customMerchantCategories = window.customMerchantCategories || {};
+                const _skippedNewStores = new Set();
+                let _newStoreQueue = [];
+                let _activeNewStore = null;
+
+                function normalizeStoreRuleKey(rawName = '') {
+                    let s = String(rawName || '').toUpperCase()
+                        .replace(/^(2C2P?\s+|PAYMONGO\*|PAYPAL\s*\*|GCASH\s+|MAYA\s+)/i, '')
+                        .replace(/\s+(PHL|HKG|SGP|USA|GBR|ARE|PH|MUNTINLUPA|CEBU CITY|MANILA|MAKATI|TAGUIG|PASIG|QUEZON CITY)$/i, '')
+                        .replace(/[^A-Z0-9\s&'-]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    const parts = s.split(' ').filter(Boolean);
+                    return parts.length > 2 ? parts.slice(0, 2).join(' ') : s;
+                }
+
+                // (2026-07-13) Fuzzy store matcher allowing 1-2 typos; prev: exact/compact only
+                function isFuzzyStoreMatch(rawStr, ruleKey) {
+                    if (!rawStr || !ruleKey) return false;
+                    const uRaw = String(rawStr).toUpperCase();
+                    const uKey = String(ruleKey).toUpperCase();
+                    if (uRaw.includes(uKey)) return true;
+                    const cRaw = uRaw.replace(/[^A-Z0-9]/g, '');
+                    const cKey = uKey.replace(/[^A-Z0-9]/g, '');
+                    if (!cRaw || !cKey) return false;
+                    if (cRaw.includes(cKey)) return true;
+                    if (cKey.length < 5 || Math.abs(cRaw.length - cKey.length) > 2) return false;
+                    const maxDist = cKey.length >= 8 ? 2 : 1;
+                    const m = cRaw.length, n = cKey.length;
+                    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+                    for (let i = 1; i <= m; i++) {
+                        const curr = [i];
+                        let rowMin = i;
+                        for (let j = 1; j <= n; j++) {
+                            const cost = cRaw[i - 1] === cKey[j - 1] ? 0 : 1;
+                            const val = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+                            curr[j] = val;
+                            if (val < rowMin) rowMin = val;
+                        }
+                        if (rowMin > maxDist) return false;
+                        prev = curr;
+                    }
+                    return prev[n] <= maxDist;
+                }
+
+                window.saveMerchantCategoryRule = async (storeKey, categoryId) => {
+                    const key = String(storeKey || '').toUpperCase().trim();
+                    if (!key || !categoryId) return;
+                    window.customMerchantCategories = window.customMerchantCategories || {};
+                    window.customMerchantCategories[key] = categoryId;
+                    const uid = auth.currentUser?.uid;
+                    if (uid) {
+                        localStorage.setItem(`wallet_merchant_categories_${uid}`, JSON.stringify(window.customMerchantCategories));
+                        try {
+                            await setDoc(doc(db, "users", uid, "config", "merchant_categories"), {
+                                rules: { [key]: categoryId }
+                            }, { merge: true });
+                        } catch (e) { console.warn('Save merchant rule failed:', e); }
+                    }
+
+                    // Retroactively update matching uncategorized/default transactions in current account
+                    const col = getCollectionName(window.currentAccount);
+                    const txns = Array.isArray(window.allTxns) ? window.allTxns : [];
+                    const toUpdate = txns.filter(t => {
+                        if (!t || !t.id) return false;
+                        // (2026-07-13) Fuzzy match store incl. typos; prev: compact only
+                        if (!isFuzzyStoreMatch(t.merchant || '', key)) return false;
+                        const curCat = String(t.manualCategory || t.category || '').toLowerCase();
+                        return !curCat || curCat === 'financial expenses';
+                    });
+
+                    toUpdate.forEach(t => {
+                        t.manualCategory = categoryId;
+                        t.category = categoryId;
+                        if (uid) {
+                            updateDoc(doc(db, "users", uid, col, t.id), {
+                                manualCategory: categoryId,
+                                category: categoryId
+                            }).catch(() => {});
+                        }
+                    });
+                    if (window.allTxns && window.renderHistory) renderHistory(window.allTxns);
+                    if (window.updateTripleProgressBar) window.updateTripleProgressBar();
+                };
+
+                window.propagateStoreCategoryRule = async (uid, col, merchantName, categoryId, editedId) => {
+                    const key = normalizeStoreRuleKey(merchantName);
+                    if (!key || key.length < 3) return;
+                    const txns = Array.isArray(window.allTxns) ? window.allTxns : [];
+                    // (2026-07-13) Fuzzy match same-store txns incl. typos; prev: compact only
+                    const sameStore = txns.filter(t => t && isFuzzyStoreMatch(t.merchant || '', key));
+                    if (sameStore.length < 3) return;
+                    const needsFix = sameStore.filter(t => {
+                        if (t.id === editedId) return false;
+                        const curCat = String(t.manualCategory || t.category || '').toLowerCase();
+                        return !curCat || curCat === 'financial expenses';
+                    });
+                    if (needsFix.length === 0) return;
+                    await window.saveMerchantCategoryRule(key, categoryId);
+                    showToast(`Updated ${needsFix.length + 1} ${key} transactions to ${categoryId}`);
+                };
+
+                window.checkNewStoresAfterSync = () => {
+                    const txns = Array.isArray(window.allTxns) ? window.allTxns : [];
+                    const savedRules = window.customMerchantCategories || {};
+                    const seenKeys = new Set();
+                    const unknownMap = new Map();
+
+                    txns.forEach(t => {
+                        if (!t || t.deleted || !t.merchant) return;
+                        if (t.manualCategory && String(t.manualCategory).toLowerCase() !== 'financial expenses') return;
+                        const disp = getMerchantDisplay(t.merchant, t);
+                        if (String(disp.category || '').toLowerCase() !== 'financial expenses') return;
+                        const rawUp = String(t.merchant).toUpperCase();
+                        if (/SERVICE FEE|INTEREST|TAX|TRANSFER|PAYMENT|ATM|WITHDRAWAL|CHARGE/.test(rawUp)) return;
+                        const key = normalizeStoreRuleKey(t.merchant);
+                        if (!key || key.length < 3 || _skippedNewStores.has(key)) return;
+                        // (2026-07-13) Fuzzy check saved rules incl. typos; prev: compact only
+                        if (Object.keys(savedRules).some(rk => rk && isFuzzyStoreMatch(rawUp, rk))) return;
+                        if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+                            unknownMap.set(key, { key, displayName: disp.name || t.merchant, count: 1 });
+                        } else {
+                            unknownMap.get(key).count++;
+                        }
+                    });
+
+                    _newStoreQueue = Array.from(unknownMap.values()).slice(0, 5);
+                    if (_newStoreQueue.length > 0) window.showNextNewStorePrompt();
+                };
+
+                window.showNextNewStorePrompt = () => {
+                    const modal = document.getElementById('new-store-modal');
+                    if (!modal) return;
+                    if (_newStoreQueue.length === 0) {
+                        _activeNewStore = null;
+                        modal.style.display = 'none';
+                        modal.classList.remove('show', 'closing');
+                        return;
+                    }
+                    _activeNewStore = _newStoreQueue.shift();
+                    const nameEl = document.getElementById('new-store-detected-name');
+                    const subEl = document.getElementById('new-store-detected-sub');
+                    const gridEl = document.getElementById('new-store-category-grid');
+                    if (nameEl) nameEl.textContent = _activeNewStore.displayName;
+                    if (subEl) subEl.textContent = _activeNewStore.count > 1
+                        ? `Found ${_activeNewStore.count} transactions. Pick a category to apply to all & future syncs.`
+                        : 'Pick a category to remember for this store on future syncs.';
+                    // (2026-07-13) Render rounded colored category tiles; prev: blue pill list
+                    if (gridEl) {
+                        const pickCats = CATEGORIES.filter(c => c.id !== 'Income' && c.id !== 'Credit Card Payment');
+                        gridEl.innerHTML = pickCats.map(c => `
+                            <button type="button" class="new-store-cat-tile" onclick="selectNewStoreCategory('${c.id.replace(/'/g, "\\'")}')"
+                                style="display:flex;flex-direction:column;align-items:center;gap:6px;background:transparent;border:none;padding:4px 2px;cursor:pointer;">
+                                <div class="${c.cls || 'cat-financial'}" style="width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(15,23,42,0.06);transition:transform 0.15s ease;">
+                                    <i class="material-icons" style="font-size:24px;">${c.icon}</i>
+                                </div>
+                                <span style="font-size:11px;font-weight:700;color:#334155;line-height:1.2;text-align:center;max-width:72px;word-break:break-word;">${c.label}</span>
+                            </button>
+                        `).join('');
+                    }
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                };
+
+                window.selectNewStoreCategory = async (categoryId) => {
+                    if (!_activeNewStore) return;
+                    const { key, displayName } = _activeNewStore;
+                    await window.saveMerchantCategoryRule(key, categoryId);
+                    showToast(`Saved "${displayName}" → ${categoryId}`);
+                    window.showNextNewStorePrompt();
+                };
+
+                window.skipNewStorePrompt = () => {
+                    if (_activeNewStore) _skippedNewStores.add(_activeNewStore.key);
+                    window.showNextNewStorePrompt();
+                };
+
+                // (2026-07-13) Prompt New Store modal after manual add too; prev: sync only
+                window.promptNewStoreIfUnknown = (merchantName, selectedCatId) => {
+                    if (!merchantName) return;
+                    const catLow = String(selectedCatId || '').toLowerCase();
+                    if (catLow && catLow !== 'financial expenses') return;
+                    const disp = getMerchantDisplay(merchantName, {});
+                    if (String(disp.category || '').toLowerCase() !== 'financial expenses') return;
+                    const rawUp = String(merchantName).toUpperCase();
+                    if (/SERVICE FEE|INTEREST|TAX|TRANSFER|PAYMENT|ATM|WITHDRAWAL|CHARGE/.test(rawUp)) return;
+                    const key = normalizeStoreRuleKey(merchantName);
+                    const savedRules = window.customMerchantCategories || {};
+                    if (!key || key.length < 3 || _skippedNewStores.has(key)) return;
+                    // (2026-07-13) Fuzzy check saved rules incl. typos; prev: compact only
+                        if (Object.keys(savedRules).some(rk => rk && isFuzzyStoreMatch(rawUp, rk))) return;
+                    const count = (window.allTxns || []).filter(t => t && String(t.merchant || '').toUpperCase().includes(key)).length || 1;
+                    _newStoreQueue = [{ key, displayName: disp.name || merchantName, count }];
+                    window.showNextNewStorePrompt();
+                };
 
                 function log(msg, type = 'info') {
                     const container = document.getElementById('log-container');
@@ -14599,7 +14873,12 @@ Be direct, practical, and helpful.`;
                         // Show category section for expenses
                         const catSection = document.getElementById('category-section');
                         if (catSection) catSection.style.display = 'block';
-                        if (!window.editingTxnId) selectedManualCatId = 'Financial Expenses';
+                        // (2026-07-13) Restore expense cat if switching back from Income; prev: stayed Income
+                        if (selectedManualCatId === 'Income') {
+                            selectedManualCatId = window._prevExpenseCatId || 'Financial Expenses';
+                        } else if (!window.editingTxnId) {
+                            selectedManualCatId = 'Financial Expenses';
+                        }
                     } else {
                         if (btnInc) {
                             btnInc.style.background = '#10b981';
@@ -14616,6 +14895,7 @@ Be direct, practical, and helpful.`;
                         // Hide category section for income (only one category)
                         const catSection = document.getElementById('category-section');
                         if (catSection) catSection.style.display = 'none';
+                        if (selectedManualCatId && selectedManualCatId !== 'Income') window._prevExpenseCatId = selectedManualCatId;
                         selectedManualCatId = 'Income';
                     }
                     if (typeof renderManualCategories === 'function') {
@@ -14790,12 +15070,15 @@ Be direct, practical, and helpful.`;
 
                     let activeBtn = btnNormal;
                     let activeBg = '#64748b';
+                    // (2026-07-13) Auto-set budget classification to N/A on refund/reimb; prev: unchanged
                     if (status === 'refund') {
                         activeBtn = btnRefund;
                         activeBg = '#d97706';
+                        if (typeof window.setManualClassification === 'function') window.setManualClassification('n/a');
                     } else if (status === 'reimbursement') {
                         activeBtn = btnReimb;
                         activeBg = '#d97706';
+                        if (typeof window.setManualClassification === 'function') window.setManualClassification('n/a');
                     }
 
                     if (activeBtn) {
@@ -14909,6 +15192,8 @@ Be direct, practical, and helpful.`;
                         setTimeout(() => fab.classList.remove('clicked'), 300);
                     }
                     window.editingTxnId = null; // Clear edit mode
+                    // (2026-07-13) Reset itemized cart for new txn; prev: absent
+                    if (window.CartModule) window.CartModule.resetForNew(selectedManualCatId);
                     document.getElementById('manual-amt').value = '';
                     document.getElementById('manual-merchant').value = '';
                     document.getElementById('manual-note').value = '';
@@ -15148,6 +15433,8 @@ Be direct, practical, and helpful.`;
                     if (fuelRow) fuelRow.style.display = isVehicleCategory ? 'flex' : 'none';
                     if (fuelInput) fuelInput.value = (txn && txn.pricePerLiter) ? txn.pricePerLiter : '';
                     if (window.updateFuelComputed) window.updateFuelComputed();
+                    // (2026-07-13) Load itemized cart & order info on edit; prev: absent
+                    if (window.CartModule) window.CartModule.loadFromTxn(txn, selectedManualCatId);
 
                     // Determine type based on category
                     if (selectedManualCatId === 'Income' || category === 'Income') {
@@ -15359,6 +15646,9 @@ Be direct, practical, and helpful.`;
                         if (preview) preview.textContent = '';
                     }
                     if (id === 'Vehicle' && window.updateFuelComputed) window.updateFuelComputed();
+                    // (2026-07-13) Update itemized cart visibility on category pick; prev: absent
+                    if (noteInput && id !== 'Vehicle') noteInput.maxLength = 80;
+                    if (window.CartModule) window.CartModule.onCategoryChanged(id);
                 };
 
                 // (2026-07-30) Live liter computation for fuel price field; prev: none
@@ -15809,7 +16099,8 @@ Be direct, practical, and helpful.`;
                             category: selectedManualCatId,
                             type: manualTxnType,
                             excluded: document.getElementById('manual-exclude-toggle').checked,
-                            manualBudgetCategory: selectedAccount === 'bpi' && !window.editingTxnId ? 'n/a' : (window.currentManualClassification || 'n/a'),
+                            // (2026-07-13) Force N/A for all refunds & reimbursements; prev: user selection
+                            manualBudgetCategory: (isRefund || isReimbursed) ? 'n/a' : (selectedAccount === 'bpi' && !window.editingTxnId ? 'n/a' : (window.currentManualClassification || 'n/a')),
                             budgetSplit: budgetSplit,
                             // (2026-08-01) Persist explicit OFF; prev: re-opening re-enabled auto-split for >=4000
                             segregateOff: !isSplitActive,
@@ -15821,7 +16112,9 @@ Be direct, practical, and helpful.`;
                             reimbursementAllocated: hasAlloc,
                             reimbursementAllocationCategory: hasAlloc ? allocCategory : null,
                             reimbursementAllocationTxnId: allocationTxnId,
-                            reimbursementAmount: reimbursementAmount
+                            reimbursementAmount: reimbursementAmount,
+                            // (2026-07-13) Persist itemized cart, shipping, orderId; prev: absent
+                            ...(window.CartModule ? window.CartModule.getPayloadForSave() : {})
                         };
 
                         const getAffectedBudgetCategories = () => {
@@ -16091,6 +16384,14 @@ Be direct, practical, and helpful.`;
                             }
                         }
 
+                        const wasEditingTxn = Boolean(window.editingTxnId);
+                        // (2026-07-13) Propagate category to matching store txns & save rule; prev: single edit
+                        if (merchantName && selectedManualCatId && selectedManualCatId !== 'Financial Expenses' && selectedManualCatId !== 'Financial expenses' && typeof window.propagateStoreCategoryRule === 'function') {
+                            window.propagateStoreCategoryRule(uid, col, merchantName, selectedManualCatId, window.editingTxnId);
+                        } else if (!wasEditingTxn && merchantName && typeof window.promptNewStoreIfUnknown === 'function') {
+                            setTimeout(() => window.promptNewStoreIfUnknown(merchantName, selectedManualCatId), 380);
+                        }
+
                         if (window.editingTxnId && originalTxnSnapshot?.txn && window.showTxnEditUndoSnackbar) {
                             window.showTxnEditUndoSnackbarOnce({
                                 txnId: window.editingTxnId,
@@ -16144,6 +16445,8 @@ Be direct, practical, and helpful.`;
                         setTimeout(() => {
                             if (window.updateUnreadCount) window.updateUnreadCount();
                         }, 500);
+                        // (2026-07-13) Clear converted checklist items & refresh widget; prev: absent
+                        if (window.CartModule) window.CartModule.onTransactionSaved();
                         if (window.refreshApp) window.refreshApp();
 
                     } catch (e) {
@@ -16215,7 +16518,11 @@ Be direct, practical, and helpful.`;
                         'card-qr-gallery-modal',
                         // (2026-07-13) Register empty-trash-modal; prev: only trash-modal
                         'trash-modal',
-                        'empty-trash-modal'
+                        'empty-trash-modal',
+                        // (2026-07-13) Register new-store-modal; prev: absent
+                        'new-store-modal',
+                        'groceries-carts-modal',
+                        'receipt-ocr-modal'
                     ];
 
                     let targetToClose = null;
@@ -17195,6 +17502,116 @@ Be direct, practical, and helpful.`;
                 </div>
             </div>
 
+            <!-- (2026-07-13) New Store Detected category prompt modal; prev: absent -->
+            <div id="new-store-modal" class="modal-overlay" onclick="skipNewStorePrompt()" style="display: none; align-items: center; justify-content: center; z-index: 100015;">
+                <div class="custom-modal new-store-modal-card" onclick="event.stopPropagation()" style="text-align: center; max-width: 340px; width: 92%; border-radius: 24px; padding: 22px 18px 18px 18px; box-shadow: 0 20px 45px rgba(0,0,0,0.22); max-height: 82vh; overflow-y: auto;">
+                    <div class="new-store-badge-icon" style="width: 48px; height: 48px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto;">
+                        <i class="material-icons" style="font-size: 24px;">storefront</i>
+                    </div>
+                    <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">New Store Detected</div>
+                    <div id="new-store-detected-name" style="font-size: 14px; font-weight: 800; color: #2563eb; margin-bottom: 6px; word-break: break-word;"></div>
+                    <p id="new-store-detected-sub" style="color: #64748b; font-size: 12px; line-height: 1.4; margin: 0 0 14px 0;">Pick a category to remember for this store.</p>
+                    <!-- (2026-07-13) 4-column colored icon tile grid; prev: 2-column pills -->
+                    <div id="new-store-category-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; margin-bottom: 18px;"></div>
+                    <button type="button" onclick="skipNewStorePrompt()" style="width: 100%; height: 40px; border-radius: 12px; background: #f1f5f9; color: #475569; font-weight: 700; font-size: 12.5px; border: none; cursor: pointer; text-transform: uppercase; letter-spacing: 0.3px;">Skip for now</button>
+                </div>
+            </div>
+
+            <!-- (2026-07-13) Groceries & Carts 3-tab modal with Donut Chart & Checklist; prev: absent -->
+            <div id="groceries-carts-modal" class="modal-overlay" onclick="window.CartModule && window.CartModule.closeGroceriesModal()"
+                style="display:none;align-items:flex-end;justify-content:center;z-index:100018;backdrop-filter:blur(6px);background:rgba(0,0,0,0.45);">
+                <div class="custom-modal groceries-carts-sheet" onclick="event.stopPropagation()"
+                    style="width:100%;max-width:430px;height:88vh;border-radius:28px 28px 0 0;background:#ffffff;padding:14px 18px calc(env(safe-area-inset-bottom, 18px) + 18px);display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,0.18);">
+                    <div style="width:36px;height:4px;background:#cbd5e1;border-radius:2px;margin:0 auto 12px;flex-shrink:0;"></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-shrink:0;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;border-radius:12px;background:#ecfdf5;color:#10b981;display:flex;align-items:center;justify-content:center;">
+                                <i class="material-icons" style="font-size:20px;">shopping_basket</i>
+                            </div>
+                            <div style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-0.3px;">Groceries & Carts</div>
+                        </div>
+                        <button type="button" onclick="window.CartModule && window.CartModule.closeGroceriesModal()"
+                            style="width:32px;height:32px;border-radius:10px;border:none;background:#f1f5f9;color:#64748b;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                            <i class="material-icons" style="font-size:18px;">close</i>
+                        </button>
+                    </div>
+
+                    <!-- Segmented Tabs -->
+                    <div style="display:flex;gap:4px;background:#f1f5f9;padding:4px;border-radius:14px;margin-bottom:14px;flex-shrink:0;">
+                        <button type="button" id="gc-tab-breakdown" onclick="window.CartModule.switchTab('breakdown')" style="flex:1;padding:8px 4px;border-radius:10px;border:none;font-size:11.5px;font-weight:700;cursor:pointer;background:#0f172a;color:#fff;">Breakdown</button>
+                        <button type="button" id="gc-tab-checklist" onclick="window.CartModule.switchTab('checklist')" style="flex:1;padding:8px 4px;border-radius:10px;border:none;font-size:11.5px;font-weight:700;cursor:pointer;background:transparent;color:#64748b;">Checklist</button>
+                        <button type="button" id="gc-tab-deliveries" onclick="window.CartModule.switchTab('deliveries')" style="flex:1;padding:8px 4px;border-radius:10px;border:none;font-size:11.5px;font-weight:700;cursor:pointer;background:transparent;color:#64748b;">Parcels & Prices</button>
+                    </div>
+
+                    <!-- Tab 1: Breakdown Donut Chart -->
+                    <div id="gc-pane-breakdown" style="flex:1;overflow-y:auto;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
+                            <select id="gc-month-filter" onchange="window.CartModule.switchTab('breakdown')"
+                                style="border:1px solid #e2e8f0;border-radius:10px;padding:6px 10px;font-size:12px;font-weight:700;color:#1e293b;background:#f8fafc;outline:none;">
+                                <option value="all">All Time</option>
+                            </select>
+                            <div style="display:flex;gap:4px;">
+                                <button type="button" id="gc-src-all" onclick="window.CartModule.setSourceFilter('all')" style="padding:5px 9px;border-radius:8px;border:1px solid #93c5fd;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;cursor:pointer;">All</button>
+                                <button type="button" id="gc-src-groceries" onclick="window.CartModule.setSourceFilter('groceries')" style="padding:5px 9px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;">Groceries</button>
+                                <button type="button" id="gc-src-online" onclick="window.CartModule.setSourceFilter('online')" style="padding:5px 9px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;">Online</button>
+                            </div>
+                        </div>
+                        <div style="position:relative;height:185px;margin-bottom:14px;">
+                            <canvas id="gc-donut-canvas"></canvas>
+                            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+                                <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;">Itemized</span>
+                                <span id="gc-donut-total" style="font-size:20px;font-weight:800;color:#0f172a;">₱0</span>
+                            </div>
+                        </div>
+                        <div id="gc-donut-legend" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;"></div>
+                        <div style="font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:8px;">Purchased Items</div>
+                        <div id="gc-breakdown-items" style="display:flex;flex-direction:column;gap:8px;padding-bottom:12px;"></div>
+                    </div>
+
+                    <!-- Tab 2: Pre-Shop Checklist Notepad -->
+                    <div id="gc-pane-checklist" style="display:none;flex:1;overflow-y:auto;">
+                        <div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:12px;">
+                            <input type="text" id="gc-check-name" placeholder="Add grocery or item to buy..."
+                                style="width:100%;border:none;outline:none;background:#fff;padding:9px 12px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;font-weight:600;color:#1e293b;">
+                            <div style="display:flex;gap:6px;">
+                                <input type="number" id="gc-check-qty" value="1" min="1" placeholder="Qty"
+                                    style="width:56px;border:1px solid #e2e8f0;border-radius:10px;padding:7px 8px;font-size:12px;font-weight:700;background:#fff;outline:none;">
+                                <input type="number" id="gc-check-price" step="0.01" min="0" placeholder="Est. ₱"
+                                    style="width:82px;border:1px solid #e2e8f0;border-radius:10px;padding:7px 8px;font-size:12px;font-weight:700;background:#fff;outline:none;">
+                                <select id="gc-check-cat" style="flex:1;border:1px solid #e2e8f0;border-radius:10px;padding:7px 8px;font-size:12px;font-weight:700;background:#fff;color:#334155;outline:none;">
+                                    <option value="food">Food</option>
+                                    <option value="drinks">Drinks</option>
+                                    <option value="snacks">Snacks</option>
+                                    <option value="essentials">Essentials</option>
+                                    <option value="gear">Gear</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <button type="button" onclick="window.CartModule.addChecklistItem()"
+                                    style="padding:0 14px;border-radius:10px;border:none;background:#10b981;color:#fff;font-weight:800;font-size:12px;cursor:pointer;">Add</button>
+                            </div>
+                        </div>
+                        <div id="gc-checklist-items" style="display:flex;flex-direction:column;gap:8px;padding-bottom:64px;"></div>
+                        <div id="gc-checklist-convert-bar" style="display:none;position:sticky;bottom:0;background:#0f172a;color:#fff;padding:12px 14px;border-radius:16px;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 8px 24px rgba(15,23,42,0.25);">
+                            <span id="gc-checklist-checked-summary" style="font-size:12px;font-weight:700;"></span>
+                            <button type="button" onclick="window.CartModule.convertCheckedToTransaction()"
+                                style="padding:8px 12px;border-radius:10px;border:none;background:#10b981;color:#fff;font-size:11.5px;font-weight:800;cursor:pointer;">Convert to Expense</button>
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Deliveries & Price Watch -->
+                    <div id="gc-pane-deliveries" style="display:none;flex:1;overflow-y:auto;">
+                        <div style="font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:8px;">Pending Deliveries</div>
+                        <div id="gc-deliveries-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                            <div style="font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:0.6px;text-transform:uppercase;">Item Price History</div>
+                        </div>
+                        <input type="text" id="gc-price-search" placeholder="Search item price history..." oninput="window.CartModule.renderDeliveriesAndPricesTab()"
+                            style="width:100%;border:1px solid #e2e8f0;border-radius:12px;padding:9px 12px;font-size:12.5px;font-weight:600;background:#f8fafc;outline:none;margin-bottom:10px;">
+                        <div id="gc-price-watch-list" style="display:flex;flex-direction:column;gap:8px;padding-bottom:12px;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- (2026-07-13) Add Trash Bin modal; prev: omitted -->
             <div id="trash-modal" class="modal-overlay" style="display: none; align-items: flex-end; justify-content: center;">
                 <div class="custom-modal trash-modal-card">
@@ -17902,9 +18319,55 @@ Be direct, practical, and helpful.`;
                                         style="font-size: 8.1px; color: #94a3b8; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;">
                                         Notes</div>
                                     <!-- (2026-07-13) Auto-format note title case on input; prev: raw -->
-                                    <input type="text" id="manual-note" maxlength="32" placeholder="Add notes..."
+                                    <input type="text" id="manual-note" maxlength="80" placeholder="Add notes..."
                                         oninput="window.formatNoteInput && window.formatNoteInput(this)"
                                         style="width: 100%; border: none; outline: none; font-size: 12.6px; font-weight: 600; color: #1e293b; background: transparent; padding: 0; text-transform: capitalize;">
+                                </div>
+                            </div>
+
+                            <!-- (2026-07-13) Collapsible Items & Receipt cart card; prev: absent -->
+                            <button type="button" id="manual-cart-show-toggle" onclick="window.CartModule && window.CartModule.forceShowCard()"
+                                style="display:none;align-self:flex-start;align-items:center;gap:6px;padding:7px 12px;border-radius:12px;border:1px dashed #cbd5e1;background:#f8fafc;color:#475569;font-size:11.5px;font-weight:700;cursor:pointer;">
+                                <i class="material-icons" style="font-size:15px;color:#ea580c;">receipt_long</i>
+                                <span>+ Add Item List / Receipt</span>
+                            </button>
+
+                            <div id="manual-cart-card" class="manual-cart-section-card"
+                                style="display:none;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:12px 14px;box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                                <div onclick="window.CartModule && window.CartModule.toggleExpand()" style="display:flex;align-items:center;cursor:pointer;">
+                                    <div style="width:40px;height:40px;border-radius:12px;background:#fff7ed;color:#ea580c;display:flex;align-items:center;justify-content:center;margin-right:12px;flex-shrink:0;">
+                                        <i class="material-icons" style="font-size:20px;">shopping_bag</i>
+                                    </div>
+                                    <div style="flex:1;min-width:0;">
+                                        <div style="font-size:8.1px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Items & Receipt</div>
+                                        <div id="manual-cart-summary-badge" style="font-size:12.5px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Add items or scan receipt</div>
+                                    </div>
+                                    <i id="manual-cart-chevron" class="material-icons" style="color:#94a3b8;font-size:20px;transition:transform 0.2s;">expand_more</i>
+                                </div>
+
+                                <div id="manual-cart-body" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+                                    <div style="display:flex;gap:8px;margin-bottom:10px;">
+                                        <button type="button" onclick="window.ReceiptOCRScanner && window.ReceiptOCRScanner.open()"
+                                            style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 10px;border-radius:12px;border:1px solid #fed7aa;background:#fff7ed;color:#ea580c;font-size:11.5px;font-weight:700;cursor:pointer;">
+                                            <i class="material-icons" style="font-size:16px;">document_scanner</i>
+                                            <span>Scan Receipt</span>
+                                        </button>
+                                        <button type="button" onclick="window.CartModule && window.CartModule.addItem()"
+                                            style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px 10px;border-radius:12px;border:1px solid #e2e8f0;background:#f8fafc;color:#1e293b;font-size:11.5px;font-weight:700;cursor:pointer;">
+                                            <i class="material-icons" style="font-size:16px;color:#10b981;">add_circle_outline</i>
+                                            <span>Add Item</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- (2026-07-13) Simplified cart: removed Order ID & Date inputs; prev: 2-col row -->
+                                    <div id="manual-cart-items-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;"></div>
+
+                                    <!-- (2026-07-13) Removed separate Ship/Disc fields; add as items; prev: 2-col row -->
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid #f1f5f9;">
+                                        <span style="font-size:11.5px;font-weight:700;color:#64748b;">Cart Total: <b id="cart-computed-total" style="color:#0f172a;">₱0.00</b></span>
+                                        <button type="button" id="cart-sync-total-btn" onclick="window.CartModule && window.CartModule.forceSyncTotalToAmount()"
+                                            style="display:none;align-items:center;padding:5px 10px;border-radius:8px;border:none;background:#2563eb;color:#fff;font-size:11px;font-weight:700;cursor:pointer;">Sync Total</button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -19838,6 +20301,9 @@ Be direct, practical, and helpful.`;
             </div>
         </div>
     </div>
+    <!-- (2026-07-13) Load Receipt OCR & Grocery Cart modules; prev: absent -->
+    <script src="receipt-ocr-scanner.js" defer></script>
+    <script src="grocery-cart-module.js" defer></script>
 </body>
 
 </html>

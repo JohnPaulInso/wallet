@@ -1,9 +1,9 @@
 /**
  * UI Rendering and Management for the Wallet App
  */
-import { db, auth, doc, setDoc, onSnapshot, getDoc, serverTimestamp } from "./firebase-config.js";
+// (2026-07-13) Import safe CONFIG from firebase-config; prev: direct config.js
+import { db, auth, doc, setDoc, onSnapshot, getDoc, serverTimestamp, CONFIG } from "./firebase-config.js";
 import { CATEGORIES, getMerchantDisplay, displayCategoryName, formatLocalDate, showToast, log, triggerHaptic, createNotification, cleanAIText, formatAIAnalysisHTML, animateNumber, repairTextArtifacts, repairNotificationTextArtifacts } from "./app-utils.js";
-import { CONFIG } from "./config.js";
 import { LocalAI } from "./local-ai.js";
 
 let switchSyncTimer = null;
@@ -2772,6 +2772,8 @@ function syncWalletDesktopLayout() {
         '#offline-queue-card',
         '#chart-section',
         '.trend-card',
+        // (2026-07-13) Keep groceries-carts-widget under trend-card; prev: omitted
+        '#groceries-carts-widget',
         '.recent-header',
         '.search-container',
         '#loading-spinner',
@@ -3045,10 +3047,11 @@ export function updateBalanceCardsUI(accounts) {
         window.accountCardObserver = null;
     }
 
-    // SKELETON STATE: If accounts is null or empty, show 2 skeleton cards
+    // (2026-07-13) Avoid redrawing skeleton if already present; prev: caused flicker
     if (!accounts || accounts.length === 0) {
+        if (container.querySelector('[data-is-skeleton="true"]')) return;
         container.innerHTML = `
-            <div class="balance-card active instant-active atome-card wallet-card-skeleton skeleton-card skeleton-card-atome">
+            <div class="balance-card active instant-active atome-card wallet-card-skeleton skeleton-card skeleton-card-atome" data-is-skeleton="true">
                 <div class="skeleton-card-inner">
                     <div class="skeleton skeleton-title" style="opacity: 0.4;"></div>
                     <div class="skeleton skeleton-balance" style="opacity: 0.4;"></div>

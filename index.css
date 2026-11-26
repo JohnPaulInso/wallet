@@ -424,27 +424,28 @@ i.material-icons-outlined {
             margin-bottom: 0;
         }
         
-        /* BALANCE CARD SKELETON - Clean single class */
+        /* (2026-07-13) Match .balance-card.active.atome-card 1:1; prev: ml12/1.025 */
         .skeleton-card {
             flex: 0 0 80vw !important;
             max-width: 80vw !important;
-            min-width: 280px !important;
-            width: 80vw !important;
-            margin-left: 20px !important; /* Match carousel padding */
-            scroll-snap-align: center;
-            scroll-snap-stop: always;
-            min-height: 210px;
-            max-height: 210px;
+            min-width: 260px !important;
+            /* (2026-07-13) Exact pixel-locked left=27px match (+11px); prev: 5px */
+            margin-left: 16px !important;
+            margin-top: 0 !important;
+            scroll-snap-align: none !important;
+            min-height: 200px !important;
+            height: 200px !important;
             border-radius: 20px;
             background: linear-gradient(135deg, #1a1a1a 0%, #080808 100%);
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
             padding: 24px 20px 18px;
             box-sizing: border-box;
-            transition: none;
-            transform: scale(1.05); /* Match atome-card.active */
+            transition: none !important;
+            transform: scale(1.05) !important;
             opacity: 1;
             filter: grayscale(0);
             z-index: 200;
@@ -3139,7 +3140,8 @@ i.material-icons-outlined {
         }
 
         /* TREND CHART */
-        .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        /* (2026-07-13) Reduce trend-card bottom margin; prev: 24px */
+        .trend-card { background: #fff; border-radius: 20px; padding: 20px 24px 16px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
         .trend-path { filter: drop-shadow(0 4px 6px rgba(29, 78, 216, 0.2)); }
         .trend-dot { fill: #fff; stroke: #000; stroke-width: 2.5; }
         .trend-label { font-size: 10px; fill: #94a3b8; font-weight: 600; }
@@ -11003,4 +11005,30 @@ body.dark-mode .trash-restore-btn {
 }
 body.dark-mode .trash-delete-btn:hover {
     background: rgba(239, 68, 68, 0.2);
+}
+
+/* (2026-07-13) Tactile touch feedback for cart & receipt scanner buttons; prev: static */
+#manual-cart-card button,
+#manual-cart-show-toggle,
+#receipt-ocr-modal button,
+#receipt-ocr-upload-box,
+#receipt-ocr-items-list label,
+#groceries-carts-widget,
+#groceries-carts-modal button {
+    transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.12s ease, background-color 0.15s ease, filter 0.12s ease !important;
+    -webkit-tap-highlight-color: transparent;
+}
+#manual-cart-card button:active,
+#manual-cart-show-toggle:active,
+#receipt-ocr-modal button:active,
+#receipt-ocr-upload-box:active,
+#receipt-ocr-items-list label:active,
+#groceries-carts-modal button:active {
+    transform: scale(0.95) !important;
+    opacity: 0.82 !important;
+    filter: brightness(0.96);
+}
+#groceries-carts-widget:active {
+    transform: scale(0.985) !important;
+    background-color: #f8fafc !important;
 }

@@ -347,6 +347,11 @@ function shouldShowTxnLogos() {
 
 /* [FIX 2026-06-26: Updated detectTxnLogo with the full set of brand logos (adding Atome, Google, Seaoil, Petron, Ayala, and fixing Lazada extension from .jpg to .png to match actual assets) and exposed detectTxnLogo on the global window object so that budget transaction rendering in index.html can detect and draw brand badges on wants-txn, needs-txn, and savings-txn cards] */
 function detectTxnLogo(mappedName = "") {
+    // (2026-07-13) Check user-customized merchant logos first; prev: hardcoded only
+    if (typeof window.resolveCustomMerchantLogo === 'function') {
+        const customLogo = window.resolveCustomMerchantLogo(mappedName);
+        if (customLogo !== undefined) return customLogo;
+    }
     const mUpper = String(mappedName || "").toUpperCase();
     if (mUpper.includes('JOLLIBEE')) return 'logos/jollibee.png';
     if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) return 'logos/mcdo.png';
@@ -2574,6 +2579,10 @@ export function updateProfileUI(user) {
                 <i class="material-icons">cloud_upload</i>
                 <span>Sign in with Google</span>
             </div>
+            <div class="dropdown-item" onclick="openMerchantLogosModal()">
+                <i class="material-icons">storefront</i>
+                <span>Merchant Logos</span>
+            </div>
             <div class="dropdown-item" onclick="openTrashModal()">
                 <i class="material-icons">delete_outline</i>
                 <span>Trash Bin</span>
@@ -2607,6 +2616,10 @@ export function updateProfileUI(user) {
             <div class="dropdown-item" onclick="promptSetPin()">
                 <i class="material-icons">lock</i>
                 <span>Privacy PIN</span>
+            </div>
+            <div class="dropdown-item" onclick="openMerchantLogosModal()">
+                <i class="material-icons">storefront</i>
+                <span>Merchant Logos</span>
             </div>
             <div class="dropdown-item" onclick="openTrashModal()">
                 <i class="material-icons">delete_outline</i>

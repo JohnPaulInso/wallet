@@ -20,8 +20,9 @@ function injectBrandLogos() {
         // Check if badge already exists
         if (iconBox.querySelector('.brand-badge')) return;
         
-        // Determine logo based on merchant name
-        let logo = null;
+        // (2026-07-13) Prefer custom/unified detectTxnLogo; prev: hardcoded list only
+        let logo = (typeof window.detectTxnLogo === 'function') ? window.detectTxnLogo(merchantName) : null;
+        if (logo === null && typeof window.detectTxnLogo !== 'function') {
         if (merchantName.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
         else if (merchantName.includes('MCDO') || merchantName.includes('MCDONALDS')) logo = 'logos/mcdo.png';
         else if (merchantName.includes('SHELL')) logo = 'logos/shell.png';
@@ -36,6 +37,7 @@ function injectBrandLogos() {
         else if (merchantName.includes('AYALA')) logo = 'logos/ayala.png';
         else if (merchantName.includes('J AND L') || merchantName.includes('JANL')) logo = 'logos/janl.png';
         else if (merchantName.includes('MR DIY')) logo = 'logos/mrdiy.png';
+        }
         
         // If logo found, inject badge
         if (logo) {

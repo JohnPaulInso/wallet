@@ -658,6 +658,11 @@
                         <i class="material-icons">lock</i>
                         <span>Privacy PIN</span>
                     </div>
+                    <!-- (2026-07-13) Add Merchant Logos settings option; prev: absent -->
+                    <div class="dropdown-item" onclick="openMerchantLogosModal()">
+                        <i class="material-icons">storefront</i>
+                        <span>Merchant Logos</span>
+                    </div>
                     <!-- (2026-07-13) Add Trash Bin option in profile dropdown; prev: omitted -->
                     <div class="dropdown-item" onclick="openTrashModal()">
                         <i class="material-icons">delete_outline</i>
@@ -3412,6 +3417,16 @@
                                     window.customMerchantCategories = mcSnap.data().rules;
                                     localStorage.setItem(`wallet_merchant_categories_${user.uid}`, JSON.stringify(window.customMerchantCategories));
                                     if (window.allTxns && window.renderHistory) renderHistory(window.allTxns);
+                                }
+                            });
+
+                            // (2026-07-13) Sync custom merchant logos with Firestore; prev: absent
+                            window.saveCustomMerchantLogosToCloud = async (logosObj) => {
+                                await setDoc(doc(db, "users", user.uid, "config", "merchant_logos"), { logos: logosObj, updatedAt: Date.now() }, { merge: true });
+                            };
+                            onSnapshot(doc(db, "users", user.uid, "config", "merchant_logos"), (mlSnap) => {
+                                if (mlSnap.exists() && mlSnap.data()?.logos && window.MerchantLogosModule) {
+                                    window.MerchantLogosModule.hydrateFromCloud(mlSnap.data().logos, user.uid);
                                 }
                             });
 
@@ -9814,10 +9829,12 @@ Be direct, practical, and helpful.`;
                             const isPaymentDuplicate = t.duplicatedFromAccount === 'bpi' && window.currentAccount === 'atome' && mapped.name.toUpperCase().includes('ATOME PAYMENT');
                             const paymentChip = isPaymentDuplicate ? '<span class="payment-badge" style="display: inline-block; background: #d1fae5; color: #059669; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-left: 6px; letter-spacing: 0.3px;">PAYMENT</span>' : '';
 
-                            // LOGO DETECTION
+                            // (2026-07-13) Check custom merchant logos before defaults; prev: hardcoded only
                             const mUpper = mapped.name.toUpperCase();
-                            let logo = null;
-                            if (mUpper.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
+                            const _customLogo = typeof window.resolveCustomMerchantLogo === 'function' ? window.resolveCustomMerchantLogo(mapped.name) : undefined;
+                            let logo = _customLogo !== undefined ? _customLogo : null;
+                            if (_customLogo !== undefined) { /* custom rule applied */ }
+                            else if (mUpper.includes('JOLLIBEE')) logo = 'logos/jollibee.png';
                             else if (mUpper.includes('MCDO') || mUpper.includes('MCDONALDS')) logo = 'logos/mcdo.png';
                             else if (mUpper.includes('SHELL')) logo = 'logos/shell.png';
                             else if (mUpper.includes('SHOPEE')) logo = 'logos/shopee.png';
@@ -20304,6 +20321,7 @@ Be direct, practical, and helpful.`;
     <!-- (2026-07-13) Load Receipt OCR & Grocery Cart modules; prev: absent -->
     <script src="receipt-ocr-scanner.js" defer></script>
     <script src="grocery-cart-module.js" defer></script>
+    <script src="merchant-logos-module.js" defer></script>
 </body>
 
 </html>

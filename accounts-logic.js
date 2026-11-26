@@ -533,7 +533,8 @@
                                 }
                             }
 
-                            let logoSrc = t.logoUrl || t.brandLogo || null;
+                            // (2026-07-13) Prefer custom/unified detectTxnLogo; prev: hardcoded fuel list
+                            let logoSrc = t.logoUrl || t.brandLogo || (typeof window.detectTxnLogo === 'function' ? window.detectTxnLogo(nameStr) : null);
                             if (!logoSrc) {
                                 if (nameStr.includes('TECFUEL') || nameStr.includes('TEC FUEL')) logoSrc = 'logos/tecfuel.png';
                                 else if (nameStr.includes('SHELL')) logoSrc = 'logos/shell.png';
